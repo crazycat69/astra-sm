@@ -232,7 +232,10 @@ void mpegts_pes_demux(mpegts_pes_t *pes)
 
             if(pes->expect_size != PES_MAX_BUFFER)
             {
-                const size_t pktlen = (pes->expect_size - PES_HDR_BASIC);
+                /* NOTE: packet length doesn't include basic 6-byte header */
+                const size_t pktlen =
+                    pes->expect_size + pes_hlen - PES_HDR_BASIC;
+
                 if(pktlen <= 0xFFFF)
                 {
                     /* can't define length for larger packets */
