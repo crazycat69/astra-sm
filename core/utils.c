@@ -251,9 +251,9 @@ void strung_buffer_addvastring(string_buffer_t *buffer, const char *str, va_list
             if(c == 's')
             {
                 ++skip;
-                const char *str = va_arg(ap, const char *);
+                const char *arg = va_arg(ap, const char *);
                 // TODO: is_space
-                string_buffer_addlstring(buffer, str, length);
+                string_buffer_addlstring(buffer, arg, length);
             }
             else if(c == 'd' || c == 'i')
             {

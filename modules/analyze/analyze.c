@@ -373,7 +373,6 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
 
         descriptors_count = 1;
         lua_newtable(lua);
-        const uint8_t *desc_pointer;
         PMT_ITEM_DESC_FOREACH(pointer, desc_pointer)
         {
             lua_pushnumber(lua, descriptors_count++);

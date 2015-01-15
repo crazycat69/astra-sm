@@ -164,9 +164,9 @@ static bool open_file(module_data_t *mod)
         mod->start_time = m2ts_time(mod->buffer) / 1000;
 
         uint8_t tail[M2TS_PACKET_SIZE];
-        const ssize_t len = pread(  mod->fd, tail, M2TS_PACKET_SIZE
-                                  , mod->file_size - M2TS_PACKET_SIZE);
-        if(len != M2TS_PACKET_SIZE || tail[4] != 0x47)
+        const ssize_t pktlen = pread(  mod->fd, tail, M2TS_PACKET_SIZE
+                                     , mod->file_size - M2TS_PACKET_SIZE);
+        if(pktlen != M2TS_PACKET_SIZE || tail[4] != 0x47)
         {
             asc_log_warning(MSG("failed to get M2TS file length"));
         }

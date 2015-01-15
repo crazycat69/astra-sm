@@ -55,10 +55,10 @@ void lua_url_decode(const char *str, size_t size)
     string_buffer_t *buffer = string_buffer_alloc();
     while(skip < size)
     {
-        const char c = str[skip];
+        char c = str[skip];
         if(c == '%')
         {
-            char c = ' ';
+            c = ' ';
             str_to_hex(&str[skip + 1] , (uint8_t *)&c, 1);
             string_buffer_addchar(buffer, c);
             skip += 3;

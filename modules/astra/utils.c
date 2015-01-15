@@ -60,8 +60,8 @@ static int utils_ifaddrs(lua_State *L)
     struct ifaddrs *ifaddr;
     char host[NI_MAXHOST];
 
-    const int s = getifaddrs(&ifaddr);
-    asc_assert(s != -1, "getifaddrs() failed");
+    const int ret = getifaddrs(&ifaddr);
+    asc_assert(ret != -1, "getifaddrs() failed");
 
     static const char __ipv4[] = "ipv4";
     static const char __ipv6[] = "ipv6";

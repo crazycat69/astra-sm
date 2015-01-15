@@ -552,9 +552,9 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
             skip += size;
         }
     }
-    const uint16_t size = skip - 12; // 12 - PMT header
-    mod->pmt->buffer[10] = (psi->buffer[10] & 0xF0) | ((size >> 8) & 0x0F);
-    mod->pmt->buffer[11] = size & 0xFF;
+    const uint16_t pmtsize = skip - 12; // 12 - PMT header
+    mod->pmt->buffer[10] = (psi->buffer[10] & 0xF0) | ((pmtsize >> 8) & 0x0F);
+    mod->pmt->buffer[11] = pmtsize & 0xFF;
 
     const uint8_t *pointer;
     PMT_ITEMS_FOREACH(psi, pointer)
