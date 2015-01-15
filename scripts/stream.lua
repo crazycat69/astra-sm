@@ -260,6 +260,35 @@ kill_output_option.biss = function(channel_data, output_id)
     output_data.tail = nil
 end
 
+init_output_option.remux = function(channel_data, output_id)
+    local output_data = channel_data.output[output_id]
+    local output_conf = output_data.config
+
+    if remux == nil then
+        log.error("[" .. channel_data.config.name .. " #" .. output_id .. "] " ..
+                  "remux module not found")
+        return nil
+    end
+
+    local remux_conf = {
+        upstream = channel_data.tail:stream(),
+        name = channel_data.config.name,
+    }
+
+    if output_conf.rate then remux_conf.rate = output_conf.rate end
+    if output_conf.pcr_interval then remux_conf.pcr_interval = output_conf.pcr_interval end
+    if output_conf.pcr_delay then remux_conf.pcr_delay = output_conf.pcr_delay end
+
+    output_data.remux = remux(remux_conf)
+    channel_data.tail = output_data.remux
+end
+
+kill_output_option.remux = function(channel_data, output_id)
+    local output_data = channel_data.output[output_id]
+
+    output_data.tail = nil
+end
+
 init_output_module = {}
 kill_output_module = {}
 
