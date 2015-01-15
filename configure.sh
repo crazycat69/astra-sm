@@ -307,7 +307,7 @@ MODS_OBJS   =
 all: \$(APP)
 
 clean: \$(APP)-clean
-	@rm -f Makefile config.h
+	@rm -f Makefile config.h modules/inscript/inscript.h
 
 distclean: clean
 EOF
