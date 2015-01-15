@@ -20,9 +20,8 @@
 
 #include "timer.h"
 #include "list.h"
+#include "loopctl.h"
 #include "utils.h"
-
-extern bool is_main_loop_idle;
 
 struct asc_timer_t
 {

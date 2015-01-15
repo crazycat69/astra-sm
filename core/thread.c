@@ -22,14 +22,13 @@
 #include "thread.h"
 #include "list.h"
 #include "log.h"
+#include "loopctl.h"
 
 #ifdef _WIN32
 #   include <windows.h>
 #else
 #   include <pthread.h>
 #endif
-
-extern bool is_main_loop_idle;
 
 #define MSG(_msg) "[core/thread] " _msg
 

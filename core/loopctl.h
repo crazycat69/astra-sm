@@ -1,8 +1,9 @@
 /*
- * Astra
+ * Astra Core (Main loop control)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,34 +19,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _ASTRA_H_
-#define _ASTRA_H_ 1
+#ifndef _LOOPCTL_H_
+#define _LOOPCTL_H_ 1
 
-#include "config.h"
+#include "base.h"
+#include <lua/lua.h>
 
-#include "core/asc.h"
+extern jmp_buf main_loop;
+extern bool is_main_loop_idle;
+extern lua_State *lua;
 
-#include "modules/astra/base.h"
-#include "modules/astra/module_lua.h"
-#include "modules/astra/module_stream.h"
+void astra_exit(void) __attribute__ ((__noreturn__));
+void astra_abort(void) __attribute__ ((__noreturn__));
+void astra_reload(void) __attribute__ ((__noreturn__));
 
-#include "mpegts/mpegts.h"
-
-/* version */
-
-#include "version.h"
-#define __VSTR(_x) #_x
-#define _VSTR(_x) __VSTR(_x)
-#define _VERSION _VSTR(ASTRA_VERSION_MAJOR) "." \
-                 _VSTR(ASTRA_VERSION_MINOR) "." \
-                 _VSTR(ASTRA_VERSION_PATCH)
-
-#ifdef DEBUG
-#   define _VDEBUG " debug"
-#else
-#   define _VDEBUG
-#endif
-
-#define ASTRA_VERSION_STR _VERSION _VDEBUG
-
-#endif /* _ASTRA_H_ */
+#endif /* _LOOPCTL_H_ */

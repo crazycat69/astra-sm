@@ -22,8 +22,7 @@
 #include "event.h"
 #include "list.h"
 #include "log.h"
-
-extern bool is_main_loop_idle;
+#include "loopctl.h"
 
 #ifndef EV_LIST_SIZE
 #   define EV_LIST_SIZE 1024

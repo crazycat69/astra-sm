@@ -1,5 +1,5 @@
 
-SOURCES="event.c list.c log.c socket.c thread.c timer.c utils.c"
+SOURCES="event.c list.c log.c loopctl.c socket.c thread.c timer.c utils.c"
 
 clock_gettime_test_c()
 {
