@@ -223,6 +223,7 @@ static void thread_loop(void *arg)
         if(mod->sync.buffer_write == mod->sync.buffer_size)
             mod->sync.buffer_write = 0;
 
+        mod->pcr_pid = 0;
         if(!seek_pcr(mod, &block_size, &next_block, &mod->pcr))
         {
             asc_log_error(MSG("first PCR is not found"));
