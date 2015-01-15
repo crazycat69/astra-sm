@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "mpegts.h"
+#include <astra.h>
 
 const char * mpegts_type_name(mpegts_packet_type_t type)
 {

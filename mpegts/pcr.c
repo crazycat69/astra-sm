@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "mpegts.h"
+#include <astra.h>
 
 inline uint64_t mpegts_pcr_block_us(uint64_t *pcr_last, const uint64_t *pcr_current)
 {

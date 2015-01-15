@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "mpegts.h"
+#include <astra.h>
 
 mpegts_psi_t * mpegts_psi_init(mpegts_packet_type_t type, uint16_t pid)
 {
