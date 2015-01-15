@@ -28,6 +28,7 @@
 typedef struct module_decrypt_t module_decrypt_t;
 typedef struct module_cam_t module_cam_t;
 typedef struct module_cas_t module_cas_t;
+typedef module_cas_t * (*cas_init_t)(module_decrypt_t *decrypt);
 
 typedef struct em_packet_t em_packet_t;
 
@@ -150,8 +151,12 @@ struct module_cas_t
 #define module_cas_check_em(_cas, _em) _cas->check_em(_cas->self, _em)
 #define module_cas_check_keys(_cas, _keys) _cas->check_keys(_cas->self, _keys)
 
+#define CAS_INIT(_name) _name##_cas_init
+#define MODULE_CAS_PROTO(_name) \
+    module_cas_t * CAS_INIT(_name)(module_decrypt_t *decrypt);
+
 #define MODULE_CAS(_name)                                                                       \
-    module_cas_t * _name##_cas_init(module_decrypt_t *decrypt)                                  \
+    module_cas_t * CAS_INIT(_name)(module_decrypt_t *decrypt)                                   \
     {                                                                                           \
         if(!cas_check_caid(decrypt->cam->caid)) return NULL;                                    \
         module_data_t *mod = calloc(1, sizeof(module_data_t));                                  \
@@ -161,6 +166,35 @@ struct module_cas_t
         mod->__cas.check_em = cas_check_em;                                                     \
         mod->__cas.check_keys = cas_check_keys;                                                 \
         return &mod->__cas;                                                                     \
+    }
+
+/* known CAS list */
+MODULE_CAS_PROTO(irdeto)
+MODULE_CAS_PROTO(viaccess)
+MODULE_CAS_PROTO(dre)
+MODULE_CAS_PROTO(conax)
+MODULE_CAS_PROTO(nagra)
+MODULE_CAS_PROTO(videoguard)
+MODULE_CAS_PROTO(mediaguard)
+MODULE_CAS_PROTO(cryptoworks)
+MODULE_CAS_PROTO(bulcrypt)
+MODULE_CAS_PROTO(exset)
+MODULE_CAS_PROTO(griffin)
+
+#define CAS_INIT_LIST \
+    { \
+        CAS_INIT(irdeto), \
+        CAS_INIT(viaccess), \
+        CAS_INIT(dre), \
+        CAS_INIT(conax), \
+        CAS_INIT(nagra), \
+        CAS_INIT(videoguard), \
+        CAS_INIT(mediaguard), \
+        CAS_INIT(cryptoworks), \
+        CAS_INIT(bulcrypt), \
+        CAS_INIT(exset), \
+        CAS_INIT(griffin), \
+        NULL \
     }
 
 /*

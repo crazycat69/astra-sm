@@ -31,9 +31,7 @@
  *      cas_pnr     - number, original PNR
  */
 
-#include <astra.h>
 #include "module_cam.h"
-#include "cas/cas_list.h"
 
 #ifndef FFDECSA
 #   define FFDECSA 1
@@ -130,6 +128,8 @@ struct module_data_t
 
 #define BISS_CAID 0x2600
 #define MSG(_msg) "[decrypt %s] " _msg, mod->name
+
+static cas_init_t cas_init_list[] = CAS_INIT_LIST;
 
 static void ca_stream_set_keys(ca_stream_t *ca_stream, const uint8_t *even, const uint8_t *odd);
 
