@@ -8,6 +8,8 @@ Usage: $0 [OPTIONS]
 
     --bin=PATH                  - path to install binary file.
                                   default value is /usr/bin/astra
+    --scripts=PATH              - path to install scripts.
+                                  default value is /etc/astra/scripts
 
     --with-modules=PATH[:PATH]  - list of modules (by default: *)
                                   * - include all modules from ./modules dir.
@@ -38,6 +40,7 @@ APP_STRIP=":"
 
 ARG_CC=0
 ARG_BPATH="/usr/bin/$APP"
+ARG_SPATH="/etc/astra/scripts"
 ARG_MODULES="*"
 ARG_BUILD_STATIC=0
 ARG_CFLAGS=""
@@ -62,6 +65,9 @@ while [ $# -ne 0 ] ; do
             ;;
         "--bin="*)
             ARG_BPATH=`echo $OPT | sed -e 's/^[a-z-]*=//'`
+            ;;
+        "--scripts="*)
+            ARG_SPATH=`echo $OPT | sed -e 's/^[a-z-]*=//' -e 's/\/$//'`
             ;;
         "--with-modules="*)
             ARG_MODULES=`echo $OPT | sed -e 's/^[a-z-]*=//'`
@@ -329,7 +335,7 @@ __check_main_app()
     fi
     cat <<EOF
 	@echo "   CC: \$@"
-	@\$(CC) \$(CFLAGS) -o \$@ -c \$<
+	@\$(CC) \$(CFLAGS) -DASC_SPATH=\"$ARG_SPATH\" -o \$@ -c \$<
 EOF
 
     return 0
@@ -519,6 +525,7 @@ Linker Flags:
 
 Install Path:
   BINARY: $ARG_BPATH
+ SCRIPTS: $ARG_SPATH
 EOF
 
 cat >&5 <<EOF
@@ -527,6 +534,7 @@ LDFLAGS     = $APP_LDFLAGS
 STRIP       = $APP_STRIP
 VERSION     = $VERSION
 BPATH       = $ARG_BPATH
+SPATH       = $ARG_SPATH
 
 \$(APP): $APP_OBJS \$(CORE_OBJS) \$(MODS_OBJS)
 	@echo "BUILD: \$@"
@@ -537,6 +545,7 @@ install: \$(APP)
 	@echo "INSTALL: \$(BPATH)"
 	@rm -f \$(BPATH)
 	@cp \$(APP) \$(BPATH)
+	@mkdir -p \$(SPATH)
 EOF
 
 cat >&5 <<EOF
