@@ -91,6 +91,7 @@ static void check_device_net(void)
 
     int fd = open(dev_name, O_RDWR | O_NONBLOCK);
     static char dvb_mac[] = "00:00:00:00:00:00";
+    int success = 0;
 
     do
     {
@@ -132,11 +133,20 @@ static void check_device_net(void)
         {
             lua_pop(lua, 1);
             lua_pushfstring(lua, "NET_REMOVE_IF failed [%s]", strerror(errno));
+            break;
         }
+
+        success = 1;
     } while(0);
 
     if(fd > 0)
         close(fd);
+
+    if (!success)
+    {
+        lua_setfield(lua, -2, "net_error");
+        lua_pushstring(lua, "ERROR");
+    }
 
     lua_setfield(lua, -2, "mac");
 }

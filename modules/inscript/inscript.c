@@ -103,6 +103,11 @@ static int fn_inscript_callback(lua_State *L)
         load = load_inscript((const char *)dvbls, sizeof(dvbls), "=app");
         argv_idx += 1;
     }
+    else if(!strcmp(script, "--dvbwrite"))
+    {
+        load = load_inscript((const char *)dvbwrite, sizeof(dvbwrite), "=app");
+        argv_idx += 1;
+    }
     else if(!access(script, R_OK))
     {
         load = luaL_dofile(lua, script);

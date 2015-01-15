@@ -560,7 +560,9 @@ function dvb_tune(conf)
         conf.device = nil
 
         if dvb_list == nil then
-            if dvbls then
+            if persistent_dvbs then
+                dvb_list = persistent_dvbs
+            elseif dvbls then
                 dvb_list = dvbls()
             else
                 dvb_list = {}
@@ -756,6 +758,7 @@ Available Applications:
                         via the HTTP protocol
     --analyze           Astra Analyze is a MPEG-TS stream analyzer
     --dvbls             DVB Adapters information list
+    --dvbwrite          Write out script containing adapter list
     SCRIPT              launch Astra script
 
 Astra Options:
