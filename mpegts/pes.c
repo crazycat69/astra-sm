@@ -39,14 +39,11 @@ void mpegts_pes_destroy(mpegts_pes_t *pes)
     free(pes);
 }
 
-bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts
-                    , pes_callback_t callback, void *arg)
+bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts)
 {
-    bool result = false;
-
     /* locate payload */
     const uint8_t *payload = TS_GET_PAYLOAD(ts);
-    const size_t paylen = (size_t)((ts + TS_PACKET_SIZE) - payload);
+    size_t paylen = TS_PACKET_SIZE - (payload - ts);
 
     if(!payload || paylen > TS_BODY_SIZE)
         /* no payload/invalid size */
@@ -54,70 +51,43 @@ bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts
 
     /* check continuity */
     const uint8_t cc = TS_GET_CC(ts);
-    if(pes->buffer_skip && cc != ((pes->i_cc + 1) & 0xf))
+    bool cc_fail = false;
+
+    if(pes->expect_size && cc != ((pes->i_cc + 1) & 0xf))
     {
-        pes->buffer_size = pes->buffer_skip;
         pes->truncated++;
+        cc_fail = true;
+        /* XXX: do we need to bump o_cc? */
     }
+
     pes->i_cc = cc;
 
-    /* packet start flag */
-    const bool is_start = (TS_IS_PAYLOAD_START(ts)
-        && (PES_BUFFER_GET_HEADER(payload) == 0x1)
-        && (paylen >= PES_HEADER_SIZE));
+    /* check for PES header */
+    const bool is_start = (PES_BUFFER_IS_START(payload, ts)
+        && paylen >= PES_HEADER_SIZE);
 
-    if(pes->buffer_skip)
+    /* force-out TS path; used by both modes */
+    const bool has_data = (pes->expect_size && pes->buf_read < pes->buf_write);
+
+    if((is_start && has_data) || cc_fail)
     {
-        uint8_t *dst = &pes->buffer[pes->buffer_skip];
-        size_t remain = (pes->buffer_size - pes->buffer_skip);
-
-        if(is_start)
-        {
-            if(pes->buffer_size != PES_MAX_BUFFER
-               && pes->buffer_size != pes->buffer_skip)
-                /* broken header */
-                asc_log_error(MSG("size mismatch: %zu != %zu, pid: %hu")
-                              , pes->buffer_size, pes->buffer_skip, pes->pid);
-
-            /* got startcode for next packet */
-            pes->buffer_size = pes->buffer_skip;
-            remain = 0;
-        }
-
-        if(remain > paylen)
-            remain = paylen;
-        else
-            /* no more data */
-            pes->buffer_skip = 0;
-
-        memcpy(dst, payload, remain);
-
-        if(!pes->buffer_skip)
-        {
-            /* assembled full PES packet */
-            callback(arg, pes);
-            pes->sent++;
-            result = true;
-        }
-        else
-            pes->buffer_skip += remain;
+        pes->fast = false;
+        mpegts_pes_demux(pes);
     }
 
+    /* reset buffer on new packet */
     if(is_start)
     {
-        /* new packet; reset buffer */
-        pes->buffer_size = pes->buffer_skip = 0;
+        asc_assert(pes->buf_write == pes->buf_read
+                   , MSG("BUG: didn't send whole buffer"));
+
+        pes->buf_write = pes->buf_read = 0;
         pes->pcr = pes->pts = pes->dts = XTS_NONE;
         pes->received++;
 
-        /* determine buffer size */
-        size_t bufsize = PES_BUFFER_GET_SIZE(payload);
-        if(bufsize <= PES_HEADER_SIZE) /* bufsize is at most 0xFFFF+6 */
-            /* unknown packet length */
-            bufsize = PES_MAX_BUFFER;
-
         /* parse headers */
         pes->key = TS_IS_RAI(ts); /* random access indicator */
+        pes->expect_size = PES_BUFFER_GET_SIZE(payload);
         pes->stream_id = PES_BUFFER_GET_SID(payload);
         memcpy(&pes->ext, &payload[PES_HDR_BASIC], PES_HDR_EXT);
 
@@ -131,49 +101,66 @@ bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts
         if(TS_IS_PCR(ts))
             pes->pcr = TS_GET_PCR(ts);
 
-        /* copy first data portion */
-        pes->buffer_size = bufsize;
-        if(bufsize > paylen)
-            /* PES split over several TS packets */
-            pes->buffer_skip = bufsize = paylen;
+        /* cut off header before buffering */
+        const size_t hdrlen = (PES_HEADER_SIZE + pes->ext.hdrlen);
+        if(hdrlen >= paylen)
+            /* no data to buffer */
+            return false;
 
-        memcpy(pes->buffer, payload, bufsize);
+        payload += hdrlen;
+        paylen -= hdrlen;
 
-        if(!pes->buffer_skip)
-        {
-            /* payload smaller than one TS packet */
-            callback(arg, pes);
-            pes->sent++;
-            result = true;
-        }
+        /* set mode and adjust expected packet size */
+        pes->fast = (pes->mode == PES_MODE_FAST);
+
+        if(pes->expect_size <= hdrlen)
+            /* variable length (e.g. video) */
+            pes->expect_size = PES_MAX_BUFFER;
+        else
+            /* fixed length */
+            pes->expect_size -= hdrlen;
     }
 
-    if(!result && !pes->buffer_skip)
-        /* TS packet out of sequence */
-        pes->dropped++;
+    if(pes->expect_size)
+    {
+        memcpy(&pes->buffer[pes->buf_write], payload, paylen);
+        pes->buf_write += paylen;
 
-    return result;
+        if(pes->expect_size == pes->buf_write)
+        {
+            /* fixed-length TS path; used by both modes */
+            pes->fast = false;
+            mpegts_pes_demux(pes);
+        }
+        else if(pes->fast)
+        {
+            /* fast TS path; send output as soon as possible */
+            mpegts_pes_demux(pes);
+        }
+    }
+    else
+    {
+        /* got nowhere to send this */
+        pes->dropped++;
+    }
+
+    return true;
 }
 
-void mpegts_pes_demux(mpegts_pes_t *pes, ts_callback_t callback, void *arg)
+void mpegts_pes_demux(mpegts_pes_t *pes)
 {
     uint8_t *ts = pes->ts;
 
-    bool is_start = 1;
-    size_t skip = PES_HEADER_SIZE + pes->ext.hdrlen;
-
-    if(skip > pes->buffer_size)
+    while(pes->buf_read < pes->buf_write)
     {
-        /* header longer than packet itself */
-        asc_log_error(MSG("oversized PES header: %zu > %zu, pid: %hu")
-                      , skip, pes->buffer_size, pes->pid);
+        const bool is_start = (pes->buf_read == 0);
+        const size_t remain = (pes->buf_write - pes->buf_read);
 
-        skip = pes->buffer_size;
-    }
+        if(pes->fast && remain < TS_BODY_SIZE)
+            /* wait for more data */
+            break;
 
-    while(skip < pes->buffer_size)
-    {
-        uint8_t *pay = &pes->ts[TS_HEADER_SIZE];
+        uint8_t *pay = &ts[TS_HEADER_SIZE];
         uint8_t *pes_h = NULL;
         size_t space = TS_BODY_SIZE;
 
@@ -194,7 +181,9 @@ void mpegts_pes_demux(mpegts_pes_t *pes, ts_callback_t callback, void *arg)
         size_t pes_hlen = 0;
         if(is_start)
         {
-            is_start = 0;
+            /* callback might change header, so call it first */
+            if(pes->on_pes)
+                pes->on_pes(pes->cb_arg, pes);
 
             /* set random access on key frames */
             if(pes->key)
@@ -238,14 +227,18 @@ void mpegts_pes_demux(mpegts_pes_t *pes, ts_callback_t callback, void *arg)
             pes_h[3] = pes->stream_id;
 
             /* recalculate packet size */
-            const size_t pktlen = (pes->buffer_size - skip
-                + pes_hlen - PES_HDR_BASIC);
+            if(!pes->fast)
+                pes->expect_size = pes->buf_write;
 
-            if(pktlen <= 0xFFFF)
+            if(pes->expect_size != PES_MAX_BUFFER)
             {
-                /* can't define length for larger packets */
-                pes_h[4] = pktlen >> 8;
-                pes_h[5] = pktlen;
+                const size_t pktlen = (pes->expect_size - PES_HDR_BASIC);
+                if(pktlen <= 0xFFFF)
+                {
+                    /* can't define length for larger packets */
+                    pes_h[4] = pktlen >> 8;
+                    pes_h[5] = pktlen;
+                }
             }
 
             /* extension */
@@ -260,11 +253,10 @@ void mpegts_pes_demux(mpegts_pes_t *pes, ts_callback_t callback, void *arg)
                 }
             }
 
-            space = (space - af_size - pes_hlen);
+            space -= (af_size + pes_hlen);
         }
 
         /* pad last TS packet via AF */
-        const size_t remain = (pes->buffer_size - skip);
         if(remain < space)
         {
             const size_t stuffing = (space - remain);
@@ -294,16 +286,23 @@ void mpegts_pes_demux(mpegts_pes_t *pes, ts_callback_t callback, void *arg)
             pay += pes_hlen;
         }
 
-        memcpy(pay, &pes->buffer[skip], space);
-        callback(arg, ts);
+        memcpy(pay, &pes->buffer[pes->buf_read], space);
+        if(pes->on_ts)
+            pes->on_ts(pes->cb_arg, ts);
 
-        skip += space;
+        pes->buf_read += space;
     }
 
-    if(skip != pes->buffer_size)
+    if(!pes->fast)
     {
-        /* shouldn't happen */
-        asc_log_error(MSG("size mismatch: %zu != %zu, pid: %hu")
-                      , skip, pes->buffer_size, pes->pid);
+        if(pes->expect_size != PES_MAX_BUFFER
+           && pes->buf_write != pes->expect_size)
+        {
+            /* happens with crappy streams */
+            asc_log_error(MSG("wrong size: expected %zu, got %zu, pid: %hu")
+                          , pes->expect_size, pes->buf_write, pes->pid);
+        }
+
+        pes->expect_size = 0;
     }
 }

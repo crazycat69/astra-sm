@@ -34,6 +34,13 @@
         (_pes[0] << 16) | (_pes[1] << 8) | (_pes[2]) \
     )
 
+/* first PES segment */
+#define PES_BUFFER_IS_START(_pes, _ts) \
+    ( \
+        TS_IS_PAYLOAD_START(_ts) && \
+        PES_BUFFER_GET_HEADER(_pes) == 0x000001 \
+    )
+
 /* stream ID */
 #define PES_BUFFER_GET_SID(_pes) (_pes[3])
 
@@ -77,6 +84,18 @@
 /* wrappers */
 #define PES_SET_PTS(__x, __v) PES_SET_XTS(__x, 9, 0x2, __v)
 #define PES_SET_DTS(__x, __v) PES_SET_XTS(__x, 14, 0x1, __v)
+
+typedef struct mpegts_pes_t mpegts_pes_t;
+typedef void (*pes_callback_t)(void *, mpegts_pes_t *);
+
+/* preferred PES buffering mode */
+typedef enum {
+    /* output as soon as possible (default) */
+    PES_MODE_FAST = 0,
+
+    /* wait until we have the whole packet */
+    PES_MODE_WHOLE,
+} pes_mode_t;
 
 /* extension header struct */
 typedef struct __attribute__ ((__packed__)) {
@@ -122,16 +141,17 @@ typedef struct __attribute__ ((__packed__)) {
 } mpegts_pes_ext_t;
 
 /* (de)muxer context struct */
-typedef struct
+struct mpegts_pes_t
 {
     /* TS header */
     uint16_t pid;
-    uint8_t i_cc; /* mux CC */
-    uint8_t o_cc; /* demux CC */
+    uint8_t i_cc; /* input CC */
+    uint8_t o_cc; /* output CC */
     bool key;     /* random access */
 
     /* PES header */
     uint8_t stream_id;
+    size_t expect_size;
 
     /* PES extension header */
     mpegts_pes_ext_t ext;
@@ -141,27 +161,33 @@ typedef struct
     uint64_t dts;
     uint64_t pcr;
 
-    /* packet counters */
+    /* input counters */
     unsigned received;
-    unsigned sent;
     unsigned truncated;
     unsigned dropped;
 
     /* mux buffer */
-    size_t buffer_size;
-    size_t buffer_skip;
     uint8_t buffer[PES_MAX_BUFFER];
+    size_t buf_read;
+    size_t buf_write;
 
     /* demux buffer */
     uint8_t ts[TS_PACKET_SIZE];
-} mpegts_pes_t;
 
-typedef void (*pes_callback_t)(void *, mpegts_pes_t *);
+    /* output mode */
+    pes_mode_t mode;
+    bool fast;
+
+    /* callbacks */
+    void *cb_arg;
+    pes_callback_t on_pes;
+    ts_callback_t on_ts;
+};
 
 mpegts_pes_t *mpegts_pes_init(uint16_t pid);
 void mpegts_pes_destroy(mpegts_pes_t *pes);
 
-bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts, pes_callback_t callback, void *arg);
-void mpegts_pes_demux(mpegts_pes_t *pes, ts_callback_t callback, void *arg);
+bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts);
+void mpegts_pes_demux(mpegts_pes_t *pes);
 
 #endif /* _TS_PES_ */
