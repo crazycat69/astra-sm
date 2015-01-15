@@ -1,7 +1,7 @@
 /*
  * Astra Module: Remux
  *
- * Copyright (C) 2014, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2014-2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -60,40 +60,6 @@ pcr_stream_t *pcr_stream_find(const module_data_t *mod, uint16_t pid);
 void pcr_stream_destroy(pcr_stream_t *p);
 
 /*
- * output buffer
- */
-typedef struct
-{
-    const char *name;
-    uint64_t rate;
-
-    size_t size;
-
-    asc_thread_t *thread;
-    asc_thread_buffer_t *output;
-    bool is_thread_started;
-
-    ts_callback_t callback;
-    void *cb_arg;
-} remux_buffer_t;
-
-/* thread loop wake up interval, msecs */
-#define BUFFER_USLEEP 5
-
-/* buffer size, seconds */
-#define BUFFER_SECS 4
-
-/* start output at this fill level */
-#define BUFFER_NORM 25
-
-/* when to dump buffer contents */
-#define BUFFER_HIGH 75
-
-remux_buffer_t *remux_buffer_init(const char *name, uint64_t rate);
-void remux_buffer_push(remux_buffer_t *buf, const uint8_t *ts);
-void remux_buffer_destroy(remux_buffer_t *buf);
-
-/*
  * module instance
  */
 struct module_data_t
@@ -104,7 +70,6 @@ struct module_data_t
     const char *name;
     unsigned rate;
     int pcr_delay;
-    bool no_buffer;
 
     /* output bytes */
     uint64_t offset;
@@ -145,8 +110,6 @@ struct module_data_t
 
     uint16_t *emms;
     unsigned emm_cnt;
-
-    remux_buffer_t *buffer;
 };
 
 /* default PCR insertion interval, ms */

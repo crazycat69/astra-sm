@@ -1,7 +1,7 @@
 /*
  * Astra Module: Remux
  *
- * Copyright (C) 2014, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2014-2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +25,6 @@
  *      rate - target bitrate, bits per second
  *      pcr_interval - PCR insertion interval, ms
  *      pcr_delay - delay to apply to PCR value, ms
- *      no_buffer - disable output TS buffering
  */
 
 #include <astra.h>
@@ -126,10 +125,7 @@ static void on_ts_out(void *arg, const uint8_t *ts)
 
     /* write early; PCR gets messed up otherwise */
     mod->offset += TS_PACKET_SIZE;
-    if(mod->buffer)
-        remux_buffer_push(mod->buffer, ts);
-    else
-        module_stream_send(mod, ts);
+    module_stream_send(mod, ts);
 
     /* insert SI */
     if(can_insert(&mod->pat_count, mod->pat_interval))
@@ -377,27 +373,12 @@ static void module_init(module_data_t *mod)
     mod->stream[0x13] = MPEGTS_PACKET_DATA; /* RST */
     mod->stream[0x14] = MPEGTS_PACKET_DATA; /* TDT, TOT */
 
-    /* create output buffer */
-    module_option_boolean("no_buffer", &mod->no_buffer);
-
-    if(!mod->no_buffer)
-    {
-        remux_buffer_t *const buf
-            = remux_buffer_init(mod->name, mod->rate);
-
-        buf->callback = (ts_callback_t)__module_stream_send;
-        buf->cb_arg = &mod->__stream;
-
-        mod->buffer = buf;
-    }
-
     module_stream_init(mod, on_ts_in);
 }
 
 static void module_destroy(module_data_t *mod)
 {
     module_stream_destroy(mod);
-    remux_buffer_destroy(mod->buffer);
 
     /* PSI deinit */
     mpegts_psi_destroy(mod->pat);
