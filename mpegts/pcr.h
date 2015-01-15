@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2014-2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,48 +22,72 @@
 #ifndef _TS_PCR_
 #define _TS_PCR_ 1
 
-/*
- * oooooooooo    oooooooo8 oooooooooo
- *  888    888 o888     88  888    888
- *  888oooo88  888          888oooo88
- *  888        888o     oo  888  88o
- * o888o        888oooo88  o888o  88o8
- *
- */
+/* PCR frequency, Hz */
+#define PCR_TIME_BASE 27000000L
 
-#define TS_IS_PCR(_ts)                                                                          \
-    (                                                                                           \
-        (_ts[0] == 0x47) &&                                                                     \
-        (TS_IS_AF(_ts)) &&              /* adaptation field */                                  \
-        (_ts[4] >= 7) &&                /* adaptation field length */                           \
-        (_ts[5] & 0x10)                 /* PCR_flag */                                          \
+/* position of last byte in PCR field */
+#define PCR_LAST_BYTE 11
+
+/* absent timestamp marker */
+#define XTS_NONE UINT64_MAX
+
+/* whether TS packet contains PCR */
+#define TS_IS_PCR(__x) \
+    ( \
+        (TS_IS_SYNC(__x)) && \
+        (TS_IS_AF(__x)) && \
+        (__x[4] >= 7) && /* AF length */ \
+        (__x[5] & 0x10) /* PCR flag */ \
     )
 
-#define TS_GET_PCR(_ts) \
-    (( \
-        ((uint64_t)(_ts)[6] << 25) | \
-        ((uint64_t)(_ts)[7] << 17) | \
-        ((uint64_t)(_ts)[8] << 9 ) | \
-        ((uint64_t)(_ts)[9] << 1 ) | \
-        ((uint64_t)(_ts)[10] >> 7) \
-    ) * 300 + ( \
-        (((uint64_t)(_ts)[10] & 0x01) << 8) | ((uint64_t)(_ts)[11]) \
-    ))
+/* extract PCR base (90KHz) */
+#define TS_PCR_BASE(__x) \
+    ( \
+        ( \
+            (uint64_t)((__x)[6]) << 25 \
+        ) | ( \
+            (uint64_t)((__x)[7]) << 17 \
+        ) | ( \
+            (uint64_t)((__x)[8]) << 9 \
+        ) | ( \
+            (uint64_t)((__x)[9]) << 1 \
+        ) | ( \
+            (uint64_t)((__x)[10]) >> 7 \
+        ) \
+    )
 
-#define TS_SET_PCR(_ts, _pcr)                                                                   \
-    {                                                                                           \
-        uint8_t *const __ts = _ts;                                                              \
-        const uint64_t __pcr = _pcr;                                                            \
-        const uint64_t __pcr_base = __pcr / 300;                                                \
-        const uint64_t __pcr_ext = __pcr % 300;                                                 \
-        __ts[6] = (__pcr_base >> 25) & 0xFF;                                                    \
-        __ts[7] = (__pcr_base >> 17) & 0xFF;                                                    \
-        __ts[8] = (__pcr_base >> 9 ) & 0xFF;                                                    \
-        __ts[9] = (__pcr_base >> 1 ) & 0xFF;                                                    \
-        __ts[10] = ((__pcr_base << 7) & 0x80) | 0x7E | ((__pcr_ext >> 8) & 0x01);               \
-        __ts[11] = __pcr_ext & 0xFF;                                                            \
-    }
+/* extract PCR extension (27MHz) */
+#define TS_PCR_EXT(__x) \
+    ( \
+        ( \
+            ((uint64_t)((__x)[10]) & 0x1) << 8 \
+        ) | ( \
+            (uint64_t)((__x)[11]) \
+        ) \
+    )
 
+/* set PCR fields in a packet, separately */
+#define TS_SET_PCR_FIELDS(__x, __b, __e) \
+    do { \
+        (__x)[6] = ((__b) >> 25) & 0xff; \
+        (__x)[7] = ((__b) >> 17) & 0xff; \
+        (__x)[8] = ((__b) >> 9) & 0xff; \
+        (__x)[9] = ((__b) >> 1) & 0xff; \
+        (__x)[10] = 0x7e | (((__b) << 7) & 0x80) | (((__e) >> 8) & 0x1); \
+        (__x)[11] = (__e) & 0xff; \
+    } while(0);
+
+/* get PCR value */
+#define TS_GET_PCR(__x) \
+    ( \
+        (TS_PCR_BASE(__x) * 300) + TS_PCR_EXT(__x) \
+    )
+
+/* set PCR value */
+#define TS_SET_PCR(__x, __v) \
+    TS_SET_PCR_FIELDS(__x, ((__v) / 300), ((__v) % 300));
+
+/* usecs between two PCR values */
 uint64_t mpegts_pcr_block_us(uint64_t *pcr_last, const uint64_t *pcr_current);
 
 #endif /* _TS_PCR_ */
