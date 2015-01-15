@@ -475,25 +475,27 @@ cat >&6 <<EOF
 #ifndef _CONFIG_H_
 #define _CONFIG_H_
 
+#include <lua/lua.h>
+
 EOF
 
 for M in $APP_MODULES_CONF ; do
-    echo "extern int luaopen_$M(lua_State *);" >&6
+    echo "LUA_API int luaopen_$M(lua_State *);" >&6
 done
 
 cat >&6 <<EOF
 
-int (*astra_mods[])(lua_State *) =
-{
+#define ASTRA_MODULES \\
+    { \\
 EOF
 
 for M in $APP_MODULES_CONF ; do
-    echo "    luaopen_$M," >&6
+    echo "        luaopen_$M, \\" >&6
 done
 
 cat >&6 <<EOF
-    NULL
-};
+        NULL \\
+    }
 
 #endif /* _CONFIG_H_ */
 EOF

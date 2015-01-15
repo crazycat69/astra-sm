@@ -21,6 +21,8 @@
 #ifndef _ASTRA_H_
 #define _ASTRA_H_ 1
 
+#include "config.h"
+
 #include "core/asc.h"
 
 #include "modules/astra/base.h"

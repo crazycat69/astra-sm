@@ -32,6 +32,8 @@ jmp_buf main_loop;
 bool is_main_loop_idle = true;
 bool is_sighup = false;
 
+static int (*astra_mods[])(lua_State *) = ASTRA_MODULES;
+
 void astra_exit(void)
 {
 #ifndef _WIN32
