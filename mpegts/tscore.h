@@ -47,6 +47,13 @@
 #define TS_IS_AF(_ts) ((_ts[3] & 0x20))
 #define TS_IS_SCRAMBLED(_ts) ((_ts[3] & 0xC0))
 
+#define TS_IS_RAI(__x) \
+    ( \
+        (TS_IS_SYNC(__x)) && \
+        (TS_IS_AF(__x)) && \
+        (__x[5] & 0x40) /* random access flag */ \
+    )
+
 #define TS_GET_PID(_ts) ((uint16_t)(((_ts[1] & 0x1F) << 8) | _ts[2]))
 #define TS_SET_PID(_ts, _pid)                                                                   \
     {                                                                                           \
