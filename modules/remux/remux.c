@@ -163,10 +163,21 @@ void remux_pes(void *arg, mpegts_pes_t *pes)
     /* reset error stats */
     if(pes->truncated || pes->dropped)
     {
+        /* don't report initial packet loss */
         if(pes->received > 0)
-            /* don't report initial packet loss */
-            asc_log_error(MSG("pid: %hu, PES truncated: %u, TS dropped: %u")
-                          , pes->pid, pes->truncated, pes->dropped);
+        {
+            char str[128];
+            unsigned pos = 0;
+
+            pos += sprintf(&str[pos], "pid: %hu", pes->pid);
+            if (pes->dropped)
+                pos += sprintf(&str[pos], ", TS dropped: %u", pes->dropped);
+
+            if (pes->truncated)
+                pos += sprintf(&str[pos], ", PES truncated: %u", pes->truncated);
+
+            asc_log_error(MSG("%s"), str);
+        }
 
         pes->truncated = pes->dropped = 0;
     }
