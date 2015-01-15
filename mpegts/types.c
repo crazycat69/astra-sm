@@ -113,17 +113,43 @@ static void push_description_text(const uint8_t *data)
     luaL_pushresult(&b);
 }
 
-#define HEX_PREFIX_SIZE 2
-#define LINE_END_SIZE 1
+#define HEX_BUFSIZE 128
 
 static const char __data[] = "data";
 static const char __type_name[] = "type_name";
 static const char __strip[] = "... (strip)";
 
+static char *fancy_hex_str(const uint8_t *ptr, const uint8_t len)
+{
+    char *buf = calloc(1, HEX_BUFSIZE);
+    asc_assert(buf != NULL, "calloc() failed");
+
+    unsigned int pos = 0;
+    buf[pos++] = '0';
+    buf[pos++] = 'x';
+
+    for(unsigned int i = 0; i < len; i++)
+    {
+        const unsigned int space = HEX_BUFSIZE - pos;
+
+        if (space <= sizeof(__strip))
+        {
+            /* no space left */
+            snprintf(&buf[pos], space, "%s", __strip);
+            pos += space - 1;
+
+            break;
+        }
+
+        hex_to_str(&buf[pos], ptr++, 1);
+        pos += 2;
+    }
+
+    return buf;
+}
+
 void mpegts_desc_to_lua(const uint8_t *desc)
 {
-    char data[128];
-
     lua_newtable(lua);
 
     lua_pushnumber(lua, desc[0]);
@@ -148,22 +174,10 @@ void mpegts_desc_to_lua(const uint8_t *desc)
             const uint8_t ca_info_size = desc[1] - 4; // 4 = caid + ca_pid
             if(ca_info_size > 0)
             {
-                const int max_size = ((HEX_PREFIX_SIZE
-                                      + ca_info_size * 2
-                                      + LINE_END_SIZE) > (int)sizeof(data))
-                                   ? ((int)sizeof(data)
-                                      - HEX_PREFIX_SIZE
-                                      - (int)sizeof(__strip)
-                                      - LINE_END_SIZE) / 2
-                                   : ca_info_size;
+                char *text = fancy_hex_str(&desc[6], ca_info_size);
+                lua_pushstring(lua, text);
+                free(text);
 
-                data[0] = '0';
-                data[1] = 'x';
-                hex_to_str(&data[HEX_PREFIX_SIZE], &desc[6], max_size);
-                if(max_size != ca_info_size)
-                    sprintf(&data[HEX_PREFIX_SIZE + max_size], "%s", __strip);
-
-                lua_pushstring(lua, data);
                 lua_setfield(lua, -2, __data);
             }
             break;
@@ -357,24 +371,12 @@ void mpegts_desc_to_lua(const uint8_t *desc)
             lua_setfield(lua, -2, __type_name);
 
             const int desc_size = 2 + desc[1];
-            const int max_size = ((HEX_PREFIX_SIZE
-                                  + desc_size * 2
-                                  + LINE_END_SIZE) > (int)sizeof(data))
-                               ? ((int)sizeof(data)
-                                  - HEX_PREFIX_SIZE
-                                  - (int)sizeof(__strip)
-                                  - LINE_END_SIZE) / 2
-                               : desc_size;
 
-            data[0] = '0';
-            data[1] = 'x';
-            hex_to_str(&data[HEX_PREFIX_SIZE], desc, max_size);
-            if(max_size != desc_size)
-                sprintf(&data[HEX_PREFIX_SIZE + max_size], "%s", __strip);
+            char *text = fancy_hex_str(desc, desc_size);
+            lua_pushstring(lua, text);
+            free(text);
 
-            lua_pushstring(lua, data);
             lua_setfield(lua, -2, __data);
-
             break;
         }
     }
