@@ -19,8 +19,6 @@
 
 #include "remux.h"
 
-#define MSG(_msg) "[remux %s] " _msg, mod->name
-
 #define LIST_APPEND(__list, __cnt, __val) \
     do { \
         bool __found = false; \

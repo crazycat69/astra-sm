@@ -19,15 +19,13 @@
 
 #include "remux.h"
 
-#define MSG(_msg) "[remux] %s(): " _msg, __func__
-
 /*
  * TS program
  */
 ts_program_t *ts_program_init(uint16_t pnr, uint16_t pid)
 {
     ts_program_t *const prog = calloc(1, sizeof(*prog));
-    asc_assert(prog != NULL, MSG("calloc() failed"));
+    asc_assert(prog != NULL, MSGF("calloc() failed"));
 
     prog->pnr = pnr;
     prog->pmt_pid = pid;
@@ -64,7 +62,7 @@ void ts_program_destroy(ts_program_t *p)
 pcr_stream_t *pcr_stream_init(uint16_t pid)
 {
     pcr_stream_t *const st = calloc(1, sizeof(*st));
-    asc_assert(st != NULL, MSG("calloc() failed"));
+    asc_assert(st != NULL, MSGF("calloc() failed"));
 
     st->pid = pid;
 

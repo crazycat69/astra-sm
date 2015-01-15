@@ -22,6 +22,9 @@
 
 #include <astra.h>
 
+#define MSG(_msg) "[remux %s] " _msg, mod->name
+#define MSGF(_msg) "[remux] %s(): " _msg, __func__
+
 /*
  * TS program
  */

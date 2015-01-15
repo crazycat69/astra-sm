@@ -29,8 +29,6 @@
 
 #include "remux.h"
 
-#define MSG(_msg) "[remux %s] " _msg, mod->name
-
 /*
  * stuffing and PCR restamping
  */
