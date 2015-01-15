@@ -815,7 +815,7 @@ static void on_read(void *arg)
         lua_getfield(lua, headers, "content-length");
         if(lua_isnumber(lua, -1))
         {
-            mod->chunk_left = lua_tonumber(lua, -1);
+            mod->chunk_left = lua_tointeger(lua, -1);
             if(mod->chunk_left > 0)
             {
                 mod->is_content_length = true;

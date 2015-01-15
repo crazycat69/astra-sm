@@ -865,7 +865,7 @@ static void module_init(module_data_t *mod)
         {
             lua_foreach(lua, -2)
             {
-                const int pid = lua_tonumber(lua, -1);
+                const int pid = lua_tointeger(lua, -1);
                 mod->stream[pid] = MPEGTS_PACKET_PES;
                 module_stream_demux_join_pid(mod, pid);
             }
@@ -888,7 +888,7 @@ static void module_init(module_data_t *mod)
             lua_pop(lua, 1);
 
             lua_rawgeti(lua, -1, 2);
-            int val = lua_tonumber(lua, -1);
+            int val = lua_tointeger(lua, -1);
             asc_assert((val > 0 && val < NULL_TS_PID), "option 'map': value is out of range");
             lua_pop(lua, 1);
 
@@ -908,7 +908,7 @@ static void module_init(module_data_t *mod)
     {
         lua_foreach(lua, -2)
         {
-            const int pid = lua_tonumber(lua, -1);
+            const int pid = lua_tointeger(lua, -1);
             mod->pid_map[pid] = MAX_PID;
         }
     }
@@ -922,7 +922,7 @@ static void module_init(module_data_t *mod)
 
         lua_foreach(lua, -2)
         {
-            const int pid = lua_tonumber(lua, -1);
+            const int pid = lua_tointeger(lua, -1);
             mod->pid_map[pid] = 0;
         }
     }

@@ -379,7 +379,7 @@ static void on_client_read(void *arg)
         lua_getfield(lua, headers, "content-length");
         if(lua_isnumber(lua, -1))
         {
-            client->chunk_left = lua_tonumber(lua, -1);
+            client->chunk_left = lua_tointeger(lua, -1);
             if(client->chunk_left > 0)
             {
                 if(client->content)
@@ -531,7 +531,7 @@ static int method_send(module_data_t *mod)
     const int idx_response = 3;
 
     lua_getfield(lua, idx_response, __code);
-    const int code = lua_tonumber(lua, -1);
+    const int code = lua_tointeger(lua, -1);
     lua_pop(lua, 1); // code
 
     lua_getfield(lua, idx_response, __message);
@@ -921,7 +921,7 @@ static int method_abort(module_data_t *mod)
     asc_assert(lua_islightuserdata(lua, 2), MSG(":abort() client instance required"));
     asc_assert(lua_isnumber(lua, 3), MSG(":abort() code required"));
     http_client_t *client = lua_touserdata(lua, 2);
-    const int code = lua_tonumber(lua, 3);
+    const int code = lua_tointeger(lua, 3);
     const char *text = lua_isstring(lua, 4) ? lua_tostring(lua, 4) : NULL;
     http_client_abort(client, code, text);
     return 0;

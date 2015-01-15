@@ -107,7 +107,7 @@ static void on_downstream_send(void *arg)
     const int idx_response = 3;
 
     lua_getfield(lua, idx_response, "code");
-    const int code = lua_tonumber(lua, -1);
+    const int code = lua_tointeger(lua, -1);
     lua_pop(lua, 1); // code
 
     lua_getfield(lua, idx_response, "message");

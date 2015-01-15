@@ -33,7 +33,7 @@ bool module_option_number(const char *name, int *number)
 
     if(type == LUA_TNUMBER)
     {
-        *number = lua_tonumber(lua, -1);
+        *number = lua_tointeger(lua, -1);
         result = true;
     }
     else if(type == LUA_TSTRING)
@@ -85,7 +85,7 @@ bool module_option_boolean(const char *name, bool *boolean)
 
     if(type == LUA_TNUMBER)
     {
-        *boolean = (lua_tonumber(lua, -1) != 0) ? true : false;
+        *boolean = (lua_tointeger(lua, -1) != 0) ? true : false;
         result = true;
     }
     else if(type == LUA_TSTRING)
