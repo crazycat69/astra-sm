@@ -290,6 +290,7 @@ void mpegts_pes_demux(mpegts_pes_t *pes)
         if(pes->on_ts)
             pes->on_ts(pes->cb_arg, ts);
 
+        pes->sent++;
         pes->buf_read += space;
     }
 

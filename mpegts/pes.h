@@ -161,8 +161,9 @@ struct mpegts_pes_t
     uint64_t dts;
     uint64_t pcr;
 
-    /* input counters */
+    /* packet counters */
     unsigned received;
+    unsigned sent;
     unsigned truncated;
     unsigned dropped;
 

@@ -164,7 +164,7 @@ void remux_pes(void *arg, mpegts_pes_t *pes)
     if(pes->truncated || pes->dropped)
     {
         /* don't report initial packet loss */
-        if(pes->received > 0)
+        if(pes->sent > 0)
         {
             char str[128];
             unsigned pos = 0;
