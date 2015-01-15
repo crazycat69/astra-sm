@@ -384,12 +384,15 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
             {
                 switch(desc_pointer[0])
                 {
-                    case 0x59:
+                    case 0x56: /* EBU teletext */
+                    case 0x59: /* DVB subtitles */
                         mod->stream[pid]->type = MPEGTS_PACKET_SUB;
                         break;
-                    case 0x6A:
+
+                    case 0x6A: /* AC3 audio */
                         mod->stream[pid]->type = MPEGTS_PACKET_AUDIO;
                         break;
+
                     default:
                         break;
                 }
