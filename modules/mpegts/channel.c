@@ -553,6 +553,11 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
                         custom_pid = map_custom_pid(mod, pid, "audio");
                     break;
                 }
+                case MPEGTS_PACKET_SUB:
+                {
+                    custom_pid = map_custom_pid(mod, pid, "sub");
+                    break;
+                }
                 default:
                 {
                     custom_pid = map_custom_pid(mod, pid, "");
