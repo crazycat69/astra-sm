@@ -20,6 +20,8 @@
 #ifndef _REMUX_H_
 #define _REMUX_H_ 1
 
+#include <astra.h>
+
 /*
  * TS program
  */

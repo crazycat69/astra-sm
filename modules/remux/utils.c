@@ -17,7 +17,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <astra.h>
 #include "remux.h"
 
 #define MSG(_msg) "[remux] %s(): " _msg, __func__

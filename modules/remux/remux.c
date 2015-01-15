@@ -27,7 +27,6 @@
  *      pcr_delay - delay to apply to PCR value, ms
  */
 
-#include <astra.h>
 #include "remux.h"
 
 #define MSG(_msg) "[remux %s] " _msg, mod->name
@@ -202,7 +201,7 @@ static void on_ts_in(module_data_t *mod, const uint8_t *orig_ts)
      * TS input hook
      */
     const uint8_t *ts = orig_ts;
-    const uint16_t pid = TS_PID(ts);
+    const uint16_t pid = TS_GET_PID(ts);
 
     /*
      * TODO
@@ -216,7 +215,7 @@ static void on_ts_in(module_data_t *mod, const uint8_t *orig_ts)
 
     if(pcr)
     {
-        if(TS_PCR(ts))
+        if(TS_IS_PCR(ts))
             pcr->last = TS_GET_PCR(ts) - (unsigned)mod->pcr_delay;
 
         while(1)
@@ -248,13 +247,13 @@ static void on_ts_in(module_data_t *mod, const uint8_t *orig_ts)
         case MPEGTS_PACKET_AUDIO:
         case MPEGTS_PACKET_SUB:
             /* elementary stream */
-            if(!TS_SC(ts) && mod->pes[pid])
+            if(!TS_IS_SCRAMBLED(ts) && mod->pes[pid])
             {
                 /* pass it on for reassembly */
                 mpegts_pes_mux(mod->pes[pid], ts, on_pes, mod);
                 break;
             }
-            else if(TS_PCR(ts))
+            else if(TS_IS_PCR(ts))
             {
                 /* got PCR in a scrambled packet */
                 uint8_t *const new = mod->buf;
