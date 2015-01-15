@@ -20,7 +20,7 @@
 
 #include <astra.h>
 
-void __module_stream_detach(module_stream_t *stream, module_stream_t *child)
+static void __module_stream_detach(module_stream_t *stream, module_stream_t *child)
 {
     asc_list_for(stream->childs)
     {

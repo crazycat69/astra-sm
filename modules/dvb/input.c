@@ -226,7 +226,7 @@ static int __dmx_open(module_data_t *mod)
     return fd;
 }
 
-void dmx_set_pid(module_data_t *mod, uint16_t pid, int is_set)
+static void dmx_set_pid(module_data_t *mod, uint16_t pid, int is_set)
 {
     if(mod->dmx_budget)
         return;
@@ -255,7 +255,7 @@ void dmx_set_pid(module_data_t *mod, uint16_t pid, int is_set)
     }
 }
 
-void dmx_bounce(module_data_t *mod)
+static void dmx_bounce(module_data_t *mod)
 {
     const int fd_max = (mod->dmx_budget) ? 1 : MAX_PID;
     for(int i = 0; i < fd_max; ++i)
@@ -268,7 +268,7 @@ void dmx_bounce(module_data_t *mod)
     }
 }
 
-void dmx_open(module_data_t *mod)
+static void dmx_open(module_data_t *mod)
 {
     sprintf(mod->dmx_dev_name, "/dev/dvb/adapter%d/demux%d", mod->adapter, mod->device);
 
@@ -286,7 +286,7 @@ void dmx_open(module_data_t *mod)
     }
 }
 
-void dmx_close(module_data_t *mod)
+static void dmx_close(module_data_t *mod)
 {
     const int fd_max = (mod->dmx_budget) ? 1 : MAX_PID;
     for(int i = 0; i < fd_max; ++i)

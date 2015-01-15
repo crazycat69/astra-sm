@@ -131,9 +131,9 @@ struct module_data_t
 #define BISS_CAID 0x2600
 #define MSG(_msg) "[decrypt %s] " _msg, mod->name
 
-void ca_stream_set_keys(ca_stream_t *ca_stream, const uint8_t *even, const uint8_t *odd);
+static void ca_stream_set_keys(ca_stream_t *ca_stream, const uint8_t *even, const uint8_t *odd);
 
-ca_stream_t * ca_stream_init(module_data_t *mod, uint16_t ecm_pid)
+static ca_stream_t * ca_stream_init(module_data_t *mod, uint16_t ecm_pid)
 {
     ca_stream_t *ca_stream;
     asc_list_for(mod->ca_list)
@@ -170,7 +170,7 @@ ca_stream_t * ca_stream_init(module_data_t *mod, uint16_t ecm_pid)
     return ca_stream;
 }
 
-void ca_stream_destroy(ca_stream_t *ca_stream)
+static void ca_stream_destroy(ca_stream_t *ca_stream)
 {
 #if FFDECSA == 1
 
@@ -188,7 +188,7 @@ void ca_stream_destroy(ca_stream_t *ca_stream)
     free(ca_stream);
 }
 
-void ca_stream_set_keys(ca_stream_t *ca_stream, const uint8_t *even, const uint8_t *odd)
+static void ca_stream_set_keys(ca_stream_t *ca_stream, const uint8_t *even, const uint8_t *odd)
 {
 #if FFDECSA == 1
 

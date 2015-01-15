@@ -52,7 +52,7 @@ void set_even_control_word(void *keys, const unsigned char *even);
 void set_odd_control_word(void *keys, const unsigned char *odd);
 
 // -- get control words, 8 bytes each
-//void get_control_words(void *keys, unsigned char *even, unsigned char *odd);
+void get_control_words(void *keys, unsigned char *even, unsigned char *odd);
 
 // -- decrypt many TS packets
 // This interface is a bit complicated because it is designed for maximum speed.

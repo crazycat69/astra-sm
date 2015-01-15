@@ -18,7 +18,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <astra.h>
 #include "../module_cam.h"
 
 #include <openssl/des.h>
@@ -623,9 +622,9 @@ static void newcamd_reconnect(module_data_t *mod, bool timeout)
         newcamd_connect(mod);
 }
 
-void newcamd_send_em(  module_data_t *mod
-                     , module_decrypt_t *decrypt, void *arg
-                     , const uint8_t *buffer, uint16_t size)
+static void newcamd_send_em(  module_data_t *mod
+                            , module_decrypt_t *decrypt, void *arg
+                            , const uint8_t *buffer, uint16_t size)
 {
     if(mod->status != 3)
         return;

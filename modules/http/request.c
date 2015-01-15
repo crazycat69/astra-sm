@@ -171,7 +171,7 @@ static void call_error(module_data_t *mod, const char *msg)
     callback(mod);
 }
 
-void timeout_callback(void *arg)
+static void timeout_callback(void *arg)
 {
     module_data_t *mod = arg;
 
