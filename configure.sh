@@ -18,7 +18,6 @@ Usage: $0 [OPTIONS]
 
     --cc=GCC                    - custom C compiler (cross-compile)
     --static                    - build static binary
-    --arch=ARCH                 - CPU architecture type (by default: native)
 
     --debug                     - build version for debug
 
@@ -35,13 +34,12 @@ CONFFILE="config.h"
 
 APP="astra"
 APP_C="gcc"
-APP_STRIP="strip"
+APP_STRIP=":"
 
 ARG_CC=0
 ARG_BPATH="/usr/bin/$APP"
 ARG_MODULES="*"
 ARG_BUILD_STATIC=0
-ARG_ARCH="native"
 ARG_CFLAGS=""
 ARG_LDFLAGS=""
 ARG_LIBDVBCSA=0
@@ -80,9 +78,6 @@ while [ $# -ne 0 ] ; do
         "--build-static")
             ARG_BUILD_STATIC=1
             ;;
-        "--arch="*)
-            ARG_ARCH=`echo $OPT | sed -e 's/^[a-z-]*=//'`
-            ;;
         "--cflags="*)
             ARG_CFLAGS=`echo $OPT | sed -e 's/^[a-z-]*=//'`
             ;;
@@ -117,9 +112,9 @@ if test -f $MAKEFILE ; then
     echo >&2
 fi
 
-CFLAGS_DEBUG="-O2 -fomit-frame-pointer"
+CFLAGS_DEBUG="-fomit-frame-pointer"
 if [ $ARG_DEBUG -ne 0 ] ; then
-    CFLAGS_DEBUG="-g -O0"
+    CFLAGS_DEBUG="-g"
     APP_STRIP=":"
 fi
 
@@ -130,76 +125,6 @@ if [ -n "$ARG_CFLAGS" ] ; then
 fi
 
 MACHINE=`$APP_C -dumpmachine`
-ARCH=`echo $MACHINE | sed "s|-.*\$||"`
-
-echo $ARCH | grep -q "i[3-6]86\|x86_64"
-ISx86=$?
-
-cpucheck_c()
-{
-    cat <<EOF
-#include <stdio.h>
-int main()
-{
-#if defined(__i386__) || defined(__x86_64__)
-    unsigned int eax, ebx, ecx, edx;
-    __asm__ __volatile__ (  "cpuid"
-                          : "=a" (eax)
-                          , "=b" (ebx)
-                          , "=c" (ecx)
-                          , "=d" (edx)
-                          : "a"  (1));
-
-    if(ecx & (0x00080000 /* 4.1 */ | 0x00100000 /* 4.2 */ )) printf("-msse -msse2 -msse4");
-    else if(ecx & 0x00000001) printf("-msse -msse2");
-    else if(edx & 0x04000000) printf("-msse -msse2");
-    else if(edx & 0x02000000) printf("-msse");
-    else if(edx & 0x00800000) printf("-mmmx");
-#endif
-    return 0;
-}
-EOF
-}
-
-cpucheck()
-{
-    CPUCHECK=".cpucheck"
-    cpucheck_c | $APP_C -Werror -O2 -fno-pic -o $CPUCHECK -x c - >/dev/null 2>&1
-    if [ $? -eq 0 ] ; then
-        ./$CPUCHECK
-        rm $CPUCHECK
-    fi
-}
-
-if [ $ARG_CC -eq 0 ]; then
-    CPUFLAGS=`cpucheck`
-    if [ -n "$CPUFLAGS" ] ; then
-        $APP_C $CFLAGS $CPUFLAGS -E -x c /dev/null >/dev/null 2>&1
-        if [ $? -eq 0 ] ; then
-            CFLAGS="$CFLAGS $CPUFLAGS"
-        fi
-    fi
-elif [ $ISx86 -eq 0 ]; then
-    $APP_C $CFLAGS -msse -E -x c /dev/null >/dev/null 2>&1
-    if [ $? -eq 0 ] ; then
-        CFLAGS="$CFLAGS -msse"
-        $APP_C $CFLAGS -msse2 -E -x c /dev/null >/dev/null 2>&1
-        if [ $? -eq 0 ] ; then
-            CFLAGS="$CFLAGS -msse2"
-            $APP_C $CFLAGS -msse4 -E -x c /dev/null >/dev/null 2>&1
-            if [ $? -eq 0 ] ; then
-                CFLAGS="$CFLAGS -msse4"
-            fi
-        fi
-    fi
-fi
-
-$APP_C $CFLAGS -march=$ARG_ARCH -E -x c /dev/null >/dev/null 2>&1
-if [ $? -eq 0 ] ; then
-    CFLAGS="$CFLAGS -march=$ARG_ARCH"
-else
-    echo "Error: gcc does not support -march=$ARG_ARCH" >&2
-fi
 
 case "$MACHINE" in
 *"linux"*)
