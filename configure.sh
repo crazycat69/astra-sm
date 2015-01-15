@@ -457,6 +457,7 @@ check_module()
 
 check_module $SRCDIR/core "CORE_OBJS"
 check_module $SRCDIR/lua "CORE_OBJS"
+check_module $SRCDIR/mpegts "CORE_OBJS"
 
 # MODULES
 

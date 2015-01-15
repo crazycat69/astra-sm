@@ -27,7 +27,7 @@
 #include "modules/astra/module_lua.h"
 #include "modules/astra/module_stream.h"
 
-#include "modules/mpegts/mpegts.h"
+#include "mpegts/mpegts.h"
 
 /* version */
 
