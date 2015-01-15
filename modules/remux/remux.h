@@ -117,6 +117,10 @@ struct module_data_t
     unsigned emm_cnt;
 };
 
+void remux_ts_out(void *arg, const uint8_t *ts);
+void remux_pes(void *arg, mpegts_pes_t *pes);
+void remux_ts_in(module_data_t *mod, const uint8_t *orig_ts);
+
 /* default PCR insertion interval, ms */
 #define PCR_INTERVAL 20
 

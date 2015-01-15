@@ -421,7 +421,13 @@ void remux_pmt(void *arg, mpegts_psi_t *psi)
         {
             /* create muxers for A/V streams */
             asc_log_debug(MSG("creating PES muxer on pid %hu"), pid);
-            mod->pes[pid] = mpegts_pes_init(pid);
+
+            mpegts_pes_t * const pes = mpegts_pes_init(pid);
+            pes->on_pes = remux_pes;
+            pes->on_ts = remux_ts_out;
+            pes->cb_arg = mod;
+
+            mod->pes[pid] = pes;
         }
     }
 

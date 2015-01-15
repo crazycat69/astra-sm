@@ -105,7 +105,7 @@ static inline bool can_insert(unsigned *count, unsigned interval)
 /*
  * TS datapath
  */
-static void on_ts_out(void *arg, const uint8_t *ts)
+void remux_ts_out(void *arg, const uint8_t *ts)
 {
     /*
      * TS output hook
@@ -128,20 +128,20 @@ static void on_ts_out(void *arg, const uint8_t *ts)
     if(can_insert(&mod->pat_count, mod->pat_interval))
     {
         /* PAT */
-        mpegts_psi_demux(mod->custom_pat, on_ts_out, mod);
+        mpegts_psi_demux(mod->custom_pat, remux_ts_out, mod);
 
         /* PMT */
         for(unsigned i = 0; i < mod->prog_cnt; i++)
-            mpegts_psi_demux(mod->progs[i]->custom_pmt, on_ts_out, mod);
+            mpegts_psi_demux(mod->progs[i]->custom_pmt, remux_ts_out, mod);
     }
 
     /* CAT */
     if(can_insert(&mod->cat_count, mod->cat_interval))
-        mpegts_psi_demux(mod->custom_cat, on_ts_out, mod);
+        mpegts_psi_demux(mod->custom_cat, remux_ts_out, mod);
 
     /* SDT */
     if(can_insert(&mod->sdt_count, mod->sdt_interval))
-        mpegts_psi_demux(mod->custom_sdt, on_ts_out, mod);
+        mpegts_psi_demux(mod->custom_sdt, remux_ts_out, mod);
 
     /* PCR */
     for(unsigned i = 0; i < mod->pcr_cnt; i++)
@@ -149,11 +149,11 @@ static void on_ts_out(void *arg, const uint8_t *ts)
         pcr_stream_t *const pcr = mod->pcrs[i];
 
         if(can_insert(&pcr->count, mod->pcr_interval))
-            insert_pcr_packet(mod, pcr, on_ts_out);
+            insert_pcr_packet(mod, pcr, remux_ts_out);
     }
 }
 
-static void on_pes(void *arg, mpegts_pes_t *pes)
+void remux_pes(void *arg, mpegts_pes_t *pes)
 {
     /*
      * PES output hook
@@ -163,7 +163,7 @@ static void on_pes(void *arg, mpegts_pes_t *pes)
     /* reset error stats */
     if(pes->truncated || pes->dropped)
     {
-        if(pes->sent > 0)
+        if(pes->received > 0)
             /* don't report initial packet loss */
             asc_log_error(MSG("pid: %hu, PES truncated: %u, TS dropped: %u")
                           , pes->pid, pes->truncated, pes->dropped);
@@ -188,12 +188,9 @@ static void on_pes(void *arg, mpegts_pes_t *pes)
      *
      *  - add audio mixing/recoding
      */
-
-    /* split payload into several TS packets */
-    mpegts_pes_demux(pes, on_ts_out, mod);
 }
 
-static void on_ts_in(module_data_t *mod, const uint8_t *orig_ts)
+void remux_ts_in(module_data_t *mod, const uint8_t *orig_ts)
 {
     /*
      * TS input hook
@@ -235,7 +232,7 @@ static void on_ts_in(module_data_t *mod, const uint8_t *orig_ts)
             if(delta < 0)
                 break;
             else
-                insert_null_packet(mod, on_ts_out);
+                insert_null_packet(mod, remux_ts_out);
         }
     }
 
@@ -248,7 +245,7 @@ static void on_ts_in(module_data_t *mod, const uint8_t *orig_ts)
             if(!TS_IS_SCRAMBLED(ts) && mod->pes[pid])
             {
                 /* pass it on for reassembly */
-                mpegts_pes_mux(mod->pes[pid], ts, on_pes, mod);
+                mpegts_pes_mux(mod->pes[pid], ts);
                 break;
             }
             else if(TS_IS_PCR(ts))
@@ -282,7 +279,7 @@ static void on_ts_in(module_data_t *mod, const uint8_t *orig_ts)
         case MPEGTS_PACKET_NIT:
         case MPEGTS_PACKET_DATA:
             /* non-PES/scrambled payload, EIT, NIT, etc */
-            on_ts_out(mod, ts);
+            remux_ts_out(mod, ts);
             break;
 
         case MPEGTS_PACKET_PAT:
@@ -370,7 +367,7 @@ static void module_init(module_data_t *mod)
     mod->stream[0x13] = MPEGTS_PACKET_DATA; /* RST */
     mod->stream[0x14] = MPEGTS_PACKET_DATA; /* TDT, TOT */
 
-    module_stream_init(mod, on_ts_in);
+    module_stream_init(mod, remux_ts_in);
 }
 
 static void module_destroy(module_data_t *mod)
