@@ -20,3 +20,6 @@ case "$OS" in
 esac
 
 CFLAGS="-DLUA_COMPAT_ALL $CFLAGS"
+
+# we didn't write this, who cares
+CFLAGS="$CFLAGS -Wno-bad-function-cast -Wno-float-equal -Wno-pedantic -Wno-strict-overflow"

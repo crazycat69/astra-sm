@@ -118,7 +118,8 @@ if [ $ARG_DEBUG -ne 0 ] ; then
     APP_STRIP=":"
 fi
 
-CFLAGS="$CFLAGS_DEBUG -I$SRCDIR -Wall -Wextra -pedantic -fno-builtin"
+CFLAGS_WARN="-pedantic-errors -Waggregate-return -Wall -Wbad-function-cast -Wcast-align -Werror -Wextra -Wfloat-equal -Wformat=2 -Winit-self -Winline -Wjump-misses-init -Wlogical-op -Wmissing-declarations -Wmissing-include-dirs -Wmissing-prototypes -Wnested-externs -Wold-style-definition -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing -Wstrict-overflow=4 -Wstrict-prototypes -Wundef -Wuninitialized -Wunreachable-code -Wunused -Wwrite-strings"
+CFLAGS="$CFLAGS_DEBUG -I$SRCDIR $CFLAGS_WARN -fno-builtin -fstrict-aliasing -fstrict-overflow"
 
 if [ -n "$ARG_CFLAGS" ] ; then
     CFLAGS="$CFLAGS $ARG_CFLAGS"
@@ -258,7 +259,7 @@ fi
 
 # APP flags
 
-APP_CFLAGS="$CFLAGS -Wstrict-prototypes -std=iso9899:1999 -D_GNU_SOURCE"
+APP_CFLAGS="$CFLAGS -std=iso9899:1999 -D_GNU_SOURCE"
 APP_LDFLAGS="$LDFLAGS"
 
 # temporary file

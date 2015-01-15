@@ -341,7 +341,7 @@ static void module_init(module_data_t *mod)
     asc_assert(mod->pcr_delay >= -5000 && mod->pcr_delay <= 5000
                , MSG("pcr delay must be between -5000 and 5000 ms"));
 
-    mod->pcr_delay = (mod->pcr_delay * PCR_TIME_BASE) / 1000;
+    mod->pcr_delay *= (PCR_TIME_BASE / 1000);
 
     /* packet intervals */
     mod->pcr_interval = msecs_to_pkts(mod->rate, mod->pcr_interval);
