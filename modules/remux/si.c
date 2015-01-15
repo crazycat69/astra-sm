@@ -22,7 +22,7 @@
 #define LIST_APPEND(__list, __cnt, __val) \
     do { \
         bool __found = false; \
-        for(unsigned __i = 0; __i < __cnt; __i++) \
+        for(size_t __i = 0; __i < __cnt; __i++) \
         { \
             if(__list[__i] == __val) \
             { \
@@ -32,17 +32,18 @@
         } \
         if(!__found) \
         { \
-            __list = realloc(__list, sizeof(*__list) * (__cnt + 1)); \
-            asc_assert(__list != NULL, MSG("realloc() failed")); \
+            void *const __tmp = realloc(__list, sizeof(*__list) * (__cnt + 1)); \
+            asc_assert(__tmp != NULL, MSG("realloc() failed")); \
+            __list = __tmp; \
             __list[__cnt++] = __val; \
         } \
     } while(0);
 
 static inline bool list_contains_pid(const uint16_t list[]
-                                     , unsigned cnt
+                                     , size_t cnt
                                      , uint16_t pid)
 {
-    for(unsigned i = 0; i < cnt; i++)
+    for(size_t i = 0; i < cnt; i++)
         if(pid == list[i])
             return true;
 
@@ -50,10 +51,10 @@ static inline bool list_contains_pid(const uint16_t list[]
 }
 
 static inline bool list_contains_item(const void *list
-                                      , unsigned cnt
+                                      , size_t cnt
                                       , const void *ptr)
 {
-    for(unsigned i = 0; i < cnt; i++)
+    for(size_t i = 0; i < cnt; i++)
         if(ptr == ((void **)list)[i])
             return true;
 
@@ -70,7 +71,7 @@ static inline void copy_psi(mpegts_psi_t *dst
 static void stream_reload(module_data_t *mod)
 {
     /* garbage collection */
-    for(unsigned pid = 16; pid < NULL_TS_PID; pid++)
+    for(size_t pid = 16; pid < NULL_TS_PID; pid++)
     {
         /* try to find pid's owner */
         if((mod->stream[pid] != MPEGTS_PACKET_NIT
@@ -87,7 +88,7 @@ static void stream_reload(module_data_t *mod)
 
         else
             /* scan TS programs */
-            for(unsigned i = 0; i < mod->prog_cnt; i++)
+            for(size_t i = 0; i < mod->prog_cnt; i++)
             {
                 ts_program_t *const prog = mod->progs[i];
 
@@ -105,13 +106,13 @@ static void stream_reload(module_data_t *mod)
         /* into the trash it goes */
         if(mod->stream[pid])
         {
-            asc_log_debug(MSG("deregistering pid %hu"), pid);
+            asc_log_debug(MSG("deregistering pid %zu"), pid);
             mod->stream[pid] = MPEGTS_PACKET_UNKNOWN;
         }
 
         if(mod->pes[pid])
         {
-            asc_log_debug(MSG("deleting PES muxer on pid %hu"), pid);
+            asc_log_debug(MSG("deleting PES muxer on pid %zu"), pid);
 
             mpegts_pes_destroy(mod->pes[pid]);
             mod->pes[pid] = NULL;
@@ -124,9 +125,9 @@ static void stream_reload(module_data_t *mod)
 
     /* update PCR pid list */
     pcr_stream_t **list = NULL;
-    unsigned cnt = 0;
+    size_t cnt = 0;
 
-    for(unsigned i = 0; i < mod->prog_cnt; i++)
+    for(size_t i = 0; i < mod->prog_cnt; i++)
     {
         const uint16_t pid = mod->progs[i]->pcr_pid;
 
@@ -144,7 +145,7 @@ static void stream_reload(module_data_t *mod)
         LIST_APPEND(list, cnt, pcr);
     }
 
-    for(unsigned i = 0; i < mod->pcr_cnt; i++)
+    for(size_t i = 0; i < mod->pcr_cnt; i++)
     {
         pcr_stream_t *pcr = mod->pcrs[i];
 
@@ -186,7 +187,7 @@ void remux_pat(void *arg, mpegts_psi_t *psi)
 
     /* rebuild program list */
     ts_program_t **list = NULL;
-    unsigned cnt = 0;
+    size_t cnt = 0;
 
     const uint8_t *ptr;
     PAT_ITEMS_FOREACH(psi, ptr)
@@ -227,7 +228,7 @@ void remux_pat(void *arg, mpegts_psi_t *psi)
     }
 
     /* kill off stale programs */
-    for(unsigned i = 0; i < mod->prog_cnt; i++)
+    for(size_t i = 0; i < mod->prog_cnt; i++)
     {
         ts_program_t *const prog = mod->progs[i];
 
@@ -278,7 +279,7 @@ void remux_cat(void *arg, mpegts_psi_t *psi)
 
     /* update EMM pid list */
     uint16_t *list = NULL;
-    unsigned cnt = 0;
+    size_t cnt = 0;
 
     const uint8_t *desc;
     CAT_DESC_FOREACH(psi, desc)
@@ -358,7 +359,7 @@ void remux_pmt(void *arg, mpegts_psi_t *psi)
 
     /* update stream map */
     uint16_t *list = NULL;
-    unsigned cnt = 0;
+    size_t cnt = 0;
 
     const uint8_t *desc;
     PMT_DESC_FOREACH(psi, desc)

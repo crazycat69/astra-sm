@@ -131,7 +131,7 @@ void remux_ts_out(void *arg, const uint8_t *ts)
         mpegts_psi_demux(mod->custom_pat, remux_ts_out, mod);
 
         /* PMT */
-        for(unsigned i = 0; i < mod->prog_cnt; i++)
+        for(size_t i = 0; i < mod->prog_cnt; i++)
             mpegts_psi_demux(mod->progs[i]->custom_pmt, remux_ts_out, mod);
     }
 
@@ -144,7 +144,7 @@ void remux_ts_out(void *arg, const uint8_t *ts)
         mpegts_psi_demux(mod->custom_sdt, remux_ts_out, mod);
 
     /* PCR */
-    for(unsigned i = 0; i < mod->pcr_cnt; i++)
+    for(size_t i = 0; i < mod->pcr_cnt; i++)
     {
         pcr_stream_t *const pcr = mod->pcrs[i];
 
@@ -268,7 +268,7 @@ void remux_ts_in(module_data_t *mod, const uint8_t *orig_ts)
                 /* clear PCR flag and field */
                 new[5] &= ~0x10;
 
-                const unsigned af_len = ts[4];
+                const size_t af_len = ts[4];
                 if(af_len < TS_BODY_SIZE)
                 {
                     memset(&new[6], 0xff, af_len - 1);
@@ -397,7 +397,7 @@ static void module_destroy(module_data_t *mod)
     mpegts_psi_destroy(mod->pmt);
 
     /* pid list deinit */
-    for(unsigned i = 0; i < MAX_PID; i++)
+    for(size_t i = 0; i < MAX_PID; i++)
     {
         mod->stream[i] = MPEGTS_PACKET_UNKNOWN;
 
@@ -406,10 +406,10 @@ static void module_destroy(module_data_t *mod)
     }
 
     /* free structs */
-    for(unsigned i = 0; i < mod->prog_cnt; i++)
+    for(size_t i = 0; i < mod->prog_cnt; i++)
         ts_program_destroy(mod->progs[i]);
 
-    for(unsigned i = 0; i < mod->pcr_cnt; i++)
+    for(size_t i = 0; i < mod->pcr_cnt; i++)
         pcr_stream_destroy(mod->pcrs[i]);
 
     mod->nit_pid = 0;

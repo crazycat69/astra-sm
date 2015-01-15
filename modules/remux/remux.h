@@ -40,7 +40,7 @@ typedef struct
 
     /* ES pid list */
     uint16_t *pids;
-    unsigned pid_cnt;
+    size_t pid_cnt;
 } ts_program_t;
 
 ts_program_t *ts_program_init(uint16_t pnr, uint16_t pid);
@@ -108,13 +108,13 @@ struct module_data_t
     uint8_t buf[TS_PACKET_SIZE];
 
     ts_program_t **progs;
-    unsigned prog_cnt;
+    size_t prog_cnt;
 
     pcr_stream_t **pcrs;
-    unsigned pcr_cnt;
+    size_t pcr_cnt;
 
     uint16_t *emms;
-    unsigned emm_cnt;
+    size_t emm_cnt;
 };
 
 void remux_ts_out(void *arg, const uint8_t *ts);

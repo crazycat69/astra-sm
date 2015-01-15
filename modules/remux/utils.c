@@ -38,7 +38,7 @@ ts_program_t *ts_program_init(uint16_t pnr, uint16_t pid)
 
 ts_program_t *ts_program_find(const module_data_t *mod, uint16_t pid)
 {
-    for(unsigned i = 0; i < mod->prog_cnt; i++)
+    for(size_t i = 0; i < mod->prog_cnt; i++)
         if(mod->progs[i]->pmt_pid == pid)
             return mod->progs[i];
 
@@ -74,7 +74,7 @@ pcr_stream_t *pcr_stream_init(uint16_t pid)
 
 pcr_stream_t *pcr_stream_find(const module_data_t *mod, uint16_t pid)
 {
-    for(unsigned i = 0; i < mod->pcr_cnt; i++)
+    for(size_t i = 0; i < mod->pcr_cnt; i++)
         if(mod->pcrs[i]->pid == pid)
             return mod->pcrs[i];
 
