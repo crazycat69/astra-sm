@@ -1,0 +1,17 @@
+#! /bin/sh
+
+version=$(git describe --match "v[0-9]*" --abbrev=7 HEAD)
+
+version=`echo $version | sed \
+    -e 's/^v//' \
+    -e 's/-\([0-9]*\)-g.*/.\1/' \
+    -e 's/-g\(.*\)/-\1/'`
+
+if [ "$version" != "" ]; then
+    echo $version
+else
+    echo "UNKNOWN"
+    exit 1
+fi
+
+exit 0
