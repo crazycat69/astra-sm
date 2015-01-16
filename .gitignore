@@ -1,8 +1,27 @@
+/astra
+/modules/inscript/inscript.h
+
+# binaries
 *.a
 *.o
-*.orig
-/astra
-/temp
-/Makefile
+*.so*
+*.la
+
+# autotools stuff
+.deps
+Makefile
+Makefile.in
+/aclocal.m4
+/autom4te.cache
+/build-aux/depcomp
+/build-aux/install-sh
+/build-aux/missing
 /config.h
-/modules/inscript/inscript.h
+/config.h.in
+/config.log
+/config.status
+/configure
+/stamp-h1
+
+# autosave files
+*~
