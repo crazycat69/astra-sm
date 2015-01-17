@@ -1,5 +1,5 @@
 /*
- * Astra Module: Stream API
+ * Astra Core (Stream API)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>

@@ -25,8 +25,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-typedef struct module_data_t module_data_t;
-
 #define BUFFER_TO_U16(_b) (((_b)[0] << 8) | ((_b)[1]))
 #define BUFFER_TO_U32(_b) (((_b)[0] << 24) | ((_b)[1] << 16) | ((_b)[2] << 8) | ((_b)[3]))
 

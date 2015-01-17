@@ -31,5 +31,6 @@
 #include "thread.h"
 #include "timer.h"
 #include "utils.h"
+#include "stream.h"
 
 #endif /* _ASC_H_ */

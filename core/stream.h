@@ -1,5 +1,5 @@
 /*
- * Astra Module: Stream API
+ * Astra Core (Stream API)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
@@ -18,14 +18,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _MODULE_STREAM_H_
-#define _MODULE_STREAM_H_ 1
+#ifndef _STREAM_H_
+#define _STREAM_H_ 1
 
-#include "base.h"
-#include "module_lua.h"
-#include <core/asc.h>
-
+typedef struct module_data_t module_data_t;
 typedef struct module_stream_t module_stream_t;
+
 struct module_stream_t
 {
     module_data_t *self;
@@ -147,4 +145,4 @@ void __module_stream_send(module_stream_t *stream, const uint8_t *ts);
 #define MODULE_STREAM_METHODS_REF()                                                             \
     { "stream", module_stream_stream }
 
-#endif /* _MODULE_STREAM_H_ */
+#endif /* _STREAM_H_ */
