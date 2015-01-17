@@ -32,5 +32,6 @@
 #include "timer.h"
 #include "utils.h"
 #include "stream.h"
+#include "luaglue.h"
 
 #endif /* _ASC_H_ */

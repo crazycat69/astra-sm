@@ -41,4 +41,9 @@ char * string_buffer_release(string_buffer_t *buffer, size_t *size);
 void string_buffer_push(lua_State *L, string_buffer_t *buffer);
 void string_buffer_free(string_buffer_t *buffer);
 
+/* module options */
+bool module_option_number(const char *name, int *number);
+bool module_option_string(const char *name, const char **string, size_t *length);
+bool module_option_boolean(const char *name, bool *boolean);
+
 #endif /* _UTILS_H_ */

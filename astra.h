@@ -22,12 +22,8 @@
 #define _ASTRA_H_ 1
 
 #include "config.h"
-
 #include "core/asc.h"
-
 #include "modules/astra/base.h"
-#include "modules/astra/module_lua.h"
-
 #include "mpegts/mpegts.h"
 
 /* version */

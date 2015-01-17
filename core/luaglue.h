@@ -1,5 +1,5 @@
 /*
- * Astra Module: Lua API
+ * Astra Core (Lua API)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
@@ -18,14 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _MODULE_LUA_H_
-#define _MODULE_LUA_H_ 1
-
-#include "base.h"
-
-#include <lua/lua.h>
-#include <lua/lualib.h>
-#include <lua/lauxlib.h>
+#ifndef _LUA_GLUE_H_
+#define _LUA_GLUE_H_ 1
 
 #define lua_stack_debug(_lua) printf("%s:%d %s(): stack:%d\n"                                   \
                         , __FILE__, __LINE__, __FUNCTION__, lua_gettop(_lua))
@@ -117,8 +111,4 @@ typedef struct
         return 1;                                                                               \
     }
 
-bool module_option_number(const char *name, int *number);
-bool module_option_string(const char *name, const char **string, size_t *length);
-bool module_option_boolean(const char *name, bool *boolean);
-
-#endif /* _MODULE_LUA_H_ */
+#endif /* _LUA_GLUE_H_ */

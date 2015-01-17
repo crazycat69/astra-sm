@@ -450,3 +450,88 @@ void string_buffer_free(string_buffer_t *buffer)
         free(next);
     }
 }
+
+/*
+ * module options
+ */
+bool module_option_number(const char *name, int *number)
+{
+    if(lua_type(lua, MODULE_OPTIONS_IDX) != LUA_TTABLE)
+        return false;
+
+    lua_getfield(lua, MODULE_OPTIONS_IDX, name);
+    const int type = lua_type(lua, -1);
+    bool result = false;
+
+    if(type == LUA_TNUMBER)
+    {
+        *number = lua_tointeger(lua, -1);
+        result = true;
+    }
+    else if(type == LUA_TSTRING)
+    {
+        const char *str = lua_tostring(lua, -1);
+        *number = atoi(str);
+        result = true;
+    }
+    else if(type == LUA_TBOOLEAN)
+    {
+        *number = lua_toboolean(lua, -1);
+        result = true;
+    }
+
+    lua_pop(lua, 1);
+    return result;
+}
+
+bool module_option_string(const char *name, const char **string, size_t *length)
+{
+    if(lua_type(lua, MODULE_OPTIONS_IDX) != LUA_TTABLE)
+        return false;
+
+    lua_getfield(lua, MODULE_OPTIONS_IDX, name);
+    const int type = lua_type(lua, -1);
+    bool result = false;
+
+    if(type == LUA_TSTRING)
+    {
+        if(length)
+            *length = luaL_len(lua, -1);
+        *string = lua_tostring(lua, -1);
+        result = true;
+    }
+
+
+    lua_pop(lua, 1);
+    return result;
+}
+
+bool module_option_boolean(const char *name, bool *boolean)
+{
+    if(lua_type(lua, MODULE_OPTIONS_IDX) != LUA_TTABLE)
+        return false;
+
+    lua_getfield(lua, MODULE_OPTIONS_IDX, name);
+    const int type = lua_type(lua, -1);
+    bool result = false;
+
+    if(type == LUA_TNUMBER)
+    {
+        *boolean = (lua_tointeger(lua, -1) != 0) ? true : false;
+        result = true;
+    }
+    else if(type == LUA_TSTRING)
+    {
+        const char *str = lua_tostring(lua, -1);
+        *boolean = (!strcmp(str, "true") || !strcmp(str, "on") || !strcmp(str, "1"));
+        result = true;
+    }
+    else if(type == LUA_TBOOLEAN)
+    {
+        *boolean = lua_toboolean(lua, -1);
+        result = true;
+    }
+
+    lua_pop(lua, 1);
+    return result;
+}
