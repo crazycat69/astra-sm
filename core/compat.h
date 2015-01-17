@@ -18,11 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _UTILS_H_
-#define _UTILS_H_ 1
+#ifndef _ASC_COMPAT_H_
+#define _ASC_COMPAT_H_ 1
 
 #ifdef _WIN32
 ssize_t pread(int fd, void *buffer, size_t size, off_t off);
 #endif
 
-#endif /* _UTILS_H_ */
+#endif /* _ASC_COMPAT_H_ */

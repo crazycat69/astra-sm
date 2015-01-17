@@ -23,6 +23,7 @@
 
 #include "assert.h"
 #include "base.h"
+#include "compat.h"
 #include "event.h"
 #include "list.h"
 #include "log.h"
@@ -33,7 +34,6 @@
 #include "clock.h"
 #include "strbuffer.h"
 #include "option.h"
-#include "utils.h"
 #include "stream.h"
 #include "luaglue.h"
 
