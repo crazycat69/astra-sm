@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _LOG_H_
-#define _LOG_H_ 1
+#ifndef _ASC_LOG_H_
+#define _ASC_LOG_H_ 1
 
 void asc_log_set_stdout(bool);
 void asc_log_set_debug(bool);
@@ -39,4 +39,4 @@ void asc_log_debug(const char *, ...);
 
 bool asc_log_is_debug(void);
 
-#endif /* _LOG_H_ */
+#endif /* _ASC_LOG_H_ */

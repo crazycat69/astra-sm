@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _THREAD_H_
-#define _THREAD_H_ 1
+#ifndef _ASC_THREAD_H_
+#define _ASC_THREAD_H_ 1
 
 typedef struct asc_thread_t asc_thread_t;
 typedef struct asc_thread_buffer_t asc_thread_buffer_t;
@@ -44,4 +44,4 @@ void asc_thread_buffer_flush(asc_thread_buffer_t *buffer);
 ssize_t asc_thread_buffer_read(asc_thread_buffer_t *buffer, void *data, size_t size) __wur;
 ssize_t asc_thread_buffer_write(asc_thread_buffer_t *buffer, const void *data, size_t size) __wur;
 
-#endif /* _THREAD_H_ */
+#endif /* _ASC_THREAD_H_ */

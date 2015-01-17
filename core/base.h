@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _BASE_H_
-#define _BASE_H_ 1
+#ifndef _ASC_BASE_H_
+#define _ASC_BASE_H_ 1
 
 #ifdef _WIN32
 #   ifndef _WIN32_WINNT
@@ -60,4 +60,4 @@
 #   endif
 #endif
 
-#endif /* _BASE_H_ */
+#endif /* _ASC_BASE_H_ */

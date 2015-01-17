@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _TIMER_H_
-#define _TIMER_H_ 1
+#ifndef _ASC_TIMER_H_
+#define _ASC_TIMER_H_ 1
 
 typedef struct asc_timer_t asc_timer_t;
 
@@ -32,4 +32,4 @@ void asc_timer_one_shot(unsigned int ms, void (*callback)(void *), void *arg);
 asc_timer_t * asc_timer_init(unsigned int ms, void (*callback)(void *), void *arg) __wur;
 void asc_timer_destroy(asc_timer_t *timer);
 
-#endif /* _TIMER_H_ */
+#endif /* _ASC_TIMER_H_ */

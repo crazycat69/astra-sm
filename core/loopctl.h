@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _LOOPCTL_H_
-#define _LOOPCTL_H_ 1
+#ifndef _ASC_LOOPCTL_H_
+#define _ASC_LOOPCTL_H_ 1
 
 extern jmp_buf main_loop;
 extern bool is_main_loop_idle;
@@ -30,4 +30,4 @@ void astra_exit(void) __attribute__ ((__noreturn__));
 void astra_abort(void) __attribute__ ((__noreturn__));
 void astra_reload(void) __attribute__ ((__noreturn__));
 
-#endif /* _LOOPCTL_H_ */
+#endif /* _ASC_LOOPCTL_H_ */

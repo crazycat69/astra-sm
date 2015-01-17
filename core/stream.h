@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _STREAM_H_
-#define _STREAM_H_ 1
+#ifndef _ASC_STREAM_H_
+#define _ASC_STREAM_H_ 1
 
 typedef struct module_data_t module_data_t;
 typedef struct module_stream_t module_stream_t;
@@ -145,4 +145,4 @@ void __module_stream_send(module_stream_t *stream, const uint8_t *ts);
 #define MODULE_STREAM_METHODS_REF()                                                             \
     { "stream", module_stream_stream }
 
-#endif /* _STREAM_H_ */
+#endif /* _ASC_STREAM_H_ */

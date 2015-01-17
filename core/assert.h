@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _ASSERT_H_
-#define _ASSERT_H_ 1
+#ifndef _ASC_ASSERT_H_
+#define _ASC_ASSERT_H_ 1
 
 #define __asc_assert(_cond, _file, _line, ...)                                                  \
     ( asc_log_error("%s:%u: failed assertion `%s'", _file, _line, _cond)                  \
@@ -28,4 +28,4 @@
 #define asc_assert(_cond, ...)                                                                  \
     ((_cond) ? (void)0 : __asc_assert(#_cond, __FILE__, __LINE__, __VA_ARGS__))
 
-#endif /* _ASSERT_H_ */
+#endif /* _ASC_ASSERT_H_ */

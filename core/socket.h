@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _SOCKET_H_
-#define _SOCKET_H_ 1
+#ifndef _ASC_SOCKET_H_
+#define _ASC_SOCKET_H_ 1
 
 typedef struct asc_socket_t asc_socket_t;
 
@@ -74,4 +74,4 @@ void asc_socket_multicast_join(asc_socket_t *sock, const char *addr, const char 
 void asc_socket_multicast_leave(asc_socket_t *sock);
 void asc_socket_multicast_renew(asc_socket_t *sock);
 
-#endif /* _SOCKET_H_ */
+#endif /* _ASC_SOCKET_H_ */

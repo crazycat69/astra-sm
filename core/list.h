@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _LIST_H_
-#define _LIST_H_ 1
+#ifndef _ASC_LIST_H_
+#define _ASC_LIST_H_ 1
 
 #define QMD_TRACE_ELEM(elem)
 #define QMD_TRACE_HEAD(head)
@@ -212,4 +212,4 @@ void asc_list_remove_item(asc_list_t *list, void *data);
 #define asc_list_for(__list) \
     for(asc_list_first(__list); !asc_list_eol(__list); asc_list_next(__list))
 
-#endif /* _LIST_H_ */
+#endif /* _ASC_LIST_H_ */
