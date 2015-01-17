@@ -25,9 +25,4 @@
 ssize_t pread(int fd, void *buffer, size_t size, off_t off);
 #endif
 
-/* module options */
-bool module_option_number(const char *name, int *number);
-bool module_option_string(const char *name, const char **string, size_t *length);
-bool module_option_boolean(const char *name, bool *boolean);
-
 #endif /* _UTILS_H_ */

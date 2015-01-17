@@ -1,8 +1,9 @@
 /*
- * Astra Core
+ * Astra Core (Module options)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,23 +19,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _ASC_H_
-#define _ASC_H_ 1
+#ifndef _ASC_OPTION_H_
+#define _ASC_OPTION_H_ 1
 
-#include "assert.h"
-#include "base.h"
-#include "event.h"
-#include "list.h"
-#include "log.h"
-#include "loopctl.h"
-#include "socket.h"
-#include "thread.h"
-#include "timer.h"
-#include "clock.h"
-#include "strbuffer.h"
-#include "option.h"
-#include "utils.h"
-#include "stream.h"
-#include "luaglue.h"
+bool module_option_number(const char *name, int *number);
+bool module_option_string(const char *name, const char **string, size_t *length);
+bool module_option_boolean(const char *name, bool *boolean);
 
-#endif /* _ASC_H_ */
+#endif /* _ASC_OPTION_H_ */
