@@ -21,10 +21,6 @@
 #ifndef _ASTRA_BASE_H_
 #define _ASTRA_BASE_H_ 1
 
-#include <stddef.h>
-#include <stdint.h>
-#include <stdbool.h>
-
 /* utils */
 
 char * hex_to_str(char *str, const uint8_t *hex, int len);
