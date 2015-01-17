@@ -25,19 +25,6 @@
 ssize_t pread(int fd, void *buffer, size_t size, off_t off);
 #endif
 
-// string_buffer
-
-typedef struct string_buffer_t string_buffer_t;
-
-string_buffer_t * string_buffer_alloc(void);
-void string_buffer_addchar(string_buffer_t *buffer, char c);
-void string_buffer_addlstring(string_buffer_t *buffer, const char *str, size_t size);
-void strung_buffer_addvastring(string_buffer_t *buffer, const char *str, va_list ap);
-void string_buffer_addfstring(string_buffer_t *buffer, const char *str, ...);
-char * string_buffer_release(string_buffer_t *buffer, size_t *size);
-void string_buffer_push(lua_State *L, string_buffer_t *buffer);
-void string_buffer_free(string_buffer_t *buffer);
-
 /* module options */
 bool module_option_number(const char *name, int *number);
 bool module_option_string(const char *name, const char **string, size_t *length);

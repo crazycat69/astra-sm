@@ -31,6 +31,7 @@
 #include "thread.h"
 #include "timer.h"
 #include "clock.h"
+#include "strbuffer.h"
 #include "utils.h"
 #include "stream.h"
 #include "luaglue.h"
