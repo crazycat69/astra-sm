@@ -30,7 +30,7 @@
 #   include <arpa/inet.h>
 #   include <netinet/in.h>
 #   include <netinet/tcp.h>
-#   ifdef HAVE_SCTP_H
+#   ifdef HAVE_NETINET_SCTP_H
 #       include <netinet/sctp.h>
 #   endif
 #   include <netdb.h>
