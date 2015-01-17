@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _ASTRA_BASE_H_
-#define _ASTRA_BASE_H_ 1
+#ifndef _ASTRA_UTILS_H_
+#define _ASTRA_UTILS_H_ 1
 
 /* utils */
 
@@ -72,4 +72,4 @@ void md5_crypt(const char *pw, const char *salt, char passwd[36]);
 
 char * iso8859_decode(const uint8_t *data, size_t size);
 
-#endif /* _ASTRA_BASE_H_ */
+#endif /* _ASTRA_UTILS_H_ */
