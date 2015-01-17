@@ -18,11 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "assert.h"
-#include "event.h"
-#include "list.h"
-#include "log.h"
-#include "loopctl.h"
+#include <astra.h>
 
 #ifndef EV_LIST_SIZE
 #   define EV_LIST_SIZE 1024

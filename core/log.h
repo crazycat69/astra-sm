@@ -21,8 +21,6 @@
 #ifndef _LOG_H_
 #define _LOG_H_ 1
 
-#include "base.h"
-
 void asc_log_set_stdout(bool);
 void asc_log_set_debug(bool);
 void asc_log_set_color(bool);

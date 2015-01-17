@@ -21,9 +21,6 @@
 #ifndef _ASSERT_H_
 #define _ASSERT_H_ 1
 
-#include "log.h"
-#include "loopctl.h"
-
 #define __asc_assert(_cond, _file, _line, ...)                                                  \
     ( asc_log_error("%s:%u: failed assertion `%s'", _file, _line, _cond)                  \
     , asc_log_error(__VA_ARGS__)                                                          \

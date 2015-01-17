@@ -21,8 +21,6 @@
 #ifndef _TIMER_H_
 #define _TIMER_H_ 1
 
-#include "base.h"
-
 typedef struct asc_timer_t asc_timer_t;
 
 void asc_timer_core_init(void);

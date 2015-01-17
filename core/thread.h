@@ -21,8 +21,6 @@
 #ifndef _THREAD_H_
 #define _THREAD_H_ 1
 
-#include "base.h"
-
 typedef struct asc_thread_t asc_thread_t;
 typedef struct asc_thread_buffer_t asc_thread_buffer_t;
 typedef void (*thread_callback_t)(void *);

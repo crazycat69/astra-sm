@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "utils.h"
+#include <astra.h>
 
 uint64_t asc_utime(void)
 {

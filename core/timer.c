@@ -18,10 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "timer.h"
-#include "list.h"
-#include "loopctl.h"
-#include "utils.h"
+#include <astra.h>
 
 struct asc_timer_t
 {

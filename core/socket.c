@@ -18,10 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "assert.h"
-#include "socket.h"
-#include "event.h"
-#include "log.h"
+#include <astra.h>
 
 #ifdef _WIN32
 #   include <ws2tcpip.h>

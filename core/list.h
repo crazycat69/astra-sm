@@ -21,8 +21,6 @@
 #ifndef _LIST_H_
 #define _LIST_H_ 1
 
-#include "base.h"
-
 #define QMD_TRACE_ELEM(elem)
 #define QMD_TRACE_HEAD(head)
 #define TRACEBUF

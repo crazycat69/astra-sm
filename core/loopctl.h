@@ -22,9 +22,6 @@
 #ifndef _LOOPCTL_H_
 #define _LOOPCTL_H_ 1
 
-#include "base.h"
-#include <lua/lua.h>
-
 extern jmp_buf main_loop;
 extern bool is_main_loop_idle;
 extern lua_State *lua;

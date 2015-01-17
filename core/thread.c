@@ -18,11 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "assert.h"
-#include "thread.h"
-#include "list.h"
-#include "log.h"
-#include "loopctl.h"
+#include <astra.h>
 
 #ifdef _WIN32
 #   include <windows.h>

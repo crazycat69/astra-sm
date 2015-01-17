@@ -21,8 +21,6 @@
 #ifndef _EVENT_H_
 #define _EVENT_H_ 1
 
-#include "base.h"
-
 typedef struct asc_event_t asc_event_t;
 typedef void (*event_callback_t)(void *);
 

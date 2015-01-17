@@ -19,8 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "loopctl.h"
-#include "log.h"
+#include <astra.h>
 
 jmp_buf main_loop;
 bool is_main_loop_idle = true;

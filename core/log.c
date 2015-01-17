@@ -18,8 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#define ASC
-#include "log.h"
+#include <astra.h>
 
 #ifndef _WIN32
 #include <syslog.h>

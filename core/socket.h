@@ -21,9 +21,6 @@
 #ifndef _SOCKET_H_
 #define _SOCKET_H_ 1
 
-#include "base.h"
-#include "event.h"
-
 typedef struct asc_socket_t asc_socket_t;
 
 void asc_socket_core_init(void);
