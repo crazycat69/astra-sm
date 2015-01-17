@@ -1,5 +1,5 @@
 /*
- * Astra Module: Utils
+ * Astra Utils
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
@@ -54,7 +54,7 @@ static int utils_hostname(lua_State *L)
     return 1;
 }
 
-#ifdef WITH_IFADDRS
+#ifdef HAVE_GETIFADDRS
 static int utils_ifaddrs(lua_State *L)
 {
     struct ifaddrs *ifaddr;
@@ -238,7 +238,7 @@ LUA_API int luaopen_utils(lua_State *L)
     static const luaL_Reg api[] =
     {
         { "hostname", utils_hostname },
-#ifdef WITH_IFADDRS
+#ifdef HAVE_GETIFADDRS
         { "ifaddrs", utils_ifaddrs },
 #endif
         { "stat", utils_stat },

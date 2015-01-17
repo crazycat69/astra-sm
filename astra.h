@@ -23,8 +23,8 @@
 
 #include "config.h"
 #include "core/asc.h"
-#include "modules/astra/base.h"
 #include "mpegts/mpegts.h"
+#include "utils/utils.h"
 
 /* version */
 

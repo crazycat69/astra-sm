@@ -1,5 +1,5 @@
 /*
- * Astra Module: ISO-8859
+ * Astra Utils (ISO-8859)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2013, Andrey Dyldin <and@cesbo.com>

@@ -1,5 +1,5 @@
 /*
- * Astra Module: Log
+ * Astra Utils (Logging)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
