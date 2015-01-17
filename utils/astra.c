@@ -78,7 +78,7 @@ LUA_API int luaopen_astra(lua_State *L)
 
     lua_setfield(lua, -2, "debug");
 
-    lua_pushstring(lua, ASTRA_VERSION_STR);
+    lua_pushstring(lua, PACKAGE_VERSION);
     lua_setfield(lua, -2, "version");
 
     lua_setglobal(L, "astra");

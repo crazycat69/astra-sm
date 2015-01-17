@@ -137,7 +137,7 @@ astra_reload_entry:
 
             if(argc < 2)
             {
-                printf("Astra " ASTRA_VERSION_STR);
+                printf(PACKAGE_STRING "\n");
                 printf("Usage: %s script.lua [OPTIONS]\n", argv[0]);
                 astra_exit();
             }
