@@ -21,9 +21,6 @@
 #ifndef _UTILS_H_
 #define _UTILS_H_ 1
 
-uint64_t asc_utime(void);
-void asc_usleep(uint64_t usec);
-
 #ifdef _WIN32
 ssize_t pread(int fd, void *buffer, size_t size, off_t off);
 #endif
