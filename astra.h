@@ -26,21 +26,4 @@
 #include "mpegts/mpegts.h"
 #include "utils/utils.h"
 
-/* version */
-
-#include "version.h"
-#define __VSTR(_x) #_x
-#define _VSTR(_x) __VSTR(_x)
-#define _VERSION _VSTR(ASTRA_VERSION_MAJOR) "." \
-                 _VSTR(ASTRA_VERSION_MINOR) "." \
-                 _VSTR(ASTRA_VERSION_PATCH)
-
-#ifdef DEBUG
-#   define _VDEBUG " debug"
-#else
-#   define _VDEBUG
-#endif
-
-#define ASTRA_VERSION_STR _VERSION _VDEBUG
-
 #endif /* _ASTRA_H_ */
