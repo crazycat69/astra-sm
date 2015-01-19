@@ -23,7 +23,6 @@
 
 #include "assert.h"
 #include "base.h"
-#include "compat.h"
 #include "event.h"
 #include "list.h"
 #include "log.h"

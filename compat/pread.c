@@ -1,5 +1,5 @@
 /*
- * Astra Core
+ * Astra Compatibility Library
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
@@ -18,13 +18,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <astra.h>
+#ifdef HAVE_CONFIG_H
+#   include <config.h>
+#endif
 
-#ifdef _WIN32
+#include <unistd.h>
+#include <sys/types.h>
+#include <unistd.h>
+
 ssize_t pread(int fd, void *buffer, size_t size, off_t off)
 {
     if(lseek(fd, off, SEEK_SET) != off)
         return -1;
+
     return read(fd, buffer, size);
 }
-#endif
