@@ -20,9 +20,7 @@
 
 #include <astra.h>
 
-#ifdef _WIN32
-#   include <windows.h>
-#else
+#ifndef _WIN32
 #   include <pthread.h>
 #endif
 
