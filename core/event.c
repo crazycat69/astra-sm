@@ -28,15 +28,15 @@
 #   define EV_TYPE_POLL
 #   define MSG(_msg) "[core/event poll] " _msg
 #   include <poll.h>
-#elif defined(WITH_SELECT) || defined(_WIN32)
+#elif defined(WITH_SELECT)
 #   define EV_TYPE_SELECT
 #   define MSG(_msg) "[core/event select] " _msg
-#elif !defined(WITH_CUSTOM) && (defined(__APPLE__) || defined(__FreeBSD__))
+#elif defined(WITH_KQUEUE)
 #   define EV_TYPE_KQUEUE
 #   include <sys/event.h>
 #   define EV_OTYPE struct kevent
 #   define MSG(_msg) "[core/event kqueue] " _msg
-#elif !defined(WITH_CUSTOM) && defined(__linux)
+#elif defined(WITH_EPOLL)
 #   define EV_TYPE_EPOLL
 #   include <sys/epoll.h>
 #   define EV_OTYPE struct epoll_event
@@ -46,6 +46,8 @@
 #       define EPOLLCLOSE (EPOLLERR | EPOLLHUP)
 #   endif
 #   define MSG(_msg) "[core/event epoll] " _msg
+#else
+#   error "Event notification interface not set"
 #endif
 
 struct asc_event_t
