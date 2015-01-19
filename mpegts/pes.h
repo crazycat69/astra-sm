@@ -99,7 +99,7 @@ typedef enum {
 
 /* extension header struct */
 typedef struct __attribute__ ((__packed__)) {
-#if __BYTE_ORDER == __LITTLE_ENDIAN
+#if defined(__BYTE_ORDER) && __BYTE_ORDER == __LITTLE_ENDIAN
     unsigned original  : 1;
     unsigned copyright : 1;
     unsigned alignment : 1;
@@ -116,7 +116,7 @@ typedef struct __attribute__ ((__packed__)) {
     unsigned dts       : 1;
     unsigned pts       : 1;
     /* byte 7 */
-#elif __BYTE_ORDER == __BIG_ENDIAN
+#elif defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN
     /* byte 6 */
     unsigned marker    : 2;
     unsigned scrambled : 2;
