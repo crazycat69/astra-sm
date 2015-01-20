@@ -44,6 +44,10 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
+
 #define ASC_ARRAY_SIZE(_a) (sizeof(_a)/sizeof(_a[0]))
 
 #define __uarg(_x) {(void)_x;}
