@@ -82,16 +82,7 @@ AC_DEFUN([AX_CHECK_WINFUNC], [
     AX_RESTORE_FLAGS
 ])
 
-AC_DEFUN([AX_EXTLIB_PARAM], [
-    # configure options
-    AC_ARG_ENABLE($1, AC_HELP_STRING([--enable-$1], [$2 (default auto)]))
-    AC_ARG_WITH($1-includes,
-        AC_HELP_STRING([--with-$1-includes=PATH], [path to $1 header files]),
-        [enable_$1="yes"], [with_$1_includes="no"])
-    AC_ARG_WITH($1-libs,
-        AC_HELP_STRING([--with-$1-libs=PATH], [path to $1 library files]),
-        [enable_$1="yes"], [with_$1_libs="no"])
-
+AC_DEFUN([AX_EXTLIB_VARS], [
     # makefile variables
     m4_define([$1_ucase],[m4_translit([$1], [a-z], [A-Z])])
 
@@ -107,14 +98,31 @@ AC_DEFUN([AX_EXTLIB_PARAM], [
     m4_undefine([$1_ucase])
 ])
 
-#
-# Temporary crap
-#################
+AC_DEFUN([AX_EXTLIB_OPTIONAL], [
+    # optional dependency parameters
+    AC_ARG_ENABLE($1, AC_HELP_STRING([--enable-$1], [$2 (default auto)]))
+    AC_ARG_WITH($1-includes,
+        AC_HELP_STRING([--with-$1-includes=PATH], [path to $1 header files]),
+        [enable_$1="yes"], [with_$1_includes="no"])
+    AC_ARG_WITH($1-libs,
+        AC_HELP_STRING([--with-$1-libs=PATH], [path to $1 library files]),
+        [enable_$1="yes"], [with_$1_libs="no"])
+])
 
+AC_DEFUN([AX_EXTLIB_REQUIRED], [
+    # required dependency parameters
+    AC_ARG_WITH($1-includes,
+        AC_HELP_STRING([--with-$1-includes=PATH], [path to $1 header files]),
+        [], [with_$1_includes="no"])
+    AC_ARG_WITH($1-libs,
+        AC_HELP_STRING([--with-$1-libs=PATH], [path to $1 library files]),
+        [], [with_$1_libs="no"])
+])
 
-#################
-# Temporary crap
-#
+AC_DEFUN([AX_EXTLIB_PARAM], [
+    AX_EXTLIB_OPTIONAL($1, $2)
+    AX_EXTLIB_VARS($1)
+])
 
 #
 # Checks for typedefs, structures, and compiler characteristics
@@ -333,6 +341,25 @@ AC_SUBST(LIBRT)
 #
 # Checks for external libraries
 #
+# lua
+AX_EXTLIB_REQUIRED(lua)
+AX_EXTLIB_VARS(lua)
+
+have_lua="no"
+AX_SAVE_FLAGS
+CFLAGS="$CFLAGS $LUA_CFLAGS"
+# lua wants -lm on linux
+LIBS="$LIBS $LIBM $LUA_LIBS"
+AC_CHECK_HEADERS([lua.h], [
+    AC_CHECK_LIB([lua], [luaL_len], [
+        have_lua="yes"
+        LUA_LIBS="${LUA_LIBS} ${LIBM} -llua"
+    ])
+])
+AX_RESTORE_FLAGS
+AS_IF([test "x${have_lua}" = "xno"], [
+    AC_MSG_ERROR([Astra requires Lua library version 5.2 or higher]) ])
+
 # libaio
 AX_EXTLIB_PARAM(libaio,
     [enable libaio for file I/O (Linux only)] )
@@ -454,14 +481,9 @@ CFLAGS="$CFLAGS $SAVE_CFLAGS"
 
 # Makefile generation
 AC_CONFIG_FILES([
-    core/Makefile
     modules/Makefile
-    mpegts/Makefile
     scripts/Makefile
     testcards/Makefile
-    utils/Makefile
     Makefile
-
-    lua/Makefile
 ])
 AC_OUTPUT

@@ -10,10 +10,17 @@
 
 # autotools stuff
 .deps
+.dirstamp
 Makefile
 Makefile.in
+/libtool
 /aclocal.m4
 /autom4te.cache
+/build-aux/m4/libtool.m4
+/build-aux/m4/ltoptions.m4
+/build-aux/m4/ltsugar.m4
+/build-aux/m4/ltversion.m4
+/build-aux/m4/lt~obsolete.m4
 /build-aux/ar-lib
 /build-aux/compile
 /build-aux/config.guess
