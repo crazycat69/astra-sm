@@ -6,6 +6,7 @@
 *.o
 *.so*
 *.la
+*.lo
 
 # autotools stuff
 .deps
@@ -13,15 +14,20 @@ Makefile
 Makefile.in
 /aclocal.m4
 /autom4te.cache
+/build-aux/ar-lib
+/build-aux/compile
+/build-aux/config.guess
+/build-aux/config.sub
 /build-aux/depcomp
 /build-aux/install-sh
+/build-aux/ltmain.sh
 /build-aux/missing
 /config.h
 /config.h.in
 /config.log
 /config.status
 /configure
-/stamp-h1
+/stamp-h*
 
 # autosave files
 *~
