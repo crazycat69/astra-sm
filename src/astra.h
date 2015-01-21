@@ -21,7 +21,10 @@
 #ifndef _ASTRA_H_
 #define _ASTRA_H_ 1
 
-#include "config.h"
+#ifdef HAVE_CONFIG_H
+#   include "config.h"
+#endif
+
 #include "core/asc.h"
 #include "mpegts/mpegts.h"
 #include "utils/utils.h"
