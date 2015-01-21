@@ -432,8 +432,8 @@ void asc_socket_connect(  asc_socket_t *sock, const char *addr, int port
     memset(&hints, 0, sizeof(hints));
     hints.ai_socktype = sock->type;
     hints.ai_family = sock->family;
-    int err = getaddrinfo(addr, NULL, &hints, &res);
-    if(err == 0)
+    const int gai_err = getaddrinfo(addr, NULL, &hints, &res);
+    if(gai_err == 0)
     {
         memcpy(&sock->addr.sin_addr
                , &((struct sockaddr_in *)res->ai_addr)->sin_addr
@@ -442,7 +442,7 @@ void asc_socket_connect(  asc_socket_t *sock, const char *addr, int port
     }
     else
     {
-        asc_log_error(MSG("getaddrinfo() failed '%s' [%s])"), addr, gai_strerror(err));
+        asc_log_error(MSG("getaddrinfo() failed '%s' [%s])"), addr, gai_strerror(gai_err));
 
         close(sock->fd);
         sock->fd = 0;
@@ -452,8 +452,8 @@ void asc_socket_connect(  asc_socket_t *sock, const char *addr, int port
     if(connect(sock->fd, (struct sockaddr *)&sock->addr, sizeof(sock->addr)) == -1)
     {
 #ifdef _WIN32
-        const int err = WSAGetLastError();
-        const bool is_error = (err == WSAEWOULDBLOCK) || (err == WSAEINPROGRESS);
+        const int ws_err = WSAGetLastError();
+        const bool is_error = (ws_err == WSAEWOULDBLOCK) || (ws_err == WSAEINPROGRESS);
 #else
         const bool is_error = (errno == EISCONN) || (errno == EINPROGRESS) || (errno == EAGAIN);
 #endif
