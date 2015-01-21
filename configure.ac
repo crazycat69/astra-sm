@@ -247,6 +247,8 @@ AC_SUBST(LIBRT)
 #
 # Checks for external libraries
 #
+AX_HELP_SECTION([External libraries:])
+
 # lua
 AX_EXTLIB_REQUIRED(lua)
 AX_EXTLIB_VARS(lua)
@@ -296,7 +298,7 @@ AM_CONDITIONAL(HAVE_LIBAIO, [test "x${have_libaio}" = "xyes"])
 
 # libdvbcsa
 AX_EXTLIB_PARAM(dvbcsa,
-    [enable software (de)scrambling using libdvbcsa] )
+    [enable CSA (de)scrambling using libdvbcsa] )
 
 have_dvbcsa="no"
 AS_IF([test "x${enable_dvbcsa}" != "xno"], [
@@ -376,11 +378,13 @@ AC_DEFINE([HAVE_DVBAPI], [1],
     [Define to 1 if you have a usable DVB API])
 
 #
-# Optional features and streaming modules
+# Optional features
 #
+AX_HELP_SECTION([Features and modules:])
+
 # Built-in scripts
 AC_ARG_ENABLE(inscript,
-    AC_HELP_STRING(--disable-inscript, [don't build Lua scripts into binary]))
+    AC_HELP_STRING(--disable-inscript, [don't build Lua scripts into binary (enabled)]))
 
 AS_IF([test "x${enable_inscript}" != "xno"], [
     # TODO: kill this abomination
@@ -389,13 +393,46 @@ AS_IF([test "x${enable_inscript}" != "xno"], [
 
 AM_CONDITIONAL([HAVE_INSCRIPT], [test "x${enable_inscript}" != "xno"])
 
+# Streaming modules
+stream_modules="analyze channel transmit"
+
+# asi
+AX_STREAM_MODULE(asi, [DVB-ASI input module],
+    [test "${SYS}" = "linux"], [this module requires Linux])
+
+# biss_encrypt
+AX_STREAM_MODULE(biss, [BISS software scrambler],
+    [test "x${have_dvbcsa}" = "xyes"], [libdvbcsa is unavailable])
+
+# dvb
+AX_STREAM_MODULE(dvb, [DVB input module],
+    [test "x${have_dvbapi}" = "xyes"], [Linux DVB API is unavailable])
+
+# file
+AX_STREAM_MODULE(file, [file I/O module])
+
+# http
+AX_STREAM_MODULE(http, [HTTP server and client])
+
+# remux
+AX_STREAM_MODULE(remux, [remultiplexer module])
+
+# softcam
+AX_STREAM_MODULE(softcam, [software descrambler],
+    [test "x${have_dvbcsa}" = "xyes"], [libdvbcsa is unavailable])
+
+# udp
+AX_STREAM_MODULE(udp, [UDP receive and transmit module])
+
 #
-# Configuration options
+# Build options
 #
+AX_HELP_SECTION([Build options:])
+
 SAVE_CFLAGS="$CFLAGS"
 CFLAGS="-std=iso9899:1999"
 
-# debug
+# Debug version
 AC_ARG_ENABLE(debug,
     AC_HELP_STRING(--enable-debug, [build a debug version]))
 
@@ -406,7 +443,7 @@ else
     CFLAGS="$CFLAGS -fomit-frame-pointer"
 fi
 
-# werror
+# -Werror build
 AC_ARG_ENABLE(werror,
     AC_HELP_STRING(--enable-werror, [turn on -Werror (GCC only)]))
 

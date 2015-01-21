@@ -1,6 +1,9 @@
 #
 # Custom macros for Astra SM
 #
+AC_DEFUN([AX_HELP_SECTION], [m4_divert_once([HELP_ENABLE], [
+$1])])
+
 AC_DEFUN([AX_CHECK_HEADERS_REQ], [
     AC_CHECK_HEADERS([$1], [], [ AC_MSG_ERROR([missing required header file]) ])
 ])
@@ -86,4 +89,36 @@ AC_DEFUN([AX_EXTLIB_REQUIRED], [
 AC_DEFUN([AX_EXTLIB_PARAM], [
     AX_EXTLIB_OPTIONAL($1, $2)
     AX_EXTLIB_VARS($1)
+])
+
+AC_DEFUN([AX_STREAM_MODULE], [
+    AC_ARG_ENABLE($1,
+        AC_HELP_STRING([--disable-$1], [disable $2 (auto)]))
+
+    have_$1="no"
+    AC_MSG_CHECKING([whether to build stream module `$1'])
+    AS_IF([test "x${enable_$1}" != "xno"], [
+        AS_IF([m4_default([$3], [true])], [
+            # auto/force on
+            AC_MSG_RESULT([yes])
+            stream_modules="${stream_modules} $1"
+            have_$1="yes"
+        ], [
+            AC_MSG_RESULT([no])
+            AS_IF([test "x${enable_$1}" = "xyes"], [
+                # force on, but can't build
+                AC_MSG_ERROR([m4_default([$4], [dependency checks failed])]
+                             [; pass --disable-$1 to disable this check])
+            ], [
+                # auto off
+                AC_MSG_WARN([m4_default([$4], [dependency checks failed])]
+                            [; skipping])
+            ])
+        ])
+    ], [
+        # force off
+        AC_MSG_RESULT([disabled by user])
+    ])
+    AM_CONDITIONAL([HAVE_STREAM_]m4_translit([$1], [a-z], [A-Z]),
+        [test "x${have_$1}" = "xyes"])
 ])

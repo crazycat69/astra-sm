@@ -68,43 +68,34 @@ noinst_LTLIBRARIES += libstream.la
 libstream_la_CFLAGS = $(libastra_la_CFLAGS)
 libstream_la_LDFLAGS = -module -static
 libstream_la_LIBADD = libastra.la
-libstream_la_SOURCES =
-
-### analyze ###
-#if HAVE_MODULE_ANALYZE
-libstream_la_SOURCES += \
-    stream/analyze/analyze.c
-#endif
+libstream_la_SOURCES = \
+    stream/analyze/analyze.c \
+    stream/channel/channel.c \
+    stream/transmit/transmit.c
 
 ### asi ###
-#if HAVE_MODULE_ASI
+if HAVE_STREAM_ASI
 libstream_la_SOURCES += \
     stream/asi/input.c
-#endif
+endif
 
 ### biss_encrypt ###
-#if HAVE_MODULE_BISS
+if HAVE_STREAM_BISS
 libstream_la_SOURCES += \
     stream/biss_encrypt/biss_encrypt.c
-#endif
-
-### channel ###
-#if HAVE_MODULE_CHANNEL
-libstream_la_SOURCES += \
-    stream/channel/channel.c
-#endif
+endif
 
 ### dvb ###
-#if HAVE_MODULE_DVB
+if HAVE_STREAM_DVB
 libstream_la_SOURCES += \
     stream/dvb/src/ca.c \
     stream/dvb/src/fe.c \
     stream/dvb/ddci.c \
     stream/dvb/input.c
-#endif
+endif
 
 ### file ###
-#if HAVE_MODULE_FILE
+if HAVE_STREAM_FILE
 libstream_la_SOURCES += \
     stream/file/input.c \
     stream/file/output.c
@@ -113,10 +104,10 @@ if HAVE_LIBAIO
 libstream_la_CFLAGS += $(LIBAIO_CFLAGS)
 libstream_la_LIBADD += $(LIBAIO_LIBS)
 endif
-#endif
+endif
 
 ### http ###
-#if HAVE_MODULE_HTTP
+if HAVE_STREAM_HTTP
 libstream_la_SOURCES += \
     stream/http/modules/downstream.c \
     stream/http/modules/redirect.c \
@@ -127,18 +118,18 @@ libstream_la_SOURCES += \
     stream/http/request.c \
     stream/http/server.c \
     stream/http/utils.c
-#endif
+endif
 
 ### remux ###
-#if HAVE_MODULE_REMUX
+if HAVE_STREAM_REMUX
 libstream_la_SOURCES += \
     stream/remux/remux.c \
     stream/remux/si.c \
     stream/remux/utils.c
-#endif
+endif
 
 ### softcam ###
-#if HAVE_MODULE_SOFTCAM
+if HAVE_STREAM_SOFTCAM
 libstream_la_CFLAGS += $(DVBCSA_CFLAGS)
 libstream_la_LIBADD += $(DVBCSA_LIBS)
 libstream_la_SOURCES += \
@@ -163,20 +154,14 @@ libstream_la_LIBADD += $(LIBCRYPTO_LIBS)
 libstream_la_SOURCES += \
     stream/softcam/cam/newcamd.c
 endif
-#endif
-
-### transmit ###
-#if HAVE_MODULE_TRANSMIT
-libstream_la_SOURCES += \
-    stream/transmit/transmit.c
-#endif
+endif
 
 ### udp ###
-#if HAVE_MODULE_UDP
+if HAVE_STREAM_UDP
 libstream_la_SOURCES += \
     stream/udp/input.c \
     stream/udp/output.c
-#endif
+endif
 
 #
 # Main binary
