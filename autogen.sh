@@ -16,6 +16,7 @@ for x in \
     aclocal.m4 \
     ar-lib \
     configure \
+    confdefs.h \
     config.guess \
     config.log \
     config.status \
@@ -39,9 +40,9 @@ for x in \
     install-sh \
     stamp-h[0-9]* \
 ; do
-    rm -vf "$x" "$x~"
-    rm -vf "build-aux/m4/$x" "build-aux/m4/$x~"
-    rm -vf "build-aux/$x" "build-aux/$x~"
+    for path in "./" "./build-aux/" "./build-aux/m4/" "./src/"; do
+        rm -vf "${path}${x}" "${path}${x}~"
+    done
 done
 
 find -type f \( -name Makefile -or -name Makefile.in \) \
@@ -50,8 +51,5 @@ find -type f \( -name Makefile -or -name Makefile.in \) \
 # generate it again if needed
 if [ "$1" != "clean" ]; then
     autoreconf -vif
-
-    # don't try to delete astra core
-    sed -e 's/^\s*rm -f core/rm -f/' -i configure
 fi
 rm -Rf autom4te.cache

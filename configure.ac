@@ -11,15 +11,14 @@ AC_PREREQ([2.69])
 AC_INIT([Astra SM], [pkg_version])
 AC_USE_SYSTEM_EXTENSIONS
 
-AC_CONFIG_SRCDIR([astra.h])
-AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_SRCDIR([src/astra.h])
+AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux/m4])
-AC_CONFIG_LIBOBJ_DIR([compat])
+AC_CONFIG_LIBOBJ_DIR([src/compat])
 AC_CANONICAL_SYSTEM
 
 AM_INIT_AUTOMAKE([1.11 foreign dist-xz subdir-objects -Wall -Werror])
-AS_IF([test "x${enable_maintainer_mode}" != "xno"], [enable_maintainer_mode="yes"])
 AM_MAINTAINER_MODE([enable])
 AM_SILENT_RULES([yes])
 AC_PRESERVE_HELP_ORDER
@@ -481,9 +480,9 @@ CFLAGS="$CFLAGS $SAVE_CFLAGS"
 
 # Makefile generation
 AC_CONFIG_FILES([
-    modules/Makefile
-    scripts/Makefile
-    testcards/Makefile
     Makefile
+    src/Makefile
+    testcards/Makefile
+    scripts/Makefile
 ])
 AC_OUTPUT
