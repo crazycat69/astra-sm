@@ -64,118 +64,118 @@ endif
 #
 # Module library
 #
-noinst_LTLIBRARIES += libmodules.la
-libmodules_la_CFLAGS = $(libastra_la_CFLAGS)
-libmodules_la_LDFLAGS = -module -static
-libmodules_la_LIBADD = libastra.la
-libmodules_la_SOURCES =
+noinst_LTLIBRARIES += libstream.la
+libstream_la_CFLAGS = $(libastra_la_CFLAGS)
+libstream_la_LDFLAGS = -module -static
+libstream_la_LIBADD = libastra.la
+libstream_la_SOURCES =
 
 ### analyze ###
 #if HAVE_MODULE_ANALYZE
-libmodules_la_SOURCES += \
-    modules/analyze/analyze.c
+libstream_la_SOURCES += \
+    stream/analyze/analyze.c
 #endif
 
 ### asi ###
 #if HAVE_MODULE_ASI
-libmodules_la_SOURCES += \
-    modules/asi/input.c
+libstream_la_SOURCES += \
+    stream/asi/input.c
 #endif
 
 ### biss_encrypt ###
 #if HAVE_MODULE_BISS
-libmodules_la_SOURCES += \
-    modules/biss_encrypt/biss_encrypt.c
+libstream_la_SOURCES += \
+    stream/biss_encrypt/biss_encrypt.c
 #endif
 
 ### channel ###
 #if HAVE_MODULE_CHANNEL
-libmodules_la_SOURCES += \
-    modules/channel/channel.c
+libstream_la_SOURCES += \
+    stream/channel/channel.c
 #endif
 
 ### dvb ###
 #if HAVE_MODULE_DVB
-libmodules_la_SOURCES += \
-    modules/dvb/src/ca.c \
-    modules/dvb/src/fe.c \
-    modules/dvb/ddci.c \
-    modules/dvb/input.c
+libstream_la_SOURCES += \
+    stream/dvb/src/ca.c \
+    stream/dvb/src/fe.c \
+    stream/dvb/ddci.c \
+    stream/dvb/input.c
 #endif
 
 ### file ###
 #if HAVE_MODULE_FILE
-libmodules_la_SOURCES += \
-    modules/file/input.c \
-    modules/file/output.c
+libstream_la_SOURCES += \
+    stream/file/input.c \
+    stream/file/output.c
 
 if HAVE_LIBAIO
-libmodules_la_CFLAGS += $(LIBAIO_CFLAGS)
-libmodules_la_LIBADD += $(LIBAIO_LIBS)
+libstream_la_CFLAGS += $(LIBAIO_CFLAGS)
+libstream_la_LIBADD += $(LIBAIO_LIBS)
 endif
 #endif
 
 ### http ###
 #if HAVE_MODULE_HTTP
-libmodules_la_SOURCES += \
-    modules/http/modules/downstream.c \
-    modules/http/modules/redirect.c \
-    modules/http/modules/static.c \
-    modules/http/modules/upstream.c \
-    modules/http/modules/websocket.c \
-    modules/http/parser.c \
-    modules/http/request.c \
-    modules/http/server.c \
-    modules/http/utils.c
+libstream_la_SOURCES += \
+    stream/http/modules/downstream.c \
+    stream/http/modules/redirect.c \
+    stream/http/modules/static.c \
+    stream/http/modules/upstream.c \
+    stream/http/modules/websocket.c \
+    stream/http/parser.c \
+    stream/http/request.c \
+    stream/http/server.c \
+    stream/http/utils.c
 #endif
 
 ### remux ###
 #if HAVE_MODULE_REMUX
-libmodules_la_SOURCES += \
-    modules/remux/remux.c \
-    modules/remux/si.c \
-    modules/remux/utils.c
+libstream_la_SOURCES += \
+    stream/remux/remux.c \
+    stream/remux/si.c \
+    stream/remux/utils.c
 #endif
 
 ### softcam ###
 #if HAVE_MODULE_SOFTCAM
-libmodules_la_CFLAGS += $(DVBCSA_CFLAGS)
-libmodules_la_LIBADD += $(DVBCSA_LIBS)
-libmodules_la_SOURCES += \
-    modules/softcam/decrypt.c \
-    modules/softcam/cam/cam.c \
-    modules/softcam/cas/bulcrypt.c \
-    modules/softcam/cas/conax.c \
-    modules/softcam/cas/cryptoworks.c \
-    modules/softcam/cas/dre.c \
-    modules/softcam/cas/exset.c \
-    modules/softcam/cas/griffin.c \
-    modules/softcam/cas/irdeto.c \
-    modules/softcam/cas/mediaguard.c \
-    modules/softcam/cas/nagra.c \
-    modules/softcam/cas/viaccess.c \
-    modules/softcam/cas/videoguard.c
+libstream_la_CFLAGS += $(DVBCSA_CFLAGS)
+libstream_la_LIBADD += $(DVBCSA_LIBS)
+libstream_la_SOURCES += \
+    stream/softcam/decrypt.c \
+    stream/softcam/cam/cam.c \
+    stream/softcam/cas/bulcrypt.c \
+    stream/softcam/cas/conax.c \
+    stream/softcam/cas/cryptoworks.c \
+    stream/softcam/cas/dre.c \
+    stream/softcam/cas/exset.c \
+    stream/softcam/cas/griffin.c \
+    stream/softcam/cas/irdeto.c \
+    stream/softcam/cas/mediaguard.c \
+    stream/softcam/cas/nagra.c \
+    stream/softcam/cas/viaccess.c \
+    stream/softcam/cas/videoguard.c
 
 if HAVE_LIBCRYPTO
 # need DES for newcamd
-libmodules_la_CFLAGS += $(LIBCRYPTO_CFLAGS)
-libmodules_la_LIBADD += $(LIBCRYPTO_LIBS)
-libmodules_la_SOURCES += \
-    modules/softcam/cam/newcamd.c
+libstream_la_CFLAGS += $(LIBCRYPTO_CFLAGS)
+libstream_la_LIBADD += $(LIBCRYPTO_LIBS)
+libstream_la_SOURCES += \
+    stream/softcam/cam/newcamd.c
 endif
 #endif
 
 ### transmit ###
 #if HAVE_MODULE_TRANSMIT
-libmodules_la_SOURCES += \
-    modules/transmit/transmit.c
+libstream_la_SOURCES += \
+    stream/transmit/transmit.c
 #endif
 
 ### udp ###
 #if HAVE_MODULE_UDP
-libmodules_la_SOURCES += \
-    modules/udp/input.c \
-    modules/udp/output.c
+libstream_la_SOURCES += \
+    stream/udp/input.c \
+    stream/udp/output.c
 #endif
 
 #
@@ -185,10 +185,10 @@ bin_PROGRAMS += astra
 astra_SOURCES = main.c
 astra_CFLAGS = \
     $(libastra_la_CFLAGS) \
-    $(libmodules_la_CFLAGS)
+    $(libstream_la_CFLAGS)
 astra_LDADD = \
     libastra.la \
-    libmodules.la
+    libstream.la
 
 #
 # Unit tests
