@@ -318,11 +318,11 @@ AS_IF([test "x${enable_dvbcsa}" != "xno"], [
 AM_CONDITIONAL(HAVE_DVBCSA, [test "x${have_dvbcsa}" = "xyes"])
 
 # OpenSSL (libcrypto)
-AC_ARG_ENABLE(libcrypto, AC_HELP_STRING([--enable-libcrypto],
-    [enable linking with OpenSSL crypto library (default auto)]) )
+AC_ARG_WITH(libcrypto, AC_HELP_STRING([--with-libcrypto],
+    [enable linking with OpenSSL crypto library (auto)]) )
 
 have_libcrypto="no"
-AS_IF([test "x${enable_libcrypto}" != "xno"], [
+AS_IF([test "x${with_libcrypto}" != "xno"], [
     AX_SAVE_FLAGS
     PKG_CHECK_MODULES([LIBCRYPTO], [libcrypto], [
         AC_CHECK_HEADERS([openssl/des.h], [
@@ -342,7 +342,7 @@ AS_IF([test "x${enable_libcrypto}" != "xno"], [
     ])
     AX_RESTORE_FLAGS
     AS_IF([test "x${have_libcrypto}" = "xno"], [
-        AS_IF([test "x${enable_libcrypto}" = "xyes"],
+        AS_IF([test "x${with_libcrypto}" = "xyes"],
             [ AC_MSG_ERROR([${LIBCRYPTO_PKG_ERRORS}]) ],
             [ AC_MSG_WARN([${LIBCRYPTO_PKG_ERRORS}]) ]) ])
 ])
