@@ -19,10 +19,6 @@
  */
 
 #include "dvb.h"
-#include "src/ca.h"
-
-#include <poll.h>
-#include <sys/socket.h>
 
 #define MSG(_msg) "[ddci %d:%d] " _msg, mod->adapter, mod->device
 

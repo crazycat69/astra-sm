@@ -21,9 +21,6 @@
 #ifndef _CA_H_
 #define _CA_H_ 1
 
-#include <pthread.h>
-#include "../dvb.h"
-
 typedef struct dvb_ca_t dvb_ca_t;
 
 // 1 - sessions[0] is empty

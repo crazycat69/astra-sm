@@ -23,11 +23,18 @@
 
 #include <astra.h>
 
+#include <poll.h>
 #include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <pthread.h>
+
 #include <linux/dvb/version.h>
 #include <linux/dvb/frontend.h>
 #include <linux/dvb/dmx.h>
 #include <linux/dvb/ca.h>
+
+#include "src/fe.h"
+#include "src/ca.h"
 
 #if DVB_API_VERSION < 5
 #   error "DVB_API_VERSION < 5"

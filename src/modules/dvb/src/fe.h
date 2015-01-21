@@ -21,8 +21,6 @@
 #ifndef _FE_H_
 #define _FE_H_ 1
 
-#include "../dvb.h"
-
 /*
  * Polarization:
  * H/L - SEC_VOLTAGE_18

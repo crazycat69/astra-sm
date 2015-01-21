@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "fe.h"
+#include "../dvb.h"
 
 #define MSG(_msg) "[dvb_input %d:%d] " _msg, fe->adapter, fe->device
 

@@ -20,11 +20,6 @@
 
 #include "dvb.h"
 
-#include "src/fe.h"
-#include "src/ca.h"
-
-#include <poll.h> // in dvb_thread_loop
-
 #define MSG(_msg) "[dvb_input %d:%d] " _msg, mod->adapter, mod->device
 
 #define DVB_API ((DVB_API_VERSION * 100) + DVB_API_VERSION_MINOR)
