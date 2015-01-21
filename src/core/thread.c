@@ -149,7 +149,7 @@ asc_thread_t * asc_thread_init(void *arg)
 }
 
 #ifdef _WIN32
-DWORD WINAPI asc_thread_loop(void *arg)
+static DWORD WINAPI asc_thread_loop(void *arg)
 #else
 static void * asc_thread_loop(void *arg)
 #endif
