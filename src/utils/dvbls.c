@@ -1,5 +1,5 @@
 /*
- * Astra Module: DVB
+ * Astra Utils (DVB enumeration)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
@@ -20,12 +20,16 @@
 
 #include <astra.h>
 
+#ifndef HAVE_DVBAPI
+#   error "OS does not provide DVB API"
+#endif
+
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <net/if.h>
 #include <dirent.h>
 
-#include "dvb.h"
+#include <linux/dvb/frontend.h>
 #include <linux/dvb/net.h>
 
 static int count;
