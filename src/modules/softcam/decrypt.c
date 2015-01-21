@@ -33,12 +33,12 @@
 
 #include "module_cam.h"
 
-#ifndef FFDECSA
-#   define FFDECSA 1
+#ifndef LIBDVBCSA
+#   define LIBDVBCSA 1
 #endif
 
-#ifndef LIBDVBCSA
-#   define LIBDVBCSA 0
+#ifndef FFDECSA
+#   define FFDECSA 0
 #endif
 
 #if FFDECSA == 1
