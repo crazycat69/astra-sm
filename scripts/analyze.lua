@@ -234,7 +234,7 @@ options = {
 }
 
 function main()
-    log.info("Starting Astra " .. astra.version)
+    log.info("Starting " .. astra.fullname)
 
     if input_url then
         _G.instance = {}

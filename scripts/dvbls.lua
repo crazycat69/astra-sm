@@ -1,6 +1,6 @@
 
 function main()
-    log.info("Starting Astra " .. astra.version)
+    log.info("Starting " .. astra.fullname)
     log.set({ color = true })
 
     if not dvbls then

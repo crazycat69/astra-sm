@@ -104,7 +104,7 @@ table { width: 600px; margin: auto; }
         <tbody>
             <tr>
                 <td class="brand">Astra Relay</td>
-                <td class="version">Astra v.]] .. astra.version .. [[</td>
+                <td class="version">]] .. astra.fullname .. [[</td>
             </tr>
         </tbody>
     </table>
@@ -414,7 +414,7 @@ function main()
         log.error("--xproxy option is deprecated. use --relay instead")
     end
 
-    log.info("Starting Astra " .. astra.version)
+    log.info("Starting " .. astra.fullname)
     log.info("Astra Relay started on " .. xproxy_addr .. ":" .. xproxy_port)
 
     local route = {

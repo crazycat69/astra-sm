@@ -751,5 +751,5 @@ options = {
 }
 
 function main()
-    log.info("Starting Astra " .. astra.version)
+    log.info("Starting " .. astra.fullname)
 end

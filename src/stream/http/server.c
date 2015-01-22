@@ -953,7 +953,7 @@ static void module_init(module_data_t *mod)
     mod->port = 80;
     module_option_number("port", &mod->port);
 
-    mod->server_name = "Astra";
+    mod->server_name = PACKAGE_NAME;
     module_option_string("server_name", &mod->server_name, NULL);
 
     mod->http_version = "HTTP/1.1";
