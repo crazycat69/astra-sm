@@ -41,13 +41,7 @@
 #   define FFDECSA 0
 #endif
 
-#if FFDECSA == 1
-#   include "FFdecsa/FFdecsa.h"
-#elif LIBDVBCSA == 1
-#   include <dvbcsa/dvbcsa.h>
-#else
-#   error "DVB-CSA is not defined"
-#endif
+#include <dvbcsa/dvbcsa.h>
 
 typedef struct
 {
@@ -57,18 +51,9 @@ typedef struct
     bool is_keys;
     uint8_t parity;
 
-#if FFDECSA == 1
-
-    void *keys;
-    uint8_t **batch;
-
-#elif LIBDVBCSA == 1
-
     struct dvbcsa_bs_key_s *even_key;
     struct dvbcsa_bs_key_s *odd_key;
     struct dvbcsa_bs_batch_s *batch;
-
-#endif
 
     size_t batch_skip;
 
@@ -139,12 +124,9 @@ static ca_stream_t * ca_stream_init(module_data_t *mod, uint16_t ecm_pid)
     asc_list_for(mod->ca_list)
     {
         ca_stream = asc_list_data(mod->ca_list);
-#if FFDECSA == 1
-        return ca_stream;
-#else
+
         if(ca_stream->ecm_pid == ecm_pid)
             return ca_stream;
-#endif
     }
 
     ca_stream = malloc(sizeof(ca_stream_t));
@@ -152,18 +134,9 @@ static ca_stream_t * ca_stream_init(module_data_t *mod, uint16_t ecm_pid)
 
     ca_stream->ecm_pid = ecm_pid;
 
-#if FFDECSA == 1
-
-    ca_stream->keys = get_key_struct();
-    ca_stream->batch = calloc(mod->batch_size * 2 + 2, sizeof(uint8_t *));
-
-#elif LIBDVBCSA == 1
-
     ca_stream->even_key = dvbcsa_bs_key_alloc();
     ca_stream->odd_key = dvbcsa_bs_key_alloc();
     ca_stream->batch = calloc(mod->batch_size + 1, sizeof(struct dvbcsa_bs_batch_s));
-
-#endif
 
     asc_list_insert_tail(mod->ca_list, ca_stream);
 
@@ -172,39 +145,19 @@ static ca_stream_t * ca_stream_init(module_data_t *mod, uint16_t ecm_pid)
 
 static void ca_stream_destroy(ca_stream_t *ca_stream)
 {
-#if FFDECSA == 1
-
-    free_key_struct(ca_stream->keys);
-    free(ca_stream->batch);
-
-#elif LIBDVBCSA == 1
-
     dvbcsa_bs_key_free(ca_stream->even_key);
     dvbcsa_bs_key_free(ca_stream->odd_key);
     free(ca_stream->batch);
-
-#endif
 
     free(ca_stream);
 }
 
 static void ca_stream_set_keys(ca_stream_t *ca_stream, const uint8_t *even, const uint8_t *odd)
 {
-#if FFDECSA == 1
-
-    if(even)
-        set_even_control_word(ca_stream->keys, even);
-    if(odd)
-        set_odd_control_word(ca_stream->keys, odd);
-
-#elif LIBDVBCSA == 1
-
     if(even)
         dvbcsa_bs_key_set(even, ca_stream->even_key);
     if(odd)
         dvbcsa_bs_key_set(odd, ca_stream->odd_key);
-
-#endif
 }
 
 static void module_decrypt_cas_init(module_data_t *mod)
@@ -693,25 +646,12 @@ static void decrypt(module_data_t *mod)
 
         if(ca_stream->batch_skip > 0)
         {
-
-#if FFDECSA == 1
-
-            ca_stream->batch[ca_stream->batch_skip] = NULL;
-
-            size_t i = 0, i_size = ca_stream->batch_skip / 2;
-            while(i < i_size)
-                i += decrypt_packets(ca_stream->keys, ca_stream->batch);
-
-#elif LIBDVBCSA == 1
-
             ca_stream->batch[ca_stream->batch_skip].data = NULL;
 
             if(ca_stream->parity == 0x80)
                 dvbcsa_bs_decrypt(ca_stream->even_key, ca_stream->batch, TS_BODY_SIZE);
             else if(ca_stream->parity == 0xC0)
                 dvbcsa_bs_decrypt(ca_stream->odd_key, ca_stream->batch, TS_BODY_SIZE);
-
-#endif
 
             ca_stream->batch_skip = 0;
         }
@@ -808,20 +748,6 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
         mod->storage.write = 0;
     mod->storage.count += TS_PACKET_SIZE;
 
-#if FFDECSA == 1
-
-    asc_list_first(mod->ca_list);
-    ca_stream_t *ca_stream = asc_list_data(mod->ca_list);
-
-    ca_stream->batch[ca_stream->batch_skip    ] = dst;
-    ca_stream->batch[ca_stream->batch_skip + 1] = dst + TS_PACKET_SIZE;
-    ca_stream->batch_skip += 2;
-
-    if(ca_stream->batch_skip >= mod->batch_size * 2)
-        decrypt(mod);
-
-#elif LIBDVBCSA == 1
-
     const uint8_t sc = TS_IS_SCRAMBLED(dst);
     if(sc)
     {
@@ -870,8 +796,6 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
                 decrypt(mod);
         }
     }
-
-#endif
 
     if(mod->storage.count >= mod->storage.size)
         decrypt(mod);
@@ -1013,15 +937,7 @@ static void module_init(module_data_t *mod)
     mod->ca_list = asc_list_init();
     mod->el_list = asc_list_init();
 
-#if FFDECSA == 1
-
-    mod->batch_size = get_suggested_cluster_size();
-
-#elif LIBDVBCSA == 1
-
     mod->batch_size = dvbcsa_bs_batch_size();
-
-#endif
 
     mod->storage.size = mod->batch_size * 4 * TS_PACKET_SIZE;
     mod->storage.buffer = malloc(mod->storage.size);
