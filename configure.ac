@@ -183,15 +183,8 @@ esac
 #
 # Checks for headers and functions common to all platforms
 #
-AC_FUNC_ERROR_AT_LINE
-AC_FUNC_MALLOC
-AC_FUNC_MKTIME
-AC_FUNC_REALLOC
-AC_FUNC_STRCOLL
-
-# required API
 AX_CHECK_HEADERS_REQ([dirent.h stdarg.h stddef.h stdint.h stdbool.h stdio.h stdlib.h sys/types.h sys/stat.h sys/time.h setjmp.h time.h string.h unistd.h errno.h])
-AX_CHECK_FUNCS_REQ([localtime longjmp memset memcpy srand strcasecmp strchr strdup strerror strftime strncasecmp strpbrk strrchr strspn strstr strtoul time snprintf vsnprintf memmove])
+AX_CHECK_FUNCS_REQ([localtime longjmp malloc realloc memset memcpy srand strcasecmp strchr strdup strerror strftime strncasecmp strpbrk strrchr strspn strstr strtoul time snprintf vsnprintf memmove])
 
 # optional headers
 AC_CHECK_HEADERS([netinet/sctp.h])
