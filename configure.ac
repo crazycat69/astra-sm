@@ -33,6 +33,7 @@ AM_PROG_AR
 
 # Initialize libtool
 LT_INIT([disable-shared static no-pic])
+LT_LIB_DLLOAD
 LT_LIB_M
 
 #
@@ -254,7 +255,7 @@ LIBS="$LIBS $LIBM $LUA_LIBS"
 AC_CHECK_HEADERS([lua.h], [
     AC_CHECK_LIB([lua], [luaL_len], [
         have_lua="yes"
-        LUA_LIBS="${LUA_LIBS} ${LIBM} -llua"
+        LUA_LIBS="${LUA_LIBS} ${LIBM} ${LIBADD_DLOPEN} -llua"
     ])
 ])
 AX_RESTORE_FLAGS
