@@ -172,6 +172,7 @@ astra_CFLAGS = \
     $(libastra_la_CFLAGS) \
     $(libstream_la_CFLAGS)
 astra_LDADD = \
+    $(LIBOBJS) \
     libastra.la \
     libstream.la
 
@@ -179,6 +180,6 @@ astra_LDADD = \
 # Unit tests
 #
 bin_PROGRAMS += test
-test_LDADD = libastra.la
+test_LDADD = $(LIBOBJS) libastra.la
 test_CFLAGS = $(libastra_la_CFLAGS)
 test_SOURCES = test.c
