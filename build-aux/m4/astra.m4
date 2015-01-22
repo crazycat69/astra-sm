@@ -107,12 +107,10 @@ AC_DEFUN([AX_STREAM_MODULE], [
             AC_MSG_RESULT([no])
             AS_IF([test "x${enable_$1}" = "xyes"], [
                 # force on, but can't build
-                AC_MSG_ERROR([m4_default([$4], [dependency checks failed])]
-                             [; pass --disable-$1 to disable this check])
+                AC_MSG_ERROR([m4_default([$4], [dependency checks failed]); pass --disable-$1 to disable this check])
             ], [
                 # auto off
-                AC_MSG_WARN([m4_default([$4], [dependency checks failed])]
-                            [; skipping])
+                AC_MSG_WARN([m4_default([$4], [dependency checks failed]); skipping])
             ])
         ])
     ], [
