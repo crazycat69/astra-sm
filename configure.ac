@@ -226,15 +226,15 @@ AS_IF(
 have_aio="no"
 AC_CHECK_HEADERS([aio.h], [
     AC_CHECK_LIB(rt, aio_init, [
+        AC_DEFINE([HAVE_AIO], [1],
+            [Define to 1 if you have the POSIX AIO interface.])
+
         LIBRT="-lrt"
         have_aio="yes"
     ], [
         # try without -lrt
         AC_CHECK_FUNCS([aio_init], [have_aio="yes"])
     ]) ])
-
-AS_IF([test "x${have_aio}" = "xyes"], [
-    AC_DEFINE([HAVE_AIO], [1], [Define to 1 if you have the POSIX AIO interface.]) ])
 
 AC_SUBST(LIBRT)
 
@@ -274,6 +274,8 @@ if test "x${have_aio}" = "xyes" -a "${SYS}" = "linux"; then
         LIBS="$LIBS $LIBAIO_LIBS"
         AC_CHECK_HEADERS([libaio.h], [
             AC_CHECK_LIB([aio], [io_queue_init], [
+                AC_DEFINE([HAVE_LIBAIO], [1], [Define to 1 if you have libaio])
+
                 have_libaio="yes"
                 LIBAIO_LIBS="${LIBAIO_LIBS} -laio"
             ])
@@ -288,7 +290,7 @@ else
     AS_IF([test "x${enable_libaio}" = "xyes"], [
         AC_MSG_ERROR([libaio is not supported on this platform]) ])
 fi
-AM_CONDITIONAL(HAVE_LIBAIO, [test "x${have_libaio}" = "xyes"])
+AM_CONDITIONAL([HAVE_LIBAIO], [test "x${have_libaio}" = "xyes"])
 
 # libdvbcsa
 AX_EXTLIB_PARAM(dvbcsa,
@@ -301,6 +303,8 @@ AS_IF([test "x${enable_dvbcsa}" != "xno"], [
     LIBS="$LIBS $DVBCSA_LIBS"
     AC_CHECK_HEADERS([dvbcsa/dvbcsa.h], [
         AC_CHECK_LIB([dvbcsa], [dvbcsa_bs_key_alloc], [
+            AC_DEFINE([HAVE_DVBCSA], [1], [Define to 1 if you have libdvbcsa])
+
             have_dvbcsa="yes"
             DVBCSA_LIBS="${DVBCSA_LIBS} -ldvbcsa"
         ])
@@ -311,7 +315,7 @@ AS_IF([test "x${enable_dvbcsa}" != "xno"], [
             [ AC_MSG_ERROR([could not find dvbcsa; pass --disable-dvbcsa to disable this check]) ],
             [ AC_MSG_WARN([could not find dvbcsa; CSA support will be unavailable]) ]) ])
 ])
-AM_CONDITIONAL(HAVE_DVBCSA, [test "x${have_dvbcsa}" = "xyes"])
+AM_CONDITIONAL([HAVE_DVBCSA], [test "x${have_dvbcsa}" = "xyes"])
 
 # OpenSSL (libcrypto)
 AC_ARG_WITH(libcrypto, AC_HELP_STRING([--with-libcrypto],
@@ -323,6 +327,9 @@ AS_IF([test "x${with_libcrypto}" != "xno"], [
     PKG_CHECK_MODULES([LIBCRYPTO], [libcrypto], [
         AC_CHECK_HEADERS([openssl/des.h], [
             AC_CHECK_LIB([crypto], [DES_random_key], [
+                AC_DEFINE([HAVE_LIBCRYPTO], [1], 
+                    [Define to 1 if you have OpenSSL libcrypto])
+
                 have_libcrypto="yes"
             ], [
                 # linking check failed
@@ -360,6 +367,8 @@ AC_PREPROC_IFELSE([
     ])
 ], [
     AC_MSG_RESULT([yes])
+    AC_DEFINE([HAVE_DVBAPI], [1], [Define to 1 if you have a usable DVB API])
+
     have_dvbapi="yes"
 ], [
     AC_MSG_RESULT([no])
@@ -368,8 +377,6 @@ AS_IF([test "x${have_dvbapi}" = "xno"], [
     AC_MSG_WARN([no DVB API found; DVB functionality will be unavailable]) ])
 
 AM_CONDITIONAL([HAVE_DVBAPI], [test "x${have_dvbapi}" = "xyes"])
-AC_DEFINE([HAVE_DVBAPI], [1],
-    [Define to 1 if you have a usable DVB API])
 
 #
 # Optional features
@@ -386,6 +393,8 @@ AS_IF([test "x${enable_inscript}" != "xno"], [
         [./src/inscript/prepare.sh]) ])
 
 AM_CONDITIONAL([HAVE_INSCRIPT], [test "x${enable_inscript}" != "xno"])
+AC_DEFINE([HAVE_INSCRIPT], [1],
+    [Define to 1 if built-in script module is enabled])
 
 # Streaming modules
 stream_modules="analyze channel transmit"

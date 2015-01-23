@@ -92,6 +92,7 @@ AC_DEFUN([AX_EXTLIB_PARAM], [
 ])
 
 AC_DEFUN([AX_STREAM_MODULE], [
+    m4_define([$1_varname], [m4_translit([$1], [a-z], [A-Z])])
     AC_ARG_ENABLE($1,
         AC_HELP_STRING([--disable-$1], [disable $2 (auto)]))
 
@@ -101,6 +102,9 @@ AC_DEFUN([AX_STREAM_MODULE], [
         AS_IF([m4_default([$3], [true])], [
             # auto/force on
             AC_MSG_RESULT([yes])
+            AC_DEFINE([HAVE_STREAM_]$1_varname, [1],
+                [Define to 1 if the `$1' module is enabled])
+
             stream_modules="${stream_modules} $1"
             have_$1="yes"
         ], [
@@ -117,6 +121,6 @@ AC_DEFUN([AX_STREAM_MODULE], [
         # force off
         AC_MSG_RESULT([disabled by user])
     ])
-    AM_CONDITIONAL([HAVE_STREAM_]m4_translit([$1], [a-z], [A-Z]),
-        [test "x${have_$1}" = "xyes"])
+    AM_CONDITIONAL([HAVE_STREAM_]$1_varname, [test "x${have_$1}" = "xyes"])
+    m4_undefine([$1_varname])
 ])
