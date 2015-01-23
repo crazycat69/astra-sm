@@ -447,7 +447,7 @@ static int lua_md5(lua_State *L)
     return 1;
 }
 
-LUA_API int luaopen_md5(lua_State *L)
+MODULE_LUA_BINDING(md5)
 {
     lua_getglobal(L, "string");
 

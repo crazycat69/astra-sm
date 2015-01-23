@@ -169,7 +169,7 @@ static int lua_sha1(lua_State *L)
     return 1;
 }
 
-LUA_API int luaopen_sha1(lua_State *L)
+MODULE_LUA_BINDING(sha1)
 {
     lua_getglobal(L, "string");
 

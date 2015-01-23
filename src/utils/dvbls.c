@@ -236,7 +236,7 @@ static int dvbls_scan(lua_State *L)
     return 1;
 }
 
-LUA_API int luaopen_dvbls(lua_State *L)
+MODULE_LUA_BINDING(dvbls)
 {
     lua_register(L, "dvbls", dvbls_scan);
     return 1;

@@ -93,7 +93,7 @@ static int lua_bin(lua_State *L)
     return 1;
 }
 
-LUA_API int luaopen_str2hex(lua_State *L)
+MODULE_LUA_BINDING(str2hex)
 {
     lua_getglobal(L, "string");
 

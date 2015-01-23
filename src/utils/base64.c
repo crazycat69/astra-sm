@@ -147,7 +147,7 @@ static int lua_base64_decode(lua_State *L)
     return 1;
 }
 
-LUA_API int luaopen_base64(lua_State *L)
+MODULE_LUA_BINDING(base64)
 {
     lua_getglobal(L, "string");
 

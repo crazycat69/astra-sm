@@ -233,7 +233,7 @@ static int utils_readder_gc(lua_State *L)
 
 /* utils */
 
-LUA_API int luaopen_utils(lua_State *L)
+MODULE_LUA_BINDING(utils)
 {
     static const luaL_Reg api[] =
     {

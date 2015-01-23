@@ -559,7 +559,7 @@ static int json_save(lua_State *L)
     return 1;
 }
 
-LUA_API int luaopen_json(lua_State *L)
+MODULE_LUA_BINDING(json)
 {
     static const luaL_Reg api[] =
     {

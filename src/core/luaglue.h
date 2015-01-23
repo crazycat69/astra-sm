@@ -36,6 +36,9 @@ typedef struct
 
 #define MODULE_OPTIONS_IDX 2
 
+#define MODULE_LUA_BINDING(_name) \
+    LUA_API int luaopen_##_name(lua_State *L)
+
 #define MODULE_LUA_METHODS()                                                                    \
     static const module_method_t __module_methods[] =
 
@@ -95,7 +98,7 @@ typedef struct
         module_init(mod);                                                                       \
         return 1;                                                                               \
     }                                                                                           \
-    LUA_API int luaopen_##_name(lua_State *L)                                                   \
+    MODULE_LUA_BINDING(_name)                                                                   \
     {                                                                                           \
         static const luaL_Reg meta_methods[] =                                                  \
         {                                                                                       \

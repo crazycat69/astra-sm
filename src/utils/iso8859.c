@@ -363,7 +363,7 @@ static int lua_iso8859_encode(lua_State *L)
     return 1;
 }
 
-LUA_API int luaopen_iso8859(lua_State *L)
+MODULE_LUA_BINDING(iso8859)
 {
     static const luaL_Reg api[] =
     {

@@ -56,7 +56,7 @@ static int _astra_reload(lua_State *L)
     return 0;
 }
 
-LUA_API int luaopen_astra(lua_State *L)
+MODULE_LUA_BINDING(astra)
 {
     static luaL_Reg astra_api[] =
     {

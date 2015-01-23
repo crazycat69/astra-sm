@@ -118,7 +118,7 @@ static int lua_log_debug(lua_State *L)
     return 0;
 }
 
-LUA_API int luaopen_log(lua_State *L)
+MODULE_LUA_BINDING(log)
 {
     is_debug = asc_log_is_debug();
 
