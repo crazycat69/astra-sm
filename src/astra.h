@@ -29,4 +29,6 @@
 #include "mpegts/mpegts.h"
 #include "utils/utils.h"
 
+#include "bindings.h"
+
 #endif /* _ASTRA_H_ */

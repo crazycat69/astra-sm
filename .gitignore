@@ -1,5 +1,6 @@
-/astra
-/modules/inscript/inscript.h
+/src/astra
+/src/inscript/inscript.h
+/src/bindings.h
 
 # binaries
 *.a

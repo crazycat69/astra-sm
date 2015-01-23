@@ -183,3 +183,16 @@ bin_PROGRAMS += test
 test_LDADD = $(LIBOBJS) libastra.la
 test_CFLAGS = $(libastra_la_CFLAGS)
 test_SOURCES = test.c
+
+#
+# Built sources
+#
+BUILT_SOURCES = bindings.h
+CLEANFILES = $(BUILT_SOURCES)
+
+bindings.h:
+	@echo -ne "/* automatically generated file; do not edit */\n\n" >bindings.h
+	@echo -ne "/*\n * Core library\n */\n\n" >>bindings.h
+	@sh ../build-aux/gen-bindings-list LUA_CORE_BINDINGS $(libastra_la_SOURCES) >>bindings.h
+	@echo -ne "\n/*\n * Streaming modules\n */\n\n" >>bindings.h
+	@sh ../build-aux/gen-bindings-list LUA_STREAM_BINDINGS $(libstream_la_SOURCES) >>bindings.h

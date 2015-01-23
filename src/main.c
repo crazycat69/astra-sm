@@ -24,7 +24,12 @@
 #endif
 
 static bool is_sighup = false;
-static int (*astra_mods[])(lua_State *) = ASTRA_MODULES;
+
+static int (*astra_mods[])(lua_State *) = {
+    LUA_CORE_BINDINGS
+    LUA_STREAM_BINDINGS
+    NULL
+};
 
 #ifndef _WIN32
 static void signal_handler(int signum)

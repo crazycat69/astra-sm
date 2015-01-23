@@ -1,0 +1,36 @@
+#! /bin/sh
+
+set -e
+
+if [ -z "$1" ]; then
+    echo "usage: $0 <listname> [src...]"
+    exit 1
+fi
+
+list_name=$1
+shift 1
+
+list_modules()
+{
+    for src in $@; do
+        list=`sed -ne 's/^MODULE_LUA_\(REGISTER\|BINDING\)(\([^)]*\)).*/\2/p' "$src"`
+        for mod in $list; do
+            echo $mod
+        done
+    done
+}
+
+list=`list_modules $@ | sort`
+
+echo '/* initializer prototypes */'
+for mod in $list; do
+    echo "MODULE_LUA_BINDING($mod);"
+done
+echo
+
+echo '/* list of pointers to init functions */'
+echo -n "#define $list_name"
+for mod in $list; do
+    echo -n ' \'; echo -ne "\n    luaopen_${mod},"
+done
+echo

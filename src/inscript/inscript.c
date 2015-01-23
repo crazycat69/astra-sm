@@ -128,7 +128,7 @@ static int fn_inscript_callback(lua_State *L)
     return 0;
 }
 
-LUA_API int luaopen_inscript(lua_State *L)
+MODULE_LUA_BINDING(inscript)
 {
     lua_pushcclosure(L, fn_inscript_callback, 0);
     lua_setglobal(L, __module_name);
