@@ -213,3 +213,7 @@ inscript/inscript.h: mkscript$(EXEEXT)
 endif
 
 CLEANFILES = $(BUILT_SOURCES)
+
+clean-local:
+	find . -name \*.s -exec rm -f {} \; ; \
+	find . -name \*.i -exec rm -f {} \;

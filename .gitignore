@@ -5,10 +5,12 @@
 
 # binaries
 *.a
-*.o
-*.so*
+*.i
 *.la
 *.lo
+*.o
+*.s
+*.so*
 
 # autotools stuff
 .deps

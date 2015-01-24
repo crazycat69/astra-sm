@@ -436,7 +436,7 @@ AC_ARG_ENABLE(debug,
 
 if test "$enable_debug" = "yes"; then
     AC_DEFINE([DEBUG], [1], [Define to build a debug version])
-    SAVE_CFLAGS="$SAVE_CFLAGS -O0 -g3"
+    SAVE_CFLAGS="$SAVE_CFLAGS -O0 -g3 -save-temps=obj"
 else
     CFLAGS="$CFLAGS -fomit-frame-pointer"
 fi
