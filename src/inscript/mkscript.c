@@ -237,11 +237,17 @@ static void print_block(uint8_t *block, size_t len)
 
 int main(int argc, char const *argv[])
 {
+    if(argc != 3)
+    {
+        fprintf(stderr, "Usage: %s <name> <file>\n", argv[0]);
+        return 1;
+    }
+
     int fd = open(argv[2], O_RDONLY);
     if(fd == -1)
     {
         fprintf(stderr, "Failed to open file: %s\n", argv[1]);
-        return -1;
+        return 1;
     }
     int filesize = lseek(fd, 0, SEEK_END);
     lseek(fd, 0, SEEK_SET);
@@ -252,7 +258,7 @@ int main(int argc, char const *argv[])
         fprintf(stderr, "Failed to read file\n");
         free(script);
         close(fd);
-        return -1;
+        return 1;
     }
     script[filesize] = '\0';
     close(fd);
