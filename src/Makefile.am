@@ -1,5 +1,7 @@
-noinst_LTLIBRARIES =
 bin_PROGRAMS =
+noinst_LTLIBRARIES =
+noinst_PROGRAMS =
+BUILT_SOURCES =
 
 #
 # Astra library
@@ -187,12 +189,27 @@ test_SOURCES = test.c
 #
 # Built sources
 #
-BUILT_SOURCES = bindings.h
-CLEANFILES = $(BUILT_SOURCES)
-
+BUILT_SOURCES += bindings.h
 bindings.h:
 	@echo -ne "/* automatically generated file; do not edit */\n\n" >bindings.h
 	@echo -ne "/*\n * Core library\n */\n\n" >>bindings.h
 	@sh ../build-aux/gen-bindings-list LUA_CORE_BINDINGS $(libastra_la_SOURCES) >>bindings.h
 	@echo -ne "\n/*\n * Streaming modules\n */\n\n" >>bindings.h
 	@sh ../build-aux/gen-bindings-list LUA_STREAM_BINDINGS $(libstream_la_SOURCES) >>bindings.h
+
+### inscript ###
+if HAVE_INSCRIPT
+BUILT_SOURCES += mkscript$(EXEEXT)
+# we have to build mkscript with host compiler
+mkscript$(EXEEXT):
+	cc -std=c99 -o mkscript$(EXEEXT) inscript/mkscript.c
+
+BUILT_SOURCES += inscript/inscript.h
+inscript/inscript.h: mkscript$(EXEEXT)
+	@echo -ne "/* automatically generated file; do not edit */\n\n" >inscript/inscript.h
+	for script in ../scripts/*.lua; do \
+	    ./mkscript$(EXEEXT) `basename $$script .lua` "$$script" >>inscript/inscript.h; \
+	done
+endif
+
+CLEANFILES = $(BUILT_SOURCES)

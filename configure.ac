@@ -387,11 +387,6 @@ AX_HELP_SECTION([Features and modules:])
 AC_ARG_ENABLE(inscript,
     AC_HELP_STRING(--disable-inscript, [don't build Lua scripts into binary (enabled)]))
 
-AS_IF([test "x${enable_inscript}" != "xno"], [
-    # TODO: kill this abomination
-    AC_CONFIG_FILES([src/inscript/inscript.h],
-        [./src/inscript/prepare.sh]) ])
-
 AM_CONDITIONAL([HAVE_INSCRIPT], [test "x${enable_inscript}" != "xno"])
 AC_DEFINE([HAVE_INSCRIPT], [1],
     [Define to 1 if built-in script module is enabled])
