@@ -54,14 +54,13 @@ AC_DEFUN([AX_EXTLIB_VARS], [
     m4_define([$1_ucase],[m4_translit([$1], [a-z], [A-Z])])
 
     AS_IF([test "x${with_$1_includes}" != "xno"],
-        $1_ucase[_CFLAGS="-I${with_$1_includes}"],
-        $1_ucase[_CFLAGS=""])
+        $1_ucase[_CFLAGS="-I${with_$1_includes}"])
     AS_IF([test "x${with_$1_libs}" != "xno"],
-        $1_ucase[_LIBS="-L${with_$1_libs}"],
-        $1_ucase[_LIBS=""])
+        $1_ucase[_LIBS="-L${with_$1_libs}"])
 
-    AC_SUBST($1_ucase[_CFLAGS])
-    AC_SUBST($1_ucase[_LIBS])
+    AC_ARG_VAR($1_ucase[_CFLAGS], [C compiler flags for $1])
+    AC_ARG_VAR($1_ucase[_LIBS], [linker flags for $1])
+
     m4_undefine([$1_ucase])
 ])
 

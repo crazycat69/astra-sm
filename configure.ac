@@ -2,12 +2,15 @@
 # Process this file with autoconf to produce a configure script.
 
 # Get version from git
-m4_define([pkg_version], m4_esyscmd_s([build-aux/git-version-gen]))
+m4_define([pkg_version], m4_esyscmd([build-aux/git-version-gen]))
+m4_ifset([pkg_version], [], [ m4_define([pkg_version], [UNKNOWN]) ])
+m4_if(pkg_version, [UNKNOWN],
+    [ m4_fatal([unable to obtain package version; please check `git-version-gen' output]) ])
 
 #
 # Autotools setup
 #
-AC_PREREQ([2.69])
+AC_PREREQ([2.63])
 AC_INIT([Astra SM], [pkg_version])
 AC_USE_SYSTEM_EXTENSIONS
 
@@ -29,6 +32,7 @@ AC_PROG_CC
 AM_PROG_CC_C_O
 AC_PROG_CPP
 AC_PROG_INSTALL
+m4_pattern_allow([AM_PROG_AR])
 AM_PROG_AR
 
 # Initialize libtool
@@ -49,21 +53,26 @@ AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_TYPE_INT64_T
 AC_CHECK_TYPES([ptrdiff_t])
-AC_CHECK_HEADER_STDBOOL
+AC_CHECK_TYPES([_Bool])
 
 # in case endian.h is absent
-AC_CHECK_HEADER([endian.h], [ac_cv_have_endian_h="yes"], [ac_cv_have_endian_h="no"])
-if test "x$ac_cv_have_endian_h" = "xno"; then
-    AC_DEFINE(__LITTLE_ENDIAN, 1234, [Little endian byte order])
-    AC_DEFINE(__BIG_ENDIAN, 4321, [Big endian byte order])
+AC_CHECK_HEADER([endian.h],
+    [ ac_cv_have_endian_h="yes" ],
+    [ ac_cv_have_endian_h="no" ])
+
+AS_IF([test "x${ac_cv_have_endian_h}" = "xno"], [
+    AC_DEFINE([__LITTLE_ENDIAN], [1234], [Little endian byte order])
+    AC_DEFINE([__BIG_ENDIAN], [4321], [Big endian byte order])
     AC_C_BIGENDIAN([ac_cv_c_bigendian="yes"], [ac_cv_c_bigendian="no"], [], [])
 
-    if test "x$ac_cv_c_bigendian" = "xyes"; then
-        AC_DEFINE(__BYTE_ORDER, __BIG_ENDIAN, [Define this machine's endianness])
-    else
-        AC_DEFINE(__BYTE_ORDER, __LITTLE_ENDIAN, [Define this machine's endianness])
-    fi
-fi
+    AS_IF([test "x${ac_cv_c_bigendian}" = "xyes"], [
+        AC_DEFINE([__BYTE_ORDER], [__BIG_ENDIAN],
+            [Define this machine's endianness])
+    ], [
+        AC_DEFINE([__BYTE_ORDER], [__LITTLE_ENDIAN],
+            [Define this machine's endianness])
+    ])
+])
 
 # use 64 bit file offsets on 32 bit systems
 AC_SYS_LARGEFILE
@@ -132,8 +141,8 @@ case "${host_os}" in
     ;;
 esac
 
-if test "${SYS}" != "windows"; then
-    AX_CHECK_HEADERS_REQ([syslog.h sys/socket.h arpa/inet.h netinet/in.h netinet/tcp.h netdb.h ifaddrs.h fcntl.h sys/ioctl.h])
+AS_IF([test "${SYS}" != "windows"], [
+    AX_CHECK_HEADERS_REQ([stdbool.h syslog.h sys/socket.h arpa/inet.h netinet/in.h netinet/tcp.h netdb.h ifaddrs.h fcntl.h sys/ioctl.h])
     AX_CHECK_FUNCS_REQ([signal syslog closelog mkstemp link fchmod access unlink gethostname setjmp getnameinfo inet_ntoa socket setsockopt bind listen accept getaddrinfo freeaddrinfo connect recv recvfrom send sendto getsockname htons shutdown fcntl ioctl localtime_r])
 
     # pthread
@@ -142,7 +151,7 @@ if test "${SYS}" != "windows"; then
         CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
         CC="$PTHREAD_CC"
     ], [ AC_MSG_ERROR([missing pthread support]) ])
-fi
+])
 
 AM_CONDITIONAL(HAVE_LINUX, [test "${SYS}" = "linux"])
 AM_CONDITIONAL(HAVE_WIN32, [test "${SYS}" = "windows"])
@@ -203,19 +212,16 @@ AC_CHECK_FUNCS([getifaddrs],
 # clock_gettime(): used by clock.c
 LIBRT=""
 ac_cv_func_clock_gettime="no"
-if test "${SYS}" != "windows"; then
-    # using clock_gettime() on windows drags winpthreads along
-    AC_CHECK_LIB(rt, clock_gettime,
-        [
-            LIBRT="-lrt"
-            ac_cv_func_clock_gettime="yes"
-            AC_DEFINE([HAVE_CLOCK_GETTIME],
-                [1], [Define to 1 if you have the `clock_gettime' function.])
-        ], [
-            # try without -lrt
-            AC_CHECK_FUNCS([clock_gettime])
-        ])
-fi
+AX_SAVE_FLAGS
+AC_SEARCH_LIBS([clock_gettime], [rt], [
+    AS_IF([test "$LIBS" != "$SAVED_LIBS"], [ LIBRT="-lrt" ])
+
+    ac_cv_func_clock_gettime="yes"
+    AC_DEFINE([HAVE_CLOCK_GETTIME],
+        [1], [Define to 1 if you have the `clock_gettime' function.])
+])
+AX_RESTORE_FLAGS
+
 AC_CHECK_FUNCS([gettimeofday])
 AS_IF(
     [ test "x${ac_cv_func_clock_gettime}" != "xyes" \
@@ -224,18 +230,17 @@ AS_IF(
 
 # POSIX AIO: used by `file'
 have_aio="no"
+AX_SAVE_FLAGS
 AC_CHECK_HEADERS([aio.h], [
-    AC_CHECK_LIB(rt, aio_init, [
+    AC_SEARCH_LIBS([aio_init], [rt], [
+        AS_IF([test "$LIBS" != "$SAVED_LIBS"], [ LIBRT="-lrt" ])
+
+        have_aio="yes"
         AC_DEFINE([HAVE_AIO], [1],
             [Define to 1 if you have the POSIX AIO interface.])
-
-        LIBRT="-lrt"
-        have_aio="yes"
-    ], [
-        # try without -lrt
-        AC_CHECK_FUNCS([aio_init], [have_aio="yes"])
-    ]) ])
-
+    ])
+])
+AX_RESTORE_FLAGS
 AC_SUBST(LIBRT)
 
 #
@@ -267,8 +272,8 @@ AX_EXTLIB_PARAM(libaio,
     [enable libaio for file I/O (Linux only)] )
 
 have_libaio="no"
-if test "x${have_aio}" = "xyes" -a "${SYS}" = "linux"; then
-    AS_IF([test "x${enable_libaio}" != "xno"], [
+AS_IF([test "x${have_aio}" = "xyes" -a "${SYS}" = "linux"], [
+    AS_IF([test "x${with_libaio}" != "xno"], [
         AX_SAVE_FLAGS
         CFLAGS="$CFLAGS $LIBAIO_CFLAGS"
         LIBS="$LIBS $LIBAIO_LIBS"
@@ -282,14 +287,14 @@ if test "x${have_aio}" = "xyes" -a "${SYS}" = "linux"; then
         ])
         AX_RESTORE_FLAGS
         AS_IF([test "x${have_libaio}" = "xno"], [
-            AS_IF([test "x${enable_libaio}" = "xyes"],
+            AS_IF([test "x${with_libaio}" = "xyes"],
                 [ AC_MSG_ERROR([could not find libaio; pass --disable-libaio to disable this check]) ],
                 [ AC_MSG_WARN([could not find libaio; Linux AIO support will be unavailable]) ]) ])
     ])
-else
-    AS_IF([test "x${enable_libaio}" = "xyes"], [
+], [
+    AS_IF([test "x${with_libaio}" = "xyes"], [
         AC_MSG_ERROR([libaio is not supported on this platform]) ])
-fi
+])
 AM_CONDITIONAL([HAVE_LIBAIO], [test "x${have_libaio}" = "xyes"])
 
 # libdvbcsa
@@ -297,7 +302,7 @@ AX_EXTLIB_PARAM(dvbcsa,
     [enable CSA (de)scrambling using libdvbcsa] )
 
 have_dvbcsa="no"
-AS_IF([test "x${enable_dvbcsa}" != "xno"], [
+AS_IF([test "x${with_dvbcsa}" != "xno"], [
     AX_SAVE_FLAGS
     CFLAGS="$CFLAGS $DVBCSA_CFLAGS"
     LIBS="$LIBS $DVBCSA_LIBS"
@@ -311,15 +316,20 @@ AS_IF([test "x${enable_dvbcsa}" != "xno"], [
     ])
     AX_RESTORE_FLAGS
     AS_IF([test "x${have_dvbcsa}" = "xno"], [
-        AS_IF([test "x${enable_dvbcsa}" = "xyes"],
+        AS_IF([test "x${with_dvbcsa}" = "xyes"],
             [ AC_MSG_ERROR([could not find dvbcsa; pass --disable-dvbcsa to disable this check]) ],
             [ AC_MSG_WARN([could not find dvbcsa; CSA support will be unavailable]) ]) ])
 ])
 AM_CONDITIONAL([HAVE_DVBCSA], [test "x${have_dvbcsa}" = "xyes"])
 
 # OpenSSL (libcrypto)
-AC_ARG_WITH(libcrypto, AC_HELP_STRING([--with-libcrypto],
-    [enable linking with OpenSSL crypto library (auto)]) )
+AX_EXTLIB_OPTIONAL(libcrypto,
+    [enable linking with OpenSSL crypto library (auto)])
+
+AS_IF([test "x${with_libcrypto_includes}" != "xno"],
+    [LIBCRYPTO_CFLAGS="-I${with_libcrypto_includes}"])
+AS_IF([test "x${with_libcrypto_libs}" != "xno"],
+    [LIBCRYPTO_LIBS="-L${with_libcrypto_libs}"])
 
 have_libcrypto="no"
 AS_IF([test "x${with_libcrypto}" != "xno"], [
@@ -384,12 +394,14 @@ AM_CONDITIONAL([HAVE_DVBAPI], [test "x${have_dvbapi}" = "xyes"])
 AX_HELP_SECTION([Features and modules:])
 
 # Built-in scripts
-AC_ARG_ENABLE(inscript,
-    AC_HELP_STRING(--disable-inscript, [don't build Lua scripts into binary (enabled)]))
+AC_ARG_ENABLE([inscript], AC_HELP_STRING([--disable-inscript],
+    [don't build Lua scripts into binary (enabled)]))
 
+AS_IF([test "x${enable_inscript}" != "xno"], [
+    AC_DEFINE([HAVE_INSCRIPT], [1],
+        [Define to 1 if built-in script module is enabled])
+])
 AM_CONDITIONAL([HAVE_INSCRIPT], [test "x${enable_inscript}" != "xno"])
-AC_DEFINE([HAVE_INSCRIPT], [1],
-    [Define to 1 if built-in script module is enabled])
 
 # Streaming modules
 stream_modules="analyze channel transmit"
@@ -431,30 +443,33 @@ SAVE_CFLAGS="$CFLAGS"
 CFLAGS="-std=iso9899:1999"
 
 # Debug version
-AC_ARG_ENABLE(debug,
-    AC_HELP_STRING(--enable-debug, [build a debug version]))
+AC_ARG_ENABLE([debug],
+    AC_HELP_STRING([--enable-debug], [build a debug version]))
 
-if test "$enable_debug" = "yes"; then
+AS_IF([test "x${enable_debug}" = "xyes"], [
     AC_DEFINE([DEBUG], [1], [Define to build a debug version])
     SAVE_CFLAGS="$SAVE_CFLAGS -O0 -g3 -save-temps=obj"
-else
+
+    # remove -pipe
+    SAVE_CFLAGS=$(echo "$SAVE_CFLAGS" | sed -e 's/-pipe//')
+], [
     CFLAGS="$CFLAGS -fomit-frame-pointer"
-fi
+])
 
 # -Werror build
-AC_ARG_ENABLE(werror,
-    AC_HELP_STRING(--enable-werror, [turn on -Werror (GCC only)]))
+AC_ARG_ENABLE([werror],
+    AC_HELP_STRING([--enable-werror], [turn on -Werror (GCC only)]))
 
 # Add generic CFLAGS
 CFLAGS="$CFLAGS -fno-builtin -fstrict-aliasing -fstrict-overflow"
-if test "$GCC" = "yes"; then
+AS_IF([test "x${GCC}" = "xyes"], [
     CFLAGS="$CFLAGS -Waggregate-return -Wall -Wbad-function-cast -Wcast-align -Wextra -Wfloat-equal -Wformat=2 -Winit-self -Winline -Wjump-misses-init -Wlogical-op -Wmissing-declarations -Wmissing-include-dirs -Wmissing-prototypes -Wnested-externs -Wold-style-definition -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing -Wstrict-overflow=4 -Wstrict-prototypes -Wundef -Wuninitialized -Wunreachable-code -Wunused -Wwrite-strings"
-    if test "$enable_werror" = "yes"; then
+    AS_IF([test "x${enable_werror}" = "xyes"], [
         CFLAGS="$CFLAGS -pedantic-errors -Werror"
-    else
+    ], [
         CFLAGS="$CFLAGS -pedantic"
-    fi
-fi
+    ])
+])
 CFLAGS="$CFLAGS $SAVE_CFLAGS"
 
 # Makefile generation

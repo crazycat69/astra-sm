@@ -5,6 +5,7 @@
 
 # binaries
 *.a
+*.exe
 *.i
 *.la
 *.lo
