@@ -1386,7 +1386,7 @@ static void ca_slot_reset(dvb_ca_t *ca, uint8_t slot_id)
 
     if(ioctl(ca->ca_fd, CA_RESET, 1 << slot_id) != 0)
     {
-        asc_log_error(MSG("CA: Slot %d CA_RESET failed"));
+        asc_log_error(MSG("CA: Slot %d CA_RESET failed"), slot_id);
         return;
     }
 

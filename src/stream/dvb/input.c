@@ -228,7 +228,7 @@ static void dmx_set_pid(module_data_t *mod, uint16_t pid, int is_set)
 
     if(pid >= MAX_PID)
     {
-        asc_log_error(MSG("demux: PID value must be less then %d"), __FUNCTION__, MAX_PID);
+        asc_log_error(MSG("demux: PID value must be less then %d"), MAX_PID);
         astra_abort();
     }
 
