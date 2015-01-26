@@ -416,7 +416,7 @@ char * http_authorization(  const char *auth_header
     }
     else if(!strncasecmp(auth_header, "digest", 6))
     {
-        parse_match_t m[4];
+        parse_match_t m[4] = { {0, 0} };
         md5_ctx_t ctx;
         uint8_t digest[MD5_DIGEST_SIZE];
         char ha1[MD5_DIGEST_SIZE * 2 + 1];
