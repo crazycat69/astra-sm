@@ -509,7 +509,7 @@ static void thread_loop(void *arg)
             mod->pcr = pcr;
             if(block_time == 0 || block_time > 500000)
             {
-                asc_log_debug(  MSG("block time out of range: %llums block_size:%u")
+                asc_log_debug(  MSG("block time out of range: %llums block_size:%zu")
                               , (uint64_t)(block_time / 1000), block_size);
 
                 mod->sync.buffer_count -= block_size;
@@ -1108,7 +1108,8 @@ static void on_ready_send_request(void *arg)
 
 static void lua_make_request(module_data_t *mod)
 {
-    asc_assert(lua_istable(lua, -1), MSG("%s() required table on top of the stack"));
+    asc_assert(lua_istable(lua, -1),
+        MSG("%s() requires table on top of the stack"), __FUNCTION__);
 
     lua_getfield(lua, -1, __method);
     const char *method = lua_isstring(lua, -1) ? lua_tostring(lua, -1) : __default_method;
@@ -1211,7 +1212,7 @@ static void on_upstream_ready(void *arg)
         }
         else if(send_size == -1)
         {
-            asc_log_error(  MSG("failed to send ts (%d bytes) [%s]")
+            asc_log_error(  MSG("failed to send ts (%zu bytes) [%s]")
                           , block_size, asc_socket_error());
             on_close(mod);
             return;

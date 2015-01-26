@@ -809,7 +809,7 @@ static void on_server_close(void *arg)
             http_client_t *client = asc_list_data(mod->clients);
             asc_assert(client != prev_client
                        , MSG("loop on on_server_close() client:%p")
-                       , client);
+                       , (void *)client);
             on_client_close(client);
             prev_client = client;
         }
@@ -858,7 +858,7 @@ static void on_server_accept(void *arg)
 
     asc_list_insert_tail(mod->clients, client);
 
-    asc_log_debug(MSG("client connected %s:%d (%d clients)")
+    asc_log_debug(MSG("client connected %s:%d (%zu clients)")
                       , asc_socket_addr(client->sock)
                       , asc_socket_port(client->sock)
                       , asc_list_size(mod->clients));
