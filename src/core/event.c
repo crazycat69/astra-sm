@@ -121,7 +121,7 @@ void asc_event_core_destroy(void)
         asc_event_t *event = asc_list_data(event_observer.event_list);
         asc_assert(event != prev_event
                    , MSG("loop on asc_event_core_destroy() event:%p")
-                   , event);
+                   , (void *)event);
         if(event->on_error)
             event->on_error(event->arg);
         prev_event = event;

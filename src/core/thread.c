@@ -96,7 +96,7 @@ void asc_thread_core_destroy(void)
         asc_thread_t *thread = asc_list_data(thread_observer.thread_list);
         asc_assert(thread != prev_thread
                    , MSG("loop on asc_thread_core_destroy() thread:%p")
-                   , thread);
+                   , (void *)thread);
         if(thread->on_close)
             thread->on_close(thread->arg);
         prev_thread = thread;
