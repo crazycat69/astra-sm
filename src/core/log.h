@@ -32,10 +32,10 @@ void asc_log_set_syslog(const char *);
 void asc_log_hup(void);
 void asc_log_core_destroy(void);
 
-void asc_log_info(const char *, ...);
-void asc_log_error(const char *, ...);
-void asc_log_warning(const char *, ...);
-void asc_log_debug(const char *, ...);
+void asc_log_info(const char *, ...) __fmt_printf(1, 2);
+void asc_log_error(const char *, ...) __fmt_printf(1, 2);
+void asc_log_warning(const char *, ...) __fmt_printf(1, 2);
+void asc_log_debug(const char *, ...) __fmt_printf(1, 2);
 
 bool asc_log_is_debug(void);
 

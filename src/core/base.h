@@ -56,6 +56,11 @@
 #   define __wur __attribute__(( __warn_unused_result__ ))
 #endif
 
+#ifndef __fmt_printf
+#   define __fmt_printf(__index, __first) \
+    __attribute__((__format__(__printf__, __index, __first)))
+#endif
+
 #ifndef O_BINARY
 #   ifdef _O_BINARY
 #       define O_BINARY _O_BINARY

@@ -83,6 +83,7 @@ static const char * _get_type_str(int type)
     }
 }
 
+__fmt_printf(2, 0)
 static void _log(int type, const char *msg, va_list ap)
 {
     char buffer[4096];
