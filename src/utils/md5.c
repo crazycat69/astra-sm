@@ -42,15 +42,17 @@
  * and on PPC we do 1-byte loads anyway.
  */
 
-#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+#if defined(__BYTE_ORDER) && __BYTE_ORDER == __LITTLE_ENDIAN
 #   define FETCH_32(p) (*(const uint32_t *)(p))
-#elif __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
-#   define FETCH_32(p)                                                      \
-                       (((uint32_t)*((const uint8_t *)(p))) |             \
-                       (((uint32_t)*((const uint8_t *)(p) + 1)) << 8) |   \
-                       (((uint32_t)*((const uint8_t *)(p) + 2)) << 16) |  \
+#elif defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN
+#   define FETCH_32(p)                                                   \
+                       (((uint32_t)*((const uint8_t *)(p))) |            \
+                       (((uint32_t)*((const uint8_t *)(p) + 1)) << 8) |  \
+                       (((uint32_t)*((const uint8_t *)(p) + 2)) << 16) | \
                        (((uint32_t)*((const uint8_t *)(p) + 3)) << 24))
-#endif
+#else
+#   error "Please fix __BYTE_ORDER defines"
+#endif /* __BYTE_ORDER */
 
 /*
  * Encodes input (uint32_t) into output (uint8_t). Assumes len is

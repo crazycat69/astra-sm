@@ -134,8 +134,8 @@ typedef struct __attribute__ ((__packed__)) {
     unsigned crc       : 1;
     unsigned extension : 1;
 #else
-#error "Please fix <asm/byteorder.h>"
-#endif
+#   error "Please fix __BYTE_ORDER defines"
+#endif /* __BYTE_ORDER */
     /* byte 8 */
     unsigned hdrlen    : 8;
 } mpegts_pes_ext_t;
