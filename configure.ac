@@ -348,7 +348,7 @@ AM_CONDITIONAL([HAVE_DVBCSA], [test "x${have_dvbcsa}" = "xyes"])
 
 # OpenSSL (libcrypto)
 AX_EXTLIB_OPTIONAL(libcrypto,
-    [enable linking with OpenSSL crypto library (auto)])
+    [enable linking with OpenSSL crypto library])
 
 AS_IF([test "x${with_libcrypto_includes}" != "xno"],
     [LIBCRYPTO_CFLAGS="-I${with_libcrypto_includes}"])
