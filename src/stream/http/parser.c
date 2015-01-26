@@ -306,7 +306,7 @@ bool http_parse_header(const char *str, parse_match_t *match)
 
 /* WWW-Authenticate */
 
-bool http_parse_auth_challenge(const char *str, parse_match_t *match)
+static bool http_parse_auth_challenge(const char *str, parse_match_t *match)
 {
     char c;
     size_t skip = 0;
@@ -426,9 +426,9 @@ char * http_authorization(  const char *auth_header
         const size_t login_len = strlen(login);
         const size_t password_len = strlen(password);
 
-        char *realm = "";
+        const char *realm = "";
         size_t realm_len = 0;
-        char *nonce = "";
+        const char *nonce = "";
         size_t nonce_len = 0;
 
         auth_header += 7; // "Digest "
