@@ -40,6 +40,11 @@ LT_INIT([disable-shared static no-pic])
 LT_LIB_DLLOAD
 LT_LIB_M
 
+# Check C99 support
+AX_CHECK_CFLAG([-std=c99], [], [], [
+    AX_CHECK_CFLAG([-std=iso9899:1999], [], [], [
+        AC_MSG_ERROR([$CC doesn't seem to support C99]) ]) ])
+
 #
 # Checks for typedefs, structures, and compiler characteristics
 #
@@ -439,38 +444,45 @@ AX_STREAM_MODULE(udp, [UDP receive and transmit module])
 #
 AX_HELP_SECTION([Build options:])
 
-SAVE_CFLAGS="$CFLAGS"
-CFLAGS="-std=iso9899:1999"
-
 # Debug version
 AC_ARG_ENABLE([debug],
     AC_HELP_STRING([--enable-debug], [build a debug version]))
 
 AS_IF([test "x${enable_debug}" = "xyes"], [
-    AC_DEFINE([DEBUG], [1], [Define to build a debug version])
-    SAVE_CFLAGS="$SAVE_CFLAGS -O0 -g3 -save-temps=obj"
+    AC_DEFINE([DEBUG], [1], [Define when building a debug version])
 
-    # remove -pipe
-    SAVE_CFLAGS=$(echo "$SAVE_CFLAGS" | sed -e 's/-pipe//')
+    # disable optimization, add debug info
+    AX_CHECK_CFLAGS([-O0 -g3], [], [], [
+        AC_MSG_ERROR([$CC doesn't support required debug flag; pass --disable-debug to disable this check]) ])
+
+    # non-essential debug flags
+    AX_CHECK_CFLAGS([-save-temps=obj -fno-builtin])
 ], [
-    CFLAGS="$CFLAGS -fomit-frame-pointer"
+    AX_CHECK_CFLAG([-fomit-frame-pointer])
 ])
 
 # -Werror build
 AC_ARG_ENABLE([werror],
-    AC_HELP_STRING([--enable-werror], [turn on -Werror (GCC only)]))
+    AC_HELP_STRING([--enable-werror], [turn on -Werror]))
 
-# Add generic CFLAGS
-CFLAGS="$CFLAGS -fno-builtin -fstrict-aliasing -fstrict-overflow"
-AS_IF([test "x${GCC}" = "xyes"], [
-    CFLAGS="$CFLAGS -Waggregate-return -Wall -Wbad-function-cast -Wcast-align -Wextra -Wfloat-equal -Wformat=2 -Winit-self -Winline -Wjump-misses-init -Wlogical-op -Wmissing-declarations -Wmissing-include-dirs -Wmissing-prototypes -Wnested-externs -Wold-style-definition -Wpacked -Wpointer-arith -Wredundant-decls -Wshadow -Wstack-protector -Wstrict-aliasing -Wstrict-overflow=4 -Wstrict-prototypes -Wundef -Wuninitialized -Wunreachable-code -Wunused -Wwrite-strings"
-    AS_IF([test "x${enable_werror}" = "xyes"], [
-        CFLAGS="$CFLAGS -pedantic-errors -Werror"
-    ], [
-        CFLAGS="$CFLAGS -pedantic"
-    ])
+AS_IF([test "x${enable_werror}" = "xyes"], [
+    AX_CHECK_CFLAGS([-pedantic-errors -Werror])
+], [
+    AX_CHECK_CFLAG([-pedantic])
 ])
-CFLAGS="$CFLAGS $SAVE_CFLAGS"
+
+# Lots of warnings
+AX_CHECK_CFLAGS([-Wall -Wextra -Waggregate-return -Wbad-function-cast])
+AX_CHECK_CFLAGS([-Wcast-align -Wfloat-equal -Wformat=2 -Winit-self -Winline])
+AX_CHECK_CFLAGS([-Wjump-misses-init -Wlogical-op -Wmissing-declarations])
+AX_CHECK_CFLAGS([-Wmissing-include-dirs -Wmissing-prototypes -Wnested-externs])
+AX_CHECK_CFLAGS([-Wold-style-definition -Wpointer-arith -Wredundant-decls])
+AX_CHECK_CFLAGS([-Wshadow -Wstack-protector -Wstrict-aliasing -Wstrict-overflow=4])
+AX_CHECK_CFLAGS([-Wstrict-prototypes -Wundef -Wuninitialized -Wunused])
+AX_CHECK_CFLAGS([-Wwrite-strings])
+
+# Other flags
+AX_CHECK_CFLAGS([-fstrict-aliasing -fstrict-overflow])
 
 # Makefile generation
 AC_CONFIG_FILES([

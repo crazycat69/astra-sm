@@ -123,3 +123,37 @@ AC_DEFUN([AX_STREAM_MODULE], [
     AM_CONDITIONAL([HAVE_STREAM_]$1_varname, [test "x${have_$1}" = "xyes"])
     m4_undefine([$1_varname])
 ])
+
+# AX_CHECK_CFLAG(FLAG, [FLAGVAR], [ACTION-IF-SUCCESS], [ACTION-IF-FAILURE]
+#-------------------------------------------------------------------------
+# Check if $CC supports FLAG; append it to FLAGVAR on success.
+# If specified, perform ACTION-IF-SUCCESS or ACTION-IF-FAILURE.
+AC_DEFUN([AX_CHECK_CFLAG], [
+    AC_MSG_CHECKING([whether $CC accepts $1])
+
+    AX_SAVE_FLAGS
+    CFLAGS="$1"
+    AC_COMPILE_IFELSE([ AC_LANG_PROGRAM([]) ],
+        [ ccf_have_flag="yes" ], [ ccf_have_flag="no" ])
+    AX_RESTORE_FLAGS
+
+    AS_IF([test "x${ccf_have_flag}" = "xyes"], [
+        AC_MSG_RESULT([yes])
+        m4_define([ccf_flag_var], m4_default([$2], [CFLAGS]))
+        ccf_flag_var="$ccf_flag_var $1"
+        m4_undefine([ccf_flag_var])
+        m4_default([$3], [])
+    ], [
+        AC_MSG_RESULT([no])
+        m4_default([$4], [])
+    ])
+])
+
+# AX_CHECK_CFLAGS(FLAGLIST, [FLAGVAR], [ACTION-IF-SUCCESS], [ACTION-IF-FAILURE]
+#------------------------------------------------------------------------------
+# For each flag in FLAGLIST perform AX_CHECK_CFLAG
+AC_DEFUN([AX_CHECK_CFLAGS], [
+    for ac_flag in $1; do
+        AX_CHECK_CFLAG([$ac_flag], [$2], [$3], [$4])
+    done
+])
