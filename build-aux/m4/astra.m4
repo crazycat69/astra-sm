@@ -132,9 +132,16 @@ AC_DEFUN([AX_CHECK_CFLAG], [
     AC_MSG_CHECKING([whether $CC accepts $1])
 
     AX_SAVE_FLAGS
-    CFLAGS="$1"
-    AC_COMPILE_IFELSE([ AC_LANG_PROGRAM([]) ],
-        [ ccf_have_flag="yes" ], [ ccf_have_flag="no" ])
+    CFLAGS="-Werror $1"
+    AC_COMPILE_IFELSE([
+        AC_LANG_SOURCE([[
+            int main(void);
+            int main(void)
+            {
+                return 0;
+            }
+        ]])
+    ], [ ccf_have_flag="yes" ], [ ccf_have_flag="no" ])
     AX_RESTORE_FLAGS
 
     AS_IF([test "x${ccf_have_flag}" = "xyes"], [
