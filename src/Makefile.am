@@ -178,13 +178,11 @@ astra_LDADD = \
     libastra.la \
     libstream.la
 
-#
-# Unit tests
-#
-bin_PROGRAMS += test
-test_LDADD = $(LIBOBJS) libastra.la
-test_CFLAGS = $(libastra_la_CFLAGS)
-test_SOURCES = test.c
+# add Lua script path
+if !HAVE_WIN32
+astra_CFLAGS += \
+    -DASC_SPATH='"$(sysconfdir)/astra/scripts"'
+endif
 
 #
 # Built sources
