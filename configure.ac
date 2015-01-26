@@ -141,6 +141,14 @@ case "${host_os}" in
         SYS=linux
     ;;
 
+    darwin*)
+        SYS=macos
+    ;;
+
+    freebsd*)
+        SYS=freebsd
+    ;;
+
     *)
         SYS=unknown
     ;;
@@ -160,6 +168,8 @@ AS_IF([test "${SYS}" != "windows"], [
 
 AM_CONDITIONAL(HAVE_LINUX, [test "${SYS}" = "linux"])
 AM_CONDITIONAL(HAVE_WIN32, [test "${SYS}" = "windows"])
+AM_CONDITIONAL(HAVE_MACOS, [test "${SYS}" = "macos"])
+AM_CONDITIONAL(HAVE_FREEBSD, [test "${SYS}" = "freebsd"])
 
 # Choose event mechanism
 case "${host_os}" in
@@ -254,23 +264,32 @@ AC_SUBST(LIBRT)
 AX_HELP_SECTION([External libraries:])
 
 # lua
-AX_EXTLIB_REQUIRED(lua)
-AX_EXTLIB_VARS(lua)
+AX_EXTLIB_PARAM(lua,
+    [use external Lua library instead of the bundled version])
 
 have_lua="no"
-AX_SAVE_FLAGS
-CFLAGS="$CFLAGS $LUA_CFLAGS"
-# lua wants -lm on linux
-LIBS="$LIBS $LIBM $LUA_LIBS"
-AC_CHECK_HEADERS([lua.h], [
-    AC_CHECK_LIB([lua], [luaL_len], [
-        have_lua="yes"
-        LUA_LIBS="${LUA_LIBS} ${LIBM} ${LIBADD_DLOPEN} -llua"
+AS_IF([test "x${with_lua}" != "xno"], [
+    AX_SAVE_FLAGS
+    CFLAGS="$CFLAGS $LUA_CFLAGS"
+    # lua wants -lm on linux
+    LIBS="$LIBS $LIBM $LUA_LIBS"
+    AC_CHECK_HEADERS([lua.h], [
+        AC_CHECK_LIB([lua], [luaL_len], [
+            have_lua="yes"
+            LUA_LIBS="${LUA_LIBS} ${LIBM} ${LIBADD_DLOPEN} -llua"
+        ])
+    ])
+    AX_RESTORE_FLAGS
+    AS_IF([test "x${have_lua}" = "xno"], [
+        AC_MSG_WARN([Astra requires Lua library version 5.2 or higher])
+        AS_IF([test "x${with_lua}" != "xyes"], [
+            AC_MSG_WARN([Bundled version will be built and statically linked])
+        ], [
+            AC_MSG_ERROR([Pass --without-lua to build bundled version])
+        ])
     ])
 ])
-AX_RESTORE_FLAGS
-AS_IF([test "x${have_lua}" = "xno"], [
-    AC_MSG_ERROR([Astra requires Lua library version 5.2 or higher]) ])
+AM_CONDITIONAL([HAVE_INTERNAL_LUA], [test "x${have_lua}" = "xno"])
 
 # libaio
 AX_EXTLIB_PARAM(libaio,
@@ -512,6 +531,7 @@ AX_CHECK_CFLAG([-fstrict-overflow])
 # Makefile generation
 AC_CONFIG_FILES([
     Makefile
+    lua/Makefile
     src/Makefile
     testcards/Makefile
     scripts/Makefile

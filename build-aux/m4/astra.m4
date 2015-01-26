@@ -75,16 +75,6 @@ AC_DEFUN([AX_EXTLIB_OPTIONAL], [
         [with_$1="yes"], [with_$1_libs="no"])
 ])
 
-AC_DEFUN([AX_EXTLIB_REQUIRED], [
-    # required dependency parameters
-    AC_ARG_WITH($1-includes,
-        AC_HELP_STRING([--with-$1-includes=PATH], [path to $1 header files]),
-        [], [with_$1_includes="no"])
-    AC_ARG_WITH($1-libs,
-        AC_HELP_STRING([--with-$1-libs=PATH], [path to $1 library files]),
-        [], [with_$1_libs="no"])
-])
-
 AC_DEFUN([AX_EXTLIB_PARAM], [
     AX_EXTLIB_OPTIONAL($1, $2)
     AX_EXTLIB_VARS($1)

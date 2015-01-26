@@ -7,10 +7,18 @@ BUILT_SOURCES =
 # Astra library
 #
 noinst_LTLIBRARIES += libastra.la
-libastra_la_CFLAGS = $(LUA_CFLAGS)
+libastra_la_CFLAGS =
 libastra_la_LDFLAGS = -module -static
-libastra_la_LIBADD = $(LIBM) $(LIBRT) $(LUA_LIBS)
+libastra_la_LIBADD = $(LIBM) $(LIBRT)
 libastra_la_SOURCES =
+
+if HAVE_INTERNAL_LUA
+libastra_la_CFLAGS += -I$(top_srcdir)/lua
+libastra_la_LIBADD += $(top_srcdir)/lua/liblua.la
+else
+libastra_la_CFLAGS += $(LUA_CFLAGS)
+libastra_la_LIBADD += $(LUA_LIBS)
+endif
 
 # core/
 libastra_la_SOURCES += \
@@ -211,7 +219,3 @@ inscript/inscript.h: mkscript$(EXEEXT)
 endif
 
 CLEANFILES = $(BUILT_SOURCES)
-
-clean-local:
-	find . -name \*.s -exec rm -f {} \; ; \
-	find . -name \*.i -exec rm -f {} \;
