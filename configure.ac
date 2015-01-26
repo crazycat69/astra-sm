@@ -472,17 +472,42 @@ AS_IF([test "x${enable_werror}" = "xyes"], [
 ])
 
 # Lots of warnings
-AX_CHECK_CFLAGS([-Wall -Wextra -Waggregate-return -Wbad-function-cast])
-AX_CHECK_CFLAGS([-Wcast-align -Wfloat-equal -Wformat=2 -Winit-self -Winline])
-AX_CHECK_CFLAGS([-Wjump-misses-init -Wlogical-op -Wmissing-declarations])
-AX_CHECK_CFLAGS([-Wmissing-include-dirs -Wmissing-prototypes -Wnested-externs])
-AX_CHECK_CFLAGS([-Wold-style-definition -Wpointer-arith -Wredundant-decls])
-AX_CHECK_CFLAGS([-Wshadow -Wstack-protector -Wstrict-aliasing -Wstrict-overflow=4])
-AX_CHECK_CFLAGS([-Wstrict-prototypes -Wundef -Wuninitialized -Wunused])
-AX_CHECK_CFLAGS([-Wwrite-strings])
+AX_CHECK_CFLAG([-Wall])
+AX_CHECK_CFLAG([-Wextra])
+AX_CHECK_CFLAG([-Waggregate-return])
+AX_CHECK_CFLAG([-Wbad-function-cast])
+AX_CHECK_CFLAG([-Wcast-align])
+AX_CHECK_CFLAG([-Wfloat-equal])
+AX_CHECK_CFLAG([-Wformat=2])
+AX_CHECK_CFLAG([-Winit-self])
+AX_CHECK_CFLAG([-Winline])
+AX_CHECK_CFLAG([-Wmissing-declarations])
+AX_CHECK_CFLAG([-Wmissing-include-dirs])
+AX_CHECK_CFLAG([-Wmissing-prototypes])
+AX_CHECK_CFLAG([-Wnested-externs])
+AX_CHECK_CFLAG([-Wold-style-definition])
+AX_CHECK_CFLAG([-Wpointer-arith])
+AX_CHECK_CFLAG([-Wredundant-decls])
+AX_CHECK_CFLAG([-Wshadow])
+AX_CHECK_CFLAG([-Wstack-protector])
+AX_CHECK_CFLAG([-Wstrict-aliasing])
+AX_CHECK_CFLAG([-Wstrict-overflow=4])
+AX_CHECK_CFLAG([-Wstrict-prototypes])
+AX_CHECK_CFLAG([-Wundef])
+AX_CHECK_CFLAG([-Wuninitialized])
+AX_CHECK_CFLAG([-Wunused])
+AX_CHECK_CFLAG([-Wwrite-strings])
+
+# GCC-specific warnings
+AX_CHECK_CFLAG([-Wjump-misses-init])
+AX_CHECK_CFLAG([-Wlogical-op])
+
+# Clang-specific warnings
+AX_CHECK_CFLAG([-Wgnu])
 
 # Other flags
-AX_CHECK_CFLAGS([-fstrict-aliasing -fstrict-overflow])
+AX_CHECK_CFLAG([-fstrict-aliasing])
+AX_CHECK_CFLAG([-fstrict-overflow])
 
 # Makefile generation
 AC_CONFIG_FILES([
