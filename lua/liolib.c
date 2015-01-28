@@ -14,6 +14,9 @@
 #define _FILE_OFFSET_BITS	64
 #endif
 
+#ifndef _GNU_SOURCE
+# define _GNU_SOURCE 1
+#endif
 
 #include <errno.h>
 #include <stdio.h>
