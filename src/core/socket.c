@@ -146,6 +146,7 @@ asc_socket_t * asc_socket_open_udp4(void * arg)
 asc_socket_t * asc_socket_open_sctp4(void * arg)
 {
 #ifndef IPPROTO_SCTP
+    __uarg(arg);
     asc_log_error("[core/socket] SCTP protocol is not available");
     astra_abort();
     return NULL;
