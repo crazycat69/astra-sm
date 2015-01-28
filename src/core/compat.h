@@ -1,8 +1,8 @@
 /*
- * Astra Core
+ * Astra Core (Compatibility library)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,23 +18,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _ASC_H_
-#define _ASC_H_ 1
+#ifndef _ASC_COMPAT_H_
+#define _ASC_COMPAT_H_ 1
 
-#include "assert.h"
-#include "base.h"
-#include "compat.h"
-#include "event.h"
-#include "list.h"
-#include "log.h"
-#include "loopctl.h"
-#include "socket.h"
-#include "thread.h"
-#include "timer.h"
-#include "clock.h"
-#include "strbuffer.h"
-#include "option.h"
-#include "stream.h"
-#include "luaglue.h"
+#ifndef HAVE_PREAD
+ssize_t pread(int fd, void *buffer, size_t size, off_t off);
+#endif
 
-#endif /* _ASC_H_ */
+#ifndef HAVE_STRNDUP
+char *strndup(const char *str, size_t max);
+#endif
+
+#endif /* _ASC_COMPAT_H_ */

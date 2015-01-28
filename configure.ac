@@ -18,7 +18,6 @@ AC_CONFIG_SRCDIR([src/astra.h])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux/m4])
-AC_CONFIG_LIBOBJ_DIR([src/compat])
 AC_CANONICAL_SYSTEM
 
 AM_INIT_AUTOMAKE([1.11 foreign dist-xz subdir-objects -Wall -Werror])
@@ -213,7 +212,7 @@ AX_CHECK_FUNCS_REQ([localtime longjmp malloc realloc memset memcpy srand strcase
 AC_CHECK_HEADERS([netinet/sctp.h])
 
 # replaceable functions
-AC_REPLACE_FUNCS([strndup pread])
+AC_CHECK_FUNCS([strndup pread])
 
 # posix_memalign(): used by `file'
 AC_CHECK_FUNCS([posix_memalign])

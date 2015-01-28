@@ -1,8 +1,9 @@
 /*
- * Astra Compatibility Library
+ * Astra Core (Compatibility library)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,14 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifdef HAVE_CONFIG_H
-#   include <config.h>
-#endif
+#include <astra.h>
 
-#include <unistd.h>
-#include <sys/types.h>
-#include <unistd.h>
-
+#ifndef HAVE_PREAD
 ssize_t pread(int fd, void *buffer, size_t size, off_t off)
 {
     if(lseek(fd, off, SEEK_SET) != off)
@@ -33,3 +29,18 @@ ssize_t pread(int fd, void *buffer, size_t size, off_t off)
 
     return read(fd, buffer, size);
 }
+#endif
+
+#ifndef HAVE_STRNDUP
+char *strndup(const char *str, size_t max)
+{
+    size_t len = strnlen(str, max);
+    char *res = malloc(len + 1);
+    if (res)
+    {
+        memcpy(res, str, len);
+        res[len] = '\0';
+    }
+    return res;
+}
+#endif

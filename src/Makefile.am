@@ -23,6 +23,7 @@ endif
 # core/
 libastra_la_SOURCES += \
     core/clock.c \
+    core/compat.c \
     core/event.c \
     core/list.c \
     core/log.c \
@@ -182,7 +183,6 @@ astra_CFLAGS = \
     $(libastra_la_CFLAGS) \
     $(libstream_la_CFLAGS)
 astra_LDADD = \
-    $(LIBOBJS) \
     libastra.la \
     libstream.la
 
