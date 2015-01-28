@@ -45,7 +45,7 @@ for x in \
     done
 done
 
-find -type f \( -name Makefile -or -name Makefile.in \) \
+find . -type f \( -name Makefile -or -name Makefile.in \) \
     -exec rm -vf {} \;
 
 # generate it again if needed

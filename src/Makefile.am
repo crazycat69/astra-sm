@@ -197,12 +197,21 @@ endif
 #
 BUILT_SOURCES += bindings.h
 bindings.h:
-	@echo -ne "/* automatically generated file; do not edit */\n\n" >bindings.h
-	@echo -ne "/*\n * Core library\n */\n\n" >>bindings.h
-	@sh ../build-aux/gen-bindings-list LUA_CORE_BINDINGS $(libastra_la_SOURCES) >>bindings.h
-	@echo -ne "\n/*\n * Streaming modules\n */\n\n" >>bindings.h
-	@sh ../build-aux/gen-bindings-list LUA_STREAM_BINDINGS $(libstream_la_SOURCES) >>bindings.h
-
+	@echo "/* automatically generated file; do not edit */" >bindings.h
+	
+	@echo                        >>bindings.h
+	@echo "/*"                   >>bindings.h
+	@echo " * Core library"      >>bindings.h
+	@echo " */"                  >>bindings.h
+	@echo                        >>bindings.h
+	sh ../build-aux/gen-bindings-list LUA_CORE_BINDINGS $(libastra_la_SOURCES) >>bindings.h
+	
+	@echo                        >>bindings.h
+	@echo "/*"                   >>bindings.h
+	@echo " * Streaming modules" >>bindings.h
+	@echo " */"                  >>bindings.h
+	@echo                        >>bindings.h
+	sh ../build-aux/gen-bindings-list LUA_STREAM_BINDINGS $(libstream_la_SOURCES) >>bindings.h
 ### inscript ###
 if HAVE_INSCRIPT
 BUILT_SOURCES += mkscript$(EXEEXT)
@@ -212,7 +221,9 @@ mkscript$(EXEEXT):
 
 BUILT_SOURCES += inscript/inscript.h
 inscript/inscript.h: mkscript$(EXEEXT)
-	@echo -ne "/* automatically generated file; do not edit */\n\n" >inscript/inscript.h
+	@echo "/* automatically generated file; do not edit */" >inscript/inscript.h
+	@echo >>inscript/inscript.h
+	
 	for script in ../scripts/*.lua; do \
 	    ./mkscript$(EXEEXT) `basename $$script .lua` "$$script" >>inscript/inscript.h; \
 	done
