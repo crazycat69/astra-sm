@@ -92,6 +92,8 @@ case "${host_os}" in
 
         AC_DEFINE(WIN32_LEAN_AND_MEAN,
             [], [Define to limit the scope of <windows.h>.])
+        AC_DEFINE(__USE_MINGW_ANSI_STDIO,
+            [1], [Define to use C99-compatible printf() with MinGW])
 
         AH_TOP([#if defined(_WIN32) && !defined(_WIN32_WINNT)])
         AH_TOP([#   define _WIN32_WINNT 0x0502 /* Windows XP SP2 */])
