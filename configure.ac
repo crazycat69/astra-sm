@@ -85,8 +85,8 @@ AC_SYS_LARGEFILE
 # Platform-dependent options
 #
 case "${host_os}" in
-    mingw32*)
-        SYS=windows
+    mingw*)
+        SYS=mingw
         AX_CHECK_HEADERS_REQ([windows.h winsock2.h ws2tcpip.h])
 
         AC_DEFINE(WIN32_LEAN_AND_MEAN,
@@ -134,6 +134,11 @@ case "${host_os}" in
         AX_CHECK_WINFUNC(setjmp, [ setjmp(NULL) ])
     ;;
 
+    cygwin*)
+        SYS=cygwin
+        AX_CHECK_CFLAG([-U__STRICT_ANSI__])
+    ;;
+
     linux*)
         SYS=linux
     ;;
@@ -151,7 +156,7 @@ case "${host_os}" in
     ;;
 esac
 
-AS_IF([test "${SYS}" != "windows"], [
+AS_IF([test "${SYS}" != "mingw"], [
     AX_CHECK_HEADERS_REQ([stdbool.h syslog.h sys/socket.h arpa/inet.h netinet/in.h netinet/tcp.h netdb.h ifaddrs.h fcntl.h sys/ioctl.h])
     AX_CHECK_FUNCS_REQ([signal syslog closelog mkstemp link fchmod access unlink gethostname setjmp getnameinfo inet_ntoa socket setsockopt bind listen accept getaddrinfo freeaddrinfo connect recv recvfrom send sendto getsockname htons shutdown fcntl ioctl localtime_r])
 
@@ -164,9 +169,12 @@ AS_IF([test "${SYS}" != "windows"], [
 ])
 
 AM_CONDITIONAL(HAVE_LINUX, [test "${SYS}" = "linux"])
-AM_CONDITIONAL(HAVE_WIN32, [test "${SYS}" = "windows"])
 AM_CONDITIONAL(HAVE_MACOS, [test "${SYS}" = "macos"])
 AM_CONDITIONAL(HAVE_FREEBSD, [test "${SYS}" = "freebsd"])
+
+# windows variants
+AM_CONDITIONAL(HAVE_MINGW, [test "${SYS}" = "mingw"])
+AM_CONDITIONAL(HAVE_CYGWIN, [test "${SYS}" = "cygwin"])
 
 # Choose event mechanism
 case "${host_os}" in

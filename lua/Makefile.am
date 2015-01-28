@@ -38,7 +38,7 @@ liblua_la_SOURCES = \
     ltablib.c
 
 # windows
-if HAVE_WIN32
+if HAVE_MINGW
 liblua_la_CFLAGS += -DLUA_BUILD_AS_DLL
 endif
 

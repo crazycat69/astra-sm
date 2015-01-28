@@ -61,7 +61,7 @@ libastra_la_SOURCES += \
     utils/dvbls.c
 endif
 
-if !HAVE_WIN32
+if !HAVE_MINGW
 # no pid files on Windows
 libastra_la_SOURCES += \
     utils/pidfile.c
@@ -187,7 +187,7 @@ astra_LDADD = \
     libstream.la
 
 # add Lua script path
-if !HAVE_WIN32
+if !HAVE_MINGW
 astra_CFLAGS += \
     -DASC_SPATH='"$(sysconfdir)/astra/scripts"'
 endif
