@@ -353,7 +353,7 @@ AX_EXTLIB_OPTIONAL(libcrypto,
 AS_IF([test "x${with_libcrypto_includes}" != "xno"],
     [LIBCRYPTO_CFLAGS="-I${with_libcrypto_includes}"])
 AS_IF([test "x${with_libcrypto_libs}" != "xno"],
-    [LIBCRYPTO_LIBS="-L${with_libcrypto_libs}"])
+    [LIBCRYPTO_LIBS="-L${with_libcrypto_libs} -lcrypto"])
 
 have_libcrypto="no"
 AS_IF([test "x${with_libcrypto}" != "xno"], [
@@ -361,7 +361,7 @@ AS_IF([test "x${with_libcrypto}" != "xno"], [
     PKG_CHECK_MODULES([LIBCRYPTO], [libcrypto], [
         AC_CHECK_HEADERS([openssl/des.h], [
             AC_CHECK_LIB([crypto], [DES_random_key], [
-                AC_DEFINE([HAVE_LIBCRYPTO], [1], 
+                AC_DEFINE([HAVE_LIBCRYPTO], [1],
                     [Define to 1 if you have OpenSSL libcrypto])
 
                 have_libcrypto="yes"
