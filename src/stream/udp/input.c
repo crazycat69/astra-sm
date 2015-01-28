@@ -129,7 +129,7 @@ static void module_init(module_data_t *mod)
 
     mod->sock = asc_socket_open_udp4(mod);
     asc_socket_set_reuseaddr(mod->sock, 1);
-#ifdef _WIN32
+#if defined(_WIN32) || defined(__CYGWIN__)
     if(!asc_socket_bind(mod->sock, NULL, mod->port))
 #else
     if(!asc_socket_bind(mod->sock, mod->addr, mod->port))
