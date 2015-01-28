@@ -95,10 +95,6 @@ case "${host_os}" in
         AC_DEFINE(__USE_MINGW_ANSI_STDIO,
             [1], [Define to use C99-compatible printf() with MinGW])
 
-        AH_TOP([#if defined(_WIN32) && !defined(_WIN32_WINNT)])
-        AH_TOP([#   define _WIN32_WINNT 0x0502 /* Windows XP SP2 */])
-        AH_TOP([#endif])
-
         # check winsock
         AC_CHECK_LIB(ws2_32, main,
             [], AC_MSG_ERROR([cannot link with ws2_32.dll]) )
