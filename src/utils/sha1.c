@@ -13,14 +13,14 @@
 
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 
-#if defined(__BYTE_ORDER) && __BYTE_ORDER == __LITTLE_ENDIAN
+#if defined(BYTE_ORDER) && BYTE_ORDER == LITTLE_ENDIAN
 #   define blk0(i) (block->l[i] = (rol(block->l[i],24) & 0xFF00FF00) \
                                 | (rol(block->l[i],8) & 0x00FF00FF))
-#elif defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN
+#elif defined(BYTE_ORDER) && BYTE_ORDER == BIG_ENDIAN
 #   define blk0(i) block->l[i]
 #else
-#   error "Please fix __BYTE_ORDER defines"
-#endif /* __BYTE_ORDER */
+#   error "Please fix BYTE_ORDER defines"
+#endif /* BYTE_ORDER */
 
 #define blk(i) (block->l[i&15] = rol(block->l[(i+13) & 15] ^ block->l[(i+8) & 15] \
                                      ^ block->l[(i+2) & 15] ^ block->l[i&15],1))

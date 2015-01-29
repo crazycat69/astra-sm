@@ -99,7 +99,7 @@ typedef enum {
 
 /* extension header struct */
 typedef struct __attribute__ ((__packed__)) {
-#if defined(__BYTE_ORDER) && __BYTE_ORDER == __LITTLE_ENDIAN
+#if defined(BYTE_ORDER) && BYTE_ORDER == LITTLE_ENDIAN
     unsigned original  : 1;
     unsigned copyright : 1;
     unsigned alignment : 1;
@@ -116,7 +116,7 @@ typedef struct __attribute__ ((__packed__)) {
     unsigned dts       : 1;
     unsigned pts       : 1;
     /* byte 7 */
-#elif defined(__BYTE_ORDER) && __BYTE_ORDER == __BIG_ENDIAN
+#elif defined(BYTE_ORDER) && BYTE_ORDER == BIG_ENDIAN
     /* byte 6 */
     unsigned marker    : 2;
     unsigned scrambled : 2;
@@ -134,8 +134,8 @@ typedef struct __attribute__ ((__packed__)) {
     unsigned crc       : 1;
     unsigned extension : 1;
 #else
-#   error "Please fix __BYTE_ORDER defines"
-#endif /* __BYTE_ORDER */
+#   error "Please fix BYTE_ORDER defines"
+#endif /* BYTE_ORDER */
     /* byte 8 */
     unsigned hdrlen    : 8;
 } mpegts_pes_ext_t;

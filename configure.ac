@@ -72,20 +72,35 @@ AC_CHECK_TYPES([ptrdiff_t])
 AC_CHECK_TYPES([_Bool])
 
 # in case endian.h is absent
-AC_CHECK_HEADER([endian.h],
-    [ ac_cv_have_endian_h="yes" ],
-    [ ac_cv_have_endian_h="no" ])
+AC_MSG_CHECKING([for endian.h presence and usability])
+AC_PREPROC_IFELSE([
+    AC_LANG_PROGRAM([
+        #include <endian.h>
+        #include <sys/types.h>
+        #if (!defined(BYTE_ORDER) || !defined(LITTLE_ENDIAN) || !defined(BIG_ENDIAN))
+        #   error "BYTE_ORDER defines absent"
+        #endif
+        #if (BYTE_ORDER != LITTLE_ENDIAN && BYTE_ORDER != BIG_ENDIAN)
+        #   error "BYTE_ORDER has invalid value"
+        #endif
+    ])
+], [
+    AC_MSG_RESULT([yes])
+], [
+    AC_MSG_RESULT([no])
 
-AS_IF([test "x${ac_cv_have_endian_h}" = "xno"], [
-    AC_DEFINE([__LITTLE_ENDIAN], [1234], [Little endian byte order])
-    AC_DEFINE([__BIG_ENDIAN], [4321], [Big endian byte order])
-    AC_C_BIGENDIAN([ac_cv_c_bigendian="yes"], [ac_cv_c_bigendian="no"], [], [])
+    # let's make our own!
+    AC_DEFINE([LITTLE_ENDIAN], [1234], [Little endian byte order])
+    AC_DEFINE([BIG_ENDIAN], [4321], [Big endian byte order])
+
+    AC_C_BIGENDIAN([ac_cv_c_bigendian="yes"], [ac_cv_c_bigendian="no"], [], [
+        AC_MSG_ERROR([universal endianness not supported; please preset ac_cv_c_bigendian=no]) ])
 
     AS_IF([test "x${ac_cv_c_bigendian}" = "xyes"], [
-        AC_DEFINE([__BYTE_ORDER], [__BIG_ENDIAN],
+        AC_DEFINE([BYTE_ORDER], [BIG_ENDIAN],
             [Define this machine's endianness])
     ], [
-        AC_DEFINE([__BYTE_ORDER], [__LITTLE_ENDIAN],
+        AC_DEFINE([BYTE_ORDER], [LITTLE_ENDIAN],
             [Define this machine's endianness])
     ])
 ])
