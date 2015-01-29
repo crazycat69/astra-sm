@@ -29,4 +29,8 @@ ssize_t pread(int fd, void *buffer, size_t size, off_t off);
 char *strndup(const char *str, size_t max);
 #endif
 
+#ifndef HAVE_STRNLEN
+size_t strnlen(const char *str, size_t max);
+#endif
+
 #endif /* _ASC_COMPAT_H_ */
