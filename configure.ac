@@ -226,7 +226,7 @@ esac
 #
 # Checks for headers and functions common to all platforms
 #
-AX_CHECK_HEADERS_REQ([dirent.h stdarg.h stddef.h stdint.h stdbool.h stdio.h stdlib.h sys/types.h sys/stat.h sys/time.h setjmp.h time.h string.h unistd.h errno.h])
+AX_CHECK_HEADERS_REQ([dirent.h inttypes.h stdarg.h stddef.h stdint.h stdbool.h stdio.h stdlib.h sys/types.h sys/stat.h sys/time.h setjmp.h time.h string.h unistd.h errno.h])
 AX_CHECK_FUNCS_REQ([lseek localtime longjmp malloc realloc memchr memset memcpy srand strcasecmp strchr strdup strerror strftime strncasecmp strpbrk strrchr strspn strstr strtoul time snprintf vsnprintf memmove])
 
 # optional headers
