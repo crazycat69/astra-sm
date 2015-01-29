@@ -22,9 +22,6 @@
 #define _ASC_BASE_H_ 1
 
 #ifdef _WIN32
-#   ifndef _WIN32_WINNT
-#       define _WIN32_WINNT 0x0502 /* WinXP SP2 */
-#   endif
 #   include <winsock2.h>
 #   include <windows.h>
 #endif

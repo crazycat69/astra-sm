@@ -89,10 +89,12 @@ case "${host_os}" in
         SYS=mingw
         AX_CHECK_HEADERS_REQ([windows.h winsock2.h ws2tcpip.h])
 
-        AC_DEFINE(WIN32_LEAN_AND_MEAN,
+        AC_DEFINE([WIN32_LEAN_AND_MEAN],
             [], [Define to limit the scope of <windows.h>.])
-        AC_DEFINE(__USE_MINGW_ANSI_STDIO,
+        AC_DEFINE([__USE_MINGW_ANSI_STDIO],
             [1], [Define to use C99-compatible printf() with MinGW])
+        AC_DEFINE([_WIN32_WINNT],
+            [0x0501], [Require at least Windows XP])
 
         # check winsock
         AC_CHECK_LIB(ws2_32, main,
