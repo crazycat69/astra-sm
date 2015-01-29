@@ -40,9 +40,21 @@ LT_LIB_DLLOAD
 LT_LIB_M
 
 # Check C99 support
-AX_CHECK_CFLAG([-std=c99], [], [], [
-    AX_CHECK_CFLAG([-std=iso9899:1999], [], [], [
-        AC_MSG_ERROR([$CC doesn't seem to support C99]) ]) ])
+case "${host_os}" in
+    mingw*|cygwin*)
+        AX_CHECK_CFLAG([-std=gnu99], [], [], [
+            AC_MSG_ERROR([$CC doesn't support GNU99])
+        ])
+        ;;
+
+    *)
+        AX_CHECK_CFLAG([-std=c99], [], [], [
+            AX_CHECK_CFLAG([-std=iso9899:1999], [], [], [
+                AC_MSG_ERROR([$CC doesn't seem to support C99])
+            ])
+        ])
+        ;;
+esac
 
 #
 # Checks for typedefs, structures, and compiler characteristics
@@ -138,7 +150,6 @@ case "${host_os}" in
 
     cygwin*)
         SYS=cygwin
-        AX_CHECK_CFLAG([-U__STRICT_ANSI__])
     ;;
 
     linux*)
@@ -222,7 +233,7 @@ AX_CHECK_FUNCS_REQ([localtime longjmp malloc realloc memset memcpy srand strcase
 AC_CHECK_HEADERS([netinet/sctp.h])
 
 # replaceable functions
-AC_CHECK_FUNCS([strndup pread])
+AC_CHECK_FUNCS([pread strndup strnlen])
 
 # posix_memalign(): used by `file'
 AC_CHECK_FUNCS([posix_memalign])
