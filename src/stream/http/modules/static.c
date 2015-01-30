@@ -225,7 +225,7 @@ static int module_call(module_data_t *mod)
     client->response->file_size = sb.st_size;
 
     http_response_code(client, 200, NULL);
-    http_response_header(client, "Content-Length: %lu", client->response->file_size);
+    http_response_header(client, "Content-Length: %jd", client->response->file_size);
     http_response_header(client, "Content-Type: %s", lua_get_mime(client, path));
     http_response_send(client);
 

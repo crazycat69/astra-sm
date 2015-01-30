@@ -357,7 +357,7 @@ static void timer_skip_set(void *arg)
 
     if(fd > 0)
     {
-        const int l = sprintf(skip_str, "%lu", mod->file_skip);
+        const int l = sprintf(skip_str, "%zu", mod->file_skip);
         if(write(fd, skip_str, l) <= 0)
             {};
         close(fd);
