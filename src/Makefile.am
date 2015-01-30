@@ -1,3 +1,4 @@
+AM_CFLAGS = $(WARN_CFLAGS)
 bin_PROGRAMS =
 noinst_LTLIBRARIES =
 noinst_PROGRAMS =
@@ -7,16 +8,16 @@ BUILT_SOURCES =
 # Astra library
 #
 noinst_LTLIBRARIES += libastra.la
-libastra_la_CFLAGS =
+libastra_la_CFLAGS = $(AM_CFLAGS)
 libastra_la_LDFLAGS = -module -static
 libastra_la_LIBADD = $(LIBM) $(LIBRT)
 libastra_la_SOURCES =
 
 if HAVE_INTERNAL_LUA
-libastra_la_CFLAGS += -I$(top_srcdir)/lua
+AM_CFLAGS += -I$(top_srcdir)/lua
 libastra_la_LIBADD += $(top_srcdir)/lua/liblua.la
 else
-libastra_la_CFLAGS += $(LUA_CFLAGS)
+AM_CFLAGS += $(LUA_CFLAGS)
 libastra_la_LIBADD += $(LUA_LIBS)
 endif
 
@@ -76,7 +77,7 @@ endif
 # Module library
 #
 noinst_LTLIBRARIES += libstream.la
-libstream_la_CFLAGS = $(libastra_la_CFLAGS)
+libstream_la_CFLAGS = $(AM_CFLAGS)
 libstream_la_LDFLAGS = -module -static
 libstream_la_LIBADD = libastra.la
 libstream_la_SOURCES = \
@@ -179,9 +180,7 @@ endif
 #
 bin_PROGRAMS += astra
 astra_SOURCES = main.c
-astra_CFLAGS = \
-    $(libastra_la_CFLAGS) \
-    $(libstream_la_CFLAGS)
+astra_CFLAGS = $(AM_CFLAGS)
 astra_LDADD = \
     libastra.la \
     libstream.la

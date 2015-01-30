@@ -514,45 +514,49 @@ AS_IF([test "x${enable_debug}" = "xyes"], [
 ])
 
 # Lots of warnings
+WARN_CFLAGS=""
 AC_ARG_ENABLE([warnings],
     AC_HELP_STRING([--enable-warnings], [turn on additional compiler warnings]))
 
 # these are always on
-AX_CHECK_CFLAG([-Wall])
-AX_CHECK_CFLAG([-Wextra])
+AX_CHECK_CFLAG([-Wall], [WARN_CFLAGS])
+AX_CHECK_CFLAG([-Wextra], [WARN_CFLAGS])
 
 AS_IF([test "x${enable_warnings}" = "xyes"], [
-    AX_CHECK_CFLAG([-Waggregate-return])
-    AX_CHECK_CFLAG([-Wbad-function-cast])
-    AX_CHECK_CFLAG([-Wcast-align])
-    AX_CHECK_CFLAG([-Wfloat-equal])
-    AX_CHECK_CFLAG([-Wformat=2])
-    AX_CHECK_CFLAG([-Winit-self])
-    AX_CHECK_CFLAG([-Winline])
-    AX_CHECK_CFLAG([-Wmissing-declarations])
-    AX_CHECK_CFLAG([-Wmissing-include-dirs])
-    AX_CHECK_CFLAG([-Wmissing-prototypes])
-    AX_CHECK_CFLAG([-Wnested-externs])
-    AX_CHECK_CFLAG([-Wold-style-definition])
-    AX_CHECK_CFLAG([-Wpedantic])
-    AX_CHECK_CFLAG([-Wpointer-arith])
-    AX_CHECK_CFLAG([-Wredundant-decls])
-    AX_CHECK_CFLAG([-Wshadow])
-    AX_CHECK_CFLAG([-Wstack-protector])
-    AX_CHECK_CFLAG([-Wstrict-aliasing])
-    AX_CHECK_CFLAG([-Wstrict-overflow=4])
-    AX_CHECK_CFLAG([-Wstrict-prototypes])
-    AX_CHECK_CFLAG([-Wundef])
-    AX_CHECK_CFLAG([-Wuninitialized])
-    AX_CHECK_CFLAG([-Wunused])
-    AX_CHECK_CFLAG([-Wwrite-strings])
+    # older GCC versions don't support -Wpedantic
+    AX_CHECK_CFLAG([-Wpedantic], [WARN_CFLAGS], [], [
+        AX_CHECK_CFLAGS([-pedantic], [WARN_CFLAGS]) ])
+
+    AX_CHECK_CFLAG([-Waggregate-return], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wbad-function-cast], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wcast-align], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wfloat-equal], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wformat=2], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Winit-self], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Winline], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wmissing-declarations], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wmissing-include-dirs], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wmissing-prototypes], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wnested-externs], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wold-style-definition], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wpointer-arith], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wredundant-decls], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wshadow], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wstack-protector], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wstrict-aliasing], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wstrict-overflow=4], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wstrict-prototypes], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wundef], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wuninitialized], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wunused], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wwrite-strings], [WARN_CFLAGS])
 
     # GCC-specific
-    AX_CHECK_CFLAG([-Wjump-misses-init])
-    AX_CHECK_CFLAG([-Wlogical-op])
+    AX_CHECK_CFLAG([-Wjump-misses-init], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wlogical-op], [WARN_CFLAGS])
 
     # Clang-specific
-    AX_CHECK_CFLAG([-Wgnu])
+    AX_CHECK_CFLAG([-Wgnu], [WARN_CFLAGS])
 ])
 
 # -Werror build
@@ -560,8 +564,10 @@ AC_ARG_ENABLE([werror],
     AC_HELP_STRING([--enable-werror], [turn on -Werror]))
 
 AS_IF([test "x${enable_werror}" = "xyes"], [
-    AX_CHECK_CFLAGS([-Werror])
+    AX_CHECK_CFLAGS([-Werror], [WARN_CFLAGS])
 ])
+
+AC_SUBST(WARN_CFLAGS)
 
 # Other flags
 AX_CHECK_CFLAG([-fstrict-aliasing])
