@@ -198,6 +198,31 @@ end
 
 function channel_init_input(channel_data, input_id)
     local input_data = channel_data.input[input_id]
+
+    -- merge channel-wide and input-specific PID maps
+    if channel_data.config.map or input_data.config.map then
+        local merged_map = {}
+        if channel_data.config.map then
+            merged_map = channel_data.config.map
+        end
+        if input_data.config.map then
+            for _, input_val in pairs(input_data.config.map) do
+                local found = false
+                for chan_key, chan_val in pairs(merged_map) do
+                    if input_val[1] == chan_val[1] then
+                        -- override channel-wide mapping
+                        merged_map[chan_key] = input_val
+                        found = true
+                    end
+                end
+                if found == false then
+                    table.insert(merged_map, input_val)
+                end
+            end
+        end
+        input_data.config.map = merged_map
+    end
+
     input_data.input = init_input(input_data.config)
 
     if input_data.config.no_analyze ~= true then
