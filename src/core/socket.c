@@ -540,7 +540,8 @@ ssize_t asc_socket_sendto(asc_socket_t *sock, const void *buffer, size_t size)
  *
  */
 
-extern inline int asc_socket_fd(asc_socket_t *sock)
+__asc_inline
+int asc_socket_fd(asc_socket_t *sock)
 {
     return sock->fd;
 }

@@ -48,29 +48,34 @@ void asc_list_destroy(asc_list_t *list)
     free(list);
 }
 
-extern inline void asc_list_first(asc_list_t *list)
+__asc_inline
+void asc_list_first(asc_list_t *list)
 {
     list->current = TAILQ_FIRST(&list->list);
 }
 
-extern inline void asc_list_next(asc_list_t *list)
+__asc_inline
+void asc_list_next(asc_list_t *list)
 {
     if(list->current)
         list->current = TAILQ_NEXT(list->current, entries);
 }
 
-extern inline bool asc_list_eol(asc_list_t *list)
+__asc_inline
+bool asc_list_eol(asc_list_t *list)
 {
     return (list->current == NULL);
 }
 
-extern inline void * asc_list_data(asc_list_t *list)
+__asc_inline
+void * asc_list_data(asc_list_t *list)
 {
     asc_assert(list->current != NULL, "[core/list] failed to get data");
     return list->current->data;
 }
 
-extern inline size_t asc_list_size(asc_list_t *list)
+__asc_inline
+size_t asc_list_size(asc_list_t *list)
 {
     return list->size;
 }
