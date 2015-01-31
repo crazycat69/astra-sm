@@ -23,6 +23,7 @@
 #define MSG(_msg) "[dvb_input %d:%d] " _msg, mod->adapter, mod->device
 
 #define DVB_API ((DVB_API_VERSION * 100) + DVB_API_VERSION_MINOR)
+#define DVR_RETRY 10
 
 struct module_data_t
 {
@@ -75,6 +76,8 @@ struct module_data_t
 
 static void dvr_open(module_data_t *mod);
 static void dvr_close(module_data_t *mod);
+static void on_thread_close(void *arg);
+static void thread_loop(void *arg);
 
 static void on_pat(void *arg, mpegts_psi_t *psi)
 {
@@ -108,6 +111,29 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
     }
 
     psi->crc32 = crc32;
+}
+
+static void dvr_on_retry(void *arg)
+{
+    module_data_t *mod = arg;
+
+    dvr_open(mod);
+    if(mod->dvr_fd == 0)
+    {
+        asc_log_info(MSG("retrying in %d seconds"), DVR_RETRY);
+        asc_timer_one_shot(DVR_RETRY * 1000, dvr_on_retry, mod);
+
+        return;
+    }
+
+    mod->thread = asc_thread_init(mod);
+    asc_thread_start(  mod->thread
+                     , thread_loop
+                     , NULL, NULL
+                     , on_thread_close);
+
+    while(!mod->is_thread_started)
+        asc_usleep(500);
 }
 
 static void dvr_on_error(void *arg)
@@ -900,18 +926,7 @@ static void module_init(module_data_t *mod)
 
     mod->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
 
-    dvr_open(mod);
-    if(mod->dvr_fd == 0)
-        return;
-
-    mod->thread = asc_thread_init(mod);
-    asc_thread_start(  mod->thread
-                     , thread_loop
-                     , NULL, NULL
-                     , on_thread_close);
-
-    while(!mod->is_thread_started)
-        asc_usleep(500);
+    dvr_on_retry(mod);
 }
 
 static void module_destroy(module_data_t *mod)
