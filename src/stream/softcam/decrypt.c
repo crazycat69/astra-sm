@@ -758,9 +758,14 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
         if(TS_IS_PAYLOAD(ts))
         {
             if(TS_IS_AF(ts))
-                hdr_size = 4 + dst[4] + 1;
+            {
+                hdr_size = TS_HEADER_SIZE + dst[4] + 1;
+
+                if (hdr_size >= TS_PACKET_SIZE)
+                    hdr_size = 0;
+            }
             else
-                hdr_size = 4;
+                hdr_size = TS_HEADER_SIZE;
         }
 
         if(hdr_size)
