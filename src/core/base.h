@@ -67,6 +67,7 @@
 
 #define __func_pure __attribute__((__pure__))
 #define __func_const __attribute__((__const__))
+#define __noreturn __attribute__((__noreturn__))
 
 #ifndef O_BINARY
 #   ifdef _O_BINARY

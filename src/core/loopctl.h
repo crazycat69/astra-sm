@@ -26,8 +26,8 @@ extern jmp_buf main_loop;
 extern bool is_main_loop_idle;
 extern lua_State *lua;
 
-void astra_exit(void) __attribute__ ((__noreturn__));
-void astra_abort(void) __attribute__ ((__noreturn__));
-void astra_reload(void) __attribute__ ((__noreturn__));
+void astra_exit(void) __noreturn;
+void astra_abort(void) __noreturn;
+void astra_reload(void) __noreturn;
 
 #endif /* _ASC_LOOPCTL_H_ */

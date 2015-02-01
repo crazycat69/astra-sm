@@ -35,25 +35,25 @@
 
 #include <astra.h>
 
+__noreturn
 static int _astra_exit(lua_State *L)
 {
     __uarg(L);
     astra_exit();
-    return 0;
 }
 
+__noreturn
 static int _astra_abort(lua_State *L)
 {
     __uarg(L);
     astra_abort();
-    return 0;
 }
 
+__noreturn
 static int _astra_reload(lua_State *L)
 {
     __uarg(L);
     astra_reload();
-    return 0;
 }
 
 MODULE_LUA_BINDING(astra)
