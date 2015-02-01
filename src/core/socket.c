@@ -64,25 +64,19 @@ struct asc_socket_t
  * receiving multicast: socket(REUSEADDR | BIND) -> join() -> read() -> close()
  */
 
+#ifdef _WIN32
 void asc_socket_core_init(void)
 {
-#ifdef _WIN32
     WSADATA wsaData;
     int err = WSAStartup(MAKEWORD(2, 2), &wsaData);
     asc_assert(err == 0, "[core/socket] WSAStartup failed %d", err);
-#else
-    (void)0;
-#endif
 }
 
 void asc_socket_core_destroy(void)
 {
-#ifdef _WIN32
     WSACleanup();
-#else
-    ;
-#endif
 }
+#endif /* _WIN32 */
 
 const char * asc_socket_error(void)
 {

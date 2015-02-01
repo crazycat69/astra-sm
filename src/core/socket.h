@@ -23,8 +23,13 @@
 
 typedef struct asc_socket_t asc_socket_t;
 
+#ifdef _WIN32
 void asc_socket_core_init(void);
 void asc_socket_core_destroy(void);
+#else
+#define asc_socket_core_init(...)
+#define asc_socket_core_destroy(...)
+#endif /* _WIN32 */
 
 const char * asc_socket_error(void);
 
