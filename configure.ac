@@ -493,9 +493,9 @@ AX_STREAM_MODULE(softcam, [software descrambler],
 AX_STREAM_MODULE(udp, [UDP receive and transmit module])
 
 #
-# Build options
+# Developer options
 #
-AX_HELP_SECTION([Build options:])
+AX_HELP_SECTION([Developer options:])
 
 # Debug version
 AC_ARG_ENABLE([debug],
@@ -558,6 +558,19 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
 
     # Clang-specific
     AX_CHECK_CFLAG([-Wgnu], [WARN_CFLAGS])
+])
+
+# Attribute suggestions
+AC_ARG_ENABLE([suggestions],
+    AC_HELP_STRING([--enable-suggestions], [turn on -Wsuggest-*]))
+
+AS_IF([test "x${enable_suggestions}" = "xyes"], [
+    AX_CHECK_CFLAG([-Wsuggest-attribute=pure], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wsuggest-attribute=const], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wsuggest-attribute=noreturn], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wsuggest-attribute=format], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wmissing-format-attribute], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-fipa-pure-const], [WARN_CFLAGS])
 ])
 
 # -Werror build
