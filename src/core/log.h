@@ -37,6 +37,6 @@ void asc_log_error(const char *, ...) __fmt_printf(1, 2);
 void asc_log_warning(const char *, ...) __fmt_printf(1, 2);
 void asc_log_debug(const char *, ...) __fmt_printf(1, 2);
 
-bool asc_log_is_debug(void);
+bool asc_log_is_debug(void) __func_pure;
 
 #endif /* _ASC_LOG_H_ */

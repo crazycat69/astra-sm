@@ -44,7 +44,7 @@ typedef struct
 } ts_program_t;
 
 ts_program_t *ts_program_init(uint16_t pnr, uint16_t pid);
-ts_program_t *ts_program_find(const module_data_t *mod, uint16_t pid);
+ts_program_t *ts_program_find(const module_data_t *mod, uint16_t pid) __func_pure;
 void ts_program_destroy(ts_program_t *p);
 
 /*
@@ -61,7 +61,7 @@ typedef struct
 } pcr_stream_t;
 
 pcr_stream_t *pcr_stream_init(uint16_t pid);
-pcr_stream_t *pcr_stream_find(const module_data_t *mod, uint16_t pid);
+pcr_stream_t *pcr_stream_find(const module_data_t *mod, uint16_t pid) __func_pure;
 void pcr_stream_destroy(pcr_stream_t *p);
 
 /*

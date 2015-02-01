@@ -55,10 +55,9 @@ typedef enum
     MPEGTS_PACKET_NULL      = 0x02000000
 } mpegts_packet_type_t;
 
-const char * mpegts_type_name(mpegts_packet_type_t type);
-mpegts_packet_type_t mpegts_pes_type(uint8_t type_id);
-
-const char * mpeg4_profile_level_name(uint8_t type_id);
+const char * mpegts_type_name(mpegts_packet_type_t type) __func_const;
+mpegts_packet_type_t mpegts_pes_type(uint8_t type_id) __func_const;
+const char * mpeg4_profile_level_name(uint8_t type_id) __func_const;
 
 void mpegts_desc_to_lua(const uint8_t *desc);
 
