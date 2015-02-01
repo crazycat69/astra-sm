@@ -136,8 +136,6 @@ static char *fancy_hex_str(const uint8_t *ptr, const uint8_t len)
         {
             /* no space left */
             snprintf(&buf[pos], space, "%s", __strip);
-            pos += space - 1;
-
             break;
         }
 

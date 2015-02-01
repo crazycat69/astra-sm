@@ -527,7 +527,7 @@ ssize_t asc_socket_send(asc_socket_t *sock, const void *buffer, size_t size)
 
 ssize_t asc_socket_sendto(asc_socket_t *sock, const void *buffer, size_t size)
 {
-    socklen_t slen = sizeof(struct sockaddr_in);
+    const socklen_t slen = sizeof(struct sockaddr_in);
     return sendto(sock->fd, buffer, size, 0, (struct sockaddr *)&sock->sockaddr, slen);
 }
 
@@ -555,8 +555,11 @@ int asc_socket_port(asc_socket_t *sock)
 {
     struct sockaddr_in s;
     socklen_t slen = sizeof(s);
+    memset(&s, 0, slen);
+
     if(getsockname(sock->fd, (struct sockaddr *)&s, &slen) != -1)
         return htons(s.sin_port);
+
     return -1;
 }
 
