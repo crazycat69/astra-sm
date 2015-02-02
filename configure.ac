@@ -318,6 +318,9 @@ AS_IF([test "x${with_lua}" != "xno"], [
         AC_MSG_WARN([Astra requires Lua library version 5.2 or higher])
         AS_IF([test "x${with_lua}" != "xyes"], [
             AC_MSG_WARN([Bundled version will be built and statically linked])
+
+            LUA_CFLAGS="-I\$(top_srcdir)/lua"
+            LUA_LIBS="\$(top_srcdir)/lua/liblua.la"
         ], [
             AC_MSG_ERROR([Pass --without-lua to build bundled version])
         ])

@@ -1,8 +1,9 @@
-AM_CFLAGS = $(WARN_CFLAGS)
 bin_PROGRAMS =
 noinst_LTLIBRARIES =
 noinst_PROGRAMS =
 BUILT_SOURCES =
+
+AM_CFLAGS = $(WARN_CFLAGS) $(LUA_CFLAGS)
 
 #
 # Astra library
@@ -10,16 +11,8 @@ BUILT_SOURCES =
 noinst_LTLIBRARIES += libastra.la
 libastra_la_CFLAGS = $(AM_CFLAGS)
 libastra_la_LDFLAGS = -module -static
-libastra_la_LIBADD = $(LIBM) $(LIBRT)
+libastra_la_LIBADD = $(LIBM) $(LIBRT) $(LUA_LIBS)
 libastra_la_SOURCES =
-
-if HAVE_INTERNAL_LUA
-AM_CFLAGS += -I$(top_srcdir)/lua
-libastra_la_LIBADD += $(top_srcdir)/lua/liblua.la
-else
-AM_CFLAGS += $(LUA_CFLAGS)
-libastra_la_LIBADD += $(LUA_LIBS)
-endif
 
 # core/
 libastra_la_SOURCES += \
