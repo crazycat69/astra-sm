@@ -22,7 +22,6 @@
 
 #define MSG(_msg) "[dvb_input %d:%d] " _msg, mod->adapter, mod->device
 
-#define DVB_API ((DVB_API_VERSION * 100) + DVB_API_VERSION_MINOR)
 #define DVR_RETRY 10
 
 struct module_data_t
