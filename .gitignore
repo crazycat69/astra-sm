@@ -34,12 +34,14 @@ Makefile.in
 /build-aux/install-sh
 /build-aux/ltmain.sh
 /build-aux/missing
+/build-aux/test-driver
 /config.log
 /config.status
 /configure
 /src/config.h
 /src/config.h.in
 /src/stamp-h1
+/private/
 
 # autosave files
 *~

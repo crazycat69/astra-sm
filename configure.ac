@@ -396,6 +396,8 @@ have_libcrypto="no"
 AS_IF([test "x${with_libcrypto}" != "xno"], [
     AX_SAVE_FLAGS
     PKG_CHECK_MODULES([LIBCRYPTO], [libcrypto], [
+        CFLAGS="$CFLAGS $LIBCRYPTO_CFLAGS"
+        LIBS="$LIBS $LIBCRYPTO_LIBS"
         AC_CHECK_HEADERS([openssl/des.h], [
             AC_CHECK_LIB([crypto], [DES_random_key], [
                 AC_DEFINE([HAVE_LIBCRYPTO], [1],
@@ -421,6 +423,37 @@ AS_IF([test "x${with_libcrypto}" != "xno"], [
             [ AC_MSG_WARN([${LIBCRYPTO_PKG_ERRORS}]) ]) ])
 ])
 AM_CONDITIONAL([HAVE_LIBCRYPTO], [test "x${have_libcrypto}" = "xyes"])
+
+# Check
+AX_EXTLIB_OPTIONAL(check, [enable unit testing using Check])
+
+AS_IF([test "x${with_check_includes}" != "xno"],
+    [CHECK_CFLAGS="-I${with_check_includes}"])
+AS_IF([test "x${with_check_libs}" != "xno"],
+    [CHECK_LIBS="-L${with_check_libs} -lcheck"])
+
+have_check="no"
+AS_IF([test "x${with_check}" != "xno"], [
+    AX_SAVE_FLAGS
+    PKG_CHECK_MODULES([CHECK], [check], [
+        CFLAGS="$CFLAGS $CHECK_CFLAGS"
+        AC_CHECK_HEADERS([check.h], [
+            have_check="yes"
+        ], [
+            # header check failed
+            CHECK_PKG_ERRORS="could not find check headers"
+        ])
+    ], [
+        # pkgconfig call failed
+        CHECK_PKG_ERRORS="could not find check; refer to config.log for details"
+    ])
+    AX_RESTORE_FLAGS
+    AS_IF([test "x${have_check}" = "xno"], [
+        AS_IF([test "x${with_check}" = "xyes"],
+            [ AC_MSG_ERROR([${CHECK_PKG_ERRORS}]) ],
+            [ AC_MSG_WARN([${CHECK_PKG_ERRORS}]) ]) ])
+])
+AM_CONDITIONAL([HAVE_CHECK], [test "x${have_check}" = "xyes"])
 
 # Linux DVB API
 have_dvbapi="no"
@@ -595,6 +628,7 @@ AC_CONFIG_FILES([
     Makefile
     lua/Makefile
     src/Makefile
+    tests/Makefile
     testcards/Makefile
     scripts/Makefile
 ])
