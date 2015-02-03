@@ -640,6 +640,5 @@ AC_CONFIG_FILES([
     src/Makefile
     tests/Makefile
     testcards/Makefile
-    scripts/Makefile
 ])
 AC_OUTPUT

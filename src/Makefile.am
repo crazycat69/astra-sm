@@ -1,9 +1,7 @@
-bin_PROGRAMS =
-noinst_LTLIBRARIES =
-noinst_PROGRAMS =
-BUILT_SOURCES =
-
 AM_CFLAGS = $(WARN_CFLAGS) $(LUA_CFLAGS)
+
+noinst_LTLIBRARIES =
+bin_PROGRAMS =
 
 #
 # Astra library
@@ -187,8 +185,12 @@ endif
 #
 # Built sources
 #
+BUILT_SOURCES =
+
+# lua initializer lists
 BUILT_SOURCES += bindings.h
-bindings.h:
+bindings.h: $(libastra_la_SOURCES) $(libstream_la_SOURCES)
+	@echo -n "Generating bindings.h... "
 	@echo "/* automatically generated file; do not edit */" >bindings.h
 	
 	@echo                        >>bindings.h
@@ -196,29 +198,43 @@ bindings.h:
 	@echo " * Core library"      >>bindings.h
 	@echo " */"                  >>bindings.h
 	@echo                        >>bindings.h
-	sh ../build-aux/gen-bindings-list LUA_CORE_BINDINGS $(libastra_la_SOURCES) >>bindings.h
+	@sh ../build-aux/gen-bindings-list LUA_CORE_BINDINGS $(libastra_la_SOURCES) >>bindings.h
 	
 	@echo                        >>bindings.h
 	@echo "/*"                   >>bindings.h
 	@echo " * Streaming modules" >>bindings.h
 	@echo " */"                  >>bindings.h
 	@echo                        >>bindings.h
-	sh ../build-aux/gen-bindings-list LUA_STREAM_BINDINGS $(libstream_la_SOURCES) >>bindings.h
+	@sh ../build-aux/gen-bindings-list LUA_STREAM_BINDINGS $(libstream_la_SOURCES) >>bindings.h
+	
+	@echo "done!"
+
 ### inscript ###
 if HAVE_INSCRIPT
+INSCRIPT_FILES = \
+    $(top_srcdir)/scripts/analyze.lua \
+    $(top_srcdir)/scripts/base.lua \
+    $(top_srcdir)/scripts/dvbls.lua \
+    $(top_srcdir)/scripts/dvbwrite.lua \
+    $(top_srcdir)/scripts/relay.lua \
+    $(top_srcdir)/scripts/stream.lua
+
 BUILT_SOURCES += mkscript$(EXEEXT)
 # we have to build mkscript with host compiler
 mkscript$(EXEEXT):
-	cc -std=c99 -o mkscript$(EXEEXT) inscript/mkscript.c
+	$(HOST_CC) -std=c99 -o mkscript$(EXEEXT) inscript/mkscript.c
 
 BUILT_SOURCES += inscript/inscript.h
-inscript/inscript.h: mkscript$(EXEEXT)
+inscript/inscript.h: mkscript$(EXEEXT) $(INSCRIPT_FILES)
+	@echo -n "Generating inscript.h... "
 	@echo "/* automatically generated file; do not edit */" >inscript/inscript.h
-	@echo >>inscript/inscript.h
 	
-	for script in ../scripts/*.lua; do \
+	@echo >>inscript/inscript.h
+	@for script in $(INSCRIPT_FILES); do \
 	    ./mkscript$(EXEEXT) `basename $$script .lua` "$$script" >>inscript/inscript.h; \
 	done
+	
+	@echo "done!"
 endif
 
 CLEANFILES = $(BUILT_SOURCES)
