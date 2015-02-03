@@ -39,6 +39,16 @@ LT_INIT([disable-shared static no-pic])
 LT_LIB_DLLOAD
 LT_LIB_M
 
+# Check whether build and host compilers should be different
+AS_IF([test -z "${HOST_CC}"], [
+    AS_IF([test "x${cross_compiling}" = "xno"], [
+        HOST_CC="\$(CC)"
+    ], [
+        HOST_CC=cc
+    ])
+])
+AC_SUBST(HOST_CC)
+
 # Check C99 support
 case "${host_os}" in
     mingw*|cygwin*)
