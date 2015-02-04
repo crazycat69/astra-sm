@@ -511,7 +511,7 @@ static void on_newcamd_read_packet(void *arg)
         static const int info_size = 3 + 8; /* ident + sa */
 
         free(mod->prov_buffer);
-        mod->prov_buffer = malloc(prov_count * info_size);
+        mod->prov_buffer = calloc(prov_count, info_size);
 
         for(int i = 0; i < prov_count; i++)
         {
