@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _CA_H_
-#define _CA_H_ 1
+#ifndef _DVB_CA_H_
+#define _DVB_CA_H_ 1
 
 typedef struct dvb_ca_t dvb_ca_t;
 
@@ -111,4 +111,4 @@ void ca_open(dvb_ca_t *ca);
 void ca_close(dvb_ca_t *ca);
 void ca_loop(dvb_ca_t *ca, int is_data);
 
-#endif /* _CA_H_ */
+#endif /* _DVB_CA_H_ */

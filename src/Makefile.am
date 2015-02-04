@@ -91,8 +91,8 @@ endif
 ### dvb ###
 if HAVE_STREAM_DVB
 libstream_la_SOURCES += \
-    stream/dvb/src/ca.c \
-    stream/dvb/src/fe.c \
+    stream/dvb/ca.c \
+    stream/dvb/frontend.c \
     stream/dvb/ddci.c \
     stream/dvb/input.c
 endif

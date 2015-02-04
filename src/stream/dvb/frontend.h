@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _FE_H_
-#define _FE_H_ 1
+#ifndef _DVB_FRONTEND_H_
+#define _DVB_FRONTEND_H_ 1
 
 /*
  * Polarization:
@@ -93,4 +93,4 @@ void fe_open(dvb_fe_t *fe);
 void fe_close(dvb_fe_t *fe);
 void fe_loop(dvb_fe_t *fe, int is_data);
 
-#endif /* _FE_H_ */
+#endif /* _DVB_FRONTEND_H_ */

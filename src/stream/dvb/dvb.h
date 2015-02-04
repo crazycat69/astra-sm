@@ -33,18 +33,18 @@
 #include <linux/dvb/dmx.h>
 #include <linux/dvb/ca.h>
 
-#include "src/fe.h"
-#include "src/ca.h"
+#include "frontend.h"
+#include "ca.h"
 
 #if DVB_API_VERSION < 5
 #   error "DVB_API_VERSION < 5"
 #endif
 
 #ifndef DTV_STREAM_ID
-	#define DTV_STREAM_ID DTV_ISDBS_TS_ID
+#   define DTV_STREAM_ID DTV_ISDBS_TS_ID
 #endif
 #ifndef NO_STREAM_ID_FILTER
-	#define NO_STREAM_ID_FILTER	(~0U)
+#   define NO_STREAM_ID_FILTER (~0U)
 #endif
 
 #define DVB_API ((DVB_API_VERSION * 100) + DVB_API_VERSION_MINOR)
