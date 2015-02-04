@@ -58,7 +58,7 @@ static void iterate_dir(const char *dir, const char *filter, void (*callback)(co
         struct dirent *entry = readdir(dirp);
         if(!entry)
             break;
-        if(strncmp(entry->d_name, filter, filter_len))
+        if(strncmp(entry->d_name, filter, filter_len) != 0)
             continue;
         sprintf(&item[item_len], "%s", entry->d_name);
         callback(item);
