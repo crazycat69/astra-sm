@@ -893,7 +893,7 @@ static void module_init(module_data_t *mod)
             lua_pop(lua, 1);
 
             map_item_t *map_item = calloc(1, sizeof(map_item_t));
-            strcpy(map_item->type, key);
+            strncpy(map_item->type, key, sizeof(map_item->type));
 
             if(key[0] >= '1' && key[0] <= '9')
                 map_item->origin_pid = atoi(key);
