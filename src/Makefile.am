@@ -188,24 +188,26 @@ endif
 BUILT_SOURCES =
 
 # lua initializer lists
-BUILT_SOURCES += bindings.h
+BUILT_SOURCES += \
+    bindings.h
+
 bindings.h: $(libastra_la_SOURCES) $(libstream_la_SOURCES)
-	@echo -n "Generating bindings.h... "
-	@echo "/* automatically generated file; do not edit */" >bindings.h
+	@echo -n "Generating $@... "
+	@echo "/* automatically generated file; do not edit */" >$@
 	
-	@echo                        >>bindings.h
-	@echo "/*"                   >>bindings.h
-	@echo " * Core library"      >>bindings.h
-	@echo " */"                  >>bindings.h
-	@echo                        >>bindings.h
-	@sh ../build-aux/gen-bindings-list LUA_CORE_BINDINGS $(libastra_la_SOURCES) >>bindings.h
+	@echo                        >>$@
+	@echo "/*"                   >>$@
+	@echo " * Core library"      >>$@
+	@echo " */"                  >>$@
+	@echo                        >>$@
+	@sh ../build-aux/gen-bindings-list LUA_CORE_BINDINGS $(libastra_la_SOURCES) >>$@
 	
-	@echo                        >>bindings.h
-	@echo "/*"                   >>bindings.h
-	@echo " * Streaming modules" >>bindings.h
-	@echo " */"                  >>bindings.h
-	@echo                        >>bindings.h
-	@sh ../build-aux/gen-bindings-list LUA_STREAM_BINDINGS $(libstream_la_SOURCES) >>bindings.h
+	@echo                        >>$@
+	@echo "/*"                   >>$@
+	@echo " * Streaming modules" >>$@
+	@echo " */"                  >>$@
+	@echo                        >>$@
+	@sh ../build-aux/gen-bindings-list LUA_STREAM_BINDINGS $(libstream_la_SOURCES) >>$@
 	
 	@echo "done!"
 
@@ -219,19 +221,24 @@ INSCRIPT_FILES = \
     $(top_srcdir)/scripts/relay.lua \
     $(top_srcdir)/scripts/stream.lua
 
-BUILT_SOURCES += mkscript$(EXEEXT)
-# we have to build mkscript with host compiler
-mkscript$(EXEEXT):
-	$(HOST_CC) -std=c99 -o mkscript$(EXEEXT) inscript/mkscript.c
+BUILT_SOURCES += \
+    mkscript$(BUILD_EXEEXT) \
+    inscript/inscript.h
 
-BUILT_SOURCES += inscript/inscript.h
-inscript/inscript.h: mkscript$(EXEEXT) $(INSCRIPT_FILES)
-	@echo -n "Generating inscript.h... "
-	@echo "/* automatically generated file; do not edit */" >inscript/inscript.h
+# we have to build mkscript with host compiler
+mkscript$(BUILD_EXEEXT): inscript/mkscript.c
+	@echo -n "Building $@... "
+	@$(CC_FOR_BUILD) -std=c99 -Wall -Wextra -o $@ $<
+	@echo "done!"
+
+inscript/inscript.h: mkscript$(BUILD_EXEEXT) $(INSCRIPT_FILES)
+	@echo -n "Generating $@... "
+	@echo "/* automatically generated file; do not edit */" >$@
 	
-	@echo >>inscript/inscript.h
+	@echo >>$@
 	@for script in $(INSCRIPT_FILES); do \
-	    ./mkscript$(EXEEXT) `basename $$script .lua` "$$script" >>inscript/inscript.h; \
+	    ./mkscript$(BUILD_EXEEXT) \
+	        `basename $$script .lua` "$$script" >>$@; \
 	done
 	
 	@echo "done!"

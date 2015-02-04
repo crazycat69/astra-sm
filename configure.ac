@@ -28,6 +28,7 @@ AC_PRESERVE_HELP_ORDER
 # Checks for programs
 AC_LANG(C)
 AC_PROG_CC
+AX_PROG_CC_FOR_BUILD
 AM_PROG_CC_C_O
 AC_PROG_CPP
 AC_PROG_INSTALL
@@ -39,16 +40,6 @@ AC_PROG_SED
 LT_INIT([disable-shared static no-pic])
 LT_LIB_DLLOAD
 LT_LIB_M
-
-# Check whether build and host compilers should be different
-AS_IF([test -z "${HOST_CC}"], [
-    AS_IF([test "x${cross_compiling}" = "xno"], [
-        HOST_CC="\$(CC)"
-    ], [
-        HOST_CC=cc
-    ])
-])
-AC_SUBST(HOST_CC)
 
 # Check C99 support
 case "${host_os}" in
