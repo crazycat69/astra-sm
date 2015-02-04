@@ -10,7 +10,6 @@
 *.la
 *.lo
 *.o
-*.s
 *.so*
 
 # autotools stuff

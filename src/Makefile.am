@@ -209,7 +209,7 @@ bindings.h: $(libastra_la_SOURCES) $(libstream_la_SOURCES)
 	
 	@echo "done!"
 
-### inscript ###
+# built-in script
 if HAVE_INSCRIPT
 INSCRIPT_FILES = \
     $(top_srcdir)/scripts/analyze.lua \
@@ -235,6 +235,24 @@ inscript/inscript.h: mkscript$(EXEEXT) $(INSCRIPT_FILES)
 	done
 	
 	@echo "done!"
+endif
+
+# preprocessed source code
+if HAVE_PREPROCESSED
+PP_CFLAGS = $(DEFS) \
+    $(DEFAULT_INCLUDES) $(INCLUDES) \
+    $(AM_CPPFLAGS) $(CPPFLAGS) \
+    $(libastra_la_CFLAGS) \
+    $(libstream_la_CFLAGS) \
+    $(astra_CFLAGS) \
+    $(CFLAGS)
+
+BUILT_SOURCES += $(SOURCES:.c=.i)
+
+SUFFIXES: .i
+.c.i: $*.c
+	@echo "  CPP     " $@
+	@$(CPP) $(PP_CFLAGS) -o $@ $<
 endif
 
 CLEANFILES = $(BUILT_SOURCES)

@@ -33,6 +33,7 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 m4_pattern_allow([AM_PROG_AR])
 AM_PROG_AR
+AC_PROG_SED
 
 # Initialize libtool
 LT_INIT([disable-shared static no-pic])
@@ -542,6 +543,7 @@ AX_STREAM_MODULE(udp, [UDP receive and transmit module])
 # Developer options
 #
 AX_HELP_SECTION([Developer options:])
+kill_optflags="no"
 
 # Debug version
 AC_ARG_ENABLE([debug],
@@ -550,12 +552,29 @@ AC_ARG_ENABLE([debug],
 AS_IF([test "x${enable_debug}" = "xyes"], [
     AC_DEFINE([DEBUG], [1], [Define when building a debug version])
 
-    # disable optimization, add debug info
-    AX_CHECK_CFLAGS([-O0 -g3], [], [], [
-        AC_MSG_ERROR([$CC doesn't support required debug flag; pass --disable-debug to disable this check]) ])
+    # add debug info
+    AX_CHECK_CFLAGS([-g3], [], [], [
+        # try to fall back to -g
+        AX_CHECK_CFLAGS([-g], [], [], [
+            AC_MSG_ERROR([$CC doesn't support required debug flag; pass --disable-debug to disable this check])
+        ])
+    ])
 
     # non-essential debug flags
-    AX_CHECK_CFLAGS([-save-temps=obj -fno-builtin])
+    AX_CHECK_CFLAGS([-ggdb -ggdb3 -fno-builtin])
+    kill_optflags="yes"
+])
+
+# Generate preprocessed files
+AC_ARG_ENABLE([preprocess],
+    AC_HELP_STRING([--enable-preprocess], [generate preprocessed files (*.i)]))
+
+AM_CONDITIONAL([HAVE_PREPROCESSED], [test "x${enable_preprocess}" = "xyes"])
+
+# Remove optimization flags
+AS_IF([test "x${kill_optflags}" = "xyes"], [
+    CFLAGS=$(echo "$CFLAGS" | $SED -r -e 's/@<:@ @:>@*(-O@<:@^ @:>@*)@<:@ @:>@*/ /g')
+    AX_CHECK_CFLAG([-O0])
 ], [
     AX_CHECK_CFLAG([-fomit-frame-pointer])
 ])
