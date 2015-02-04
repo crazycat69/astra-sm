@@ -12,6 +12,11 @@
 *.o
 *.so*
 
+# debug data
+gmon.out
+*.gcda
+*.gcno
+
 # autotools stuff
 .deps
 .dirstamp

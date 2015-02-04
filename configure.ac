@@ -565,6 +565,29 @@ AS_IF([test "x${enable_debug}" = "xyes"], [
     kill_optflags="yes"
 ])
 
+# Test coverage
+AC_ARG_ENABLE([gcov],
+    AC_HELP_STRING([--enable-gcov], [enable test coverage analysis]))
+
+AS_IF([test "x${enable_gcov}" = "xyes"], [
+    AX_CHECK_CFLAGS([-ftest-coverage -fprofile-arcs], [], [], [
+        AC_MSG_ERROR([$CC doesn't support gcov; pass --disable-gcov to disable this check])
+    ])
+
+    LIBS="$LIBS -lgcov"
+    kill_optflags="yes"
+])
+
+# Profiling
+AC_ARG_ENABLE([gprof],
+    AC_HELP_STRING([--enable-gprof], [enable profiling with gprof]))
+
+AS_IF([test "x${enable_gprof}" = "xyes"], [
+    AX_CHECK_CFLAGS([-pg], [], [], [
+        AC_MSG_ERROR([$CC doesn't support gprof; pass --disable-gprof to disable this check])
+    ])
+])
+
 # Generate preprocessed files
 AC_ARG_ENABLE([preprocess],
     AC_HELP_STRING([--enable-preprocess], [generate preprocessed files (*.i)]))
