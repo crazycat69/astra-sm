@@ -475,8 +475,7 @@ static void conditional_access_event(dvb_ca_t *ca, uint8_t slot_id, uint16_t ses
 
             conditional_access_data_t *data = ca->slots[slot_id].sessions[session_id].data;
 
-            if(data->caid_list)
-                free(data->caid_list);
+            free(data->caid_list);
             data->caid_list_size = size / 2;
             data->caid_list = calloc(data->caid_list_size, sizeof(uint16_t));
 
@@ -511,9 +510,7 @@ static void conditional_access_close(dvb_ca_t *ca, uint8_t slot_id, uint16_t ses
     ca_session_t *session = &ca->slots[slot_id].sessions[session_id];
     conditional_access_data_t *data = session->data;
 
-    if(data->caid_list)
-        free(data->caid_list);
-
+    free(data->caid_list);
     free(data);
 }
 

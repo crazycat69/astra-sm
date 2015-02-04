@@ -814,10 +814,8 @@ static void module_destroy(module_data_t *mod)
 
     asc_timer_destroy(mod->check_stat);
 
-    if(mod->pmt_checksum_list)
-        free(mod->pmt_checksum_list);
-    if(mod->sdt_checksum_list)
-        free(mod->sdt_checksum_list);
+    free(mod->pmt_checksum_list);
+    free(mod->sdt_checksum_list);
 }
 
 MODULE_STREAM_METHODS()

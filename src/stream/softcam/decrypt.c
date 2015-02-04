@@ -1028,9 +1028,7 @@ static void module_destroy(module_data_t *mod)
     asc_list_destroy(mod->el_list);
 
     free(mod->storage.buffer);
-
-    if(mod->shift.buffer)
-        free(mod->shift.buffer);
+    free(mod->shift.buffer);
 
     for(int i = 0; i < MAX_PID; ++i)
     {

@@ -348,8 +348,7 @@ static void module_destroy(module_data_t *mod)
             struct io_event events[1];
             io_cancel(mod->ctx, mod->io[0], events);
             io_destroy(mod->ctx);
-            if(mod->io[0])
-                free(mod->io[0]);
+            free(mod->io[0]);
         }
         else
 #endif

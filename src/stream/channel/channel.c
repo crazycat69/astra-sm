@@ -948,8 +948,7 @@ static void module_destroy(module_data_t *mod)
         mpegts_psi_destroy(mod->sdt);
         mpegts_psi_destroy(mod->custom_sdt);
 
-        if(mod->sdt_checksum_list)
-            free(mod->sdt_checksum_list);
+        free(mod->sdt_checksum_list);
     }
 
     if(mod->eit)

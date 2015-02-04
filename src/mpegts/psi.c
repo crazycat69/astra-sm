@@ -34,9 +34,6 @@ mpegts_psi_t * mpegts_psi_init(mpegts_packet_type_t type, uint16_t pid)
 
 void mpegts_psi_destroy(mpegts_psi_t *psi)
 {
-    if(!psi)
-        return;
-
     free(psi);
 }
 

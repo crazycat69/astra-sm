@@ -437,8 +437,7 @@ static void module_destroy(module_data_t *mod)
     if(mod->thread)
         on_thread_close(mod);
 
-    if(mod->buffer)
-        free(mod->buffer);
+    free(mod->buffer);
 
     if(mod->idx_callback)
     {
