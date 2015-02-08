@@ -20,7 +20,7 @@ AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux/m4])
 AC_CANONICAL_SYSTEM
 
-AM_INIT_AUTOMAKE([1.11 foreign dist-xz subdir-objects -Wall -Werror])
+AM_INIT_AUTOMAKE([1.11 foreign dist-xz no-dist-gzip subdir-objects -Wall -Werror])
 AM_MAINTAINER_MODE([enable])
 AM_SILENT_RULES([yes])
 AC_PRESERVE_HELP_ORDER
@@ -32,8 +32,7 @@ AX_PROG_CC_FOR_BUILD
 AM_PROG_CC_C_O
 AC_PROG_CPP
 AC_PROG_INSTALL
-m4_pattern_allow([AM_PROG_AR])
-AM_PROG_AR
+m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 AC_PROG_SED
 
 # Initialize libtool
