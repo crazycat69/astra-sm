@@ -2,6 +2,7 @@
 /src/mkscript
 /src/inscript/inscript.h
 /src/bindings.h
+/lua/luac
 
 # binaries
 *.a
@@ -9,6 +10,7 @@
 *.i
 *.la
 *.lo
+*.luac
 *.o
 *.so*
 

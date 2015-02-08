@@ -26,7 +26,10 @@
 #include <fcntl.h>
 #include <unistd.h>
 
+#include <lua.h>
+
 #define MAX_BUFFER_SIZE 4096
+#define BYTES_PER_ROW 10
 
 typedef struct string_buffer_t string_buffer_t;
 
@@ -263,41 +266,51 @@ int main(int argc, char const *argv[])
     script[filesize] = '\0';
     close(fd);
 
-    size_t skip;
-    string_buffer_t *buffer;
-    string_buffer_t *next_next;
-
-    // first clean
-    buffer = parse(script);
-    skip = 0;
-    for(string_buffer_t *next = buffer
-        ; next && (next_next = next->next, 1)
-        ; next = next_next)
+    bool compiled = false;
+    if(filesize >= (int)sizeof(LUA_SIGNATURE) &&
+       !strncmp(&script[0], LUA_SIGNATURE, sizeof(LUA_SIGNATURE) - 1))
     {
-        memcpy(&script[skip], next->buffer, next->size);
-        skip += next->size;
-        free(next);
+        compiled = true;
     }
-    script[skip] = 0;
 
-    // second clean
-    buffer = parse(script);
-    skip = 0;
-    for(string_buffer_t *next = buffer
-        ; next && (next_next = next->next, 1)
-        ; next = next_next)
+    size_t skip = filesize;
+    if(!compiled)
     {
-        memcpy(&script[skip], next->buffer, next->size);
-        skip += next->size;
-        free(next);
-    }
-    script[skip] = 0;
+        string_buffer_t *buffer;
+        string_buffer_t *next_next;
 
-    printf("static unsigned char %s[] = {\n", argv[1]);
-    const size_t tail = skip % 8;
+        // first clean
+        buffer = parse(script);
+        skip = 0;
+        for(string_buffer_t *next = buffer
+            ; next && (next_next = next->next, 1)
+            ; next = next_next)
+        {
+            memcpy(&script[skip], next->buffer, next->size);
+            skip += next->size;
+            free(next);
+        }
+        script[skip] = 0;
+
+        // second clean
+        buffer = parse(script);
+        skip = 0;
+        for(string_buffer_t *next = buffer
+            ; next && (next_next = next->next, 1)
+            ; next = next_next)
+        {
+            memcpy(&script[skip], next->buffer, next->size);
+            skip += next->size;
+            free(next);
+        }
+        script[skip] = 0;
+    }
+
+    printf("static const uint8_t %s[] = {\n", argv[1]);
+    const size_t tail = skip % BYTES_PER_ROW;
     const size_t limit = skip - tail;
-    for(size_t i = 0; i < limit; i += 8)
-        print_block((uint8_t *)&script[i], 8);
+    for(size_t i = 0; i < limit; i += BYTES_PER_ROW)
+        print_block((uint8_t *)&script[i], BYTES_PER_ROW);
     if(limit < skip)
         print_block((uint8_t *)&script[limit], tail);
     printf("};\n");

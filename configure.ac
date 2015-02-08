@@ -709,6 +709,7 @@ AX_CHECK_CFLAG([-fstrict-overflow])
 AC_CONFIG_FILES([
     Makefile
     lua/Makefile
+    scripts/Makefile
     src/Makefile
     tests/Makefile
     testcards/Makefile

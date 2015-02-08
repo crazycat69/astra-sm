@@ -214,12 +214,12 @@ bindings.h: $(libastra_la_SOURCES) $(libstream_la_SOURCES)
 # built-in script
 if HAVE_INSCRIPT
 INSCRIPT_FILES = \
-    $(top_srcdir)/scripts/analyze.lua \
-    $(top_srcdir)/scripts/base.lua \
-    $(top_srcdir)/scripts/dvbls.lua \
-    $(top_srcdir)/scripts/dvbwrite.lua \
-    $(top_srcdir)/scripts/relay.lua \
-    $(top_srcdir)/scripts/stream.lua
+    $(top_srcdir)/scripts/analyze.luac \
+    $(top_srcdir)/scripts/base.luac \
+    $(top_srcdir)/scripts/dvbls.luac \
+    $(top_srcdir)/scripts/dvbwrite.luac \
+    $(top_srcdir)/scripts/relay.luac \
+    $(top_srcdir)/scripts/stream.luac
 
 BUILT_SOURCES += \
     mkscript$(BUILD_EXEEXT) \
@@ -228,7 +228,7 @@ BUILT_SOURCES += \
 # we have to build mkscript with host compiler
 mkscript$(BUILD_EXEEXT): inscript/mkscript.c
 	@echo -n "Building $@... "
-	@$(CC_FOR_BUILD) -std=c99 -Wall -Wextra -o $@ $<
+	@$(CC_FOR_BUILD) $(LUA_CFLAGS) -std=c99 -Wall -Wextra -o $@ $<
 	@echo "done!"
 
 inscript/inscript.h: mkscript$(BUILD_EXEEXT) $(INSCRIPT_FILES)
@@ -238,7 +238,7 @@ inscript/inscript.h: mkscript$(BUILD_EXEEXT) $(INSCRIPT_FILES)
 	@echo >>$@
 	@for script in $(INSCRIPT_FILES); do \
 	    ./mkscript$(BUILD_EXEEXT) \
-	        `basename $$script .lua` "$$script" >>$@; \
+	        `basename $$script .luac` "$$script" >>$@; \
 	done
 	
 	@echo "done!"
