@@ -1,6 +1,34 @@
 if HAVE_INTERNAL_LUA
+#
+# Platform-specific flags
+#
+AM_CFLAGS = -DLUA_COMPAT_ALL
+
+# windows
+if HAVE_MINGW
+AM_CFLAGS += -DLUA_BUILD_AS_DLL
+endif
+
+# macos
+if HAVE_MACOS
+AM_CFLAGS += -DLUA_USE_MACOSX
+endif
+
+# freebsd
+if HAVE_FREEBSD
+AM_CFLAGS += -DLUA_USE_LINUX
+endif
+
+# linux
+if HAVE_LINUX
+AM_CFLAGS += -DLUA_USE_LINUX
+endif
+
+#
+# Library
+#
 noinst_LTLIBRARIES = liblua.la
-liblua_la_CFLAGS = -DLUA_COMPAT_ALL
+liblua_la_CFLAGS = $(AM_CFLAGS)
 liblua_la_LDFLAGS = -module -static
 liblua_la_LIBADD = $(LIBM) $(LIBADD_DLOPEN)
 liblua_la_SOURCES = \
@@ -37,23 +65,13 @@ liblua_la_SOURCES = \
     lstrlib.c \
     ltablib.c
 
-# windows
-if HAVE_MINGW
-liblua_la_CFLAGS += -DLUA_BUILD_AS_DLL
-endif
-
-# macos
-if HAVE_MACOS
-liblua_la_CFLAGS += -DLUA_USE_MACOSX
-endif
-
-# freebsd
-if HAVE_FREEBSD
-liblua_la_CFLAGS += -DLUA_USE_LINUX
-endif
-
-# linux
-if HAVE_LINUX
-liblua_la_CFLAGS += -DLUA_USE_LINUX
+#
+# Compiler
+#
+if HAVE_LUA_COMPILER
+noinst_PROGRAMS = luac
+luac_CFLAGS = $(AM_CFLAGS)
+luac_LDADD = liblua.la
+luac_SOURCES = luac.c
 endif
 endif

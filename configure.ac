@@ -302,6 +302,25 @@ AX_HELP_SECTION([External libraries:])
 AX_EXTLIB_PARAM(lua,
     [use external Lua library instead of the bundled version])
 
+AC_ARG_VAR([LUAC], [Lua compiler command])
+AC_ARG_WITH([lua-compiler], [
+    AC_HELP_STRING([--with-lua-compiler=PATH], [path to Lua compiler (luac)]) ])
+
+AS_IF([test "x${with_lua_compiler}" = "xyes" -o -z "${with_lua_compiler}"], [
+    AS_IF([test -z "${LUAC}"], [
+        # default value
+        LUAC="luac"
+    ])
+], [
+    AS_IF([test "x${with_lua_compiler}" != "xno"], [
+        # custom compiler path
+        LUAC="${with_lua_compiler}"
+    ], [
+        # disabled explicitly
+        LUAC=""
+    ])
+])
+
 have_lua="no"
 AS_IF([test "x${with_lua}" != "xno"], [
     AX_SAVE_FLAGS
@@ -312,6 +331,12 @@ AS_IF([test "x${with_lua}" != "xno"], [
         AC_CHECK_LIB([lua], [luaL_len], [
             have_lua="yes"
             LUA_LIBS="${LUA_LIBS} ${LIBM} ${LIBADD_DLOPEN} -llua"
+
+            AS_IF([test "x${with_lua_compiler}" != "xno"], [
+                AC_PATH_PROG([LUAC], [${LUAC}])
+                AS_IF([test -z "${LUAC}"], [
+                    AC_MSG_ERROR([Couldn't find Lua compiler; pass --without-lua-compiler to disable this check]) ])
+            ])
         ])
     ])
     AX_RESTORE_FLAGS
@@ -322,12 +347,27 @@ AS_IF([test "x${with_lua}" != "xno"], [
 
             LUA_CFLAGS="-I\$(top_srcdir)/lua"
             LUA_LIBS="\$(top_srcdir)/lua/liblua.la"
+
+            AS_IF([test "x${with_lua_compiler}" != "xno"], [
+                LUAC="\$(top_srcdir)/lua/luac"
+            ])
         ], [
             AC_MSG_ERROR([Pass --without-lua to build bundled version])
         ])
     ])
 ])
+
+AS_IF([test "x${cross_compiling}" = "xyes" -a -n "${LUAC}"], [
+    AS_IF([test -z "${with_lua_compiler}"], [
+        AC_MSG_WARN([Cross compilation detected; disabling Lua compiler])
+        LUAC=""
+    ], [
+        AC_MSG_ERROR([Cannot cross-compile Lua scripts; pass --without-lua-compiler to disable this check])
+    ])
+])
+
 AM_CONDITIONAL([HAVE_INTERNAL_LUA], [test "x${have_lua}" = "xno"])
+AM_CONDITIONAL([HAVE_LUA_COMPILER], [test ! -z "${LUAC}"])
 
 # libaio
 AX_EXTLIB_PARAM(libaio,
