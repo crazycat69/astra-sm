@@ -739,6 +739,8 @@ static void mmi_free(mmi_data_t *mmi)
 
 static void mmi_send_menu_answer(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id, int choice)
 {
+    __uarg(session_id);
+
     uint8_t answer[5];
     answer[0] = (AOT_MENU_ANSW >> 16) & 0xFF;
     answer[1] = (AOT_MENU_ANSW >>  8) & 0xFF;
@@ -847,7 +849,7 @@ static void mmi_menu_event(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id)
     {
         char *text = NULL;
         size_t choice_size = mmi_get_text(ca, &buffer[skip], size - skip, &text);
-        asc_log_debug(MSG("CA: MMI: Choice #%d: %s"),
+        asc_log_debug(MSG("CA: MMI: Choice #%zu: %s"),
                       asc_list_size(mmi->object.menu.choices) + 1,
                       text);
         asc_list_insert_tail(mmi->object.menu.choices, text);
