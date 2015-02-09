@@ -34,6 +34,7 @@ AC_PROG_CPP
 AC_PROG_INSTALL
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
 AC_PROG_SED
+AC_PROG_LN_S
 
 # Initialize libtool
 LT_INIT([disable-shared static no-pic])
@@ -209,14 +210,14 @@ AM_CONDITIONAL(HAVE_CYGWIN, [test "${SYS}" = "cygwin"])
 # Choose event mechanism
 case "${host_os}" in
     mingw32*)
-        AC_MSG_NOTICE([using select() for event notification])
+        event_mechanism="select"
         AX_CHECK_WINFUNC(select, [ select(0, NULL, NULL, NULL, NULL) ])
         AC_DEFINE([WITH_SELECT],
             [1], [Define to use select() for event notification])
     ;;
 
     freebsd*|darwin*)
-        AC_MSG_NOTICE([using kqueue for event notification])
+        event_mechanism="kqueue"
         AX_CHECK_HEADERS_REQ([sys/event.h])
         AX_CHECK_FUNCS_REQ([kqueue kevent])
         AC_DEFINE([WITH_KQUEUE],
@@ -224,7 +225,7 @@ case "${host_os}" in
     ;;
 
     linux*)
-        AC_MSG_NOTICE([using epoll for event notification])
+        event_mechanism="epoll"
         AX_CHECK_HEADERS_REQ([sys/epoll.h])
         AX_CHECK_FUNCS_REQ([epoll_create epoll_ctl epoll_wait])
         AC_DEFINE([WITH_EPOLL],
@@ -232,13 +233,14 @@ case "${host_os}" in
     ;;
 
     *)
-        AC_MSG_NOTICE([using poll() for event notification])
+        event_mechanism="poll"
         AX_CHECK_HEADERS_REQ([poll.h])
         AX_CHECK_FUNCS_REQ([poll])
         AC_DEFINE([WITH_POLL],
             [1], [Define to use poll() for event notification])
     ;;
 esac
+AC_MSG_NOTICE([using ${event_mechanism} for event notification])
 
 #
 # Checks for headers and functions common to all platforms
@@ -303,8 +305,8 @@ AX_EXTLIB_PARAM(lua,
     [use external Lua library instead of the bundled version])
 
 AC_ARG_VAR([LUAC], [Lua compiler command])
-AC_ARG_WITH([lua-compiler], [
-    AC_HELP_STRING([--with-lua-compiler=PATH], [path to Lua compiler (luac)]) ])
+AC_ARG_WITH([lua-compiler],
+    AC_HELP_STRING([--with-lua-compiler=PATH], [path to Lua compiler (luac)]))
 
 AS_IF([test "x${with_lua_compiler}" = "xyes" -o -z "${with_lua_compiler}"], [
     AS_IF([test -z "${LUAC}"], [
@@ -401,7 +403,7 @@ AM_CONDITIONAL([HAVE_LIBAIO], [test "x${have_libaio}" = "xyes"])
 
 # libdvbcsa
 AX_EXTLIB_PARAM(dvbcsa,
-    [enable CSA (de)scrambling using libdvbcsa] )
+    [enable CSA (de)scrambling using libdvbcsa])
 
 have_dvbcsa="no"
 AS_IF([test "x${with_dvbcsa}" != "xno"], [
@@ -715,3 +717,90 @@ AC_CONFIG_FILES([
     testcards/Makefile
 ])
 AC_OUTPUT
+
+# Print configuration summary
+echo
+echo "Configuration summary"
+echo "-----------------------"
+echo "Version:               ${PACKAGE_STRING}"
+echo
+echo "Compiler:              ${CC}"
+echo "Building for:          ${SYS} (${host})"
+echo "Event mechanism:       ${event_mechanism}"
+
+# large file support
+echo -n "Large files:           "
+AS_IF([test "x${enable_largefile}" != "xno"], [echo "yes"], [echo "no"])
+echo
+
+# lua (lib/compiler)
+echo -n "Lua library:           "
+AS_IF([test "x${have_lua}" = "xyes"], [echo "external"], [echo "internal"])
+
+echo -n "Lua compiler:          "
+AS_IF([test ! -z "${LUAC}"], [echo "${LUAC}"], [echo "no"])
+
+# libdvbcsa
+echo -n "libdvbcsa:             "
+AS_IF([test "x${have_dvbcsa}" = "xyes"], [echo "yes"], [echo "no"])
+
+# libcrypto
+echo -n "libcrypto:             "
+AS_IF([test "x${have_libcrypto}" = "xyes"], [echo "yes"], [echo "no"])
+
+# aio (linux/posix)
+echo -n "Asynchronous I/O:      "
+AS_IF([test "x${have_aio}" = "xyes"], [
+    AS_IF([test "x${have_libaio}" = "xyes"],
+        [echo "yes (Linux)"], [echo "yes (POSIX)"])
+], [
+    echo "no"
+])
+
+# dvb api
+echo -n "Linux DVB API:         "
+AS_IF([test "x${have_dvbapi}" = "xyes"],
+    [echo "yes"], [echo "no"])
+
+# inscript
+echo -n "Built-in scripts:      "
+AS_IF([test "x${enable_inscript}" != "xno"], [
+    AS_IF([test ! -z "${LUAC}"],
+        [ echo "yes (compiled)" ], [ echo "yes (plaintext)" ])
+], [
+    echo "no"
+])
+
+# check
+echo -n "Check (unit tests):    "
+AS_IF([test "x${have_check}" = "xyes"],
+    [echo "yes"], [echo "no"])
+
+# streaming module list
+echo
+echo -n "Streaming modules:     "
+first="yes"
+for mod in ${stream_modules}; do
+    if [ test "x${first}" != "xyes" ]; then
+        echo -n "                       "
+    fi
+    echo "${mod}"
+    first="no"
+done
+echo
+
+# debug build
+echo -n "Debug build:           "
+AS_IF([test "x${enable_debug}" = "xyes"], [echo "yes"], [echo "no"])
+
+# extra warnings
+echo -n "Extra warnings:        "
+AS_IF([test "x${enable_warnings}" = "xyes"], [echo "yes"], [echo "no"])
+
+# test coverage
+echo -n "Test coverage:         "
+AS_IF([test "x${enable_gcov}" = "xyes"], [echo "yes"], [echo "no"])
+
+# profiling
+echo -n "Profiling:             "
+AS_IF([test "x${enable_gprof}" = "xyes"], [echo "yes"], [echo "no"])

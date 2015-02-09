@@ -11,7 +11,7 @@ if HAVE_LUA_COMPILER
 else
 .lua.luac:
 	@echo -n "Linking $@ to $<... "
-	@ln -sf "$<" "$@"
+	@$(LN_S) -f "$<" "$@"
 	@echo "done!"
 endif
 
