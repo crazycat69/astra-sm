@@ -330,7 +330,7 @@ AS_IF([test "x${with_lua}" != "xno"], [
     # lua wants -lm on linux
     LIBS="$LIBS $LIBM $LUA_LIBS"
     AC_CHECK_HEADERS([lua.h], [
-        AC_SEARCH_LIBS([luaL_len], [lua lua52 lua-5.2 lua53 lua-5.3], [
+        AC_SEARCH_LIBS([luaL_len], [lua lua52 lua5.2 lua-5.2 lua53 lua5.3 lua-5.3], [
             have_lua="yes"
             LUA_LIBS="${LUA_LIBS} ${LIBM} ${LIBADD_DLOPEN} ${ac_res}"
 

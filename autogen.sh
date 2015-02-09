@@ -39,14 +39,22 @@ for x in \
     depcomp \
     install-sh \
     stamp-h[0-9]* \
+    test-driver \
 ; do
     for path in "./" "./build-aux/" "./build-aux/m4/" "./src/"; do
-        rm -vf "${path}${x}" "${path}${x}~"
+        if [ -f "${path}${x}" ]; then
+            echo "${path}${x}"
+            rm -f "${path}${x}"
+        fi
+        if [ -f "${path}${x}~" ]; then
+            echo "${path}${x}~"
+            rm -f "${path}${x}~"
+        fi
     done
 done
 
 find . -type f \( -name Makefile -or -name Makefile.in \) \
-    -exec rm -vf {} \;
+    -print -exec rm -f {} \;
 
 # generate it again if needed
 if [ "$1" != "clean" ]; then
