@@ -31,6 +31,10 @@
 #define MAX_BUFFER_SIZE 4096
 #define BYTES_PER_ROW 10
 
+#ifndef O_BINARY
+#define O_BINARY 0
+#endif
+
 typedef struct string_buffer_t string_buffer_t;
 
 struct string_buffer_t
@@ -246,7 +250,7 @@ int main(int argc, char const *argv[])
         return 1;
     }
 
-    int fd = open(argv[2], O_RDONLY);
+    int fd = open(argv[2], O_RDONLY | O_BINARY);
     if(fd == -1)
     {
         fprintf(stderr, "Failed to open file: %s\n", argv[1]);
