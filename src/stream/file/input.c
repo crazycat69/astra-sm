@@ -108,7 +108,7 @@ static bool open_file(module_data_t *mod)
     if(mod->fd)
         close(mod->fd);
 
-    mod->fd = open(mod->filename, O_RDONLY);
+    mod->fd = open(mod->filename, O_RDONLY | O_BINARY);
     if(mod->fd <= 0)
     {
         mod->fd = 0;
