@@ -284,7 +284,7 @@ AS_IF(
 have_aio="no"
 AX_SAVE_FLAGS
 AC_CHECK_HEADERS([aio.h], [
-    AC_SEARCH_LIBS([aio_init], [rt], [
+    AC_SEARCH_LIBS([aio_write], [rt], [
         AS_IF([test "$LIBS" != "$SAVED_LIBS"], [ LIBRT="-lrt" ])
 
         have_aio="yes"
@@ -311,7 +311,7 @@ AC_ARG_WITH([lua-compiler],
 AS_IF([test "x${with_lua_compiler}" = "xyes" -o -z "${with_lua_compiler}"], [
     AS_IF([test -z "${LUAC}"], [
         # default value
-        LUAC="luac"
+        LUAC="luac luac52 luac53"
     ])
 ], [
     AS_IF([test "x${with_lua_compiler}" != "xno"], [
@@ -330,12 +330,12 @@ AS_IF([test "x${with_lua}" != "xno"], [
     # lua wants -lm on linux
     LIBS="$LIBS $LIBM $LUA_LIBS"
     AC_CHECK_HEADERS([lua.h], [
-        AC_CHECK_LIB([lua], [luaL_len], [
+        AC_SEARCH_LIBS([luaL_len], [lua lua52 lua-5.2 lua53 lua-5.3], [
             have_lua="yes"
-            LUA_LIBS="${LUA_LIBS} ${LIBM} ${LIBADD_DLOPEN} -llua"
+            LUA_LIBS="${LUA_LIBS} ${LIBM} ${LIBADD_DLOPEN} ${ac_res}"
 
             AS_IF([test "x${with_lua_compiler}" != "xno"], [
-                AC_PATH_PROG([LUAC], [${LUAC}])
+                AC_PATH_PROGS([LUAC], [${LUAC}])
                 AS_IF([test -z "${LUAC}"], [
                     AC_MSG_ERROR([Couldn't find Lua compiler; pass --without-lua-compiler to disable this check]) ])
             ])
