@@ -191,25 +191,20 @@ BUILT_SOURCES =
 BUILT_SOURCES += \
     bindings.h
 
-bindings.h: $(libastra_la_SOURCES) $(libstream_la_SOURCES)
-	@echo -n "Generating $@... "
-	@echo "/* automatically generated file; do not edit */" >$@
-	
-	@echo                        >>$@
-	@echo "/*"                   >>$@
-	@echo " * Core library"      >>$@
-	@echo " */"                  >>$@
-	@echo                        >>$@
-	@sh ../build-aux/gen-bindings-list LUA_CORE_BINDINGS $(libastra_la_SOURCES) >>$@
-	
-	@echo                        >>$@
-	@echo "/*"                   >>$@
-	@echo " * Streaming modules" >>$@
-	@echo " */"                  >>$@
-	@echo                        >>$@
-	@sh ../build-aux/gen-bindings-list LUA_STREAM_BINDINGS $(libstream_la_SOURCES) >>$@
-	
-	@echo "done!"
+bindings.h:
+	$(AM_V_GEN)echo "/* automatically generated file; do not edit */" >$@; \
+	echo                        >>$@; \
+	echo "/*"                   >>$@; \
+	echo " * Core library"      >>$@; \
+	echo " */"                  >>$@; \
+	echo                        >>$@; \
+	sh ../build-aux/gen-bindings-list LUA_CORE_BINDINGS $(libastra_la_SOURCES) >>$@; \
+	echo                        >>$@; \
+	echo "/*"                   >>$@; \
+	echo " * Streaming modules" >>$@; \
+	echo " */"                  >>$@; \
+	echo                        >>$@; \
+	sh ../build-aux/gen-bindings-list LUA_STREAM_BINDINGS $(libstream_la_SOURCES) >>$@
 
 # built-in script
 if HAVE_INSCRIPT
@@ -227,21 +222,15 @@ BUILT_SOURCES += \
 
 # we have to build mkscript with host compiler
 mkscript$(BUILD_EXEEXT): inscript/mkscript.c
-	@echo -n "Building $@... "
-	@$(CC_FOR_BUILD) $(LUA_CFLAGS) -std=c99 -Wall -Wextra -o $@ $<
-	@echo "done!"
+	$(AM_V_CC)$(CC_FOR_BUILD) $(LUA_CFLAGS) -std=c99 -Wall -Wextra -o $@ $<
 
 inscript/inscript.h: mkscript$(BUILD_EXEEXT) $(INSCRIPT_FILES)
-	@echo -n "Generating $@... "
-	@echo "/* automatically generated file; do not edit */" >$@
-	
-	@echo >>$@
-	@for script in $(INSCRIPT_FILES); do \
+	$(AM_V_GEN)echo "/* automatically generated file; do not edit */" >$@; \
+	echo >>$@; \
+	for script in $(INSCRIPT_FILES); do \
 	    ./mkscript$(BUILD_EXEEXT) \
 	        `basename $$script .luac` "$$script" >>$@; \
 	done
-	
-	@echo "done!"
 endif
 
 # preprocessed source code
@@ -258,8 +247,7 @@ BUILT_SOURCES += $(SOURCES:.c=.i)
 
 SUFFIXES: .i
 .c.i: $*.c
-	@echo "  CPP     " $@
-	@$(CPP) $(PP_CFLAGS) -o $@ $<
+	$(AM_V_GEN)$(CPP) $(PP_CFLAGS) -o $@ $<
 endif
 
 CLEANFILES = $(BUILT_SOURCES)

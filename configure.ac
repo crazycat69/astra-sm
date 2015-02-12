@@ -33,8 +33,9 @@ AM_PROG_CC_C_O
 AC_PROG_CPP
 AC_PROG_INSTALL
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
-AC_PROG_SED
 AC_PROG_LN_S
+AC_PROG_MKDIR_P
+AC_PROG_SED
 
 # Initialize libtool
 LT_INIT([disable-shared static no-pic])

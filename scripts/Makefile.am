@@ -1,20 +1,21 @@
+SCRIPT_FILES = analyze.lua base.lua dvbls.lua dvbwrite.lua relay.lua stream.lua
+scriptdir = $(sysconfdir)/astra/scripts
+
 if HAVE_INSCRIPT
 SUFFIXES: .luac
-BUILT_SOURCES = analyze.luac base.luac dvbls.luac dvbwrite.luac relay.luac stream.luac
+BUILT_SOURCES = $(SCRIPT_FILES:.lua=.luac)
 CLEANFILES = $(BUILT_SOURCES)
 
 if HAVE_LUA_COMPILER
 .lua.luac: $*.lua
-	@echo -n "Building $@ from $<... "
-	@$(LUAC) -s -o "$@" -- "$<"
-	@echo "done!"
+	$(AM_V_GEN)$(LUAC) -s -o $@ -- $<
 else
 .lua.luac:
-	@echo -n "Linking $@ to $<... "
-	@$(LN_S) -f "$<" "$@"
-	@echo "done!"
+	$(AM_V_GEN)$(LN_S) -f $< $@
+endif
+else
+script_DATA = $(SCRIPT_FILES)
 endif
 
-else
-# TODO: install scripts in $(sysconfdir)/astra/scripts
-endif
+install-data-local:
+	$(MKDIR_P) $(DESTDIR)$(scriptdir)
