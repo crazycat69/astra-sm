@@ -13,9 +13,10 @@ else
 .lua.luac:
 	$(AM_V_GEN)$(LN_S) -f $< $@
 endif
+
+# add empty script directory
+install-data-local:
+	$(MKDIR_P) $(DESTDIR)$(scriptdir)
 else
 script_DATA = $(SCRIPT_FILES)
 endif
-
-install-data-local:
-	$(MKDIR_P) $(DESTDIR)$(scriptdir)
