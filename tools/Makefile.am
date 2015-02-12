@@ -1,16 +1,15 @@
-CC = $(CC_FOR_BUILD)
-EXEEXT = $(BUILD_EXEEXT)
-AM_CFLAGS = $(WARN_CFLAGS)
-noinst_PROGRAMS =
+BUILT_SOURCES =
 
 if HAVE_INSCRIPT
-noinst_PROGRAMS += mkscript
-mkscript_SOURCES = mkscript.c
-mkscript_CFLAGS = $(LUA_CFLAGS)
+BUILT_SOURCES += mkscript$(BUILD_EXEEXT)
+mkscript$(BUILD_EXEEXT): mkscript.c
+	$(AM_V_GEN)$(CC_FOR_BUILD) $(WARN_CFLAGS) $(LUA_CFLAGS) $(CFLAGS) -o $@ mkscript.c
 endif
 
 if HAVE_FFMPEG
-noinst_PROGRAMS += tonegen
-tonegen_SOURCES = tonegen.c
-tonegen_LDADD = $(LIBM)
+BUILT_SOURCES += tonegen$(BUILD_EXEEXT)
+tonegen$(BUILD_EXEEXT): tonegen.c
+	$(AM_V_GEN)$(CC_FOR_BUILD) $(WARN_CFLAGS) $(CFLAGS) $(LIBM_FOR_BUILD) -o $@ tonegen.c
 endif
+
+CLEANFILES = $(BUILT_SOURCES)

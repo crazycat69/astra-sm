@@ -35,91 +35,115 @@
 #serial 8
 
 AU_ALIAS([AC_PROG_CC_FOR_BUILD], [AX_PROG_CC_FOR_BUILD])
-AC_DEFUN([AX_PROG_CC_FOR_BUILD], [dnl
-AC_REQUIRE([AC_PROG_CC])dnl
-AC_REQUIRE([AC_PROG_CPP])dnl
-AC_REQUIRE([AC_EXEEXT])dnl
-AC_REQUIRE([AC_CANONICAL_SYSTEM])dnl
 
-dnl Use the standard macros, but make them use other variable names
-dnl
-pushdef([ac_cv_prog_CPP], ac_cv_build_prog_CPP)dnl
-pushdef([ac_cv_prog_gcc], ac_cv_build_prog_gcc)dnl
-pushdef([ac_cv_prog_cc_works], ac_cv_build_prog_cc_works)dnl
-pushdef([ac_cv_prog_cc_cross], ac_cv_build_prog_cc_cross)dnl
-pushdef([ac_cv_prog_cc_g], ac_cv_build_prog_cc_g)dnl
-pushdef([ac_cv_exeext], ac_cv_build_exeext)dnl
-pushdef([ac_cv_objext], ac_cv_build_objext)dnl
-pushdef([ac_exeext], ac_build_exeext)dnl
-pushdef([ac_objext], ac_build_objext)dnl
-pushdef([CC], CC_FOR_BUILD)dnl
-pushdef([CPP], CPP_FOR_BUILD)dnl
-pushdef([CFLAGS], CFLAGS_FOR_BUILD)dnl
-pushdef([CPPFLAGS], CPPFLAGS_FOR_BUILD)dnl
-pushdef([LDFLAGS], LDFLAGS_FOR_BUILD)dnl
-pushdef([host], build)dnl
-pushdef([host_alias], build_alias)dnl
-pushdef([host_cpu], build_cpu)dnl
-pushdef([host_vendor], build_vendor)dnl
-pushdef([host_os], build_os)dnl
-pushdef([ac_cv_host], ac_cv_build)dnl
-pushdef([ac_cv_host_alias], ac_cv_build_alias)dnl
-pushdef([ac_cv_host_cpu], ac_cv_build_cpu)dnl
-pushdef([ac_cv_host_vendor], ac_cv_build_vendor)dnl
-pushdef([ac_cv_host_os], ac_cv_build_os)dnl
-pushdef([ac_cpp], ac_build_cpp)dnl
-pushdef([ac_compile], ac_build_compile)dnl
-pushdef([ac_link], ac_build_link)dnl
+AC_DEFUN([AX_PROG_CC_FOR_BUILD], [
+    AC_REQUIRE([AC_PROG_CC])
+    AC_REQUIRE([AC_PROG_CPP])
+    AC_REQUIRE([AC_EXEEXT])
+    AC_REQUIRE([AC_CANONICAL_SYSTEM])
+    AC_REQUIRE([LT_LIB_M])
 
-save_cross_compiling=$cross_compiling
-save_ac_tool_prefix=$ac_tool_prefix
-cross_compiling=no
-ac_tool_prefix=
+    AS_IF([test "x${cross_compiling}" = "xyes" ], [
+        #
+        # Use the standard macros, but make them use other variable names
+        #
+        pushdef([ac_cv_prog_CPP], ac_cv_build_prog_CPP)
+        pushdef([ac_cv_prog_gcc], ac_cv_build_prog_gcc)
+        pushdef([ac_cv_prog_cc_works], ac_cv_build_prog_cc_works)
+        pushdef([ac_cv_prog_cc_cross], ac_cv_build_prog_cc_cross)
+        pushdef([ac_cv_prog_cc_g], ac_cv_build_prog_cc_g)
+        pushdef([ac_cv_exeext], ac_cv_build_exeext)
+        pushdef([ac_cv_objext], ac_cv_build_objext)
+        pushdef([ac_cv_lib_m_cos], ac_cv_build_lib_m_cos)
+        pushdef([ac_exeext], ac_build_exeext)
+        pushdef([ac_objext], ac_build_objext)
+        pushdef([CC], CC_FOR_BUILD)
+        pushdef([CPP], CPP_FOR_BUILD)
+        pushdef([CFLAGS], CFLAGS_FOR_BUILD)
+        pushdef([CPPFLAGS], CPPFLAGS_FOR_BUILD)
+        pushdef([LDFLAGS], LDFLAGS_FOR_BUILD)
+        pushdef([LIBM], LIBM_FOR_BUILD)
+        pushdef([host], build)
+        pushdef([host_alias], build_alias)
+        pushdef([host_cpu], build_cpu)
+        pushdef([host_vendor], build_vendor)
+        pushdef([host_os], build_os)
+        pushdef([ac_cv_host], ac_cv_build)
+        pushdef([ac_cv_host_alias], ac_cv_build_alias)
+        pushdef([ac_cv_host_cpu], ac_cv_build_cpu)
+        pushdef([ac_cv_host_vendor], ac_cv_build_vendor)
+        pushdef([ac_cv_host_os], ac_cv_build_os)
+        pushdef([ac_cpp], ac_build_cpp)
+        pushdef([ac_compile], ac_build_compile)
+        pushdef([ac_link], ac_build_link)
 
-AC_PROG_CC
-AC_PROG_CPP
-AC_EXEEXT
+        save_cross_compiling=$cross_compiling
+        save_ac_tool_prefix=$ac_tool_prefix
+        cross_compiling=no
+        ac_tool_prefix=
 
-ac_tool_prefix=$save_ac_tool_prefix
-cross_compiling=$save_cross_compiling
+        AC_PROG_CC
+        AC_PROG_CPP
+        AC_EXEEXT
+        LT_LIB_M
 
-dnl Restore the old definitions
-dnl
-popdef([ac_link])dnl
-popdef([ac_compile])dnl
-popdef([ac_cpp])dnl
-popdef([ac_cv_host_os])dnl
-popdef([ac_cv_host_vendor])dnl
-popdef([ac_cv_host_cpu])dnl
-popdef([ac_cv_host_alias])dnl
-popdef([ac_cv_host])dnl
-popdef([host_os])dnl
-popdef([host_vendor])dnl
-popdef([host_cpu])dnl
-popdef([host_alias])dnl
-popdef([host])dnl
-popdef([LDFLAGS])dnl
-popdef([CPPFLAGS])dnl
-popdef([CFLAGS])dnl
-popdef([CPP])dnl
-popdef([CC])dnl
-popdef([ac_objext])dnl
-popdef([ac_exeext])dnl
-popdef([ac_cv_objext])dnl
-popdef([ac_cv_exeext])dnl
-popdef([ac_cv_prog_cc_g])dnl
-popdef([ac_cv_prog_cc_cross])dnl
-popdef([ac_cv_prog_cc_works])dnl
-popdef([ac_cv_prog_gcc])dnl
-popdef([ac_cv_prog_CPP])dnl
+        ac_tool_prefix=$save_ac_tool_prefix
+        cross_compiling=$save_cross_compiling
 
-dnl Finally, set Makefile variables
-dnl
-BUILD_EXEEXT=$ac_build_exeext
-BUILD_OBJEXT=$ac_build_objext
-AC_SUBST(BUILD_EXEEXT)dnl
-AC_SUBST(BUILD_OBJEXT)dnl
-AC_SUBST([CFLAGS_FOR_BUILD])dnl
-AC_SUBST([CPPFLAGS_FOR_BUILD])dnl
-AC_SUBST([LDFLAGS_FOR_BUILD])dnl
+        #
+        # Restore the old definitions
+        #
+        popdef([ac_link])
+        popdef([ac_compile])
+        popdef([ac_cpp])
+        popdef([ac_cv_host_os])
+        popdef([ac_cv_host_vendor])
+        popdef([ac_cv_host_cpu])
+        popdef([ac_cv_host_alias])
+        popdef([ac_cv_host])
+        popdef([host_os])
+        popdef([host_vendor])
+        popdef([host_cpu])
+        popdef([host_alias])
+        popdef([host])
+        popdef([LIBM])
+        popdef([LDFLAGS])
+        popdef([CPPFLAGS])
+        popdef([CFLAGS])
+        popdef([CPP])
+        popdef([CC])
+        popdef([ac_objext])
+        popdef([ac_exeext])
+        popdef([ac_cv_lib_m_cos])
+        popdef([ac_cv_objext])
+        popdef([ac_cv_exeext])
+        popdef([ac_cv_prog_cc_g])
+        popdef([ac_cv_prog_cc_cross])
+        popdef([ac_cv_prog_cc_works])
+        popdef([ac_cv_prog_gcc])
+        popdef([ac_cv_prog_CPP])
+
+        BUILD_EXEEXT=$ac_build_exeext
+        BUILD_OBJEXT=$ac_build_objext
+    ], [
+        CC_FOR_BUILD=${CC}
+        CPP_FOR_BUILD=${CPP}
+        CFLAGS_FOR_BUILD=${CFLAGS}
+        CPPFLAGS_FOR_BUILD=${CPPFLAGS}
+        LDFLAGS_FOR_BUILD=${LDFLAGS}
+        LIBM_FOR_BUILD=${LIBM}
+
+        BUILD_EXEEXT=${EXEEXT}
+        BUILD_OBJEXT=${OBJEXT}
+    ])
+
+    #
+    # Finally, set Makefile variables
+    #
+    AC_SUBST([BUILD_EXEEXT])
+    AC_SUBST([BUILD_OBJEXT])
+    AC_SUBST([CFLAGS_FOR_BUILD])
+    AC_SUBST([CPPFLAGS_FOR_BUILD])
+    AC_SUBST([LDFLAGS_FOR_BUILD])
+    AC_SUBST([LIBM_FOR_BUILD])
 ])

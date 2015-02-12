@@ -28,8 +28,6 @@ AC_PRESERVE_HELP_ORDER
 # Checks for programs
 AC_LANG(C)
 AC_PROG_CC
-AX_PROG_CC_FOR_BUILD
-AM_PROG_CC_C_O
 AC_PROG_CPP
 AC_PROG_INSTALL
 m4_ifdef([AM_PROG_AR], [AM_PROG_AR])
@@ -41,6 +39,10 @@ AC_PROG_SED
 LT_INIT([disable-shared static no-pic])
 LT_LIB_DLLOAD
 LT_LIB_M
+
+# Set build compiler options
+AX_PROG_CC_FOR_BUILD
+AM_PROG_CC_C_O
 
 # Check C99 support
 case "${host_os}" in
@@ -352,7 +354,7 @@ AS_IF([test "x${with_lua}" != "xno"], [
             LUA_LIBS="\$(top_srcdir)/lua/liblua.la"
 
             AS_IF([test "x${with_lua_compiler}" != "xno"], [
-                LUAC="\$(top_srcdir)/lua/luac"
+                LUAC="\$(top_srcdir)/lua/luac\$(EXEEXT)"
             ])
         ], [
             AC_MSG_ERROR([Pass --without-lua to build bundled version])
