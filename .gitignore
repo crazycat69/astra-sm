@@ -1,7 +1,8 @@
 /src/astra
-/src/mkscript
 /src/inscript/inscript.h
 /src/bindings.h
+/tools/mkscript
+/tools/tonegen
 /lua/luac
 
 # binaries

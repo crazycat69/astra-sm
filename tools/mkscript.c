@@ -1,5 +1,5 @@
 /*
- * Astra Built-in script
+ * Built-in script converter
  * https://cesbo.com/astra
  *
  * Copyright (C) 2014, Andrey Dyldin <and@cesbo.com>

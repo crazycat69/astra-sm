@@ -188,8 +188,7 @@ endif
 BUILT_SOURCES =
 
 # lua initializer lists
-BUILT_SOURCES += \
-    bindings.h
+BUILT_SOURCES += bindings.h
 
 bindings.h:
 	$(AM_V_GEN)echo "/* automatically generated file; do not edit */" >$@; \
@@ -216,20 +215,14 @@ INSCRIPT_FILES = \
     $(top_srcdir)/scripts/relay.luac \
     $(top_srcdir)/scripts/stream.luac
 
-BUILT_SOURCES += \
-    mkscript$(BUILD_EXEEXT) \
-    inscript/inscript.h
+MKSCRIPT = $(top_srcdir)/tools/mkscript$(BUILD_EXEEXT)
+BUILT_SOURCES += inscript/inscript.h
 
-# we have to build mkscript with host compiler
-mkscript$(BUILD_EXEEXT): inscript/mkscript.c
-	$(AM_V_CC)$(CC_FOR_BUILD) $(LUA_CFLAGS) -std=c99 -Wall -Wextra -o $@ $<
-
-inscript/inscript.h: mkscript$(BUILD_EXEEXT) $(INSCRIPT_FILES)
+inscript/inscript.h: $(INSCRIPT_FILES)
 	$(AM_V_GEN)echo "/* automatically generated file; do not edit */" >$@; \
 	echo >>$@; \
 	for script in $(INSCRIPT_FILES); do \
-	    ./mkscript$(BUILD_EXEEXT) \
-	        `basename $$script .luac` "$$script" >>$@; \
+	    $(MKSCRIPT) `basename $$script .luac` "$$script" >>$@; \
 	done
 endif
 

@@ -370,7 +370,30 @@ AS_IF([test "x${cross_compiling}" = "xyes" -a -n "${LUAC}"], [
 ])
 
 AM_CONDITIONAL([HAVE_INTERNAL_LUA], [test "x${have_lua}" = "xno"])
-AM_CONDITIONAL([HAVE_LUA_COMPILER], [test ! -z "${LUAC}"])
+AM_CONDITIONAL([HAVE_LUA_COMPILER], [test -n "${LUAC}"])
+
+# ffmpeg
+AC_ARG_VAR([FFMPEG], [path to ffmpeg program])
+AC_ARG_WITH([ffmpeg],
+    AC_HELP_STRING([--with-ffmpeg=PATH], [path to ffmpeg program]))
+
+AS_IF([test "x${with_ffmpeg}" != "xno"], [
+    AS_IF([test "x${with_ffmpeg}" = "xyes" -o -z "${with_ffmpeg}"], [
+        AS_IF([test -z "${FFMPEG}"], [ FFMPEG="ffmpeg" ])
+    ], [
+        FFMPEG="${with_ffmpeg}"
+    ])
+    AC_PATH_PROGS([FFMPEG], [${FFMPEG}])
+
+    AS_IF([test -z "${FFMPEG}"], [
+        AS_IF([test -n "${with_ffmpeg}"],
+            [ AC_MSG_ERROR([Couldn't find ffmpeg program; pass --without-ffmpeg to disable this check]) ],
+            [ AC_MSG_WARN([Couldn't find ffmpeg program; test patterns will not be built]) ]) ])
+], [
+    FFMPEG=""
+])
+
+AM_CONDITIONAL([HAVE_FFMPEG], [test -n "${FFMPEG}"])
 
 # libaio
 AX_EXTLIB_PARAM(libaio,
@@ -713,6 +736,7 @@ AC_CONFIG_FILES([
     Makefile
     lua/Makefile
     scripts/Makefile
+    tools/Makefile
     src/Makefile
     tests/Makefile
     testcards/Makefile
@@ -739,7 +763,11 @@ echo -n "Lua library:           "
 AS_IF([test "x${have_lua}" = "xyes"], [echo "external"], [echo "internal"])
 
 echo -n "Lua compiler:          "
-AS_IF([test ! -z "${LUAC}"], [echo "${LUAC}"], [echo "no"])
+AS_IF([test -n "${LUAC}"], [echo "${LUAC}"], [echo "no"])
+
+# ffmpeg
+echo -n "ffmpeg program:        "
+AS_IF([test -n "${FFMPEG}"], [echo "${FFMPEG}"], [echo "no"])
 
 # libdvbcsa
 echo -n "libdvbcsa:             "
@@ -766,7 +794,7 @@ AS_IF([test "x${have_dvbapi}" = "xyes"],
 # inscript
 echo -n "Built-in scripts:      "
 AS_IF([test "x${enable_inscript}" != "xno"], [
-    AS_IF([test ! -z "${LUAC}"],
+    AS_IF([test -n "${LUAC}"],
         [ echo "yes (compiled)" ], [ echo "yes (plaintext)" ])
 ], [
     echo "no"
