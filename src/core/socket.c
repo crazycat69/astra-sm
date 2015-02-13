@@ -447,18 +447,34 @@ void asc_socket_connect(  asc_socket_t *sock, const char *addr, int port
     if(connect(sock->fd, (struct sockaddr *)&sock->addr, sizeof(sock->addr)) == -1)
     {
 #ifdef _WIN32
-        const int ws_err = WSAGetLastError();
-        const bool is_error = (ws_err == WSAEWOULDBLOCK) || (ws_err == WSAEINPROGRESS);
+        const int sock_err = WSAGetLastError();
 #else
-        const bool is_error = (errno == EISCONN) || (errno == EINPROGRESS) || (errno == EAGAIN);
-#endif
-        if(!is_error)
-        {
-            asc_log_error(MSG("connect() to %s:%d failed [%s]"), addr, port, asc_socket_error());
+        const int sock_err = errno;
+#endif /* _WIN32 */
 
-            close(sock->fd);
-            sock->fd = 0;
-            return;
+        switch(sock_err)
+        {
+#ifdef _WIN32
+            case WSAEWOULDBLOCK:
+            case WSAEINPROGRESS:
+                break;
+#else
+            case EISCONN:
+            case EINPROGRESS:
+            case EAGAIN:
+#if EWOULDBLOCK != EAGAIN
+            case EWOULDBLOCK:
+#endif
+                break;
+#endif /* _WIN32 */
+
+            default:
+                asc_log_error(MSG("connect(): %s:%d: %s")
+                              , addr, port, asc_socket_error());
+
+                close(sock->fd);
+                sock->fd = 0;
+                return;
         }
     }
 
@@ -512,7 +528,7 @@ ssize_t asc_socket_send(asc_socket_t *sock, const void *buffer, size_t size)
         if(err == WSAEWOULDBLOCK)
             return 0;
 #else
-        if(errno == EAGAIN)
+        if(errno == EAGAIN || errno == EWOULDBLOCK)
             return 0;
 #endif
     }

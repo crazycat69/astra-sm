@@ -165,7 +165,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 #endif /* O_DIRECT */
             if(write(mod->fd, mod->buffer, size) != size)
             {
-                if(errno == EAGAIN)
+                if(errno == EAGAIN || errno == EWOULDBLOCK)
                 {
                     if(!mod->error)
                     {
