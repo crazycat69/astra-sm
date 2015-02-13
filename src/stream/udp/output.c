@@ -51,6 +51,8 @@ struct module_data_t
     uint16_t rtpseq;
 
     asc_socket_t *sock;
+    bool can_send;
+    size_t dropped;
 
     struct
     {
@@ -77,8 +79,28 @@ struct module_data_t
     uint16_t pcr_pid;
 };
 
+static void on_ready(void *arg)
+{
+    module_data_t *mod = arg;
+
+    if(mod->dropped > 0)
+    {
+        asc_log_error(MSG("socket buffer full, dropped %zu packets"), mod->dropped);
+        mod->dropped = 0;
+    }
+
+    mod->can_send = true;
+    asc_socket_set_on_ready(mod->sock, NULL);
+}
+
 static void on_ts(module_data_t *mod, const uint8_t *ts)
 {
+    if(!mod->can_send)
+    {
+        mod->dropped++;
+        return;
+    }
+
     if(mod->is_rtp && mod->packet.skip == 0)
     {
         struct timeval tv;
@@ -103,17 +125,20 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 
     if(mod->packet.skip > UDP_BUFFER_SIZE - TS_PACKET_SIZE)
     {
-        ssize_t ret;
-
-        do
-        {
-            ret = asc_socket_sendto(mod->sock
-                                    , mod->packet.buffer
-                                    , mod->packet.skip);
-        } while(ret == -1 && errno == EAGAIN);
+        const ssize_t ret = asc_socket_sendto(mod->sock
+                                              , mod->packet.buffer
+                                              , mod->packet.skip);
 
         if(ret == -1)
-            asc_log_warning(MSG("error on send [%s]"), asc_socket_error());
+        {
+            if(errno == EAGAIN || errno == EWOULDBLOCK)
+            {
+                mod->can_send = false;
+                asc_socket_set_on_ready(mod->sock, on_ready);
+            }
+            else
+                asc_log_warning(MSG("sendto(): %s"), asc_socket_error());
+        }
 
         mod->packet.skip = 0;
     }
@@ -382,6 +407,9 @@ static void module_init(module_data_t *mod)
 
     asc_socket_multicast_join(mod->sock, mod->addr, NULL);
     asc_socket_set_sockaddr(mod->sock, mod->addr, mod->port);
+
+    mod->can_send = false;
+    asc_socket_set_on_ready(mod->sock, on_ready);
 
     value = 0;
     module_option_number("sync", &value);
