@@ -48,6 +48,8 @@
 
 #define ASC_ARRAY_SIZE(_a) (sizeof(_a)/sizeof(_a[0]))
 
+#define ASC_FREE(_o, _m) if(_o != NULL) { _m(_o); _o = NULL; }
+
 #define __uarg(_x) {(void)_x;}
 
 #if defined(__GNUC_GNU_INLINE__) \
