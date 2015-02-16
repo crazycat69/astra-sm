@@ -27,5 +27,6 @@
 #include "psi.h"
 #include "pes.h"
 #include "pcr.h"
+#include "sync.h"
 
 #endif /* _MPEGTS_H_ */

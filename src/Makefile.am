@@ -32,6 +32,7 @@ libastra_la_SOURCES += \
     mpegts/pcr.c \
     mpegts/psi.c \
     mpegts/pes.c \
+    mpegts/sync.c \
     mpegts/types.c
 
 # utils/
