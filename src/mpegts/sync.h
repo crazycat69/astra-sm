@@ -1,7 +1,25 @@
+/*
+ * Astra Module: MPEG-TS (Sync buffer)
+ * http://cesbo.com/astra
+ *
+ * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #ifndef _TS_SYNC_
 #define _TS_SYNC_ 1
-
-typedef uint8_t ts_packet_t[TS_PACKET_SIZE];
 
 typedef struct mpegts_sync_t mpegts_sync_t;
 
@@ -10,7 +28,8 @@ typedef void (*sync_callback_t)(void *);
 mpegts_sync_t *mpegts_sync_init(void);
 void mpegts_sync_destroy(mpegts_sync_t *sync);
 void mpegts_sync_loop(void *arg);
-bool mpegts_sync_push(mpegts_sync_t *sync, void *buf, size_t count);
+bool mpegts_sync_push(mpegts_sync_t *sync, const void *buf, size_t count);
+bool mpegts_sync_resize(mpegts_sync_t *sync, size_t new_size);
 void mpegts_sync_set_arg(mpegts_sync_t *sync, void *arg);
 void mpegts_sync_set_on_read(mpegts_sync_t *sync, sync_callback_t on_read);
 void mpegts_sync_set_on_write(mpegts_sync_t *sync, ts_callback_t on_write);
