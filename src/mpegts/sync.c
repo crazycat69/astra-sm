@@ -20,26 +20,26 @@
 
 #include <astra.h>
 
-#define MSG(_msg) "[sync %s] " _msg, sync->name
+#define MSG(_msg) "[%s] " _msg, sync->name
 
 /* buffer this many blocks before starting output */
-#define BUFFER_PCR_COUNT 10
+#define MIN_BUFFER_BLOCKS 10
 
-/* initial buffer size, TS packets */
-#define BUFFER_MIN_SIZE ((1 * 1024 * 1024) / TS_PACKET_SIZE) /* 1 MiB */
-#define BUFFER_MAX_SIZE (16 * BUFFER_MIN_SIZE)               /* 16 MiB */
+/* default buffer sizes, TS packets */
+#define MIN_BUFFER_SIZE ((512 * 1024) / TS_PACKET_SIZE) /* 512 KiB */
+#define MAX_BUFFER_SIZE (32 * MIN_BUFFER_SIZE) /* 16 MiB */
 
-/* FIXME */
-#define PCR_JUMP_THRESH ((PCR_TIME_BASE * 150) / 1000) /* 150ms */
+/* maximum allowed PCR spacing */
+#define MAX_PCR_DELTA ((PCR_TIME_BASE * 150) / 1000) /* 150ms */
 
-/* FIXME */
-#define UNDERFLOW_THRESH (200 * 1000) /* 200ms */
+/* timeout for new block arrival */
+#define MAX_IDLE_TIME (200 * 1000) /* 200ms */
 
 typedef uint8_t ts_packet_t[TS_PACKET_SIZE];
 
 struct mpegts_sync_t
 {
-    const char *name;
+    char name[128];
     ts_packet_t *buf;
 
     /* packets, not bytes */
@@ -80,13 +80,15 @@ mpegts_sync_t *mpegts_sync_init(void)
     mpegts_sync_t *sync = calloc(1, sizeof(*sync));
     asc_assert(sync != NULL, "[sync] calloc() failed");
 
-    sync->size = BUFFER_MIN_SIZE;
-    sync->max_size = BUFFER_MAX_SIZE;
+    sync->size = MIN_BUFFER_SIZE;
+    sync->max_size = MAX_BUFFER_SIZE;
+    strcpy(sync->name, "sync");
+
+    sync->pcr_last = XTS_NONE;
+    sync->pcr_cur = XTS_NONE;
 
     sync->buf = calloc(sync->size, sizeof(*sync->buf));
     asc_assert(sync->buf != NULL, "[sync] calloc() failed");
-
-    sync->pcr_last = sync->pcr_cur = XTS_NONE;
 
     return sync;
 }
@@ -109,7 +111,7 @@ void mpegts_sync_reset(mpegts_sync_t *sync, sync_reset_t type)
             sync->pos.rcv = sync->pos.pcr = sync->pos.send = 0;
             sync->last_run = 0;
 
-            mpegts_sync_resize(sync, BUFFER_MIN_SIZE);
+            mpegts_sync_resize(sync, MIN_BUFFER_SIZE);
 
         case SYNC_RESET_BLOCKS:
             /* reset output buffering */
@@ -126,6 +128,16 @@ void mpegts_sync_reset(mpegts_sync_t *sync, sync_reset_t type)
     }
 }
 
+void mpegts_sync_set_fname(mpegts_sync_t *sync, const char *format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+
+    vsnprintf(sync->name, sizeof(sync->name), format, ap);
+
+    va_end(ap);
+}
+
 __asc_inline
 void mpegts_sync_set_arg(mpegts_sync_t *sync, void *arg)
 {
@@ -135,6 +147,12 @@ void mpegts_sync_set_arg(mpegts_sync_t *sync, void *arg)
 __asc_inline
 void mpegts_sync_set_max_size(mpegts_sync_t *sync, size_t max_size)
 {
+    if (sync->size > max_size)
+    {
+        asc_log_error(MSG("current size is larger than new size limit"));
+        return;
+    }
+
     sync->max_size = max_size;
 }
 
@@ -175,13 +193,14 @@ __func_pure size_t block_count(mpegts_sync_t *sync)
     size_t count = 0;
 
     /* count blocks after PCR lookahead */
-    for (size_t i = sync->pos.pcr; i != sync->pos.rcv; i++)
+    size_t pos = sync->pos.pcr;
+    while (pos != sync->pos.rcv)
     {
-        if (i >= sync->size)
+        if (pos >= sync->size)
             /* buffer wrap around */
-            i = 0;
+            pos = 0;
 
-        const uint8_t *ts = sync->buf[i];
+        const uint8_t *ts = sync->buf[pos++];
         if (TS_IS_PCR(ts) && TS_GET_PID(ts) == sync->pcr_pid)
             count++;
     }
@@ -238,7 +257,7 @@ bool seek_pcr(mpegts_sync_t *sync)
                 asc_log_debug(MSG("PCR reset or wrap around"));
                 continue;
             }
-            else if (delta >= PCR_JUMP_THRESH)
+            else if (delta >= MAX_PCR_DELTA)
             {
                 const unsigned int ms = delta / (PCR_TIME_BASE / 1000);
                 asc_log_error(MSG("PCR jumped forward by %ums"), ms);
@@ -314,7 +333,7 @@ void mpegts_sync_loop(void *arg)
         {
             sync->num_blocks += block_count(sync) + 1;
 
-            if (sync->num_blocks >= BUFFER_PCR_COUNT)
+            if (sync->num_blocks >= MIN_BUFFER_BLOCKS)
             {
                 /* got enough data to start output */
                 mpegts_sync_reset(sync, SYNC_RESET_PCR);
@@ -322,7 +341,7 @@ void mpegts_sync_loop(void *arg)
             }
 
             asc_log_debug(MSG("buffered blocks: %u (min %u)%s")
-                          , sync->num_blocks, BUFFER_PCR_COUNT
+                          , sync->num_blocks, MIN_BUFFER_BLOCKS
                           , (sync->buffered ? ", starting output" : ""));
         }
         else if (!mpegts_sync_space(sync)
@@ -360,21 +379,21 @@ void mpegts_sync_loop(void *arg)
     }
 
     /* underflow correction */
-    if (sync->num_blocks < BUFFER_PCR_COUNT)
+    if (sync->num_blocks < MIN_BUFFER_BLOCKS)
     {
         sync->num_blocks = block_count(sync) + 1;
 
         if (!sync->last_error)
         {
             asc_log_debug(MSG("%u blocks short! output suspended")
-                          , BUFFER_PCR_COUNT - sync->num_blocks);
+                          , MIN_BUFFER_BLOCKS - sync->num_blocks);
 
             sync->last_error = time_now;
         }
         else
         {
             const unsigned int dt = time_now - sync->last_error;
-            if (dt >= UNDERFLOW_THRESH)
+            if (dt >= MAX_IDLE_TIME)
             {
                 asc_log_error(MSG("no input in %.2fms; resetting"), dt / 1000.0);
                 mpegts_sync_reset(sync, SYNC_RESET_ALL);
@@ -412,30 +431,31 @@ void mpegts_sync_loop(void *arg)
 
 bool mpegts_sync_push(mpegts_sync_t *sync, const void *buf, size_t count)
 {
-    const size_t space = mpegts_sync_space(sync);
-    if (count > space && !mpegts_sync_resize(sync, 0))
-        return false;
+    while (mpegts_sync_space(sync) < count)
+    {
+        if (!mpegts_sync_resize(sync, 0))
+            return false;
+    }
 
     size_t left = count;
     const ts_packet_t *ts = (void *)((ptrdiff_t)buf);
     /* FIXME: compiler whining about constness */
-    do
+    while (left > 0)
     {
         size_t chunk = sync->size - sync->pos.rcv;
         if (left < chunk)
             chunk = left; /* last piece */
 
         memcpy(&sync->buf[sync->pos.rcv], ts, sizeof(*ts) * chunk);
-        if (left > chunk)
-            /* wrap over */
+
+        sync->pos.rcv += chunk;
+        if (sync->pos.rcv >= sync->size)
+            /* buffer wrap around */
             sync->pos.rcv = 0;
-        else
-            sync->pos.rcv += chunk;
 
         ts += chunk;
         left -= chunk;
     }
-    while (left > 0);
 
     return true;
 }
@@ -443,12 +463,12 @@ bool mpegts_sync_push(mpegts_sync_t *sync, const void *buf, size_t count)
 bool mpegts_sync_resize(mpegts_sync_t *sync, size_t new_size)
 {
     if (!new_size)
-        new_size = sync->size + BUFFER_MIN_SIZE;
+        new_size = sync->size + MIN_BUFFER_SIZE;
 
     /* don't let it grow bigger than max_size */
-    if (new_size >= sync->max_size)
+    if (new_size > sync->max_size)
     {
-        if (sync->size == sync->max_size)
+        if (sync->size >= sync->max_size)
         {
             asc_log_debug(MSG("buffer already at maximum size, cannot expand"));
             return false;
@@ -486,28 +506,27 @@ bool mpegts_sync_resize(mpegts_sync_t *sync, size_t new_size)
 
     /* move contents to new buffer */
     ts_packet_t *const buf = calloc(new_size, sizeof(*buf));
-    asc_assert(buf != NULL, "[sync] calloc() failed");
+    asc_assert(buf != NULL, MSG("calloc() failed"));
 
     size_t pos = sync->pos.send;
     size_t left = filled;
     ts_packet_t *ts = buf;
-    do
+    while (left > 0)
     {
         size_t chunk = sync->size - pos;
         if (left < chunk)
-            chunk = left;
+            chunk = left; /* last piece */
 
         memcpy(ts, &sync->buf[pos], sizeof(*ts) * chunk);
-        if (left > chunk)
-            /* wrap over */
+
+        pos += chunk;
+        if (pos >= sync->size)
+            /* buffer wrap around */
             pos = 0;
-        else
-            pos += chunk;
 
         ts += chunk;
         left -= chunk;
     }
-    while (left > 0);
 
     /* clean up */
     asc_log_debug(MSG("buffer %s to %zu slots (%zu bytes)")
