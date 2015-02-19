@@ -273,7 +273,7 @@ unsigned int usecs_elapsed(mpegts_sync_t *sync, uint64_t time_now)
     {
         elapsed = time_now - sync->last_run;
 
-        if (time_now <= sync->last_run || elapsed > 1000000)
+        if (time_now < sync->last_run || elapsed > 1000000)
         {
             asc_log_error(MSG("time travel detected; resetting"));
             mpegts_sync_reset(sync, SYNC_RESET_ALL);
