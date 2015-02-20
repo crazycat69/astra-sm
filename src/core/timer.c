@@ -51,7 +51,6 @@ void asc_timer_core_destroy(void)
 void asc_timer_core_loop(void)
 {
     int is_detached = 0;
-    uint64_t cur;
 
     asc_list_for(timer_list)
     {
@@ -62,7 +61,7 @@ void asc_timer_core_loop(void)
             continue;
         }
 
-        cur = asc_utime();
+        const uint64_t cur = asc_utime();
         if(cur >= timer->next_shot)
         {
             if(timer->interval == 0)
@@ -76,7 +75,7 @@ void asc_timer_core_loop(void)
             else
             {
                 is_main_loop_idle = false;
-                timer->next_shot += timer->interval;
+                timer->next_shot = cur + timer->interval;
                 timer->callback(timer->arg);
             }
         }
