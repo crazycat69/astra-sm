@@ -32,6 +32,9 @@
 /* maximum allowed PCR spacing */
 #define MAX_PCR_DELTA ((PCR_TIME_BASE * 150) / 1000) /* 150ms */
 
+/* don't report inter-packet jitter smaller than this value */
+#define MIN_IDLE_TIME (5 * 1000) /* 5ms */
+
 /* timeout for new block arrival */
 #define MAX_IDLE_TIME (200 * 1000) /* 200ms */
 
@@ -64,7 +67,7 @@ struct mpegts_sync_t
     size_t offset;
 
     double bitrate;
-    double pending;
+    unsigned int pending;
 
     void *arg;
     sync_callback_t on_read;
@@ -121,7 +124,7 @@ void mpegts_sync_reset(mpegts_sync_t *sync, sync_reset_t type)
             /* reset PCR lookahead routine */
             sync->pcr_pid = sync->offset = 0;
             sync->pcr_last = sync->pcr_cur = XTS_NONE;
-            sync->bitrate = sync->pending = 0.0;
+            sync->bitrate = sync->pending = 0;
 
             /* start searching from first packet in queue */
             sync->pos.pcr = sync->pos.send;
@@ -190,7 +193,7 @@ size_t mpegts_sync_space(mpegts_sync_t *sync)
 static inline
 __func_pure size_t block_count(mpegts_sync_t *sync)
 {
-    size_t count = 0;
+    size_t count = 1;
 
     /* count blocks after PCR lookahead */
     size_t pos = sync->pos.pcr;
@@ -331,7 +334,7 @@ void mpegts_sync_loop(void *arg)
     {
         if (seek_pcr(sync))
         {
-            sync->num_blocks += block_count(sync) + 1;
+            sync->num_blocks += block_count(sync);
 
             if (sync->num_blocks >= MIN_BUFFER_BLOCKS)
             {
@@ -367,50 +370,48 @@ void mpegts_sync_loop(void *arg)
             return;
         }
 
-        sync->num_blocks = block_count(sync) + 1;
-#if 1
-        const time_t t = time(NULL);
-        printf("[%zu] br=%f, f=%zu/%zu, r=%zu p=%zu s=%zu b=%u\n"
-               , t, sync->bitrate
-               , sync->size - mpegts_sync_space(sync), sync->size
-               , sync->pos.rcv, sync->pos.pcr, sync->pos.send
-               , sync->num_blocks);
-#endif
+        sync->num_blocks = block_count(sync);
     }
 
     /* underflow correction */
+    unsigned int downtime;
+
+    if (sync->last_error)
+    {
+        /* check if we can resume output */
+        sync->num_blocks = block_count(sync);
+        downtime = time_now - sync->last_error;
+    }
+
     if (sync->num_blocks < MIN_BUFFER_BLOCKS)
     {
-        sync->num_blocks = block_count(sync) + 1;
-
         if (!sync->last_error)
         {
-            asc_log_debug(MSG("%u blocks short! output suspended")
-                          , MIN_BUFFER_BLOCKS - sync->num_blocks);
-
+            /* set error state */
             sync->last_error = time_now;
         }
-        else
+        else if (downtime >= MAX_IDLE_TIME)
         {
-            const unsigned int dt = time_now - sync->last_error;
-            if (dt >= MAX_IDLE_TIME)
-            {
-                asc_log_error(MSG("no input in %.2fms; resetting"), dt / 1000.0);
-                mpegts_sync_reset(sync, SYNC_RESET_ALL);
-            }
+            asc_log_error(MSG("no input in %.2fms; resetting")
+                          , downtime / 1000.0);
+
+            mpegts_sync_reset(sync, SYNC_RESET_ALL);
         }
 
         return;
     }
     else if (sync->last_error)
     {
-        const unsigned int dt = time_now - sync->last_error;
-        asc_log_debug(MSG("ok! downtime=%.2fms"), dt / 1000.0);
+        if (downtime >= MIN_IDLE_TIME)
+        {
+            asc_log_info(MSG("buffer underflow; output suspended for %.2fms")
+                         , downtime / 1000.0);
+        }
         sync->last_error = 0;
     }
 
     /* output */
-    sync->pending += (sync->bitrate / (1000000.0 / elapsed));
+    sync->pending += (sync->bitrate / (1000000.0 / elapsed)) + 0.5;
     while (sync->pending > TS_PACKET_SIZE)
     {
         if (sync->pos.send >= sync->size)

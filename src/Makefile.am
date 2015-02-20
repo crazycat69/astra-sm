@@ -9,7 +9,7 @@ bin_PROGRAMS =
 noinst_LTLIBRARIES += libastra.la
 libastra_la_CFLAGS = $(AM_CFLAGS)
 libastra_la_LDFLAGS = -module -static
-libastra_la_LIBADD = $(LIBM) $(LIBRT) $(LUA_LIBS)
+libastra_la_LIBADD = $(LIBRT) $(LUA_LIBS)
 libastra_la_SOURCES =
 
 # core/
