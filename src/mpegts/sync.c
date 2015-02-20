@@ -196,13 +196,13 @@ __func_pure size_t block_count(mpegts_sync_t *sync)
     size_t pos = sync->pos.pcr;
     while (pos != sync->pos.rcv)
     {
-        if (pos >= sync->size)
-            /* buffer wrap around */
-            pos = 0;
-
-        const uint8_t *ts = sync->buf[pos++];
+        const uint8_t *ts = sync->buf[pos];
         if (TS_IS_PCR(ts) && TS_GET_PID(ts) == sync->pcr_pid)
             count++;
+
+        if (++pos >= sync->size)
+            /* buffer wrap around */
+            pos = 0;
     }
 
     return count;
