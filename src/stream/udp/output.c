@@ -79,7 +79,13 @@ static void on_ready(void *arg)
 
 static void on_input(module_data_t *mod, const uint8_t *ts)
 {
-    mpegts_sync_push(mod->sync, ts, 1);
+    const bool ret = mpegts_sync_push(mod->sync, ts, 1);
+
+    if (!ret)
+    {
+        asc_log_error(MSG("sync push failed, resetting buffer"));
+        mpegts_sync_reset(mod->sync, SYNC_RESET_ALL);
+    }
 }
 
 static void on_ts(module_data_t *mod, const uint8_t *ts)
