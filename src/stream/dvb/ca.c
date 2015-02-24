@@ -1674,13 +1674,12 @@ void ca_remove_pnr(dvb_ca_t *ca, uint16_t pnr)
     else
     {
         pmt_checksum_t *pmt_checksum_list = calloc(ca->pmt_count - 1, sizeof(pmt_checksum_t));
-        int i = 0, j = 0;
-        for(int i = 0, j = 0; i < ca->pmt_count; ++i)
+        int j = 0;
+        for(int i = 0; i < ca->pmt_count; ++i)
         {
             if(ca->pmt_checksum_list[i].pnr != pnr)
             {
-                memcpy(&pmt_checksum_list[j], &ca->pmt_checksum_list[i]
-                       , sizeof(pmt_checksum_t));
+                memcpy(&pmt_checksum_list[j], &ca->pmt_checksum_list[i], sizeof(pmt_checksum_t));
                 ++j;
             }
         }
