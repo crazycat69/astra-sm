@@ -23,11 +23,11 @@
 #define MSG(_msg) "[%s] " _msg, sync->name
 
 /* buffer this many blocks before starting output */
-#define MIN_BUFFER_BLOCKS 10
+#define MIN_BUFFER_BLOCKS 5
 
 /* default buffer sizes, TS packets */
-#define MIN_BUFFER_SIZE ((512 * 1024) / TS_PACKET_SIZE) /* 512 KiB */
-#define MAX_BUFFER_SIZE (32 * MIN_BUFFER_SIZE) /* 16 MiB */
+#define MIN_BUFFER_SIZE ((256 * 1024) / TS_PACKET_SIZE) /* 256 KiB */
+#define MAX_BUFFER_SIZE ((16 * 1024 * 1024) / TS_PACKET_SIZE) /* 16 MiB */
 
 /* maximum allowed PCR spacing */
 #define MAX_PCR_DELTA ((PCR_TIME_BASE * 150) / 1000) /* 150ms */
@@ -72,6 +72,9 @@ struct mpegts_sync_t
     void *arg;
     sync_callback_t on_read;
     ts_callback_t on_write;
+#ifdef DEBUG
+    uint64_t last_report;
+#endif
 };
 
 /*
@@ -190,8 +193,8 @@ size_t mpegts_sync_space(mpegts_sync_t *sync)
 /*
  * worker functions
  */
-static inline
-__func_pure size_t block_count(mpegts_sync_t *sync)
+static inline __func_pure
+size_t block_count(mpegts_sync_t *sync)
 {
     size_t count = 1;
 
@@ -268,7 +271,6 @@ bool seek_pcr(mpegts_sync_t *sync)
                 /* in case this happens during initial buffering */
                 sync->pos.send = lookahead;
                 sync->num_blocks = 0;
-                // FIXME: test on !sync->buffered
 
                 continue;
             }
@@ -371,6 +373,21 @@ void mpegts_sync_loop(void *arg)
         }
 
         sync->num_blocks = block_count(sync);
+
+#ifdef DEBUG
+        if (time_now - sync->last_report > 10000000) /* 10 sec */
+        {
+            const size_t filled = sync->size - mpegts_sync_space(sync);
+            const unsigned int percent = (filled * 100) / sync->size;
+
+            asc_log_debug(MSG("BR: %.2f, fill: %5zu/%5zu (%2u%%), R: %5zu, P: %5zu, S: %5zu, B: %u")
+                          , sync->bitrate, filled, sync->size, percent
+                          , sync->pos.rcv, sync->pos.pcr, sync->pos.send
+                          , sync->num_blocks);
+
+            sync->last_report = time_now;
+        }
+#endif
     }
 
     /* underflow correction */
@@ -464,7 +481,7 @@ bool mpegts_sync_push(mpegts_sync_t *sync, const void *buf, size_t count)
 bool mpegts_sync_resize(mpegts_sync_t *sync, size_t new_size)
 {
     if (!new_size)
-        new_size = sync->size + MIN_BUFFER_SIZE;
+        new_size = sync->size * 2;
 
     /* don't let it grow bigger than max_size */
     if (new_size > sync->max_size)
