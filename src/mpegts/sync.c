@@ -23,7 +23,7 @@
 #define MSG(_msg) "[%s] " _msg, sync->name
 
 /* buffer this many blocks before starting output */
-#define MIN_BUFFER_BLOCKS 5
+#define MIN_BUFFER_BLOCKS 10
 
 /* default buffer sizes, TS packets */
 #define MIN_BUFFER_SIZE ((256 * 1024) / TS_PACKET_SIZE) /* 256 KiB */
@@ -67,7 +67,7 @@ struct mpegts_sync_t
     size_t offset;
 
     double bitrate;
-    unsigned int pending;
+    double pending;
 
     void *arg;
     sync_callback_t on_read;
@@ -83,7 +83,7 @@ struct mpegts_sync_t
 __asc_inline
 mpegts_sync_t *mpegts_sync_init(void)
 {
-    mpegts_sync_t *sync = calloc(1, sizeof(*sync));
+    mpegts_sync_t *const sync = calloc(1, sizeof(*sync));
     asc_assert(sync != NULL, "[sync] calloc() failed");
 
     sync->size = MIN_BUFFER_SIZE;
@@ -127,7 +127,7 @@ void mpegts_sync_reset(mpegts_sync_t *sync, sync_reset_t type)
             /* reset PCR lookahead routine */
             sync->pcr_pid = sync->offset = 0;
             sync->pcr_last = sync->pcr_cur = XTS_NONE;
-            sync->bitrate = sync->pending = 0;
+            sync->bitrate = sync->pending = 0.0;
 
             /* start searching from first packet in queue */
             sync->pos.pcr = sync->pos.send;
@@ -194,9 +194,9 @@ size_t mpegts_sync_space(mpegts_sync_t *sync)
  * worker functions
  */
 static inline __func_pure
-size_t block_count(mpegts_sync_t *sync)
+unsigned int block_count(mpegts_sync_t *sync)
 {
-    size_t count = 1;
+    unsigned int count = 1;
 
     /* count blocks after PCR lookahead */
     size_t pos = sync->pos.pcr;
@@ -428,7 +428,7 @@ void mpegts_sync_loop(void *arg)
     }
 
     /* output */
-    sync->pending += (sync->bitrate / (1000000.0 / elapsed)) + 0.5;
+    sync->pending += (sync->bitrate / (1000000.0 / elapsed));
     while (sync->pending > TS_PACKET_SIZE)
     {
         if (sync->pos.send >= sync->size)
