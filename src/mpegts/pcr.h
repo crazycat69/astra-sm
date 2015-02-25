@@ -23,7 +23,7 @@
 #define _TS_PCR_ 1
 
 /* PCR frequency, Hz */
-#define PCR_TIME_BASE 27000000L
+#define PCR_TIME_BASE 27000000LL
 
 /* position of last byte in PCR field */
 #define PCR_LAST_BYTE 11
