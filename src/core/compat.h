@@ -30,7 +30,19 @@
 #       endif
 #   endif
 #   define PRIu64 __PRI64_PREFIX "u"
-#endif
+#endif /* PRIu64 */
+
+#ifndef O_BINARY
+#   ifdef _O_BINARY
+#       define O_BINARY _O_BINARY
+#   else
+#       define O_BINARY 0
+#   endif
+#endif /* O_BINARY */
+
+#ifndef EWOULDBLOCK
+#   define EWOULDBLOCK EAGAIN
+#endif /* EWOULDBLOCK */
 
 #ifndef HAVE_PREAD
 ssize_t pread(int fd, void *buffer, size_t size, off_t off);
