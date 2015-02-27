@@ -64,8 +64,10 @@ AS_IF([test -z "${compiler_lang}"], [
     AC_MSG_ERROR([$CC doesn't support C nor C++]) ])
 
 AS_IF([test "x${compiler_lang}" = "xC++"], [
+    AX_CHECK_CFLAGS([-fpermissive -fkeep-inline-functions])
     AC_DEFINE([__STDC_LIMIT_MACROS], [],
-        [Use C99 integer limit macros when compiling as C++]) ])
+        [Use C99 integer limit macros when compiling as C++])
+])
 
 #
 # Checks for typedefs, structures, and compiler characteristics
@@ -686,7 +688,6 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wclobbered], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wdouble-promotion], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wfloat-equal], [WARN_CFLAGS])
-    AX_CHECK_CFLAG([-Wformat=2], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Winit-self], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Winline], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wmissing-declarations], [WARN_CFLAGS])
@@ -709,10 +710,12 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wuseless-cast], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wvector-operation-performance], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wwrite-strings], [WARN_CFLAGS])
-    AX_CHECK_CFLAG([-Wzero-as-null-pointer-constant], [WARN_CFLAGS])
 
     AS_IF([test "${SYS}" = "mingw"], [
+        AX_CHECK_CFLAG([-Wno-format], [WARN_CFLAGS])
         AX_CHECK_CFLAG([-Wno-pedantic-ms-format], [WARN_CFLAGS])
+    ], [
+        AX_CHECK_CFLAG([-Wformat=2], [WARN_CFLAGS])
     ])
 
     # GCC-specific
