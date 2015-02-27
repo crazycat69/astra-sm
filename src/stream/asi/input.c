@@ -43,7 +43,7 @@ struct module_data_t
 
 static void asi_on_error(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     asc_log_error(MSG("asi read error [%s]"), strerror(errno));
     asc_event_close(mod->event);
@@ -54,7 +54,7 @@ static void asi_on_error(void *arg)
 
 static void asi_on_read(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     const ssize_t len = read(mod->fd, mod->buffer, ASI_BUFFER_SIZE);
     if(len <= 0)

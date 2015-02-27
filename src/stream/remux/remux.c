@@ -110,7 +110,7 @@ void remux_ts_out(void *arg, const uint8_t *ts)
     /*
      * TS output hook
      */
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     /*
      * TODO
@@ -158,7 +158,7 @@ void remux_pes(void *arg, mpegts_pes_t *pes)
     /*
      * PES output hook
      */
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     /* reset error stats */
     if(pes->truncated || pes->dropped)

@@ -66,7 +66,7 @@ static void process_ts(module_data_t *mod, const uint8_t *ts, uint8_t hdr_size)
         uint8_t *storage_tmp = mod->batch_storage_send;
         mod->batch_storage_send = mod->batch_storage_recv;
         if(!storage_tmp)
-            storage_tmp = malloc(mod->storage_size);
+            storage_tmp = (uint8_t *)malloc(mod->storage_size);
         mod->batch_storage_recv = storage_tmp;
         mod->batch_skip = 0;
         mod->storage_skip = 0;
@@ -75,7 +75,7 @@ static void process_ts(module_data_t *mod, const uint8_t *ts, uint8_t hdr_size)
 
 static void on_pat(void *arg, mpegts_psi_t *psi)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     // check changes
     const uint32_t crc32 = PSI_GET_CRC32(psi);
@@ -104,7 +104,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
 
 static void on_pmt(void *arg, mpegts_psi_t *psi)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     if(psi->buffer[0] != 0x02)
         return;
@@ -169,9 +169,9 @@ static void module_init(module_data_t *mod)
     key[7] = (key[4] + key[5] + key[6]) & 0xFF;
 
     const int batch_size = dvbcsa_bs_batch_size();
-    mod->batch = calloc(batch_size + 1, sizeof(struct dvbcsa_bs_batch_s));
+    mod->batch = (struct dvbcsa_bs_batch_s *)calloc(batch_size + 1, sizeof(*mod->batch));
     mod->storage_size = batch_size * TS_PACKET_SIZE;
-    mod->batch_storage_recv = malloc(mod->storage_size);
+    mod->batch_storage_recv = (uint8_t *)malloc(mod->storage_size);
 
     mod->key = dvbcsa_bs_key_alloc();
     dvbcsa_bs_key_set(key, mod->key);

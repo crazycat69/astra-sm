@@ -65,7 +65,7 @@ struct module_data_t
 
 static void on_ready(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     if(mod->dropped > 0)
     {

@@ -121,7 +121,7 @@ static const char __strip[] = "... (strip)";
 
 static char *fancy_hex_str(const uint8_t *ptr, const uint8_t len)
 {
-    char *buf = calloc(1, HEX_BUFSIZE);
+    char *buf = (char *)calloc(1, HEX_BUFSIZE);
     asc_assert(buf != NULL, "calloc() failed");
 
     unsigned int pos = 0;

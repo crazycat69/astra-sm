@@ -83,7 +83,7 @@ struct mpegts_sync_t
 __asc_inline
 mpegts_sync_t *mpegts_sync_init(void)
 {
-    mpegts_sync_t *const sync = calloc(1, sizeof(*sync));
+    mpegts_sync_t *const sync = (mpegts_sync_t *)calloc(1, sizeof(*sync));
     asc_assert(sync != NULL, "[sync] calloc() failed");
 
     sync->size = MIN_BUFFER_SIZE;
@@ -93,7 +93,7 @@ mpegts_sync_t *mpegts_sync_init(void)
     sync->pcr_last = XTS_NONE;
     sync->pcr_cur = XTS_NONE;
 
-    sync->buf = calloc(sync->size, sizeof(*sync->buf));
+    sync->buf = (ts_packet_t *)calloc(sync->size, sizeof(*sync->buf));
     asc_assert(sync->buf != NULL, "[sync] calloc() failed");
 
     return sync;
@@ -320,7 +320,7 @@ unsigned int usecs_elapsed(mpegts_sync_t *sync, uint64_t time_now)
 
 void mpegts_sync_loop(void *arg)
 {
-    mpegts_sync_t *const sync = arg;
+    mpegts_sync_t *const sync = (mpegts_sync_t *)arg;
 
     /* timekeeping */
     const uint64_t time_now = asc_utime();
@@ -459,8 +459,8 @@ bool mpegts_sync_push(mpegts_sync_t *sync, const void *buf, size_t count)
     }
 
     size_t left = count;
-    const ts_packet_t *ts = (void *)((ptrdiff_t)buf);
-    /* FIXME: compiler whining about constness */
+    const ts_packet_t *ts = (const ts_packet_t *)buf;
+
     while (left > 0)
     {
         size_t chunk = sync->size - sync->pos.rcv;
@@ -526,7 +526,7 @@ bool mpegts_sync_resize(mpegts_sync_t *sync, size_t new_size)
     sync->pos.pcr = lookahead;
 
     /* move contents to new buffer */
-    ts_packet_t *const buf = calloc(new_size, sizeof(*buf));
+    ts_packet_t *const buf = (ts_packet_t *)calloc(new_size, sizeof(*buf));
     asc_assert(buf != NULL, MSG("calloc() failed"));
 
     size_t pos = sync->pos.send;

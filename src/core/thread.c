@@ -93,7 +93,7 @@ void asc_thread_core_destroy(void)
         ; !asc_list_eol(thread_observer.thread_list)
         ; asc_list_first(thread_observer.thread_list))
     {
-        asc_thread_t *thread = asc_list_data(thread_observer.thread_list);
+        asc_thread_t *thread = (asc_thread_t *)asc_list_data(thread_observer.thread_list);
         asc_assert(thread != prev_thread
                    , MSG("loop on asc_thread_core_destroy() thread:%p")
                    , (void *)thread);

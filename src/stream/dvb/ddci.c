@@ -62,7 +62,7 @@ struct module_data_t
 
 static void on_thread_close(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     if(mod->dec_sec_fd > 0)
     {
@@ -85,7 +85,7 @@ static void on_thread_close(void *arg)
 
 static void on_thread_read(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     uint8_t ts[TS_PACKET_SIZE];
     const ssize_t r = asc_thread_buffer_read(mod->sec_thread_output, ts, sizeof(ts));
@@ -95,7 +95,7 @@ static void on_thread_read(void *arg)
 
 static void thread_loop(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
     uint8_t ts[TS_PACKET_SIZE];
 
     mod->dec_sec_fd = open(mod->dev_name, O_RDONLY);
@@ -157,7 +157,7 @@ static void sec_close(module_data_t *mod)
 
 static void on_ca_thread_close(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     mod->is_ca_thread_started = false;
 
@@ -170,7 +170,7 @@ static void on_ca_thread_close(void *arg)
 
 static void ca_thread_loop(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     ca_open(mod->ca);
 
@@ -262,7 +262,7 @@ static void module_init(module_data_t *mod)
     module_stream_init(mod, on_ts);
     module_stream_demux_set(mod, join_pid, leave_pid);
 
-    mod->ca = calloc(1, sizeof(dvb_ca_t));
+    mod->ca = (dvb_ca_t *)calloc(1, sizeof(*mod->ca));
 
     static const char __adapter[] = "adapter";
     if(!module_option_number(__adapter, &mod->adapter))

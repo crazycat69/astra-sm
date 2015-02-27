@@ -184,7 +184,7 @@ static bool open_file(module_data_t *mod)
 
 static void thread_loop(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     // block sync
     uint64_t   pcr
@@ -305,7 +305,7 @@ static void thread_loop(void *arg)
 
 static void on_thread_close(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     if(mod->fd > 0)
     {
@@ -334,7 +334,7 @@ static void on_thread_close(void *arg)
 
 static void on_thread_read(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     uint8_t ts[TS_PACKET_SIZE];
     const ssize_t r = asc_thread_buffer_read(mod->thread_output, ts, TS_PACKET_SIZE);
@@ -346,7 +346,7 @@ static void on_thread_read(void *arg)
 
 static void timer_skip_set(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
     char skip_str[64];
     int fd = open(mod->lock, O_CREAT | O_WRONLY | O_TRUNC
 #ifndef _WIN32

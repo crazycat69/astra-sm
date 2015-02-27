@@ -2,7 +2,7 @@ if HAVE_INTERNAL_LUA
 #
 # Platform-specific flags
 #
-AM_CFLAGS = -DLUA_COMPAT_ALL
+AM_CFLAGS = -DLUA_COMPAT_ALL -DLUA_USE_LONGJMP
 
 # windows
 if HAVE_MINGW

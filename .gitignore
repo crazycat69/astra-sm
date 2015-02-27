@@ -1,6 +1,8 @@
 /src/astra
 /src/inscript/inscript.h
 /src/bindings.h
+/testcards/*.ts
+/testcards/*.wav
 /tools/mkscript
 /tools/tonegen
 /lua/luac

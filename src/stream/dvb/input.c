@@ -83,6 +83,7 @@ static void dvr_open(module_data_t *mod);
 static void dvr_close(module_data_t *mod);
 static void on_thread_close(void *arg);
 static void thread_loop(void *arg);
+static void thread_loop_slave(void *arg);
 
 static void on_pat(void *arg, mpegts_psi_t *psi)
 {
@@ -121,7 +122,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
 
 static void dvr_on_retry(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     if(!mod->no_dvr)
     {

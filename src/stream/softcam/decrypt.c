@@ -240,7 +240,7 @@ static void stream_reload(module_data_t *mod)
 
 static void on_pat(void *arg, mpegts_psi_t *psi)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     // check changes
     const uint32_t crc32 = PSI_GET_CRC32(psi);
@@ -337,7 +337,7 @@ static bool __cat_check_desc(module_data_t *mod, const uint8_t *desc)
 
 static void on_cat(void *arg, mpegts_psi_t *psi)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     // check changes
     const uint32_t crc32 = PSI_GET_CRC32(psi);
@@ -439,7 +439,7 @@ static ca_stream_t * __pmt_check_desc(  module_data_t *mod
 
 static void on_pmt(void *arg, mpegts_psi_t *psi)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     if(psi->buffer[0] != 0x02)
         return;
@@ -571,7 +571,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
 
 static void on_em(void *arg, mpegts_psi_t *psi)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     if(!mod->__decrypt.cam->is_ready)
         return;

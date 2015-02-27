@@ -44,22 +44,28 @@ LT_LIB_M
 AX_PROG_CC_FOR_BUILD
 AM_PROG_CC_C_O
 
-# Check C99 support
+# Check C99/C++03 support
+compiler_lang=""
+
 case "${host_os}" in
     mingw*|cygwin*)
-        AX_CHECK_CFLAG([-std=gnu99], [], [], [
-            AC_MSG_ERROR([$CC doesn't support GNU99])
-        ])
+        AX_CHECK_CFLAG([-std=gnu99], [], [compiler_lang=C], [
+            AX_CHECK_CFLAG([-std=gnu++03], [], [compiler_lang=C++]) ])
         ;;
 
     *)
-        AX_CHECK_CFLAG([-std=c99], [], [], [
-            AX_CHECK_CFLAG([-std=iso9899:1999], [], [], [
-                AC_MSG_ERROR([$CC doesn't seem to support C99])
-            ])
-        ])
+        AX_CHECK_CFLAG([-std=c99], [], [compiler_lang=C], [
+            AX_CHECK_CFLAG([-std=iso9899:1999], [], [compiler_lang=C], [
+                AX_CHECK_CFLAG([-std=c++03], [], [compiler_lang=C++]) ]) ])
         ;;
 esac
+
+AS_IF([test -z "${compiler_lang}"], [
+    AC_MSG_ERROR([$CC doesn't support C nor C++]) ])
+
+AS_IF([test "x${compiler_lang}" = "xC++"], [
+    AC_DEFINE([__STDC_LIMIT_MACROS], [],
+        [Use C99 integer limit macros when compiling as C++]) ])
 
 #
 # Checks for typedefs, structures, and compiler characteristics
@@ -677,6 +683,8 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Waggregate-return], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wbad-function-cast], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wcast-align], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wclobbered], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wdouble-promotion], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wfloat-equal], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wformat=2], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Winit-self], [WARN_CFLAGS])
@@ -688,15 +696,24 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wold-style-definition], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wpointer-arith], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wredundant-decls], [WARN_CFLAGS])
-    AX_CHECK_CFLAG([-Wshadow], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstack-protector], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstrict-aliasing], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstrict-overflow=4], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstrict-prototypes], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wsync-nand], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wtrampolines], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wundef], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wuninitialized], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wunsafe-loop-optimizations], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wunused], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wuseless-cast], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wvector-operation-performance], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wwrite-strings], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wzero-as-null-pointer-constant], [WARN_CFLAGS])
+
+    AS_IF([test "${SYS}" = "mingw"], [
+        AX_CHECK_CFLAG([-Wno-pedantic-ms-format], [WARN_CFLAGS])
+    ])
 
     # GCC-specific
     AX_CHECK_CFLAG([-Wjump-misses-init], [WARN_CFLAGS])
@@ -705,6 +722,9 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     # Clang-specific
     AX_CHECK_CFLAG([-Wgnu], [WARN_CFLAGS])
 ])
+
+AS_IF([test "x${compiler_lang}" = "xC++"], [
+    AX_CHECK_CFLAG([-Wno-variadic-macros], [WARN_CFLAGS]) ])
 
 # Attribute suggestions
 AC_ARG_ENABLE([suggestions],

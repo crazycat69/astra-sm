@@ -794,7 +794,7 @@ void http_client_redirect(http_client_t *client, int code, const char *location)
 
 static void on_server_close(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     if(!mod->sock)
         return;
@@ -846,7 +846,7 @@ static void on_server_close(void *arg)
 
 static void on_server_accept(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     http_client_t *client = calloc(1, sizeof(http_client_t));
     client->mod = mod;
