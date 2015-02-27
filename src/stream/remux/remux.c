@@ -262,24 +262,24 @@ void remux_ts_in(module_data_t *mod, const uint8_t *orig_ts)
             else if(TS_IS_PCR(ts))
             {
                 /* got PCR in a scrambled packet */
-                uint8_t *const new = mod->buf;
-                memcpy(new, ts, TS_PACKET_SIZE);
+                uint8_t *const copy = mod->buf;
+                memcpy(copy, ts, TS_PACKET_SIZE);
 
                 /* clear PCR flag and field */
-                new[5] &= ~0x10;
+                copy[5] &= ~0x10;
 
                 const size_t af_len = ts[4];
                 if(af_len < TS_BODY_SIZE)
                 {
-                    memset(&new[6], 0xff, af_len - 1);
+                    memset(&copy[6], 0xff, af_len - 1);
 
                     /* 7 = 1 + 6 (flags + PCR field) */
                     if(af_len > 7)
                         /* move remaining AF bytes */
-                        memcpy(&new[6], &ts[12], af_len - 7);
+                        memcpy(&copy[6], &ts[12], af_len - 7);
                 }
 
-                ts = new;
+                ts = copy;
             }
 
         /* pass these through for now */
