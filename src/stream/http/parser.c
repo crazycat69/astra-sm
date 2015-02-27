@@ -496,13 +496,13 @@ char * http_authorization(  const char *auth_header
                 ha3[i] = c3 - 'A' + 'a';
         }
 
-        const char template[] = "Digest "
+        const char template_str[] = "Digest "
                                 "username=\"%s\", "
                                 "realm=\"%s\", "
                                 "nonce=\"%s\", "
                                 "uri=\"%s\", "
                                 "response=\"%s\"";
-        const size_t template_len = sizeof(template) - (2 * 5) - 1;
+        const size_t template_len = sizeof(template_str) - (2 * 5) - 1;
 
         char *r = malloc(  template_len
                          + login_len
@@ -512,7 +512,7 @@ char * http_authorization(  const char *auth_header
                          + MD5_DIGEST_SIZE * 2
                          + 1);
 
-        sprintf(r, template, login, realm, nonce, path, ha3);
+        sprintf(r, template_str, login, realm, nonce, path, ha3);
         return r;
     }
 

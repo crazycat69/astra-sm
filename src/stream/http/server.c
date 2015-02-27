@@ -729,7 +729,7 @@ void http_client_abort(http_client_t *client, int code, const char *text)
 
     const char *message = http_code(code);
 
-    static const char template[] =
+    static const char template_str[] =
         "<html><head>"
             "<title>%d %s</title>"
         "</head><body>"
@@ -740,7 +740,7 @@ void http_client_abort(http_client_t *client, int code, const char *text)
         "</body></html>\r\n";
 
     lua_pushfstring(  lua
-                    , template
+                    , template_str
                     , code, message
                     , message, (text) ? text : "&nbsp;"
                     , mod->server_name);
