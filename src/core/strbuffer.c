@@ -2,7 +2,7 @@
  * Astra Core (String buffer)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
  *                    2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
@@ -34,7 +34,7 @@ struct string_buffer_t
 
 string_buffer_t * string_buffer_alloc(void)
 {
-    string_buffer_t *buffer = malloc(sizeof(string_buffer_t));
+    string_buffer_t *buffer = (string_buffer_t *)malloc(sizeof(string_buffer_t));
     buffer->size = 0;
     buffer->last = buffer;
     buffer->next = NULL;
@@ -47,7 +47,7 @@ static string_buffer_t * __string_buffer_last(string_buffer_t *buffer)
     string_buffer_t *last = buffer->last;
     if(last->size >= MAX_BUFFER_SIZE)
     {
-        last->next = malloc(sizeof(string_buffer_t));
+        last->next = (string_buffer_t *)malloc(sizeof(string_buffer_t));
         last = last->next;
         last->size = 0;
         last->last = NULL;
@@ -92,7 +92,7 @@ void string_buffer_addlstring(string_buffer_t *buffer, const char *str, size_t s
                 skip += cap;
             }
 
-            last->next = malloc(sizeof(string_buffer_t));
+            last->next = (string_buffer_t *)malloc(sizeof(string_buffer_t));
             last = last->next;
             last->size = 0;
             last->last = NULL;
@@ -353,7 +353,7 @@ char * string_buffer_release(string_buffer_t *buffer, size_t *size)
     }
 
 
-    char *str = malloc(skip + 1);
+    char *str = (char *)malloc(skip + 1);
     for(  skip = 0, next = buffer
         ; next && (next_next = next->next, 1)
         ; next = next_next)

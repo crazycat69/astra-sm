@@ -2,7 +2,7 @@
  * Astra Core
  * http://cesbo.com/astra
  *
- * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,7 +35,7 @@ struct asc_list_t
 
 asc_list_t * asc_list_init(void)
 {
-    asc_list_t *list = malloc(sizeof(asc_list_t));
+    asc_list_t *list = (asc_list_t *)malloc(sizeof(asc_list_t));
     TAILQ_INIT(&list->list);
     list->size = 0;
     list->current = NULL;
@@ -83,7 +83,7 @@ size_t asc_list_size(asc_list_t *list)
 void asc_list_insert_head(asc_list_t *list, void *data)
 {
     ++list->size;
-    item_t *item = malloc(sizeof(item_t));
+    item_t *item = (item_t *)malloc(sizeof(item_t));
     item->data = data;
     item->entries.tqe_next = NULL;
     item->entries.tqe_prev = NULL;
@@ -93,7 +93,7 @@ void asc_list_insert_head(asc_list_t *list, void *data)
 void asc_list_insert_tail(asc_list_t *list, void *data)
 {
     ++list->size;
-    item_t *item = malloc(sizeof(item_t));
+    item_t *item = (item_t *)malloc(sizeof(item_t));
     item->data = data;
     item->entries.tqe_next = NULL;
     item->entries.tqe_prev = NULL;

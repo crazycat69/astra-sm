@@ -111,7 +111,7 @@ void asc_thread_core_loop(void)
     thread_observer.is_changed = false;
     asc_list_for(thread_observer.thread_list)
     {
-        asc_thread_t *thread = asc_list_data(thread_observer.thread_list);
+        asc_thread_t *thread = (asc_thread_t *)asc_list_data(thread_observer.thread_list);
         if(!thread->is_started)
             continue;
 
@@ -138,7 +138,7 @@ void asc_thread_core_loop(void)
 
 asc_thread_t * asc_thread_init(void *arg)
 {
-    asc_thread_t *thread = calloc(1, sizeof(asc_thread_t));
+    asc_thread_t *thread = (asc_thread_t *)calloc(1, sizeof(asc_thread_t));
 
     thread->arg = arg;
 
@@ -154,7 +154,7 @@ static DWORD WINAPI asc_thread_loop(void *arg)
 static void * asc_thread_loop(void *arg)
 #endif
 {
-    asc_thread_t *thread = arg;
+    asc_thread_t *thread = (asc_thread_t *)arg;
 
     thread->is_started = true;
     thread->loop(thread->arg);
@@ -226,9 +226,9 @@ void asc_thread_destroy(asc_thread_t *thread)
 
 asc_thread_buffer_t * asc_thread_buffer_init(size_t size)
 {
-    asc_thread_buffer_t * buffer = calloc(1, sizeof(asc_thread_buffer_t));
+    asc_thread_buffer_t *buffer = (asc_thread_buffer_t *)calloc(1, sizeof(asc_thread_buffer_t));
     buffer->size = size;
-    buffer->buffer = malloc(size);
+    buffer->buffer = (uint8_t *)malloc(size);
     asc_thread_mutex_init(buffer->mutex);
     return buffer;
 }
