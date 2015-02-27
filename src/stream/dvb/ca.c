@@ -324,13 +324,13 @@ typedef struct
 {
     uint8_t caid_list_size;
     uint16_t *caid_list;
-} conditional_access_data_t;
+} ca_data_t;
 
 // ADD: CA_PMT_LM_ADD, CA_PMT_CMD_OK_DESCRAMBLING
 // UPD: CA_PMT_LM_UPDATE, CA_PMT_CMD_OK_DESCRAMBLING
 // DEL: CA_PMT_LM_UPDATE, CA_PMT_CMD_NOT_SELECTED
 
-static bool ca_pmt_check_caid(conditional_access_data_t *ca_data, uint16_t caid)
+static bool ca_pmt_check_caid(ca_data_t *ca_data, uint16_t caid)
 {
     for(int i = 0; i < ca_data->caid_list_size; ++i)
     {
@@ -341,7 +341,7 @@ static bool ca_pmt_check_caid(conditional_access_data_t *ca_data, uint16_t caid)
 }
 
 static uint16_t ca_pmt_copy_desc(  const uint8_t *src, uint16_t size, uint8_t *dst
-                                 , conditional_access_data_t *ca_data)
+                                 , ca_data_t *ca_data)
 {
     uint16_t ca_pmt_skip = 3; // info_length + ca_pmt_cmd_id
     uint16_t src_skip = 0;
@@ -382,7 +382,8 @@ static bool ca_pmt_build(  dvb_ca_t *ca, ca_pmt_t *ca_pmt
 {
     bool is_caid = false;
 
-    conditional_access_data_t *ca_data = ca->slots[slot_id].sessions[session_id].data;
+    ca_data_t *ca_data =
+        (ca_data_t *)ca->slots[slot_id].sessions[session_id].data;
 
     ca_pmt->buffer[0] = list_manage;
     ca_pmt->buffer[1] = (ca_pmt->pnr >> 8);
@@ -497,7 +498,8 @@ static void conditional_access_event(dvb_ca_t *ca, uint8_t slot_id, uint16_t ses
             if(size < 2)
                 break;
 
-            conditional_access_data_t *data = ca->slots[slot_id].sessions[session_id].data;
+            ca_data_t *data =
+                (ca_data_t *)ca->slots[slot_id].sessions[session_id].data;
 
             free(data->caid_list);
             data->caid_list_size = size / 2;
@@ -528,7 +530,7 @@ static void conditional_access_event(dvb_ca_t *ca, uint8_t slot_id, uint16_t ses
 static void conditional_access_close(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id)
 {
     ca_session_t *session = &ca->slots[slot_id].sessions[session_id];
-    conditional_access_data_t *data = session->data;
+    ca_data_t *data = (ca_data_t *)session->data;
 
     free(data->caid_list);
     free(data);
@@ -539,7 +541,7 @@ static void conditional_access_open(dvb_ca_t *ca, uint8_t slot_id, uint16_t sess
     ca_session_t *session = &ca->slots[slot_id].sessions[session_id];
     session->event = conditional_access_event;
     session->close = conditional_access_close;
-    session->data = (conditional_access_data_t *)calloc(1, sizeof(conditional_access_data_t));
+    session->data = (ca_data_t *)calloc(1, sizeof(ca_data_t));
 
     ca_apdu_send(ca, slot_id, session_id, AOT_CA_INFO_ENQ, NULL, 0);
 }
@@ -595,7 +597,9 @@ static void date_time_send(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id)
 
     ca_apdu_send(ca, slot_id, session_id, AOT_DATE_TIME, buffer, 7);
 
-    date_time_data_t *dt = ca->slots[slot_id].sessions[session_id].data;
+    date_time_data_t *const dt =
+        (date_time_data_t *)ca->slots[slot_id].sessions[session_id].data;
+
     dt->last_utime = asc_utime();
 }
 
@@ -609,7 +613,8 @@ static void date_time_event(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id)
             uint16_t size = 0;
             const uint8_t *buffer = ca_apdu_get_buffer(ca, slot_id, &size);
 
-            date_time_data_t *data = ca->slots[slot_id].sessions[session_id].data;
+            date_time_data_t *const data =
+                (date_time_data_t *)ca->slots[slot_id].sessions[session_id].data;
 
             data->interval = (size > 0) ? (buffer[0] * 1000000) : 0;
 
@@ -624,7 +629,8 @@ static void date_time_event(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id)
 
 static void date_time_manage(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id)
 {
-    date_time_data_t *data = ca->slots[slot_id].sessions[session_id].data;
+    date_time_data_t *const data =
+        (date_time_data_t *)ca->slots[slot_id].sessions[session_id].data;
 
     const uint64_t cur = asc_utime();
     if(cur < data->last_utime)
@@ -800,7 +806,7 @@ static void mmi_enq_event(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id)
     if(!size)
         return;
 
-    mmi_data_t *mmi = ca->slots[slot_id].sessions[session_id].data;
+    mmi_data_t *mmi = (mmi_data_t *)ca->slots[slot_id].sessions[session_id].data;
     mmi_free(mmi);
     mmi->object_type = EN50221_MMI_ENQ;
     mmi->object.enq.blind = (buffer[0] & 0x01) ? true : false;
@@ -838,7 +844,7 @@ static void mmi_menu_event(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id)
     if(!size)
         return;
 
-    mmi_data_t *mmi = ca->slots[slot_id].sessions[session_id].data;
+    mmi_data_t *mmi = (mmi_data_t *)ca->slots[slot_id].sessions[session_id].data;
     mmi_free(mmi);
 
     const uint32_t tag = ca_apdu_get_tag(ca, slot_id);
@@ -916,7 +922,7 @@ static void mmi_event(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id)
 static void mmi_close(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id)
 {
     ca_session_t *session = &ca->slots[slot_id].sessions[session_id];
-    mmi_free(session->data);
+    mmi_free((mmi_data_t *)session->data);
     free(session->data);
 }
 
