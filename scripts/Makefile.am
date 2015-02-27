@@ -1,4 +1,4 @@
-SCRIPT_FILES = analyze.lua base.lua dvbls.lua dvbwrite.lua relay.lua stream.lua
+SCRIPT_FILES = analyze.lua base.lua dvbls.lua dvbwrite.lua femon.lua relay.lua stream.lua
 scriptdir = $(sysconfdir)/astra/scripts
 
 if HAVE_INSCRIPT

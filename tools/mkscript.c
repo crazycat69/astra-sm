@@ -2,7 +2,7 @@
  * Built-in script converter
  * https://cesbo.com/astra
  *
- * Copyright (C) 2014, Andrey Dyldin <and@cesbo.com>
+ * Copyright (C) 2014-2015, Andrey Dyldin <and@cesbo.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,7 +32,11 @@
 #define BYTES_PER_ROW 10
 
 #ifndef O_BINARY
-#define O_BINARY 0
+#   ifdef _O_BINARY
+#       define O_BINARY _O_BINARY
+#   else
+#       define O_BINARY 0
+#   endif
 #endif
 
 typedef struct string_buffer_t string_buffer_t;
@@ -51,7 +55,7 @@ static void string_buffer_addchar(string_buffer_t *buffer, char c)
     string_buffer_t *last = buffer->last;
     if(last->size >= MAX_BUFFER_SIZE)
     {
-        last->next = malloc(sizeof(string_buffer_t));
+        last->next = (string_buffer_t *)malloc(sizeof(string_buffer_t));
         last = last->next;
         last->size = 0;
         last->last = NULL;
@@ -196,7 +200,7 @@ static const char * parse_string(const char *source, string_buffer_t *buffer)
 
 static string_buffer_t * parse(const char *source)
 {
-    string_buffer_t *buffer = malloc(sizeof(string_buffer_t));
+    string_buffer_t *buffer = (string_buffer_t *)malloc(sizeof(string_buffer_t));
     buffer->size = 0;
     buffer->last = buffer;
     buffer->next = NULL;
@@ -259,7 +263,7 @@ int main(int argc, char const *argv[])
     int filesize = lseek(fd, 0, SEEK_END);
     lseek(fd, 0, SEEK_SET);
 
-    char *script = malloc(filesize + 1);
+    char *script = (char *)malloc(filesize + 1);
     if(read(fd, script, filesize) != filesize)
     {
         fprintf(stderr, "Failed to read file\n");

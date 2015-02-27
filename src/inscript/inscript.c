@@ -2,7 +2,7 @@
  * Astra Built-in script
  * https://cesbo.com/astra
  *
- * Copyright (C) 2014, Andrey Dyldin <and@cesbo.com>
+ * Copyright (C) 2014-2015, Andrey Dyldin <and@cesbo.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -48,6 +48,8 @@ static int fn_inscript_callback(lua_State *L)
     if(load != 0)
         luaL_error(lua, "[main] %s", lua_tostring(lua, -1));
 
+    static const char *app = "=app";
+
     lua_getglobal(lua, "argv");
     const int argc = luaL_len(lua, -1);
 
@@ -83,27 +85,32 @@ static int fn_inscript_callback(lua_State *L)
     }
     else if(!strcmp(script, "--analyze"))
     {
-        load = load_inscript((const char *)analyze, sizeof(analyze), "=app");
+        load = load_inscript((const char *)analyze, sizeof(analyze), app);
         argv_idx += 1;
     }
     else if(!strcmp(script, "--xproxy"))
     {
-        load = load_inscript((const char *)relay, sizeof(relay), "=app");
+        load = load_inscript((const char *)relay, sizeof(relay), app);
         argv_idx += 1;
     }
     else if(!strcmp(script, "--relay"))
     {
-        load = load_inscript((const char *)relay, sizeof(relay), "=app");
+        load = load_inscript((const char *)relay, sizeof(relay), app);
         argv_idx += 1;
     }
     else if(!strcmp(script, "--dvbls"))
     {
-        load = load_inscript((const char *)dvbls, sizeof(dvbls), "=app");
+        load = load_inscript((const char *)dvbls, sizeof(dvbls), app);
         argv_idx += 1;
     }
     else if(!strcmp(script, "--dvbwrite"))
     {
-        load = load_inscript((const char *)dvbwrite, sizeof(dvbwrite), "=app");
+        load = load_inscript((const char *)dvbwrite, sizeof(dvbwrite), app);
+        argv_idx += 1;
+    }
+    else if(!strcmp(script, "--femon"))
+    {
+        load = load_inscript((const char *)femon, sizeof(femon), app);
         argv_idx += 1;
     }
     else if(!access(script, R_OK))

@@ -213,6 +213,7 @@ INSCRIPT_FILES = \
     $(top_srcdir)/scripts/base.luac \
     $(top_srcdir)/scripts/dvbls.luac \
     $(top_srcdir)/scripts/dvbwrite.luac \
+    $(top_srcdir)/scripts/femon.luac \
     $(top_srcdir)/scripts/relay.luac \
     $(top_srcdir)/scripts/stream.luac
 
