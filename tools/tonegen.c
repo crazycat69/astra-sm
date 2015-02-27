@@ -195,22 +195,22 @@ int main(int argc, char *argv[])
     const size_t block_align = channels * sizeof(int16_t);
     const size_t datasize = total_samples * block_align;
 
-    const wav_header_t hdr = {
-        .riff        = { 'R','I','F','F' },
-        .wave        = { 'W','A','V','E' },
-        .fmt         = { 'f','m','t',' ' },
-        .data        = { 'd','a','t','a' },
+    wav_header_t hdr;
 
-        .filesize    = le32(datasize + sizeof(hdr) - 8),
-        .hdrsize     = le32(16), /* fmt chunk size */
-        .format      = le16(WAVE_FORMAT_PCM),
-        .channels    = le16(channels),
-        .sample_rate = le32(sample_rate),
-        .bps         = le32(sample_rate * block_align),
-        .block_align = le16(block_align),
-        .sample_bits = le16(sizeof(int16_t) * 8),
-        .datasize    = le32(datasize),
-    };
+    memcpy(hdr.riff, "RIFF", 4);
+    memcpy(hdr.wave, "WAVE", 4);
+    memcpy(hdr.fmt,  "fmt ", 4);
+    memcpy(hdr.data, "data", 4);
+
+    hdr.filesize    = le32(datasize + sizeof(hdr) - 8);
+    hdr.hdrsize     = le32(16); /* fmt chunk size */
+    hdr.format      = le16(WAVE_FORMAT_PCM);
+    hdr.channels    = le16(channels);
+    hdr.sample_rate = le32(sample_rate);
+    hdr.bps         = le32(sample_rate * block_align);
+    hdr.block_align = le16(block_align);
+    hdr.sample_bits = le16(sizeof(int16_t) * 8);
+    hdr.datasize    = le32(datasize);
 
     size_t written = fwrite(&hdr, sizeof(hdr), 1, out);
     assert(written == 1);

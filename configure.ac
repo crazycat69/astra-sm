@@ -44,19 +44,19 @@ LT_LIB_M
 AX_PROG_CC_FOR_BUILD
 AM_PROG_CC_C_O
 
-# Check C99/C++03 support
+# Check C99/C++11 support
 compiler_lang=""
 
 case "${host_os}" in
     mingw*|cygwin*)
         AX_CHECK_CFLAG([-std=gnu99], [], [compiler_lang=C], [
-            AX_CHECK_CFLAG([-std=gnu++03], [], [compiler_lang=C++]) ])
+            AX_CHECK_CFLAG([-std=gnu++11], [], [compiler_lang=C++]) ])
         ;;
 
     *)
         AX_CHECK_CFLAG([-std=c99], [], [compiler_lang=C], [
             AX_CHECK_CFLAG([-std=iso9899:1999], [], [compiler_lang=C], [
-                AX_CHECK_CFLAG([-std=c++03], [], [compiler_lang=C++]) ]) ])
+                AX_CHECK_CFLAG([-std=c++11], [], [compiler_lang=C++]) ]) ])
         ;;
 esac
 
@@ -65,8 +65,6 @@ AS_IF([test -z "${compiler_lang}"], [
 
 AS_IF([test "x${compiler_lang}" = "xC++"], [
     AX_CHECK_CFLAGS([-fpermissive -fkeep-inline-functions])
-    AC_DEFINE([__STDC_LIMIT_MACROS], [],
-        [Use C99 integer limit macros when compiling as C++])
 ])
 
 #
