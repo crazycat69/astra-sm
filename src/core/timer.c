@@ -22,7 +22,7 @@
 
 struct asc_timer_t
 {
-    void (*callback)(void *arg);
+    timer_callback_t callback;
     void *arg;
 
     uint64_t interval;
@@ -98,9 +98,9 @@ void asc_timer_core_loop(void)
     }
 }
 
-asc_timer_t * asc_timer_init(unsigned int ms, void (*callback)(void *), void *arg)
+asc_timer_t *asc_timer_init(unsigned int ms, timer_callback_t callback, void *arg)
 {
-    asc_timer_t *timer = (asc_timer_t *)calloc(1, sizeof(asc_timer_t));
+    asc_timer_t *const timer = (asc_timer_t *)calloc(1, sizeof(asc_timer_t));
     timer->interval = ms * 1000;
     timer->callback = callback;
     timer->arg = arg;
@@ -112,12 +112,12 @@ asc_timer_t * asc_timer_init(unsigned int ms, void (*callback)(void *), void *ar
     return timer;
 }
 
-void asc_timer_one_shot(unsigned int ms, void (*callback)(void *), void *arg)
+asc_timer_t *asc_timer_one_shot(unsigned int ms, timer_callback_t callback, void *arg)
 {
-    asc_timer_t *timer = asc_timer_init(ms, callback, arg);
+    asc_timer_t *const timer = asc_timer_init(ms, callback, arg);
     timer->interval = 0;
-    timer->callback = callback;
-    timer->arg = arg;
+
+    return timer;
 }
 
 void asc_timer_destroy(asc_timer_t *timer)
