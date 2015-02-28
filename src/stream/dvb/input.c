@@ -35,6 +35,7 @@ struct module_data_t
     asc_thread_t *thread;
     bool is_thread_started;
 
+    asc_timer_t *retry_timer;
     asc_timer_t *status_timer;
     int idx_callback;
 
@@ -130,9 +131,12 @@ static void dvr_on_retry(void *arg)
         if(mod->dvr_fd == 0)
         {
             asc_log_info(MSG("retrying in %d seconds"), DVR_RETRY);
-            asc_timer_one_shot(DVR_RETRY * 1000, dvr_on_retry, mod);
-
+            mod->retry_timer = asc_timer_one_shot(DVR_RETRY * 1000, dvr_on_retry, mod);
             return;
+        }
+        else
+        {
+            mod->retry_timer = NULL;
         }
     }
 
@@ -1029,6 +1033,7 @@ static int method_close(module_data_t *mod)
     ASC_FREE(mod->pat, mpegts_psi_destroy);
     ASC_FREE(mod->fe, free);
     ASC_FREE(mod->ca, free);
+    ASC_FREE(mod->retry_timer, asc_timer_destroy);
     ASC_FREE(mod->status_timer, asc_timer_destroy);
 
     if(mod->idx_callback)
