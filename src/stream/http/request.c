@@ -2,7 +2,7 @@
  * Astra Module: HTTP Request
  * http://cesbo.com/astra
  *
- * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
+ * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -702,13 +702,15 @@ static void on_read(void *arg)
         // check empty line
         while(skip < mod->buffer_skip)
         {
-            if(mod->buffer[skip + 0] == '\n' && mod->buffer[skip + 1] == '\n')
+            if(   skip + 1 < mod->buffer_skip
+               && mod->buffer[skip + 0] == '\n' && mod->buffer[skip + 1] == '\n')
             {
                 eoh = skip + 2;
                 mod->status = 1;
                 break;
             }
-            else if(   mod->buffer[skip + 0] == '\r' && mod->buffer[skip + 1] == '\n'
+            else if(   skip + 3 < mod->buffer_skip
+                    && mod->buffer[skip + 0] == '\r' && mod->buffer[skip + 1] == '\n'
                     && mod->buffer[skip + 2] == '\r' && mod->buffer[skip + 3] == '\n')
             {
                 eoh = skip + 4;
@@ -737,8 +739,7 @@ static void on_read(void *arg)
  *
  */
 
-        m[0].eo = eoh; // end of buffer
-        if(!http_parse_response(mod->buffer, m))
+        if(!http_parse_response(mod->buffer, eoh, m))
         {
             call_error(mod, "failed to parse response line");
             on_close(mod);
@@ -781,8 +782,7 @@ static void on_read(void *arg)
 
         while(skip < eoh)
         {
-            m[0].eo = eoh - skip; // end of buffer
-            if(!http_parse_header(&mod->buffer[skip], m))
+            if(!http_parse_header(&mod->buffer[skip], eoh - skip, m))
             {
                 call_error(mod, "failed to parse response headers");
                 on_close(mod);
@@ -862,7 +862,7 @@ static void on_read(void *arg)
             lua_setfield(lua, -2, __stream);
             callback(mod);
 
-            mod->sync.buffer = malloc(mod->sync.buffer_size);
+            mod->sync.buffer = (uint8_t *)malloc(mod->sync.buffer_size);
 
             if(!mod->config.sync)
             {
@@ -922,8 +922,7 @@ static void on_read(void *arg)
         {
             if(!mod->chunk_left)
             {
-                m[0].eo = mod->buffer_skip - skip;
-                if(!http_parse_chunk(&mod->buffer[skip], m))
+                if(!http_parse_chunk(&mod->buffer[skip], mod->buffer_skip - skip, m))
                 {
                     call_error(mod, "invalid chunk");
                     on_close(mod);
@@ -1369,7 +1368,7 @@ static void module_init(module_data_t *mod)
         int value = 1024;
         module_option_number("buffer_size", &value);
         mod->sync.buffer_size = value * 1024;
-        mod->sync.buffer = malloc(mod->sync.buffer_size);
+        mod->sync.buffer = (uint8_t *)malloc(mod->sync.buffer_size);
 
         value = 128;
         module_option_number("buffer_fill", &value);
