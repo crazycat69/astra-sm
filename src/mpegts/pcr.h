@@ -28,6 +28,9 @@
 /* position of last byte in PCR field */
 #define PCR_LAST_BYTE 11
 
+/* maximum possible PCR value */
+#define PCR_MAX ((0x1FFFFFFFFLL * 300) + 299)
+
 /* absent timestamp marker */
 #define XTS_NONE UINT64_MAX
 

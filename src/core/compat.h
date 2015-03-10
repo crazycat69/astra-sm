@@ -21,14 +21,19 @@
 #ifndef _ASC_COMPAT_H_
 #define _ASC_COMPAT_H_ 1
 
-#ifndef PRIu64
-#   ifndef __PRI64_PREFIX
-#       if __WORDSIZE == 64
-#           define __PRI64_PREFIX "l"
-#       else
-#           define __PRI64_PREFIX "ll"
-#       endif
+#ifndef __PRI64_PREFIX
+#   if __WORDSIZE == 64
+#       define __PRI64_PREFIX "l"
+#   else
+#       define __PRI64_PREFIX "ll"
 #   endif
+#endif /* __PRI64_PREFIX */
+
+#ifndef PRId64
+#   define PRId64 __PRI64_PREFIX "d"
+#endif /* PRId64 */
+
+#ifndef PRIu64
 #   define PRIu64 __PRI64_PREFIX "u"
 #endif /* PRIu64 */
 
