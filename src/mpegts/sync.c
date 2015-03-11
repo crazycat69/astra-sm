@@ -262,17 +262,27 @@ bool seek_pcr(mpegts_sync_t *sync)
                 continue;
             }
 
-            const int64_t delta = sync->pcr_cur - sync->pcr_last;
+            int64_t delta = sync->pcr_cur - sync->pcr_last;
+            if (delta < 0)
+            {
+                /* clock reset or wrap around */
+                delta = (PCR_MAX - sync->pcr_last) + sync->pcr_cur + 1;
+#ifdef DEBUG
+                const int ms = delta / (PCR_TIME_BASE / 1000);
+                asc_log_debug(MSG("PCR decreased, assuming wrap around with delta %dms"), ms);
+#endif
+            }
+
             if (delta <= 0)
             {
-                /* clock reset or wrap around; wait for next PCR packet */
-                asc_log_debug(MSG("PCR reset or wrap around"));
+                /* shouldn't happen */
+                asc_log_error(MSG("PCR did not increase!"));
                 continue;
             }
             else if (delta >= MAX_PCR_DELTA)
             {
                 const unsigned int ms = delta / (PCR_TIME_BASE / 1000);
-                asc_log_error(MSG("PCR jumped forward by %ums"), ms);
+                asc_log_error(MSG("PCR jumped forward by %ums, skipping block"), ms);
 
                 /* in case this happens during initial buffering */
                 sync->pos.send = lookahead;
@@ -351,9 +361,12 @@ void mpegts_sync_loop(void *arg)
                 sync->buffered = true;
             }
 
-            asc_log_debug(MSG("buffered blocks: %u (min %u)%s")
-                          , sync->num_blocks, ENOUGH_BUFFER_BLOCKS
-                          , (sync->buffered ? ", starting output" : ""));
+            if (!(sync->num_blocks % 5))
+            {
+                asc_log_debug(MSG("buffered blocks: %u (min %u)%s")
+                              , sync->num_blocks, ENOUGH_BUFFER_BLOCKS
+                              , (sync->buffered ? ", starting output" : ""));
+            }
         }
         else if (!mpegts_sync_space(sync)
                  && !mpegts_sync_resize(sync, 0))
