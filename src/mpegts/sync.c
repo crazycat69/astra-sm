@@ -61,9 +61,8 @@ struct mpegts_sync_t
 
     uint64_t last_run;
     uint64_t last_error;
-    uint16_t pcr_pid;
+    unsigned int pcr_pid;
     unsigned int num_blocks;
-    bool buffered;
 
     uint64_t pcr_last;
     uint64_t pcr_cur;
@@ -78,6 +77,8 @@ struct mpegts_sync_t
 #ifdef DEBUG
     uint64_t last_report;
 #endif
+
+    bool buffered;
 };
 
 /*
@@ -266,7 +267,7 @@ bool seek_pcr(mpegts_sync_t *sync)
             if (delta < 0)
             {
                 /* clock reset or wrap around */
-                delta = (PCR_MAX - sync->pcr_last) + sync->pcr_cur + 1;
+                delta += PCR_MAX + 1;
 #ifdef DEBUG
                 const int ms = delta / (PCR_TIME_BASE / 1000);
                 asc_log_debug(MSG("PCR decreased, assuming wrap around with delta %dms"), ms);
