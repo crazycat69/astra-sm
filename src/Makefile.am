@@ -44,6 +44,7 @@ libastra_la_SOURCES += \
     utils/json.c \
     utils/log.c \
     utils/md5.c \
+    utils/rc4.c \
     utils/sha1.c \
     utils/strhex.c \
     utils/timer.c \
