@@ -901,7 +901,7 @@ static void thread_loop(void *arg)
         if(current_time >= dvr_check_timeout + THREAD_DELAY_DVR)
         {
             dvr_check_timeout = current_time;
-            if(mod->fe->fe_event_status & FE_HAS_LOCK)
+            if(mod->fe->status & FE_HAS_LOCK)
             {
                 if(mod->dvr_read == 0)
                     dmx_bounce(mod);
@@ -972,7 +972,7 @@ static void thread_loop_slave(void *arg)
         if(current_time >= dvr_check_timeout + THREAD_DELAY_DVR)
         {
             dvr_check_timeout = current_time;
-            if(mod->fe->fe_event_status & FE_HAS_LOCK)
+            if(mod->fe->status & FE_HAS_LOCK)
             {
                 if(mod->dvr_read == 0)
                     dmx_bounce(mod);

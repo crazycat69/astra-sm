@@ -82,7 +82,6 @@ struct dvb_fe_t
 
     /* FE Status */
     bool is_started;
-    fe_status_t fe_event_status;
     fe_status_t status;
     bool lock;
     int signal;
