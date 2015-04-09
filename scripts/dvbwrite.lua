@@ -14,7 +14,7 @@ function main()
         "--\n",
         "-- automatically generated file. do not edit.\n",
         "--\n",
-        "persistent_dvbs = {\n"
+        "dvb_list = {\n"
     )
 
     -- list adapters

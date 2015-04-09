@@ -573,9 +573,7 @@ function dvb_tune(conf)
         conf.device = nil
 
         if dvb_list == nil then
-            if persistent_dvbs then
-                dvb_list = persistent_dvbs
-            elseif dvbls then
+            if dvbls then
                 dvb_list = dvbls()
             else
                 dvb_list = {}
