@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 # Get version from git
-m4_define([pkg_version], m4_esyscmd([build-aux/git-version-gen]))
+m4_define([pkg_version], m4_esyscmd([sh build-aux/git-version-gen]))
 m4_ifset([pkg_version], [], [ m4_define([pkg_version], [UNKNOWN]) ])
 m4_if(pkg_version, [UNKNOWN],
     [ m4_fatal([unable to obtain package version; please check `git-version-gen' output]) ])
