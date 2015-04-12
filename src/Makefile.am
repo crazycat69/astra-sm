@@ -143,6 +143,7 @@ libstream_la_SOURCES += \
     stream/softcam/cas/bulcrypt.c \
     stream/softcam/cas/conax.c \
     stream/softcam/cas/cryptoworks.c \
+    stream/softcam/cas/dgcrypt.c \
     stream/softcam/cas/dre.c \
     stream/softcam/cas/exset.c \
     stream/softcam/cas/griffin.c \

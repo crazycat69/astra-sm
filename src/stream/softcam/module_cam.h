@@ -180,6 +180,7 @@ MODULE_CAS_PROTO(cryptoworks)
 MODULE_CAS_PROTO(bulcrypt)
 MODULE_CAS_PROTO(exset)
 MODULE_CAS_PROTO(griffin)
+MODULE_CAS_PROTO(dgcrypt)
 
 #define CAS_INIT_LIST \
     { \
@@ -194,6 +195,7 @@ MODULE_CAS_PROTO(griffin)
         CAS_INIT(bulcrypt), \
         CAS_INIT(exset), \
         CAS_INIT(griffin), \
+        CAS_INIT(dgcrypt), \
         NULL \
     }
 
