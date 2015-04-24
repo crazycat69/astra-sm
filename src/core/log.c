@@ -23,7 +23,6 @@
 #ifndef _WIN32
 #include <syslog.h>
 #endif
-#include <stdarg.h>
 
 typedef struct
 {

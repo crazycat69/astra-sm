@@ -38,9 +38,11 @@ void astra_exit(void)
 
 void astra_abort(void)
 {
+    asc_log_error("[main] abort execution");
+
     if (lua != NULL)
     {
-        asc_log_error("[main] abort execution. Lua backtrace:");
+        asc_log_error("[main] Lua backtrace:");
 
         lua_Debug ar;
         int level = 1;
@@ -54,8 +56,6 @@ void astra_abort(void)
             ++level;
         }
     }
-    else
-        asc_log_error("[main] abort execution");
 
     abort();
 }

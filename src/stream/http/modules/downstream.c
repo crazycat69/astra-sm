@@ -45,9 +45,12 @@ static void on_downstream_read(void *arg)
 {
     http_client_t *client = (http_client_t *)arg;
 
-    ssize_t size = asc_socket_recv(client->sock, client->buffer, HTTP_BUFFER_SIZE);
+    const ssize_t size = asc_socket_recv(client->sock, client->buffer, HTTP_BUFFER_SIZE);
     if(size <= 0)
     {
+        if (errno == EAGAIN || errno == EWOULDBLOCK)
+            return;
+
         http_client_close(client);
         return;
     }
