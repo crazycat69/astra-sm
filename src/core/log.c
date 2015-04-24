@@ -36,7 +36,7 @@ typedef struct
 #endif
 } log_t;
 
-static log_t __log =
+log_t __log =
 {
     0,
     false,

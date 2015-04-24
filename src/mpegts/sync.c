@@ -241,7 +241,7 @@ bool seek_pcr(mpegts_sync_t *sync)
         {
             /* latch onto first PCR pid we see */
             sync->pcr_pid = TS_GET_PID(ts);
-            asc_log_debug(MSG("selected PCR pid %hu"), sync->pcr_pid);
+            asc_log_debug(MSG("selected PCR pid %u"), sync->pcr_pid);
         }
 
         if (is_pcr && TS_GET_PID(ts) == sync->pcr_pid)

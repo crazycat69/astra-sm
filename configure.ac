@@ -572,6 +572,16 @@ AS_IF([test "x${enable_inscript}" != "xno"], [
 ])
 AM_CONDITIONAL([HAVE_INSCRIPT], [test "x${enable_inscript}" != "xno"])
 
+# IGMP emulation
+AC_ARG_ENABLE([igmp-emulation], AC_HELP_STRING([--enable-igmp-emulation],
+    [send IGMP using raw sockets (disabled, needs CAP_NET_RAW)]))
+
+AS_IF([test "x${enable_igmp_emulation}" = "xyes"], [
+    AC_DEFINE([IGMP_EMULATION], [1],
+        [Define to 1 to use IGMP emulation via raw sockets])
+])
+AM_CONDITIONAL([IGMP_EMULATION], [test "x${enable_igmp_emulation}" != "xno"])
+
 # Streaming modules
 stream_modules="analyze channel transmit"
 
@@ -822,6 +832,11 @@ AS_IF([test "x${enable_inscript}" != "xno"], [
 ], [
     echo "no"
 ])
+
+# igmp emulation
+echo -n "IGMP emulation:        "
+AS_IF([test "x${enable_igmp_emulation}" = "xyes"],
+    [echo "yes"], [echo "no"])
 
 # check
 echo -n "Check (unit tests):    "
