@@ -223,6 +223,10 @@ function channel_init_input(channel_data, input_id)
         input_data.config.map = merged_map
     end
 
+    if channel_data.config.set_pnr then
+        input_data.config.set_pnr = channel_data.config.set_pnr
+    end
+
     input_data.input = init_input(input_data.config)
 
     if input_data.config.no_analyze ~= true then
