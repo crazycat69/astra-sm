@@ -26,6 +26,10 @@
 char * hex_to_str(char *str, const uint8_t *hex, int len);
 uint8_t * str_to_hex(const char *str, uint8_t *hex, int len);
 
+/* crc8.c */
+
+uint8_t crc8(const uint8_t *buffer, size_t len) __func_pure;
+
 /* crc32b.c */
 
 #define CRC32_SIZE 4

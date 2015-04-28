@@ -40,6 +40,7 @@ libastra_la_SOURCES += \
     utils/astra.c \
     utils/base64.c \
     utils/crc32b.c \
+    utils/crc8.c \
     utils/iso8859.c \
     utils/json.c \
     utils/log.c \
