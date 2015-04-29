@@ -20,6 +20,14 @@
 
 #include <astra.h>
 
+const uint8_t null_ts[TS_PACKET_SIZE] = {
+    /*
+     * pid 0x1fff, cc 0
+     * payload all zeroes
+     */
+    0x47, 0x1f, 0xff, 0x10
+};
+
 const char * mpegts_type_name(mpegts_packet_type_t type)
 {
     switch(type)

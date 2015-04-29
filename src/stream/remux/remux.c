@@ -78,15 +78,7 @@ static inline void insert_pcr_packet(module_data_t *mod
 static inline void insert_null_packet(module_data_t *mod
                                       , ts_callback_t callback)
 {
-    static const uint8_t ts[TS_PACKET_SIZE] = {
-        /*
-         * pid 0x1fff, cc 0
-         * payload all zeroes
-         */
-        0x47, 0x1f, 0xff, 0x10
-    };
-
-    callback(mod, ts);
+    callback(mod, null_ts);
 }
 
 static inline unsigned msecs_to_pkts(unsigned rate, unsigned msec)
