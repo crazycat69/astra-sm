@@ -1,9 +1,8 @@
 /*
- * Astra Module: MPEG-TS
+ * Astra Module: MPEG-TS (T2-MI de-encapsulator)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,15 +18,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _MPEGTS_H_
-#define _MPEGTS_H_ 1
+#ifndef _TS_T2MI_
+#define _TS_T2MI_ 1
 
-#include "tscore.h"
-#include "types.h"
-#include "psi.h"
-#include "pes.h"
-#include "pcr.h"
-#include "sync.h"
-#include "t2mi.h"
+typedef struct mpegts_t2mi_t mpegts_t2mi_t;
 
-#endif /* _MPEGTS_H_ */
+mpegts_t2mi_t *mpegts_t2mi_init(void);
+void mpegts_t2mi_destroy(mpegts_t2mi_t *mi);
+
+void mpegts_t2mi_set_name(mpegts_t2mi_t *mi, const char *name);
+void mpegts_t2mi_set_callback(mpegts_t2mi_t *mi, ts_callback_t cb, void *arg);
+void mpegts_t2mi_set_plp(mpegts_t2mi_t *mi, uint8_t plp_id);
+void mpegts_t2mi_set_payload(mpegts_t2mi_t *mi, uint16_t pnr, uint16_t pid);
+
+void mpegts_t2mi_decap(mpegts_t2mi_t *mi, const uint8_t *ts);
+
+#endif /* _TS_T2MI_ */

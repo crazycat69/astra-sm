@@ -33,6 +33,7 @@ libastra_la_SOURCES += \
     mpegts/psi.c \
     mpegts/pes.c \
     mpegts/sync.c \
+    mpegts/t2mi.c \
     mpegts/types.c
 
 # utils/
