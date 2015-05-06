@@ -411,7 +411,6 @@ mpegts_t2mi_t *mpegts_t2mi_init(void)
     return mi;
 }
 
-__asc_inline
 void mpegts_t2mi_destroy(mpegts_t2mi_t *mi)
 {
     for (size_t i = 0; i < MAX_PID; i++)
@@ -812,7 +811,7 @@ bool on_l1_current(mpegts_t2mi_t *mi, const t2mi_packet_t *pkt)
         t2_plp_t *plp = mi->plps[plp_id];
         if (plp == NULL)
         {
-            plp = mi->plps[plp_id] = calloc(1, sizeof(*plp));
+            plp = mi->plps[plp_id] = (t2_plp_t *)calloc(1, sizeof(*plp));
             asc_assert(plp != NULL, MSG("calloc() failed"));
 
             asc_log_debug(MSG("added PLP %u"), plp_id);
@@ -1219,7 +1218,7 @@ void on_psi(void *arg, mpegts_psi_t *psi)
             if (mi->prefer_pnr == pnr || !new_pid)
                 new_pid = pid;
 
-            asc_log_debug(MSG("PAT: pnr %hu, PMT pid %hu"), pnr, pid);
+            asc_log_debug(MSG("PAT: pnr %u, PMT pid %u"), pnr, pid);
             item_count++;
         }
 
@@ -1241,7 +1240,7 @@ void on_psi(void *arg, mpegts_psi_t *psi)
                 /* pick first stream with type 0x06 (as per TS 102 773) */
                 new_pid = pid;
 
-            asc_log_debug(MSG("PMT: pid %hu, type 0x%02x"), pid, item_type);
+            asc_log_debug(MSG("PMT: pid %u, type 0x%02x"), pid, item_type);
             item_count++;
         }
 
