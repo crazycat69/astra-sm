@@ -24,19 +24,21 @@
 typedef struct module_data_t module_data_t;
 typedef struct module_stream_t module_stream_t;
 
+typedef void (*stream_callback_t)(module_data_t *, const uint8_t *);
+typedef void (*demux_callback_t)(void *, uint16_t);
+
 struct module_stream_t
 {
     module_data_t *self;
     module_stream_t *parent;
 
     // stream
-    void (*on_ts)(module_data_t *mod, const uint8_t *ts);
-
+    stream_callback_t on_ts;
     asc_list_t *childs;
 
     // demux
-    void (*join_pid)(module_data_t *mod, uint16_t pid);
-    void (*leave_pid)(module_data_t *mod, uint16_t pid);
+    demux_callback_t join_pid;
+    demux_callback_t leave_pid;
 
     uint8_t *pid_list;
 };

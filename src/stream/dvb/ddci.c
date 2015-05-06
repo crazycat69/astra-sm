@@ -234,13 +234,17 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
         asc_log_error(MSG("sec write failed"));
 }
 
-static void join_pid(module_data_t *mod, uint16_t pid)
+static void join_pid(void *arg, uint16_t pid)
 {
+    module_data_t *const mod = (module_data_t *)arg;
+
     module_stream_demux_join_pid(mod, pid);
 }
 
-static void leave_pid(module_data_t *mod, uint16_t pid)
+static void leave_pid(void *arg, uint16_t pid)
 {
+    module_data_t *const mod = (module_data_t *)arg;
+
     module_stream_demux_leave_pid(mod, pid);
 }
 
