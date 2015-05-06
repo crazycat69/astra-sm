@@ -453,9 +453,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     const uint32_t crc32 = PSI_GET_CRC32(psi);
     if(crc32 == psi->crc32)
     {
-        mpegts_psi_demux(  mod->pmt
-                         , (void (*)(void *, const uint8_t *))__module_stream_send
-                         , &mod->__stream);
+        mpegts_psi_demux(mod->pmt, __module_stream_send, &mod->__stream);
         return;
     }
 
@@ -555,9 +553,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     PSI_SET_SIZE(mod->pmt);
     PSI_SET_CRC32(mod->pmt);
 
-    mpegts_psi_demux(  mod->pmt
-                     , (void (*)(void *, const uint8_t *))__module_stream_send
-                     , &mod->__stream);
+    mpegts_psi_demux(mod->pmt, __module_stream_send, &mod->__stream);
 }
 
 /*

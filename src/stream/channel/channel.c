@@ -156,16 +156,16 @@ static void on_si_timer(void *arg)
     module_data_t *mod = (module_data_t *)arg;
 
     if(mod->custom_pat)
-        mpegts_psi_demux(mod->custom_pat, (ts_callback_t)__module_stream_send, &mod->__stream);
+        mpegts_psi_demux(mod->custom_pat, __module_stream_send, &mod->__stream);
 
     if(mod->custom_cat)
-        mpegts_psi_demux(mod->custom_cat, (ts_callback_t)__module_stream_send, &mod->__stream);
+        mpegts_psi_demux(mod->custom_cat, __module_stream_send, &mod->__stream);
 
     if(mod->custom_pmt)
-        mpegts_psi_demux(mod->custom_pmt, (ts_callback_t)__module_stream_send, &mod->__stream);
+        mpegts_psi_demux(mod->custom_pmt, __module_stream_send, &mod->__stream);
 
     if(mod->custom_sdt)
-        mpegts_psi_demux(mod->custom_sdt, (ts_callback_t)__module_stream_send, &mod->__stream);
+        mpegts_psi_demux(mod->custom_sdt, __module_stream_send, &mod->__stream);
 }
 
 /*
@@ -185,7 +185,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
     const uint32_t crc32 = PSI_GET_CRC32(psi);
     if(crc32 == psi->crc32)
     {
-        mpegts_psi_demux(mod->custom_pat, (ts_callback_t)__module_stream_send, &mod->__stream);
+        mpegts_psi_demux(mod->custom_pat, __module_stream_send, &mod->__stream);
         return;
     }
 
@@ -278,7 +278,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
     PSI_SET_SIZE(mod->custom_pat);
     PSI_SET_CRC32(mod->custom_pat);
 
-    mpegts_psi_demux(mod->custom_pat, (ts_callback_t)__module_stream_send, &mod->__stream);
+    mpegts_psi_demux(mod->custom_pat, __module_stream_send, &mod->__stream);
 
     if(mod->config.no_reload)
         mod->stream[psi->pid] = MPEGTS_PACKET_UNKNOWN;
@@ -301,7 +301,7 @@ static void on_cat(void *arg, mpegts_psi_t *psi)
     const uint32_t crc32 = PSI_GET_CRC32(psi);
     if(crc32 == psi->crc32)
     {
-        mpegts_psi_demux(mod->custom_cat, (ts_callback_t)__module_stream_send, &mod->__stream);
+        mpegts_psi_demux(mod->custom_cat, __module_stream_send, &mod->__stream);
         return;
     }
 
@@ -343,7 +343,7 @@ static void on_cat(void *arg, mpegts_psi_t *psi)
     mod->custom_cat->buffer_size = psi->buffer_size;
     mod->custom_cat->cc = 0;
 
-    mpegts_psi_demux(mod->custom_cat, (ts_callback_t)__module_stream_send, &mod->__stream);
+    mpegts_psi_demux(mod->custom_cat, __module_stream_send, &mod->__stream);
 
     if(mod->config.no_reload)
         mod->stream[psi->pid] = MPEGTS_PACKET_UNKNOWN;
@@ -394,7 +394,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     const uint32_t crc32 = PSI_GET_CRC32(psi);
     if(crc32 == psi->crc32)
     {
-        mpegts_psi_demux(mod->custom_pmt, (ts_callback_t)__module_stream_send, &mod->__stream);
+        mpegts_psi_demux(mod->custom_pmt, __module_stream_send, &mod->__stream);
         return;
     }
 
@@ -594,7 +594,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
 
     PSI_SET_SIZE(mod->custom_pmt);
     PSI_SET_CRC32(mod->custom_pmt);
-    mpegts_psi_demux(mod->custom_pmt, (ts_callback_t)__module_stream_send, &mod->__stream);
+    mpegts_psi_demux(mod->custom_pmt, __module_stream_send, &mod->__stream);
 
     if(mod->config.no_reload)
         mod->stream[psi->pid] = MPEGTS_PACKET_UNKNOWN;
@@ -645,7 +645,7 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
     if(mod->sdt_checksum_list[section_id] == crc32)
     {
         if(mod->sdt_original_section_id == section_id)
-            mpegts_psi_demux(mod->custom_sdt, (ts_callback_t)__module_stream_send, &mod->__stream);
+            mpegts_psi_demux(mod->custom_sdt, __module_stream_send, &mod->__stream);
 
         return;
     }
@@ -689,7 +689,7 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
     PSI_SET_SIZE(mod->custom_sdt);
     PSI_SET_CRC32(mod->custom_sdt);
 
-    mpegts_psi_demux(mod->custom_sdt, (ts_callback_t)__module_stream_send, &mod->__stream);
+    mpegts_psi_demux(mod->custom_sdt, __module_stream_send, &mod->__stream);
 
     if(mod->config.no_reload)
         mod->stream[psi->pid] = MPEGTS_PACKET_UNKNOWN;
@@ -724,7 +724,7 @@ static void on_eit(void *arg, mpegts_psi_t *psi)
     if(mod->config.set_pnr)
         EIT_SET_PNR(psi, mod->config.set_pnr);
 
-    mpegts_psi_demux(psi, (ts_callback_t)__module_stream_send, &mod->__stream);
+    mpegts_psi_demux(psi, __module_stream_send, &mod->__stream);
 
     mod->eit_cc = psi->cc;
 }
