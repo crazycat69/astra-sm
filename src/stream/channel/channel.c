@@ -465,7 +465,8 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
             continue;
 
         const uint8_t item_type = PMT_ITEM_GET_TYPE(psi, pointer);
-        mpegts_packet_type_t mpegts_type = mpegts_pes_type(item_type);
+        const stream_type_t *const st = mpegts_stream_type(item_type);
+        mpegts_packet_type_t mpegts_type = st->pkt_type;
         const uint8_t *language_desc = NULL;
 
         const uint16_t skip_last = skip;
@@ -503,20 +504,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
             }
             else if(item_type == 0x06)
             {
-                switch(desc_type)
-                {
-                    case 0x56: /* EBU teletext */
-                    case 0x59: /* DVB subtitles */
-                        mpegts_type = MPEGTS_PACKET_SUB;
-                        break;
-
-                    case 0x6A: /* AC3 audio */
-                        mpegts_type = MPEGTS_PACKET_AUDIO;
-                        break;
-
-                    default:
-                        break;
-                }
+                mpegts_type = mpegts_priv_type(desc_type);
             }
 
             const uint8_t size = desc_pointer[1] + 2;

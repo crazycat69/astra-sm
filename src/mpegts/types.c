@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
+ *                    2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,7 +29,86 @@ const uint8_t null_ts[TS_PACKET_SIZE] = {
     0x47, 0x1f, 0xff, 0x10
 };
 
-const char * mpegts_type_name(mpegts_packet_type_t type)
+static const stream_type_t stream_types[256] = {
+    /* 0x00 */ { 0,                   NULL },
+    /* 0x01 */ { MPEGTS_PACKET_VIDEO, "MPEG-1 video, ISO/IEC 11172-2" },
+    /* 0x02 */ { MPEGTS_PACKET_VIDEO, "MPEG-2 video, ISO/IEC 13818-2" },
+    /* 0x03 */ { MPEGTS_PACKET_AUDIO, "MPEG-1 audio, ISO/IEC 11172-3" },
+    /* 0x04 */ { MPEGTS_PACKET_AUDIO, "MPEG-2 audio, ISO/IEC 13818-3" },
+    /* 0x05 */ { MPEGTS_PACKET_DATA,  "Private sections, ISO/IEC 13818-1" },
+    /* 0x06 */ { MPEGTS_PACKET_DATA,  "Private PES, ISO/IEC 13818-1" },
+    /* 0x07 */ { MPEGTS_PACKET_DATA,  "MHEG, ISO/IEC 13522-5" },
+    /* 0x08 */ { MPEGTS_PACKET_DATA,  "DSM-CC, ISO/IEC 13818-1" },
+    /* 0x09 */ { MPEGTS_PACKET_DATA,  "Auxiliary data, ISO/IEC 13818-1" },
+    /* 0x0a */ { MPEGTS_PACKET_DATA,  "DSM-CC multiprotocol encapsulation, ISO/IEC 13818-6" },
+    /* 0x0b */ { MPEGTS_PACKET_DATA,  "DSM-CC U-N messages, ISO/IEC 13818-6" },
+    /* 0x0c */ { MPEGTS_PACKET_DATA,  "DSM-CC stream descriptors, ISO/IEC 13818-6" },
+    /* 0x0d */ { MPEGTS_PACKET_DATA,  "DSM-CC sections, ISO/IEC 13818-6" },
+    /* 0x0e */ { MPEGTS_PACKET_DATA,  "Auxiliary data, ISO/IEC 13818-1" },
+    /* 0x0f */ { MPEGTS_PACKET_AUDIO, "ADTS AAC, ISO/IEC 13818-7" },
+    /* 0x10 */ { MPEGTS_PACKET_VIDEO, "MPEG-4 Part 2, ISO/IEC 14496-2" },
+    /* 0x11 */ { MPEGTS_PACKET_AUDIO, "LATM AAC, ISO/IEC 14496-3" },
+    /* 0x12 */ { MPEGTS_PACKET_DATA,  "MPEG-4 FlexMux PES, ISO/IEC 14496-1" },
+    /* 0x13 */ { MPEGTS_PACKET_DATA,  "MPEG-4 FlexMux sections, ISO/IEC 14496-1" },
+    /* 0x14 */ { MPEGTS_PACKET_DATA,  "DSM-CC Synchronized Download Protocol, ISO/IEC 13818-6" },
+    /* 0x15 */ { MPEGTS_PACKET_DATA,  "Metadata in PES" },
+    /* 0x16 */ { MPEGTS_PACKET_DATA,  "Metadata in sections" },
+    /* 0x17 */ { MPEGTS_PACKET_DATA,  "DSM-CC Data Carousel metadata, ISO/IEC 13818-6" },
+    /* 0x18 */ { MPEGTS_PACKET_DATA,  "DSM-CC Object Carousel metadata, ISO/IEC 13818-6" },
+    /* 0x19 */ { MPEGTS_PACKET_DATA,  "DSM-CC Synchronized Download Protocol metadata, ISO/IEC 13818-6" },
+    /* 0x1a */ { MPEGTS_PACKET_DATA,  "MPEG-2 IPMP stream, ISO/IEC 13818-11" },
+    /* 0x1b */ { MPEGTS_PACKET_VIDEO, "MPEG-4 AVC/H.264, ISO/IEC 14496-10" },
+    /* 0x1c */ { 0,                   NULL },
+    /* 0x1d */ { 0,                   NULL },
+    /* 0x1e */ { 0,                   NULL },
+    /* 0x1f */ { 0,                   NULL },
+    /* 0x20 */ { 0,                   NULL },
+    /* 0x21 */ { 0,                   NULL },
+    /* 0x22 */ { 0,                   NULL },
+    /* 0x23 */ { 0,                   NULL },
+    /* 0x24 */ { MPEGTS_PACKET_VIDEO, "HEVC/H.265, ISO/IEC 23008-2" },
+};
+
+static const stream_type_t reserved_stream[] = {
+    /* 0x00 - 0x7F */
+    { MPEGTS_PACKET_DATA, "Reserved" },
+
+    /* 0x80 - 0xFF */
+    { MPEGTS_PACKET_DATA, "User private" },
+};
+
+const stream_type_t *mpegts_stream_type(uint8_t type_id)
+{
+    const stream_type_t *st = &stream_types[type_id];
+
+    if (st->pkt_type == 0)
+    {
+        const bool private = type_id & 0x80;
+        return &reserved_stream[private];
+    }
+
+    return st;
+}
+
+__asc_inline
+mpegts_packet_type_t mpegts_priv_type(uint8_t desc_type)
+{
+    switch (desc_type)
+    {
+        case 0x46: /* VBI teletext */
+        case 0x56: /* EBU teletext */
+        case 0x59: /* DVB subtitles */
+            return MPEGTS_PACKET_SUB;
+
+        case 0x6A: /* AC3 audio */
+            return MPEGTS_PACKET_AUDIO;
+
+        default:
+            return MPEGTS_PACKET_DATA;
+    }
+}
+
+const char *mpegts_type_name(mpegts_packet_type_t type)
 {
     switch(type)
     {
@@ -52,60 +132,6 @@ const char * mpegts_type_name(mpegts_packet_type_t type)
             return "EMM";
         default:
             return "UNKN";
-    }
-}
-
-mpegts_packet_type_t mpegts_pes_type(uint8_t type_id)
-{
-    switch(type_id)
-    {
-        case 0x01:  // ISO/IEC 11172 Video
-        case 0x02:  // ISO/IEC 13818-2 Video
-        case 0x10:  // ISO/IEC 14496-2 Visual
-        case 0x1B:  // ISO/IEC 14496-10 Video | H.264
-        case 0x24:  // ISO/IEC 23008-2 Video | H.265
-            return MPEGTS_PACKET_VIDEO;
-        case 0x03:  // ISO/IEC 11172 Audio
-        case 0x04:  // ISO/IEC 13818-3 Audio
-        case 0x0F:  // ISO/IEC 13818-7 Audio (ADTS)
-        case 0x11:  // ISO/IEC 14496-3 Audio (LATM)
-            return MPEGTS_PACKET_AUDIO;
-        default:
-            return MPEGTS_PACKET_DATA;
-    }
-}
-
-/* ISO/IEC 14496-2 */
-const char * mpeg4_profile_level_name(uint8_t type_id)
-{
-    switch(type_id)
-    {
-        case 0x01: return "Simple/L1";
-        case 0x02: return "Simple/L2";
-        case 0x03: return "Simple/L3";
-        case 0x11: return "Simple Scalable/L1";
-        case 0x12: return "Simple Scalable/L2";
-        case 0x21: return "Core/L1";
-        case 0x22: return "Core/L2";
-        case 0x32: return "Main/L2";
-        case 0x33: return "Main/L3";
-        case 0x34: return "Main/L4";
-        case 0x42: return "N-bit/L2";
-        case 0x51: return "Scalable Texture/L1";
-        case 0x61: return "Simple Face Animation/L1";
-        case 0x62: return "Simple Face Animation/L2";
-        case 0x63: return "Simple FBA/L1";
-        case 0x64: return "Simple FBA/L2";
-        case 0x71: return "Basic Animated Texture/L1";
-        case 0x72: return "Basic Animated Texture/L2";
-        case 0x81: return "Hybrid/L1";
-        case 0x82: return "Hybrid/L2";
-        case 0x91: return "Advanced Real Time Simple/L1";
-        case 0x92: return "Advanced Real Time Simple/L2";
-        case 0x93: return "Advanced Real Time Simple/L3";
-        case 0x94: return "Advanced Real Time Simple/L4";
-        default:
-            return "Unknown Profile/Level";
     }
 }
 
@@ -352,8 +378,8 @@ void mpegts_desc_to_lua(const uint8_t *desc)
 
             break;
         }
-        case 0x55: // Parental Rating Descriptor [rating]
-        {
+        case 0x55:
+        { /* Parental Rating Descriptor [rating] */
             lua_pushstring(lua, "parental_rating_descriptor");
             lua_setfield(lua, -2, __type_name);
 

@@ -77,8 +77,9 @@ dump_psi_info["pmt"] = function(info)
     end
 
     for _, stream_info in pairs(info.streams) do
-        log.info(("%s: pid: %d type: 0x%02X"):format(stream_info.type_name,
+        log.info(("%s: pid: %d type: %s (0x%02X)"):format(stream_info.type_name,
                                                       stream_info.pid,
+                                                      stream_info.type_description,
                                                       stream_info.type_id))
         for _, descriptor_info in pairs(stream_info.descriptors) do
             dump_descriptor(stream_info.type_name .. ": ", descriptor_info)

@@ -378,7 +378,8 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
         if(!mod->stream[pid])
             mod->stream[pid] = (analyze_item_t *)calloc(1, sizeof(analyze_item_t));
 
-        mod->stream[pid]->type = mpegts_pes_type(type);
+        const stream_type_t *st = mpegts_stream_type(type);
+        mod->stream[pid]->type = st->pkt_type;
 
         lua_pushnumber(lua, pid);
         lua_setfield(lua, -2, __pid);
@@ -392,22 +393,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
             lua_settable(lua, -3); // append to the "streams[X].descriptors" table
 
             if(type == 0x06)
-            {
-                switch(desc_pointer[0])
-                {
-                    case 0x56: /* EBU teletext */
-                    case 0x59: /* DVB subtitles */
-                        mod->stream[pid]->type = MPEGTS_PACKET_SUB;
-                        break;
-
-                    case 0x6A: /* AC3 audio */
-                        mod->stream[pid]->type = MPEGTS_PACKET_AUDIO;
-                        break;
-
-                    default:
-                        break;
-                }
-            }
+                mod->stream[pid]->type = mpegts_priv_type(desc_pointer[0]);
         }
         lua_setfield(lua, -2, __descriptors);
 
@@ -416,6 +402,9 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
 
         lua_pushnumber(lua, type);
         lua_setfield(lua, -2, "type_id");
+
+        lua_pushstring(lua, st->description);
+        lua_setfield(lua, -2, "type_description");
 
         lua_settable(lua, -3); // append to the "streams" table
 

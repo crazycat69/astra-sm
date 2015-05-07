@@ -384,7 +384,9 @@ void remux_pmt(void *arg, mpegts_psi_t *psi)
     {
         const uint16_t pid = PMT_ITEM_GET_PID(psi, item);
         const uint8_t item_type = PMT_ITEM_GET_TYPE(psi, item);
-        mpegts_packet_type_t ts_type = mpegts_pes_type(item_type);
+
+        const stream_type_t *const st = mpegts_stream_type(item_type);
+        mpegts_packet_type_t ts_type = st->pkt_type;
 
         if(pid < 32 || pid > 8190)
             /* invalid pid */
@@ -407,11 +409,8 @@ void remux_pmt(void *arg, mpegts_psi_t *psi)
                 LIST_APPEND(list, cnt, ca_pid);
             }
             /* FIXME: ditto */
-            else if(item_type == 0x06 && desc[0] == 0x6A)
-            {
-                /* AC3 audio */
-                ts_type = MPEGTS_PACKET_AUDIO;
-            }
+            else if(item_type == 0x06)
+                ts_type = mpegts_priv_type(desc[0]);
         }
 
         /* add elementary stream */
