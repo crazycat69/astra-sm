@@ -406,7 +406,7 @@ mpegts_t2mi_t *mpegts_t2mi_init(void)
     mi->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
     mi->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, 0);
 
-    mi->prefer_plp = PLP_ID_NONE;
+    mi->prefer_plp = T2MI_PLP_AUTO;
 
     return mi;
 }
@@ -431,10 +431,14 @@ void mpegts_t2mi_destroy(mpegts_t2mi_t *mi)
 /*
  * setters
  */
-__asc_inline
-void mpegts_t2mi_set_name(mpegts_t2mi_t *mi, const char *name)
+void mpegts_t2mi_set_fname(mpegts_t2mi_t *mi, const char *format, ...)
 {
-    snprintf(mi->name, sizeof(mi->name), "%s", name);
+    va_list ap;
+    va_start(ap, format);
+
+    vsnprintf(mi->name, sizeof(mi->name), format, ap);
+
+    va_end(ap);
 }
 
 __asc_inline
@@ -447,8 +451,8 @@ void mpegts_t2mi_set_callback(mpegts_t2mi_t *mi, ts_callback_t cb, void *arg)
 __asc_inline
 void mpegts_t2mi_set_plp(mpegts_t2mi_t *mi, unsigned plp_id)
 {
-    if (plp_id > PLP_ID_NONE)
-        plp_id = PLP_ID_NONE;
+    if (plp_id > T2MI_PLP_AUTO)
+        plp_id = T2MI_PLP_AUTO;
 
     mi->prefer_plp = plp_id;
     mi->l1_current.cksum = 0;
@@ -802,7 +806,7 @@ bool on_l1_current(mpegts_t2mi_t *mi, const t2mi_packet_t *pkt)
     }
 
     t2_plp_t *selected = NULL;
-    const bool auto_plp = (mi->prefer_plp == PLP_ID_NONE);
+    const bool auto_plp = (mi->prefer_plp == T2MI_PLP_AUTO);
 
     for (size_t i = 0; i < l1->num_plp; i++)
     {

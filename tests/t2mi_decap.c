@@ -128,7 +128,7 @@ int main(int argc, char *argv[])
 
     /* feed TS to decapsulator */
     mpegts_t2mi_t *const mi = mpegts_t2mi_init();
-    mpegts_t2mi_set_name(mi, "decap");
+    mpegts_t2mi_set_fname(mi, "decap");
 
     mpegts_t2mi_set_demux(mi, NULL, join_pid, leave_pid);
     mpegts_t2mi_set_payload(mi, outer_pnr, outer_pid);

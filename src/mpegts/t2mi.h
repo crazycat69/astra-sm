@@ -21,12 +21,14 @@
 #ifndef _TS_T2MI_
 #define _TS_T2MI_ 1
 
+#define T2MI_PLP_AUTO 0x100
+
 typedef struct mpegts_t2mi_t mpegts_t2mi_t;
 
 mpegts_t2mi_t *mpegts_t2mi_init(void);
 void mpegts_t2mi_destroy(mpegts_t2mi_t *mi);
 
-void mpegts_t2mi_set_name(mpegts_t2mi_t *mi, const char *name);
+void mpegts_t2mi_set_fname(mpegts_t2mi_t *mi, const char *format, ...) __fmt_printf(2, 3);
 void mpegts_t2mi_set_callback(mpegts_t2mi_t *mi, ts_callback_t cb, void *arg);
 void mpegts_t2mi_set_plp(mpegts_t2mi_t *mi, unsigned plp_id);
 void mpegts_t2mi_set_payload(mpegts_t2mi_t *mi, uint16_t pnr, uint16_t pid);
@@ -35,8 +37,5 @@ void mpegts_t2mi_set_demux(mpegts_t2mi_t *mi, void *arg
                            , demux_callback_t leave_pid);
 
 void mpegts_t2mi_decap(mpegts_t2mi_t *mi, const uint8_t *ts);
-
-/* auto PLP selection marker */
-#define PLP_ID_NONE 0x100
 
 #endif /* _TS_T2MI_ */

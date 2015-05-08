@@ -615,6 +615,16 @@ function dvb_tune(conf)
     local instance_id = conf.adapter .. "." .. conf.device
     local instance = dvb_input_instance_list[instance_id]
     if not instance then
+        if conf.t2mi == nil then
+            local function check_dependent()
+                if conf.t2mi_pnr and conf.t2mi_pnr > 0 then return true end
+                if conf.t2mi_pid and conf.t2mi_pid > 0 then return true end
+                if conf.t2mi_plp ~= nil then return true end
+                return false
+            end
+            conf.t2mi = check_dependent()
+        end
+
         if not conf.type then
             instance = dvb_input(conf)
             dvb_input_instance_list[instance_id] = instance
