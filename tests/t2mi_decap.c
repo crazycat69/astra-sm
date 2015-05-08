@@ -118,11 +118,11 @@ int main(int argc, char *argv[])
     asc_log_info(MSG("in: %s, out: %s"), infile, outfile);
 
     /* open files */
-    FILE *f_in = fopen(infile, "r");
+    FILE *f_in = fopen(infile, "rb");
     if (!f_in)
         fatal("fopen: %s: %s", infile, strerror(errno));
 
-    FILE *f_out = fopen(outfile, "w");
+    FILE *f_out = fopen(outfile, "wb");
     if (!f_out)
         fatal("fopen: %s: %s", outfile, strerror(errno));
 

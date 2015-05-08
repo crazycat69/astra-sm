@@ -21,6 +21,14 @@
 #ifndef _ASC_COMPAT_H_
 #define _ASC_COMPAT_H_ 1
 
+#ifndef __WORDSIZE
+#   if defined __x86_64__ && !defined __ILP32__
+#       define __WORDSIZE 64
+#   else
+#       define __WORDSIZE 32
+#   endif
+#endif /* __WORDSIZE */
+
 #ifndef __PRI64_PREFIX
 #   if __WORDSIZE == 64 && !defined(__llvm__)
 #       define __PRI64_PREFIX "l"
