@@ -23,7 +23,7 @@
 /*
  * CRC-8 calculation routine as per ETSI EN 302 755.
  *
- * Polynominal used: x^8 + x^7 + x^6 + x^4 + x^2 + 1 (0xD5)
+ * Polynomial used: x^8 + x^7 + x^6 + x^4 + x^2 + 1 (0xD5)
  */
 static const uint8_t crc8_table[256] = {
     0x00, 0xd5, 0x7f, 0xaa, 0xfe, 0x2b, 0x81, 0x54, 0x29, 0xfc, 0x56, 0x83,

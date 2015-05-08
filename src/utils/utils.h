@@ -33,7 +33,7 @@ uint8_t crc8(const uint8_t *buffer, size_t len) __func_pure;
 /* crc32b.c */
 
 #define CRC32_SIZE 4
-uint32_t crc32b(const uint8_t *buffer, int size);
+uint32_t crc32b(const uint8_t *buffer, int size) __func_pure;
 
 /* sha1.c */
 
