@@ -1,5 +1,5 @@
 /*
- * Astra Module: MPEG-TS
+ * Astra Module: MPEG-TS (DVB descriptors)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
@@ -19,16 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _MPEGTS_H_
-#define _MPEGTS_H_ 1
+#ifndef _TS_DESCRIPTORS_
+#define _TS_DESCRIPTORS_ 1
 
-#include "tscore.h"
-#include "types.h"
-#include "descriptors.h"
-#include "psi.h"
-#include "pes.h"
-#include "pcr.h"
-#include "sync.h"
-#include "t2mi.h"
+void mpegts_desc_to_lua(const uint8_t *desc);
 
-#endif /* _MPEGTS_H_ */
+#endif /* _TS_DESCRIPTORS_ */

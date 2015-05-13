@@ -29,6 +29,7 @@ libastra_la_SOURCES += \
 
 # mpegts/
 libastra_la_SOURCES += \
+    mpegts/descriptors.c \
     mpegts/pcr.c \
     mpegts/psi.c \
     mpegts/pes.c \

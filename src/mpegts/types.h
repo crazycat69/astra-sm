@@ -67,6 +67,4 @@ const stream_type_t *mpegts_stream_type(uint8_t type_id) __func_pure;
 mpegts_packet_type_t mpegts_priv_type(uint8_t desc_type) __func_const;
 const char *mpegts_type_name(mpegts_packet_type_t type) __func_const;
 
-void mpegts_desc_to_lua(const uint8_t *desc);
-
 #endif /* _TS_TYPES_ */
