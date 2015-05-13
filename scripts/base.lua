@@ -63,24 +63,38 @@ end
 --
 -- DVB descriptor dumping
 --
-function dump_descriptor(prefix, descriptor_info)
-    if descriptor_info.type_name == "cas" then
-        local data = ""
-        if descriptor_info.data then data = " data: " .. descriptor_info.data end
-        log.info(prefix .. ("CAS: caid: 0x%04X pid: %d%s")
-                           :format(descriptor_info.caid, descriptor_info.pid, data))
-    elseif descriptor_info.type_name == "lang" then
-        log.info(prefix .. "Language: " .. descriptor_info.lang)
-    elseif descriptor_info.type_name == "stream_id" then
-        log.info(prefix .. "Stream ID: " .. descriptor_info.stream_id)
-    elseif descriptor_info.type_name == "service" then
-        log.info(prefix .. "Service: " .. descriptor_info.service_name)
-        log.info(prefix .. "Provider: " .. descriptor_info.service_provider)
-    elseif descriptor_info.type_name == "unknown" then
-        log.info(prefix .. "descriptor: " .. descriptor_info.data)
+dump_descriptor_func = {}
+
+dump_descriptor_func["cas"] = function(prefix, desc)
+    local data = ""
+    if desc.data then data = " data: " .. desc.data end
+    log.info(prefix .. ("CAS: caid: 0x%04X pid: %d%s")
+                       :format(desc.caid, desc.pid, data))
+end
+
+dump_descriptor_func["lang"] = function(prefix, desc)
+    log.info(prefix .. "Language: " .. desc.lang)
+end
+
+dump_descriptor_func["stream_id"] = function(prefix, desc)
+    log.info(prefix .. "Stream ID: " .. desc.stream_id)
+end
+
+dump_descriptor_func["service"] = function(prefix, desc)
+    log.info(prefix .. "Service: " .. desc.service_name)
+    log.info(prefix .. "Provider: " .. desc.service_provider)
+end
+
+dump_descriptor_func["unknown"] = function(prefix, desc)
+    log.info(prefix .. "descriptor: " .. desc.data)
+end
+
+function dump_descriptor(prefix, desc)
+    if dump_descriptor_func[desc.type_name] then
+        dump_descriptor_func[desc.type_name](prefix, desc)
     else
         log.info(prefix .. ("unknown descriptor. type: %s 0x%02X")
-                           :format(tostring(descriptor_info.type_name), descriptor_info.type_id))
+                           :format(tostring(desc.type_name), desc.type_id))
     end
 end
 
