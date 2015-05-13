@@ -409,7 +409,7 @@ void remux_pmt(void *arg, mpegts_psi_t *psi)
                 LIST_APPEND(list, cnt, ca_pid);
             }
             /* FIXME: ditto */
-            else if(item_type == 0x06)
+            else if(item_type == 0x06 && ts_type == MPEGTS_PACKET_DATA)
                 ts_type = mpegts_priv_type(desc[0]);
         }
 

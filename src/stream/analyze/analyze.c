@@ -392,7 +392,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
             mpegts_desc_to_lua(desc_pointer);
             lua_settable(lua, -3); // append to the "streams[X].descriptors" table
 
-            if(type == 0x06)
+            if(type == 0x06 && mod->stream[pid]->type == MPEGTS_PACKET_DATA)
                 mod->stream[pid]->type = mpegts_priv_type(desc_pointer[0]);
         }
         lua_setfield(lua, -2, __descriptors);

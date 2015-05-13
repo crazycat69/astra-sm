@@ -502,7 +502,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
             {
                 language_desc = desc_pointer;
             }
-            else if(item_type == 0x06)
+            else if(item_type == 0x06 && mpegts_type == MPEGTS_PACKET_DATA)
             {
                 mpegts_type = mpegts_priv_type(desc_type);
             }
