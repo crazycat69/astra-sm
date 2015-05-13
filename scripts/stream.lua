@@ -292,7 +292,6 @@ init_output_module.udp = function(channel_data, output_id)
         socket_size = output_data.config.socket_size,
         rtp = (output_data.config.format == "rtp"),
         sync = output_data.config.sync,
-        cbr = output_data.config.cbr,
     })
 end
 

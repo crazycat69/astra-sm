@@ -3,6 +3,7 @@
 /src/bindings.h
 /testcards/*.ts
 /testcards/*.wav
+/tests/t2mi_decap
 /tools/mkscript
 /tools/tonegen
 /lua/luac
