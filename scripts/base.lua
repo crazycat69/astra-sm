@@ -76,6 +76,10 @@ dump_descriptor_func["lang"] = function(prefix, desc)
     log.info(prefix .. "Language: " .. desc.lang)
 end
 
+dump_descriptor_func["maximum_bitrate"] = function(prefix, desc)
+    log.info(prefix .. "Maximum bitrate: " .. desc.maximum_bitrate)
+end
+
 dump_descriptor_func["stream_id"] = function(prefix, desc)
     log.info(prefix .. "Stream ID: " .. desc.stream_id)
 end
@@ -83,6 +87,27 @@ end
 dump_descriptor_func["service"] = function(prefix, desc)
     log.info(prefix .. "Service: " .. desc.service_name)
     log.info(prefix .. "Provider: " .. desc.service_provider)
+end
+
+dump_descriptor_func["caid"] = function(prefix, desc)
+    log.info(prefix .. ("CAS: caid: 0x%04X"):format(desc.caid))
+end
+
+dump_descriptor_func["teletext"] = function(prefix, desc)
+    log.info(prefix .. "type: teletext")
+    for _, item in pairs(desc.items) do
+        log.info(prefix .. ("   page: %03X (%s), language: %s")
+                           :format(item.page_number, item.page_type, item.lang))
+    end
+end
+
+dump_descriptor_func["ac3"] = function(prefix, desc)
+    local optflags = ""
+    if desc.component_type then optflags = ", component_type: " .. desc.component_type end
+    if desc.bsid then optflags = optflags .. ", bsid: " .. desc.bsid end
+    if desc.mainid then optflags = optflags .. ", mainid: " .. desc.mainid end
+    if desc.asvc then optflags = optflags .. ", asvc: " .. desc.asvc end
+    log.info(prefix .. "Type: AC3" .. optflags)
 end
 
 dump_descriptor_func["unknown"] = function(prefix, desc)

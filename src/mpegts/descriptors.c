@@ -87,6 +87,19 @@ static char *fancy_hex_str(const uint8_t *ptr, const uint8_t len)
     return buf;
 }
 
+static inline const char *teletext_type_string(unsigned type_id)
+{
+    switch (type_id)
+    {
+        case 0x01: return "initial page";
+        case 0x02: return "subtitle page";
+        case 0x03: return "additional information";
+        case 0x04: return "programming schedule";
+        case 0x05: return "hearing impaired subtitle";
+        default:   return "reserved";
+    }
+}
+
 /*
  * parser functions
  */
@@ -122,6 +135,15 @@ DESC_FUNCTION(lang)
 
     lua_pushstring(lua, lang);
     lua_setfield(lua, -2, "lang");
+}
+
+DESC_FUNCTION(maximum_bitrate)
+{
+    const uint32_t bitrate =
+        ((desc[2] & 0x3f) << 16) | (desc[3] << 8) | desc[4];
+
+    lua_pushnumber(lua, bitrate);
+    lua_setfield(lua, -2, "maximum_bitrate");
 }
 
 DESC_FUNCTION(service)
@@ -218,6 +240,12 @@ DESC_FUNCTION(stream_id)
     lua_setfield(lua, -2, "stream_id");
 }
 
+DESC_FUNCTION(caid)
+{
+    lua_pushnumber(lua, ((desc[2] << 8) | desc[3]));
+    lua_setfield(lua, -2, "caid");
+}
+
 DESC_FUNCTION(content)
 {
     lua_newtable(lua); // items[]
@@ -272,6 +300,82 @@ DESC_FUNCTION(parental_rating)
     lua_setfield(lua, -2, "items");
 }
 
+DESC_FUNCTION(teletext)
+{
+    lua_newtable(lua);
+
+    const size_t desc_size = desc[1];
+    desc += 2;
+
+    const uint8_t *const end = desc + desc_size;
+    while (desc < end)
+    {
+        const int item_count = luaL_len(lua, -1) + 1;
+        lua_pushnumber(lua, item_count);
+
+        lua_newtable(lua);
+
+        char lang[4];
+        lang[0] = safe_char((char)desc[0]);
+        lang[1] = safe_char((char)desc[1]);
+        lang[2] = safe_char((char)desc[2]);
+        lang[3] = 0x00;
+
+        lua_pushstring(lua, lang);
+        lua_setfield(lua, -2, "lang");
+
+        const unsigned type = (desc[3] & 0xF8) >> 3;
+        lua_pushstring(lua, teletext_type_string(type));
+        lua_setfield(lua, -2, "page_type");
+
+        const unsigned page_number = ((desc[3] & 0x7) << 8) | desc[4];
+        lua_pushnumber(lua, page_number);
+        lua_setfield(lua, -2, "page_number");
+
+        lua_settable(lua, -3);
+        desc += 5;
+    }
+
+    lua_setfield(lua, -2, "items");
+}
+
+DESC_FUNCTION(ac3)
+{
+    const bool component_type_flag = desc[2] & 0x80;
+    const bool bsid_flag = desc[2] & 0x40;
+    const bool mainid_flag = desc[2] & 0x20;
+    const bool asvc_flag = desc[2] & 0x10;
+    desc += 3;
+
+    if (component_type_flag)
+    {
+        lua_pushnumber(lua, *desc);
+        lua_setfield(lua, -2, "component_type");
+        desc++;
+    }
+
+    if (bsid_flag)
+    {
+        lua_pushnumber(lua, *desc);
+        lua_setfield(lua, -2, "bsid");
+        desc++;
+    }
+
+    if (mainid_flag)
+    {
+        lua_pushnumber(lua, *desc);
+        lua_setfield(lua, -2, "mainid");
+        desc++;
+    }
+
+    if (asvc_flag)
+    {
+        lua_pushnumber(lua, *desc);
+        lua_setfield(lua, -2, "asvc");
+        desc++;
+    }
+}
+
 DESC_FUNCTION(unknown)
 {
     const int desc_size = 2 + desc[1];
@@ -289,12 +393,16 @@ DESC_FUNCTION(unknown)
 static const dvb_descriptor_t known_descriptors[] = {
     DESC_LIST(0x09, cas),
     DESC_LIST(0x0a, lang),
+    DESC_LIST(0x0e, maximum_bitrate),
     DESC_LIST(0x48, service),
     DESC_LIST(0x4d, short_event),
     DESC_LIST(0x4e, extended_event),
     DESC_LIST(0x52, stream_id),
+    DESC_LIST(0x53, caid),
     DESC_LIST(0x54, content),
     DESC_LIST(0x55, parental_rating),
+    DESC_LIST(0x56, teletext),
+    DESC_LIST(0x6a, ac3),
 };
 
 void mpegts_desc_to_lua(const uint8_t *desc)
