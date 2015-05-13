@@ -26,86 +26,12 @@ arg_n = nil
 --   8oooo88    88   8888   8oooo88    888      o  888       888    oo  888    oo
 -- o88o  o888o o88o    88 o88o  o888o o888ooooo88 o888o    o888oooo888 o888ooo8888
 
-dump_psi_info = {}
-
-dump_psi_info["pat"] = function(info)
-    log.info(("PAT: tsid: %d"):format(info.tsid))
-    for _, program_info in pairs(info.programs) do
-        if program_info.pnr == 0 then
-            log.info(("PAT: pid: %d NIT"):format(program_info.pid))
-        else
-            log.info(("PAT: pid: %d PMT pnr: %d"):format(program_info.pid, program_info.pnr))
-        end
-    end
-    log.info(("PAT: crc32: 0x%X"):format(info.crc32))
-end
-
-function dump_descriptor(prefix, descriptor_info)
-    if descriptor_info.type_name == "cas" then
-        local data = ""
-        if descriptor_info.data then data = " data: " .. descriptor_info.data end
-        log.info((prefix .. "CAS: caid: 0x%04X pid: %d%s"):format(descriptor_info.caid,
-                                                               descriptor_info.pid,
-                                                               data))
-    elseif descriptor_info.type_name == "lang" then
-        log.info(prefix .. "Language: " .. descriptor_info.lang)
-    elseif descriptor_info.type_name == "stream_id" then
-        log.info(prefix .. "Stream ID: " .. descriptor_info.stream_id)
-    elseif descriptor_info.type_name == "service" then
-        log.info(prefix .. "Service: " .. descriptor_info.service_name)
-        log.info(prefix .. "Provider: " .. descriptor_info.service_provider)
-    elseif descriptor_info.type_name == "unknown" then
-        log.info(prefix .. "descriptor: " .. descriptor_info.data)
-    else
-        log.info((prefix .. "unknown descriptor. type: %s 0x%02X")
-                 :format(tostring(descriptor_info.type_name), descriptor_info.type_id))
-    end
-end
-
-dump_psi_info["cat"] = function(info)
-    for _, descriptor_info in pairs(info.descriptors) do
-        dump_descriptor("CAT: ", descriptor_info)
-    end
-end
-
-dump_psi_info["pmt"] = function(info)
-    log.info(("PMT: pnr: %d"):format(info.pnr))
-    log.info(("PMT: pid: %d PCR"):format(info.pcr))
-
-    for _, descriptor_info in pairs(info.descriptors) do
-        dump_descriptor("PMT: ", descriptor_info)
-    end
-
-    for _, stream_info in pairs(info.streams) do
-        log.info(("%s: pid: %d type: %s (0x%02X)"):format(stream_info.type_name,
-                                                      stream_info.pid,
-                                                      stream_info.type_description,
-                                                      stream_info.type_id))
-        for _, descriptor_info in pairs(stream_info.descriptors) do
-            dump_descriptor(stream_info.type_name .. ": ", descriptor_info)
-        end
-    end
-    log.info(("PMT: crc32: 0x%X"):format(info.crc32))
-end
-
-dump_psi_info["sdt"] = function(info)
-    log.info(("SDT: tsid: %d"):format(info.tsid))
-
-    for _, service in pairs(info.services) do
-        log.info(("SDT: sid: %d"):format(service.sid))
-        for _, descriptor_info in pairs(service.descriptors) do
-            dump_descriptor("SDT:     ", descriptor_info)
-        end
-    end
-    log.info(("SDT: crc32: 0x%X"):format(info.crc32))
-end
-
 function on_analyze(instance, data)
     if data.error then
         log.error(data.error)
     elseif data.psi then
         if dump_psi_info[data.psi] then
-            dump_psi_info[data.psi](data)
+            dump_psi_info[data.psi]("", data)
         else
             log.error("Unknown PSI: " .. data.psi)
         end
