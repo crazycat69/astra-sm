@@ -23,6 +23,22 @@
 
 #define HEX_BUFSIZE 128
 
+#define DESC_FUNCTION(__type_name) \
+    static void desc_##__type_name(const uint8_t *desc)
+
+#define DESC_LIST(__type_id, __type_name) \
+    { __type_id, #__type_name, desc_##__type_name }
+
+typedef void (*descriptor_parser_t)(const uint8_t *);
+
+typedef struct
+{
+    unsigned type;
+    const char *name;
+
+    descriptor_parser_t parser;
+} dvb_descriptor_t;
+
 static const char __data[] = "data";
 static const char __type_name[] = "type_name";
 static const char __strip[] = "... (strip)";
@@ -71,243 +87,241 @@ static char *fancy_hex_str(const uint8_t *ptr, const uint8_t len)
     return buf;
 }
 
-// descriptor list goes here
+/*
+ * parser functions
+ */
+DESC_FUNCTION(cas)
+{
+    const uint16_t ca_pid = DESC_CA_PID(desc);
+    const uint16_t caid = desc[2] << 8 | desc[3];
+
+    lua_pushnumber(lua, caid);
+    lua_setfield(lua, -2, "caid");
+
+    lua_pushnumber(lua, ca_pid);
+    lua_setfield(lua, -2, "pid");
+
+    const uint8_t ca_info_size = desc[1] - 4; // 4 = caid + ca_pid
+    if(ca_info_size > 0)
+    {
+        char *text = fancy_hex_str(&desc[6], ca_info_size);
+        lua_pushstring(lua, text);
+        free(text);
+
+        lua_setfield(lua, -2, __data);
+    }
+}
+
+DESC_FUNCTION(lang)
+{
+    char lang[4];
+    lang[0] = safe_char((char)desc[2]);
+    lang[1] = safe_char((char)desc[3]);
+    lang[2] = safe_char((char)desc[4]);
+    lang[3] = 0x00;
+
+    lua_pushstring(lua, lang);
+    lua_setfield(lua, -2, "lang");
+}
+
+DESC_FUNCTION(service)
+{
+    lua_pushnumber(lua, desc[2]);
+    lua_setfield(lua, -2, "service_type_id");
+
+    desc += 3;
+    // service provider
+    if(desc[0] > 0)
+        push_description_text(desc);
+    else
+        lua_pushstring(lua, "");
+    lua_setfield(lua, -2, "service_provider");
+
+    desc += desc[0] + 1;
+    // service name
+    if(desc[0] > 0)
+        push_description_text(desc);
+    else
+        lua_pushstring(lua, "");
+    lua_setfield(lua, -2, "service_name");
+}
+
+DESC_FUNCTION(short_event)
+{
+    const char lang[] = { desc[2], desc[3], desc[4], 0x00 };
+    lua_pushstring(lua, lang);
+    lua_setfield(lua, -2, "lang");
+
+    desc += 5; // skip 1:tag + 1:length + 3:lang
+    push_description_text(desc);
+    lua_setfield(lua, -2, "event_name");
+
+    desc += desc[0] + 1;
+    push_description_text(desc);
+    lua_setfield(lua, -2, "text_char");
+}
+
+DESC_FUNCTION(extended_event)
+{
+    lua_pushnumber(lua, desc[2] >> 4);
+    lua_setfield(lua, -2, "desc_num");
+
+    lua_pushnumber(lua, desc[2] & 0x0F);
+    lua_setfield(lua, -2, "last_desc_num");
+
+    const char lang[] = { desc[3], desc[4], desc[5], 0x00 };
+    lua_pushstring(lua, lang);
+    lua_setfield(lua, -2, "lang");
+
+    desc += 6; // skip 1:tag + 1:length + 1:desc_num:last_desc_num + 3:lang
+
+    if(desc[0] > 0)
+    {
+        lua_newtable(lua); // items[]
+
+        const uint8_t *_item_ptr = &desc[1];
+        const uint8_t *const _item_ptr_end = _item_ptr + desc[0];
+
+        while(_item_ptr < _item_ptr_end)
+        {
+            const int item_count = luaL_len(lua, -1) + 1;
+            lua_pushnumber(lua, item_count);
+
+            lua_newtable(lua);
+
+            push_description_text(_item_ptr);
+            lua_setfield(lua, -2, "item_desc");
+            _item_ptr += _item_ptr[0] + 1;
+
+            push_description_text(_item_ptr);
+            lua_setfield(lua, -2, "item");
+            _item_ptr += _item_ptr[0] + 1;
+
+            lua_settable(lua, -3);
+       }
+
+       lua_setfield(lua, -2, "items");
+    }
+
+    desc += desc[0] + 1;
+    // text
+    if(desc[0] > 0)
+         push_description_text(desc);
+    else
+         lua_pushstring(lua, "");
+    lua_setfield(lua, -2, "text");
+}
+
+DESC_FUNCTION(stream_id)
+{
+    lua_pushnumber(lua, desc[2]);
+    lua_setfield(lua, -2, "stream_id");
+}
+
+DESC_FUNCTION(content)
+{
+    lua_newtable(lua); // items[]
+
+    const uint8_t *_item_ptr = &desc[2];
+    const uint8_t *const _item_ptr_end = _item_ptr + desc[1];
+
+    while(_item_ptr < _item_ptr_end)
+    {
+        const int item_count = luaL_len(lua, -1) + 1;
+        lua_pushnumber(lua, item_count);
+
+        lua_newtable(lua);
+
+        lua_pushnumber(lua, _item_ptr[0] >> 4);
+        lua_setfield(lua, -2, "cn_l1");
+        lua_pushnumber(lua, _item_ptr[0] & 0xF);
+        lua_setfield(lua, -2, "cn_l2");
+        lua_pushnumber(lua, _item_ptr[1] >> 4);
+        lua_setfield(lua, -2, "un_l1");
+        lua_pushnumber(lua, _item_ptr[1] & 0xF);
+        lua_setfield(lua, -2, "un_l2");
+
+        lua_settable(lua, -3);
+        _item_ptr += 2;
+    }
+    lua_setfield(lua, -2, "items");
+}
+
+DESC_FUNCTION(parental_rating)
+{
+    lua_newtable(lua); // items[]
+
+    const uint8_t *_item_ptr = &desc[2];
+    const uint8_t *const _item_ptr_end = _item_ptr + desc[1];
+
+    while(_item_ptr < _item_ptr_end)
+    {
+        const int item_count = luaL_len(lua, -1) + 1;
+        lua_pushnumber(lua, item_count);
+
+        const char country[] = { _item_ptr[0], _item_ptr[1], _item_ptr[2], 0x00 };
+        lua_pushstring(lua, country);
+        lua_setfield(lua, -2, "country");
+
+        lua_pushnumber(lua, _item_ptr[3]);
+        lua_setfield(lua, -2, "rating");
+
+        lua_settable(lua, -3);
+        _item_ptr += 4;
+    }
+    lua_setfield(lua, -2, "items");
+}
+
+DESC_FUNCTION(unknown)
+{
+    const int desc_size = 2 + desc[1];
+
+    char *text = fancy_hex_str(desc, desc_size);
+    lua_pushstring(lua, text);
+    free(text);
+
+    lua_setfield(lua, -2, __data);
+}
+
+/*
+ * public interface
+ */
+static const dvb_descriptor_t known_descriptors[] = {
+    DESC_LIST(0x09, cas),
+    DESC_LIST(0x0a, lang),
+    DESC_LIST(0x48, service),
+    DESC_LIST(0x4d, short_event),
+    DESC_LIST(0x4e, extended_event),
+    DESC_LIST(0x52, stream_id),
+    DESC_LIST(0x54, content),
+    DESC_LIST(0x55, parental_rating),
+};
 
 void mpegts_desc_to_lua(const uint8_t *desc)
 {
+    const unsigned type_id = desc[0];
+
     lua_newtable(lua);
 
-    lua_pushnumber(lua, desc[0]);
+    lua_pushnumber(lua, type_id);
     lua_setfield(lua, -2, "type_id");
 
-    switch(desc[0])
+    for (size_t i = 0; i < ASC_ARRAY_SIZE(known_descriptors); i++)
     {
-        case 0x09:
-        { /* CA */
-            lua_pushstring(lua, "cas");
-            lua_setfield(lua, -2, __type_name);
-
-            const uint16_t ca_pid = DESC_CA_PID(desc);
-            const uint16_t caid = desc[2] << 8 | desc[3];
-
-            lua_pushnumber(lua, caid);
-            lua_setfield(lua, -2, "caid");
-
-            lua_pushnumber(lua, ca_pid);
-            lua_setfield(lua, -2, "pid");
-
-            const uint8_t ca_info_size = desc[1] - 4; // 4 = caid + ca_pid
-            if(ca_info_size > 0)
-            {
-                char *text = fancy_hex_str(&desc[6], ca_info_size);
-                lua_pushstring(lua, text);
-                free(text);
-
-                lua_setfield(lua, -2, __data);
-            }
-            break;
-        }
-        case 0x0A:
-        { /* ISO-639 language */
-            static const char __lang[] = "lang";
-            lua_pushstring(lua, __lang);
-            lua_setfield(lua, -2, __type_name);
-
-            char lang[4];
-            lang[0] = safe_char((char)desc[2]);
-            lang[1] = safe_char((char)desc[3]);
-            lang[2] = safe_char((char)desc[4]);
-            lang[3] = 0x00;
-
-            lua_pushstring(lua, lang);
-            lua_setfield(lua, -2, __lang);
-            break;
-        }
-        case 0x48:
-        { /* Service Descriptor */
-            lua_pushstring(lua, "service");
-            lua_setfield(lua, -2, __type_name);
-
-            lua_pushnumber(lua, desc[2]);
-            lua_setfield(lua, -2, "service_type_id");
-
-            desc += 3;
-            // service provider
-            if(desc[0] > 0)
-                push_description_text(desc);
-            else
-                lua_pushstring(lua, "");
-            lua_setfield(lua, -2, "service_provider");
-
-            desc += desc[0] + 1;
-            // service name
-            if(desc[0] > 0)
-                push_description_text(desc);
-            else
-                lua_pushstring(lua, "");
-            lua_setfield(lua, -2, "service_name");
-
-            break;
-        }
-        case 0x4D:
-        { /* Short Even */
-            lua_pushstring(lua, "short_event_descriptor");
-            lua_setfield(lua, -2, __type_name);
-
-            const char lang[] = { desc[2], desc[3], desc[4], 0x00 };
-            lua_pushstring(lua, lang);
-            lua_setfield(lua, -2, "lang");
-
-            desc += 5; // skip 1:tag + 1:length + 3:lang
-            push_description_text(desc);
-            lua_setfield(lua, -2, "event_name");
-
-            desc += desc[0] + 1;
-            push_description_text(desc);
-            lua_setfield(lua, -2, "text_char");
-
-            break;
-        }
-        case 0x4E:
-        { /* Extended Event */
-            lua_pushstring(lua, "extended_event_descriptor");
-            lua_setfield(lua, -2, __type_name);
-
-            lua_pushnumber(lua, desc[2] >> 4);
-            lua_setfield(lua, -2, "desc_num");
-
-            lua_pushnumber(lua, desc[2] & 0x0F);
-            lua_setfield(lua, -2, "last_desc_num");
-
-            const char lang[] = { desc[3], desc[4], desc[5], 0x00 };
-            lua_pushstring(lua, lang);
-            lua_setfield(lua, -2, "lang");
-
-            desc += 6; // skip 1:tag + 1:length + 1:desc_num:last_desc_num + 3:lang
-
-            if(desc[0] > 0)
-            {
-                lua_newtable(lua); // items[]
-
-                const uint8_t *_item_ptr = &desc[1];
-                const uint8_t *const _item_ptr_end = _item_ptr + desc[0];
-
-                while(_item_ptr < _item_ptr_end)
-                {
-                    const int item_count = luaL_len(lua, -1) + 1;
-                    lua_pushnumber(lua, item_count);
-
-                    lua_newtable(lua);
-
-                    push_description_text(_item_ptr);
-                    lua_setfield(lua, -2, "item_desc");
-                    _item_ptr += _item_ptr[0] + 1;
-
-                    push_description_text(_item_ptr);
-                    lua_setfield(lua, -2, "item");
-                    _item_ptr += _item_ptr[0] + 1;
-
-                    lua_settable(lua, -3);
-               }
-
-               lua_setfield(lua, -2, "items");
-            }
-
-            desc += desc[0] + 1;
-            // text
-            if(desc[0] > 0)
-                 push_description_text(desc);
-            else
-                 lua_pushstring(lua, "");
-            lua_setfield(lua, -2, "text");
-
-            break;
-        }
-        case 0x52:
-        { /* Stream Identifier */
-            static const char __stream_id[] = "stream_id";
-            lua_pushstring(lua, __stream_id);
-            lua_setfield(lua, -2, __type_name);
-
-            lua_pushnumber(lua, desc[2]);
-            lua_setfield(lua, -2, __stream_id);
-            break;
-        }
-        case 0x54:
-        { /* Content [category] */
-            lua_pushstring(lua, "content_descriptor");
-            lua_setfield(lua, -2, __type_name);
-
-            lua_newtable(lua); // items[]
-
-            const uint8_t *_item_ptr = &desc[2];
-            const uint8_t *const _item_ptr_end = _item_ptr + desc[1];
-
-            while(_item_ptr < _item_ptr_end)
-            {
-                const int item_count = luaL_len(lua, -1) + 1;
-                lua_pushnumber(lua, item_count);
-
-                lua_newtable(lua);
-
-                lua_pushnumber(lua, _item_ptr[0] >> 4);
-                lua_setfield(lua, -2, "cn_l1");
-                lua_pushnumber(lua, _item_ptr[0] & 0xF);
-                lua_setfield(lua, -2, "cn_l2");
-                lua_pushnumber(lua, _item_ptr[1] >> 4);
-                lua_setfield(lua, -2, "un_l1");
-                lua_pushnumber(lua, _item_ptr[1] & 0xF);
-                lua_setfield(lua, -2, "un_l2");
-
-                lua_settable(lua, -3);
-                _item_ptr += 2;
-            }
-            lua_setfield(lua, -2, "items");
-
-            break;
-        }
-        case 0x55:
-        { /* Parental Rating Descriptor [rating] */
-            lua_pushstring(lua, "parental_rating_descriptor");
-            lua_setfield(lua, -2, __type_name);
-
-            lua_newtable(lua); // items[]
-
-            const uint8_t *_item_ptr = &desc[2];
-            const uint8_t *const _item_ptr_end = _item_ptr + desc[1];
-
-            while(_item_ptr < _item_ptr_end)
-            {
-                const int item_count = luaL_len(lua, -1) + 1;
-                lua_pushnumber(lua, item_count);
-
-                const char country[] = { _item_ptr[0], _item_ptr[1], _item_ptr[2], 0x00 };
-                lua_pushstring(lua, country);
-                lua_setfield(lua, -2, "country");
-
-                lua_pushnumber(lua, _item_ptr[3]);
-                lua_setfield(lua, -2, "rating");
-
-                lua_settable(lua, -3);
-                _item_ptr += 4;
-            }
-            lua_setfield(lua, -2, "items");
-
-            break;
-        }
-        default:
+        const dvb_descriptor_t *const item = &known_descriptors[i];
+        if (item->type == type_id)
         {
-            lua_pushstring(lua, "unknown");
+            lua_pushstring(lua, item->name);
             lua_setfield(lua, -2, __type_name);
 
-            const int desc_size = 2 + desc[1];
-
-            char *text = fancy_hex_str(desc, desc_size);
-            lua_pushstring(lua, text);
-            free(text);
-
-            lua_setfield(lua, -2, __data);
-            break;
+            item->parser(desc);
+            return;
         }
     }
+
+    /* dump raw descriptor data */
+    lua_pushstring(lua, "unknown");
+    lua_setfield(lua, -2, __type_name);
+
+    desc_unknown(desc);
 }
