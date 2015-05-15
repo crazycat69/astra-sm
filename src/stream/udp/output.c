@@ -126,7 +126,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 
         if(ret == -1)
         {
-            if(errno == EAGAIN || errno == EWOULDBLOCK)
+            if(asc_socket_would_block())
             {
                 mod->can_send = false;
                 asc_socket_set_on_ready(mod->sock, on_ready);

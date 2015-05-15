@@ -107,6 +107,21 @@ const char * asc_socket_error(void)
     return buffer;
 }
 
+__asc_inline
+bool asc_socket_would_block(void)
+{
+#ifdef _WIN32
+    const int err = WSAGetLastError();
+    if (err == WSAEWOULDBLOCK)
+        return true;
+#else
+    if (errno == EAGAIN || errno == EWOULDBLOCK)
+        return true;
+#endif
+
+    return false;
+}
+
 /*
  *   ooooooo  oooooooooo ooooooooooo oooo   oooo
  * o888   888o 888    888 888    88   8888o  88
@@ -528,14 +543,8 @@ ssize_t asc_socket_send(asc_socket_t *sock, const void *buffer, size_t size)
     const ssize_t ret = send(sock->fd, buffer, size, 0);
     if(ret == -1)
     {
-#ifdef _WIN32
-        const int err = WSAGetLastError();
-        if(err == WSAEWOULDBLOCK)
+        if(asc_socket_would_block())
             return 0;
-#else
-        if(errno == EAGAIN || errno == EWOULDBLOCK)
-            return 0;
-#endif
     }
     return ret;
 }

@@ -32,6 +32,7 @@ void asc_socket_core_destroy(void);
 #endif /* _WIN32 */
 
 const char * asc_socket_error(void);
+bool asc_socket_would_block(void);
 
 asc_socket_t * asc_socket_open_tcp4(void * arg) __wur;
 asc_socket_t * asc_socket_open_udp4(void * arg) __wur;

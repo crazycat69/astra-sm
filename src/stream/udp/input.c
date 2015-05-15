@@ -87,10 +87,10 @@ static void on_read(void *arg)
 {
     module_data_t *mod = (module_data_t *)arg;
 
-    int len = asc_socket_recv(mod->sock, mod->buffer, UDP_BUFFER_SIZE);
+    ssize_t len = asc_socket_recv(mod->sock, mod->buffer, UDP_BUFFER_SIZE);
     if(len <= 0)
     {
-        if(len == 0 || errno == EAGAIN || errno == EWOULDBLOCK)
+        if(len == 0 || asc_socket_would_block())
             return;
 
         on_close(mod);
