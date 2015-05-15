@@ -1,17 +1,20 @@
+# binaries
 /src/astra
-/src/inscript/inscript.h
-/src/bindings.h
-/testcards/*.ts
-/testcards/*.wav
+/lua/luac
 /tests/t2mi_decap
 /tools/mkscript
 /tools/tonegen
-/lua/luac
 
-# binaries
+# generated files
+/src/bindings.h
+/src/inscript/inscript.h
+/testcards/*.ts
+/testcards/*.wav
+*.i
+
+# more binaries
 *.a
 *.exe
-*.i
 *.la
 *.lo
 *.luac
@@ -51,7 +54,9 @@ Makefile.in
 /src/config.h
 /src/config.h.in
 /src/stamp-h1
-/private/
 
 # autosave files
 *~
+
+# cat porn
+/private/

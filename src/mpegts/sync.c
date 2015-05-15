@@ -417,7 +417,7 @@ void mpegts_sync_loop(void *arg)
     }
 
     /* underflow correction */
-    unsigned int downtime;
+    unsigned int downtime = 0;
 
     if (sync->last_error)
     {
