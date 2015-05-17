@@ -1903,7 +1903,8 @@ void ca_loop(dvb_ca_t *ca, int is_data)
 
             pthread_mutex_lock(&ca->ca_mutex);
             asc_list_first(ca->ca_pmt_list_del);
-            uint16_t pnr = (uint16_t)(intptr_t)asc_list_data(ca->ca_pmt_list_del);
+            const void *item = asc_list_data(ca->ca_pmt_list_del);
+            const uint16_t pnr = (intptr_t)item;
             asc_list_remove_current(ca->ca_pmt_list_del);
 
             ca_pmt_t *ca_pmt = NULL;

@@ -131,6 +131,8 @@ case "${host_os}" in
             [], [Define to limit the scope of <windows.h>.])
         AC_DEFINE([__USE_MINGW_ANSI_STDIO],
             [1], [Define to use C99-compatible printf() with MinGW])
+        AC_DEFINE([__printf__],
+            [__gnu_printf__], [Don't use MS-style printf() format checks])
         AC_DEFINE([_WIN32_WINNT],
             [0x0501], [Require at least Windows XP])
 
@@ -707,24 +709,16 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wredundant-decls], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstack-protector], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstrict-aliasing], [WARN_CFLAGS])
-    AX_CHECK_CFLAG([-Wstrict-overflow=4], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstrict-prototypes], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wsync-nand], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wtrampolines], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wundef], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wuninitialized], [WARN_CFLAGS])
-    AX_CHECK_CFLAG([-Wunsafe-loop-optimizations], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wunused], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wuseless-cast], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wvector-operation-performance], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wwrite-strings], [WARN_CFLAGS])
-
-    AS_IF([test "${SYS}" = "mingw"], [
-        AX_CHECK_CFLAG([-Wno-format], [WARN_CFLAGS])
-        AX_CHECK_CFLAG([-Wno-pedantic-ms-format], [WARN_CFLAGS])
-    ], [
-        AX_CHECK_CFLAG([-Wformat=2], [WARN_CFLAGS])
-    ])
+    AX_CHECK_CFLAG([-Wformat=2], [WARN_CFLAGS])
 
     # GCC-specific
     AX_CHECK_CFLAG([-Wjump-misses-init], [WARN_CFLAGS])
@@ -737,9 +731,9 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
 AS_IF([test "x${compiler_lang}" = "xC++"], [
     AX_CHECK_CFLAG([-Wno-variadic-macros], [WARN_CFLAGS]) ])
 
-# Attribute suggestions
+# Less important warnings
 AC_ARG_ENABLE([suggestions],
-    AC_HELP_STRING([--enable-suggestions], [turn on -Wsuggest-*]))
+    AC_HELP_STRING([--enable-suggestions], [turn on non-vital warnings (e.g. -Wsuggest-*)]))
 
 AS_IF([test "x${enable_suggestions}" = "xyes"], [
     AX_CHECK_CFLAG([-Wsuggest-attribute=pure], [WARN_CFLAGS])
@@ -747,7 +741,12 @@ AS_IF([test "x${enable_suggestions}" = "xyes"], [
     AX_CHECK_CFLAG([-Wsuggest-attribute=noreturn], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wsuggest-attribute=format], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wmissing-format-attribute], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wunsafe-loop-optimizations], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wstrict-overflow=5], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-fipa-pure-const], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-fstrict-overflow])
+], [
+    AX_CHECK_CFLAG([-fwrapv])
 ])
 
 # -Werror build
@@ -762,7 +761,6 @@ AC_SUBST(WARN_CFLAGS)
 
 # Other flags
 AX_CHECK_CFLAG([-fstrict-aliasing])
-AX_CHECK_CFLAG([-fstrict-overflow])
 
 # Makefile generation
 AC_CONFIG_FILES([
@@ -862,7 +860,15 @@ AS_IF([test "x${enable_debug}" = "xyes"], [echo "yes"], [echo "no"])
 
 # extra warnings
 echo -n "Extra warnings:        "
-AS_IF([test "x${enable_warnings}" = "xyes"], [echo "yes"], [echo "no"])
+AS_IF([test "x${enable_warnings}" = "xyes"], [
+    echo -n "yes"
+    AS_IF([test "x${enable_suggestions}" = "xyes"], [
+        echo -n " (w/suggestions)"
+    ])
+    echo
+], [
+    echo "no"
+])
 
 # test coverage
 echo -n "Test coverage:         "

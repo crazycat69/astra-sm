@@ -97,7 +97,7 @@ static void on_read(void *arg)
         return;
     }
 
-    int i = 0;
+    ssize_t i = 0;
 
     if(mod->config.rtp)
     {
@@ -115,7 +115,7 @@ static void on_read(void *arg)
 
     if(i != len && !mod->is_error_message)
     {
-        asc_log_error(MSG("wrong stream format. drop %d bytes"), len - i);
+        asc_log_error(MSG("wrong stream format. drop %zd bytes"), len - i);
         mod->is_error_message = true;
     }
 }
