@@ -39,6 +39,8 @@
 #   endif
 #endif
 
+#define __func_pure __attribute__((__pure__))
+
 typedef struct string_buffer_t string_buffer_t;
 
 struct string_buffer_t
@@ -67,7 +69,7 @@ static void string_buffer_addchar(string_buffer_t *buffer, char c)
     ++last->size;
 }
 
-static const char * skip_sp(const char *source)
+static __func_pure const char * skip_sp(const char *source)
 {
     if(!source)
         return NULL;

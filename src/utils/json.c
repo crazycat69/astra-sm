@@ -166,7 +166,7 @@ static int json_encode(lua_State *L)
  *
  */
 
-static int skip_sp(const char *str, int pos)
+static __func_pure int skip_sp(const char *str, int pos)
 {
     do
     {
@@ -185,7 +185,7 @@ static int skip_sp(const char *str, int pos)
     } while(true);
 }
 
-static int skip_comment(const char *str, int pos)
+static __func_pure int skip_comment(const char *str, int pos)
 {
     char c;
     for(; (c = str[pos]) != '\0'; ++pos)

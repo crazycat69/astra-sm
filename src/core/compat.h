@@ -66,7 +66,7 @@ char *strndup(const char *str, size_t max);
 #endif
 
 #ifndef HAVE_STRNLEN
-size_t strnlen(const char *str, size_t max);
+size_t strnlen(const char *str, size_t max) __func_pure;
 #endif
 
 #endif /* _ASC_COMPAT_H_ */
