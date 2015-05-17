@@ -875,9 +875,7 @@ end
 -- o888ooooo88   88ooo88 o88o  o888o o888ooo88
 
 function astra_usage()
-    log.info(astra.fullname)
     print([[
-
 Usage: astra APP [OPTIONS]
 
 Available Applications:
@@ -889,6 +887,7 @@ Available Applications:
     --analyze           Astra Analyze is a MPEG-TS stream analyzer
     --dvbls             DVB Adapters information list
     --dvbwrite          Write out script containing adapter list
+    --femon             DVB frontend monitor
     SCRIPT              launch Astra script
 
 Astra Options:
@@ -906,12 +905,13 @@ Astra Options:
         print("Application Options:")
         print(_G.options_usage)
     end
-    astra.exit()
+
+    os.exit(0)
 end
 
 function astra_version()
-    log.info(astra.fullname)
-    astra.exit()
+    print(astra.fullname)
+    os.exit(0)
 end
 
 astra_options = {
