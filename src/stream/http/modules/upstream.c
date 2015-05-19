@@ -203,8 +203,8 @@ static void on_upstream_send(void *arg)
     client->response->buffer = (uint8_t *)malloc(client->response->buffer_size);
 
     // like module_stream_init()
-    client->response->__stream.self = (void *)client;
-    client->response->__stream.on_ts = (void (*)(module_data_t *, const uint8_t *))on_ts;
+    client->response->__stream.self = (module_data_t *)client;
+    client->response->__stream.on_ts = (stream_callback_t)on_ts;
     __module_stream_init(&client->response->__stream);
     __module_stream_attach(upstream, &client->response->__stream);
 

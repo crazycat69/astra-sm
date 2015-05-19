@@ -47,7 +47,7 @@ static bool cas_check_em(module_data_t *mod, mpegts_psi_t *em)
         {
             asc_list_for(mod->__cas.decrypt->cam->prov_list)
             {
-                uint8_t *sa = asc_list_data(mod->__cas.decrypt->cam->prov_list);
+                uint8_t *sa = (uint8_t *)asc_list_data(mod->__cas.decrypt->cam->prov_list);
                 if(!memcmp(&em->buffer[5], &sa[5], 3))
                     return true;
             }

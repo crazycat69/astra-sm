@@ -1,7 +1,7 @@
 /*
  * Astra Module: Remux (Service Information)
  *
- * Copyright (C) 2014, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2014-2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +19,7 @@
 
 #include "remux.h"
 
-#define LIST_APPEND(__list, __cnt, __val) \
+#define LIST_APPEND(__list, __cnt, __val, __type) \
     do { \
         bool __found = false; \
         for(size_t __i = 0; __i < __cnt; __i++) \
@@ -34,7 +34,7 @@
         { \
             void *const __tmp = realloc(__list, sizeof(*__list) * (__cnt + 1)); \
             asc_assert(__tmp != NULL, MSG("realloc() failed")); \
-            __list = __tmp; \
+            __list = (__type *)__tmp; \
             __list[__cnt++] = __val; \
         } \
     } while(0);
@@ -142,7 +142,7 @@ static void stream_reload(module_data_t *mod)
             pcr = pcr_stream_init(pid);
         }
 
-        LIST_APPEND(list, cnt, pcr);
+        LIST_APPEND(list, cnt, pcr, pcr_stream_t *);
     }
 
     for(size_t i = 0; i < mod->pcr_cnt; i++)
@@ -164,7 +164,7 @@ static void stream_reload(module_data_t *mod)
 
 void remux_pat(void *arg, mpegts_psi_t *psi)
 {
-    module_data_t *const mod = arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     /* check CRC */
     const uint32_t crc32 = PSI_GET_CRC32(psi);
@@ -217,7 +217,7 @@ void remux_pat(void *arg, mpegts_psi_t *psi)
                 prog->pnr = pnr;
             }
 
-            LIST_APPEND(list, cnt, prog);
+            LIST_APPEND(list, cnt, prog, ts_program_t *);
         }
         else if(!pnr && pid >= 16 && pid <= 31)
         {
@@ -256,7 +256,7 @@ void remux_pat(void *arg, mpegts_psi_t *psi)
 
 void remux_cat(void *arg, mpegts_psi_t *psi)
 {
-    module_data_t *const mod = arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     /* check CRC */
     const uint32_t crc32 = PSI_GET_CRC32(psi);
@@ -291,7 +291,7 @@ void remux_cat(void *arg, mpegts_psi_t *psi)
             continue;
 
         mod->stream[pid] = MPEGTS_PACKET_CA;
-        LIST_APPEND(list, cnt, pid);
+        LIST_APPEND(list, cnt, pid, uint16_t);
     }
 
     /* replace list pointer */
@@ -308,7 +308,7 @@ void remux_cat(void *arg, mpegts_psi_t *psi)
 
 void remux_sdt(void *arg, mpegts_psi_t *psi)
 {
-    module_data_t *const mod = arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     /*
      * TODO: options to alter SDT
@@ -327,7 +327,7 @@ void remux_sdt(void *arg, mpegts_psi_t *psi)
 
 void remux_pmt(void *arg, mpegts_psi_t *psi)
 {
-    module_data_t *const mod = arg;
+    module_data_t *const mod = (module_data_t *)arg;
     ts_program_t *const prog = ts_program_find(mod, psi->pid);
     if(!prog)
         /* stray PMT; shouldn't happen */
@@ -375,7 +375,7 @@ void remux_pmt(void *arg, mpegts_psi_t *psi)
 
             /* add ECM pid */
             mod->stream[ca_pid] = MPEGTS_PACKET_CA;
-            LIST_APPEND(list, cnt, ca_pid);
+            LIST_APPEND(list, cnt, ca_pid, uint16_t);
         }
     }
 
@@ -406,7 +406,7 @@ void remux_pmt(void *arg, mpegts_psi_t *psi)
 
                 /* add ECM pid */
                 mod->stream[ca_pid] = MPEGTS_PACKET_CA;
-                LIST_APPEND(list, cnt, ca_pid);
+                LIST_APPEND(list, cnt, ca_pid, uint16_t);
             }
             /* FIXME: ditto */
             else if(item_type == 0x06 && ts_type == MPEGTS_PACKET_DATA)
@@ -415,7 +415,7 @@ void remux_pmt(void *arg, mpegts_psi_t *psi)
 
         /* add elementary stream */
         mod->stream[pid] = ts_type;
-        LIST_APPEND(list, cnt, pid);
+        LIST_APPEND(list, cnt, pid, uint16_t);
 
         if(ts_type != MPEGTS_PACKET_DATA && !mod->pes[pid])
         {
@@ -447,7 +447,7 @@ void remux_pmt(void *arg, mpegts_psi_t *psi)
     {
         /* in case PCR is in its own pid */
         mod->stream[pcr_pid] = MPEGTS_PACKET_DATA;
-        LIST_APPEND(list, cnt, pcr_pid);
+        LIST_APPEND(list, cnt, pcr_pid, uint16_t);
 
         if(mod->pes[pcr_pid])
         {

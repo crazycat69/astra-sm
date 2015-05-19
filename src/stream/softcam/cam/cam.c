@@ -25,7 +25,7 @@ em_packet_t * module_cam_queue_pop(module_cam_t *cam)
     asc_list_first(cam->packet_queue);
     if(asc_list_eol(cam->packet_queue))
         return NULL;
-    em_packet_t *packet = asc_list_data(cam->packet_queue);
+    em_packet_t *packet = (em_packet_t *)asc_list_data(cam->packet_queue);
     asc_list_remove_current(cam->packet_queue);
     return packet;
 }
@@ -35,7 +35,7 @@ void module_cam_queue_flush(module_cam_t *cam, module_decrypt_t *decrypt)
     asc_list_first(cam->packet_queue);
     while(!asc_list_eol(cam->packet_queue))
     {
-        em_packet_t *packet = asc_list_data(cam->packet_queue);
+        em_packet_t *packet = (em_packet_t *)asc_list_data(cam->packet_queue);
         if(!decrypt || packet->decrypt == decrypt)
         {
             free(packet);
@@ -54,7 +54,7 @@ void module_cam_ready(module_cam_t *cam)
         ; !asc_list_eol(cam->decrypt_list)
         ; asc_list_next(cam->decrypt_list))
     {
-        module_decrypt_t *__decrypt = asc_list_data(cam->decrypt_list);
+        module_decrypt_t *__decrypt = (module_decrypt_t *)asc_list_data(cam->decrypt_list);
         on_cam_ready(__decrypt->self);
     }
 }
@@ -67,7 +67,7 @@ void module_cam_reset(module_cam_t *cam)
         ; !asc_list_eol(cam->decrypt_list)
         ; asc_list_next(cam->decrypt_list))
     {
-        module_decrypt_t *__decrypt = asc_list_data(cam->decrypt_list);
+        module_decrypt_t *__decrypt = (module_decrypt_t *)asc_list_data(cam->decrypt_list);
         on_cam_error(__decrypt->self);
     }
     for(  asc_list_first(cam->prov_list)

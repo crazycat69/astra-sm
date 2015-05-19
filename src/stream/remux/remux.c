@@ -359,7 +359,7 @@ static void module_init(module_data_t *mod)
     mod->custom_cat = mpegts_psi_init(MPEGTS_PACKET_CAT, 0x01);
     mod->custom_sdt = mpegts_psi_init(MPEGTS_PACKET_SDT, 0x11);
 
-    mod->pmt = mpegts_psi_init(0, 0);
+    mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, 0);
 
     /* pid list init */
     mod->stream[0x00] = MPEGTS_PACKET_PAT;

@@ -277,7 +277,7 @@ static void module_init(module_data_t *mod)
     else
 #endif
     {
-        mod->buffer = malloc(mod->buffer_size);
+        mod->buffer = (uint8_t *)malloc(mod->buffer_size);
     }
 
     int flags = O_CREAT | O_APPEND | O_WRONLY | O_BINARY;

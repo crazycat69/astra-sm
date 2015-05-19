@@ -163,7 +163,6 @@ asc_socket_t * asc_socket_open_sctp4(void * arg)
     __uarg(arg);
     asc_log_error("[core/socket] SCTP protocol is not available");
     astra_abort();
-    return NULL;
 #else
     return __socket_open(PF_INET, SOCK_STREAM, IPPROTO_SCTP, arg);
 #endif

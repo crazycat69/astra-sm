@@ -42,7 +42,7 @@ static bool cas_check_em(module_data_t *mod, mpegts_psi_t *em)
         {
             asc_list_for(mod->__cas.decrypt->cam->prov_list)
             {
-                const uint8_t *p = asc_list_data(mod->__cas.decrypt->cam->prov_list);
+                const uint8_t *p = (uint8_t *)asc_list_data(mod->__cas.decrypt->cam->prov_list);
                 if(memcmp(&p[3 + 4], &em->buffer[3], 4) == 0)
                     return true;
             }

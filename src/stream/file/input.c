@@ -382,7 +382,7 @@ static void module_init(module_data_t *mod)
     if(!module_option_number("buffer_size", &buffer_size) || buffer_size <= 0)
         buffer_size = INPUT_BUFFER_SIZE;
     mod->buffer_size = buffer_size * 1024 * 1024;
-    mod->buffer = malloc(mod->buffer_size);
+    mod->buffer = (uint8_t *)malloc(mod->buffer_size);
 
     bool check_length;
     if(module_option_boolean("check_length", &check_length) && check_length)

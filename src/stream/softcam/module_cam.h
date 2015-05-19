@@ -159,7 +159,7 @@ struct module_cas_t
     module_cas_t * CAS_INIT(_name)(module_decrypt_t *decrypt)                                   \
     {                                                                                           \
         if(!cas_check_caid(decrypt->cam->caid)) return NULL;                                    \
-        module_data_t *mod = calloc(1, sizeof(module_data_t));                                  \
+        module_data_t *mod = (module_data_t *)calloc(1, sizeof(*mod));                          \
         mod->__cas.self = mod;                                                                  \
         mod->__cas.decrypt = decrypt;                                                           \
         mod->__cas.check_descriptor = cas_check_descriptor;                                     \

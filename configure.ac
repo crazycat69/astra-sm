@@ -694,7 +694,6 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
 
     AX_CHECK_CFLAG([-Waggregate-return], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wbad-function-cast], [WARN_CFLAGS])
-    AX_CHECK_CFLAG([-Wcast-align], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wclobbered], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wdouble-promotion], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wfloat-equal], [WARN_CFLAGS])
@@ -743,6 +742,8 @@ AS_IF([test "x${enable_suggestions}" = "xyes"], [
     AX_CHECK_CFLAG([-Wmissing-format-attribute], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wunsafe-loop-optimizations], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstrict-overflow=5], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wcast-align], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wc++-compat], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-fipa-pure-const], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-fstrict-overflow])
 ], [

@@ -161,7 +161,7 @@ static int module_call(module_data_t *mod)
     client->on_send = on_downstream_send;
 
     // like module_stream_init()
-    client->response->__stream.self = (void *)client;
+    client->response->__stream.self = (module_data_t *)client;
     client->response->__stream.on_ts = NULL;
     __module_stream_init(&client->response->__stream);
 

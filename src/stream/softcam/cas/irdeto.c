@@ -155,7 +155,7 @@ static bool cas_check_descriptor(module_data_t *mod, const uint8_t *desc)
     if(!mod->sa)
     {
         asc_list_first(mod->__cas.decrypt->cam->prov_list);
-        mod->sa = asc_list_data(mod->__cas.decrypt->cam->prov_list);
+        mod->sa = (uint8_t *)asc_list_data(mod->__cas.decrypt->cam->prov_list);
         mod->sa = &mod->sa[3];
         mod->ua = mod->__cas.decrypt->cam->ua;
 

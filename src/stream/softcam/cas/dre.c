@@ -146,7 +146,7 @@ static bool cas_check_descriptor(module_data_t *mod, const uint8_t *desc)
 
         asc_list_for(mod->__cas.decrypt->cam->prov_list)
         {
-            uint8_t *prov = asc_list_data(mod->__cas.decrypt->cam->prov_list);
+            const uint8_t *prov = (uint8_t *)asc_list_data(mod->__cas.decrypt->cam->prov_list);
             if(prov[2])
             {
                 is_prov_ident = 1;

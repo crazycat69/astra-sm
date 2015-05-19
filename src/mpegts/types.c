@@ -30,43 +30,43 @@ const uint8_t null_ts[TS_PACKET_SIZE] = {
 };
 
 static const stream_type_t stream_types[256] = {
-    /* 0x00 */ { 0,                   NULL },
-    /* 0x01 */ { MPEGTS_PACKET_VIDEO, "MPEG-1 video, ISO/IEC 11172-2" },
-    /* 0x02 */ { MPEGTS_PACKET_VIDEO, "MPEG-2 video, ISO/IEC 13818-2" },
-    /* 0x03 */ { MPEGTS_PACKET_AUDIO, "MPEG-1 audio, ISO/IEC 11172-3" },
-    /* 0x04 */ { MPEGTS_PACKET_AUDIO, "MPEG-2 audio, ISO/IEC 13818-3" },
-    /* 0x05 */ { MPEGTS_PACKET_DATA,  "Private sections, ISO/IEC 13818-1" },
-    /* 0x06 */ { MPEGTS_PACKET_DATA,  "Private PES, ISO/IEC 13818-1" },
-    /* 0x07 */ { MPEGTS_PACKET_DATA,  "MHEG, ISO/IEC 13522-5" },
-    /* 0x08 */ { MPEGTS_PACKET_DATA,  "DSM-CC, ISO/IEC 13818-1" },
-    /* 0x09 */ { MPEGTS_PACKET_DATA,  "Auxiliary data, ISO/IEC 13818-1" },
-    /* 0x0a */ { MPEGTS_PACKET_DATA,  "DSM-CC multiprotocol encapsulation, ISO/IEC 13818-6" },
-    /* 0x0b */ { MPEGTS_PACKET_DATA,  "DSM-CC U-N messages, ISO/IEC 13818-6" },
-    /* 0x0c */ { MPEGTS_PACKET_DATA,  "DSM-CC stream descriptors, ISO/IEC 13818-6" },
-    /* 0x0d */ { MPEGTS_PACKET_DATA,  "DSM-CC sections, ISO/IEC 13818-6" },
-    /* 0x0e */ { MPEGTS_PACKET_DATA,  "Auxiliary data, ISO/IEC 13818-1" },
-    /* 0x0f */ { MPEGTS_PACKET_AUDIO, "ADTS AAC, ISO/IEC 13818-7" },
-    /* 0x10 */ { MPEGTS_PACKET_VIDEO, "MPEG-4 Part 2, ISO/IEC 14496-2" },
-    /* 0x11 */ { MPEGTS_PACKET_AUDIO, "LATM AAC, ISO/IEC 14496-3" },
-    /* 0x12 */ { MPEGTS_PACKET_DATA,  "MPEG-4 FlexMux PES, ISO/IEC 14496-1" },
-    /* 0x13 */ { MPEGTS_PACKET_DATA,  "MPEG-4 FlexMux sections, ISO/IEC 14496-1" },
-    /* 0x14 */ { MPEGTS_PACKET_DATA,  "DSM-CC Synchronized Download Protocol, ISO/IEC 13818-6" },
-    /* 0x15 */ { MPEGTS_PACKET_DATA,  "Metadata in PES" },
-    /* 0x16 */ { MPEGTS_PACKET_DATA,  "Metadata in sections" },
-    /* 0x17 */ { MPEGTS_PACKET_DATA,  "DSM-CC Data Carousel metadata, ISO/IEC 13818-6" },
-    /* 0x18 */ { MPEGTS_PACKET_DATA,  "DSM-CC Object Carousel metadata, ISO/IEC 13818-6" },
-    /* 0x19 */ { MPEGTS_PACKET_DATA,  "DSM-CC Synchronized Download Protocol metadata, ISO/IEC 13818-6" },
-    /* 0x1a */ { MPEGTS_PACKET_DATA,  "MPEG-2 IPMP stream, ISO/IEC 13818-11" },
-    /* 0x1b */ { MPEGTS_PACKET_VIDEO, "MPEG-4 AVC/H.264, ISO/IEC 14496-10" },
-    /* 0x1c */ { 0,                   NULL },
-    /* 0x1d */ { 0,                   NULL },
-    /* 0x1e */ { 0,                   NULL },
-    /* 0x1f */ { 0,                   NULL },
-    /* 0x20 */ { 0,                   NULL },
-    /* 0x21 */ { 0,                   NULL },
-    /* 0x22 */ { 0,                   NULL },
-    /* 0x23 */ { 0,                   NULL },
-    /* 0x24 */ { MPEGTS_PACKET_VIDEO, "HEVC/H.265, ISO/IEC 23008-2" },
+    /* 0x00 */ { MPEGTS_PACKET_UNKNOWN, NULL },
+    /* 0x01 */ { MPEGTS_PACKET_VIDEO,   "MPEG-1 video, ISO/IEC 11172-2" },
+    /* 0x02 */ { MPEGTS_PACKET_VIDEO,   "MPEG-2 video, ISO/IEC 13818-2" },
+    /* 0x03 */ { MPEGTS_PACKET_AUDIO,   "MPEG-1 audio, ISO/IEC 11172-3" },
+    /* 0x04 */ { MPEGTS_PACKET_AUDIO,   "MPEG-2 audio, ISO/IEC 13818-3" },
+    /* 0x05 */ { MPEGTS_PACKET_DATA,    "Private sections, ISO/IEC 13818-1" },
+    /* 0x06 */ { MPEGTS_PACKET_DATA,    "Private PES, ISO/IEC 13818-1" },
+    /* 0x07 */ { MPEGTS_PACKET_DATA,    "MHEG, ISO/IEC 13522-5" },
+    /* 0x08 */ { MPEGTS_PACKET_DATA,    "DSM-CC, ISO/IEC 13818-1" },
+    /* 0x09 */ { MPEGTS_PACKET_DATA,    "Auxiliary data, ISO/IEC 13818-1" },
+    /* 0x0a */ { MPEGTS_PACKET_DATA,    "DSM-CC multiprotocol encapsulation, ISO/IEC 13818-6" },
+    /* 0x0b */ { MPEGTS_PACKET_DATA,    "DSM-CC U-N messages, ISO/IEC 13818-6" },
+    /* 0x0c */ { MPEGTS_PACKET_DATA,    "DSM-CC stream descriptors, ISO/IEC 13818-6" },
+    /* 0x0d */ { MPEGTS_PACKET_DATA,    "DSM-CC sections, ISO/IEC 13818-6" },
+    /* 0x0e */ { MPEGTS_PACKET_DATA,    "Auxiliary data, ISO/IEC 13818-1" },
+    /* 0x0f */ { MPEGTS_PACKET_AUDIO,   "ADTS AAC, ISO/IEC 13818-7" },
+    /* 0x10 */ { MPEGTS_PACKET_VIDEO,   "MPEG-4 Part 2, ISO/IEC 14496-2" },
+    /* 0x11 */ { MPEGTS_PACKET_AUDIO,   "LATM AAC, ISO/IEC 14496-3" },
+    /* 0x12 */ { MPEGTS_PACKET_DATA,    "MPEG-4 FlexMux PES, ISO/IEC 14496-1" },
+    /* 0x13 */ { MPEGTS_PACKET_DATA,    "MPEG-4 FlexMux sections, ISO/IEC 14496-1" },
+    /* 0x14 */ { MPEGTS_PACKET_DATA,    "DSM-CC Synchronized Download Protocol, ISO/IEC 13818-6" },
+    /* 0x15 */ { MPEGTS_PACKET_DATA,    "Metadata in PES" },
+    /* 0x16 */ { MPEGTS_PACKET_DATA,    "Metadata in sections" },
+    /* 0x17 */ { MPEGTS_PACKET_DATA,    "DSM-CC Data Carousel metadata, ISO/IEC 13818-6" },
+    /* 0x18 */ { MPEGTS_PACKET_DATA,    "DSM-CC Object Carousel metadata, ISO/IEC 13818-6" },
+    /* 0x19 */ { MPEGTS_PACKET_DATA,    "DSM-CC Synchronized Download Protocol metadata, ISO/IEC 13818-6" },
+    /* 0x1a */ { MPEGTS_PACKET_DATA,    "MPEG-2 IPMP stream, ISO/IEC 13818-11" },
+    /* 0x1b */ { MPEGTS_PACKET_VIDEO,   "MPEG-4 AVC/H.264, ISO/IEC 14496-10" },
+    /* 0x1c */ { MPEGTS_PACKET_UNKNOWN, NULL },
+    /* 0x1d */ { MPEGTS_PACKET_UNKNOWN, NULL },
+    /* 0x1e */ { MPEGTS_PACKET_UNKNOWN, NULL },
+    /* 0x1f */ { MPEGTS_PACKET_UNKNOWN, NULL },
+    /* 0x20 */ { MPEGTS_PACKET_UNKNOWN, NULL },
+    /* 0x21 */ { MPEGTS_PACKET_UNKNOWN, NULL },
+    /* 0x22 */ { MPEGTS_PACKET_UNKNOWN, NULL },
+    /* 0x23 */ { MPEGTS_PACKET_UNKNOWN, NULL },
+    /* 0x24 */ { MPEGTS_PACKET_VIDEO,   "HEVC/H.265, ISO/IEC 23008-2" },
 };
 
 static const stream_type_t reserved_stream[] = {
@@ -83,8 +83,8 @@ const stream_type_t *mpegts_stream_type(uint8_t type_id)
 
     if (st->pkt_type == 0)
     {
-        const bool private = type_id & 0x80;
-        return &reserved_stream[private];
+        const bool user_private = type_id & 0x80;
+        return &reserved_stream[user_private];
     }
 
     return st;
@@ -108,6 +108,7 @@ mpegts_packet_type_t mpegts_priv_type(uint8_t desc_type)
     }
 }
 
+__asc_inline
 const char *mpegts_type_name(mpegts_packet_type_t type)
 {
     switch(type)

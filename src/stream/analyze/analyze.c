@@ -378,7 +378,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
         if(!mod->stream[pid])
             mod->stream[pid] = (analyze_item_t *)calloc(1, sizeof(analyze_item_t));
 
-        const stream_type_t *st = mpegts_stream_type(type);
+        const stream_type_t *const st = mpegts_stream_type(type);
         mod->stream[pid]->type = st->pkt_type;
 
         lua_pushnumber(lua, pid);

@@ -1,7 +1,7 @@
 /*
  * Astra Module: Remux (Utilities)
  *
- * Copyright (C) 2014, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2014-2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,7 @@
  */
 ts_program_t *ts_program_init(uint16_t pnr, uint16_t pid)
 {
-    ts_program_t *const prog = calloc(1, sizeof(*prog));
+    ts_program_t *const prog = (ts_program_t *)calloc(1, sizeof(*prog));
     asc_assert(prog != NULL, MSGF("calloc() failed"));
 
     prog->pnr = pnr;
@@ -61,7 +61,7 @@ void ts_program_destroy(ts_program_t *p)
  */
 pcr_stream_t *pcr_stream_init(uint16_t pid)
 {
-    pcr_stream_t *const st = calloc(1, sizeof(*st));
+    pcr_stream_t *const st = (pcr_stream_t *)calloc(1, sizeof(*st));
     asc_assert(st != NULL, MSGF("calloc() failed"));
 
     st->pid = pid;

@@ -99,19 +99,19 @@ static void on_websocket_send(void *arg)
     const char *str = lua_tostring(lua, 3);
     const int str_size = luaL_len(lua, 3);
 
-    frame_t *frame = malloc(sizeof(frame_t));
+    frame_t *frame = (frame_t *)malloc(sizeof(*frame));
 
     if(str_size <= 125)
     {
         frame->size = FRAME_HEADER_SIZE;
-        frame->buffer = malloc(frame->size + str_size);
+        frame->buffer = (uint8_t *)malloc(frame->size + str_size);
 
         frame->buffer[1] = str_size & 0xFF;
     }
     else if(str_size <= 0xFFFF)
     {
         frame->size = FRAME_HEADER_SIZE + FRAME_SIZE16_SIZE;
-        frame->buffer = malloc(frame->size + str_size);
+        frame->buffer = (uint8_t *)malloc(frame->size + str_size);
 
         frame->buffer[1] = 126;
         frame->buffer[2] = (str_size >> 8) & 0xFF;
@@ -120,7 +120,7 @@ static void on_websocket_send(void *arg)
     else
     {
         frame->size = FRAME_HEADER_SIZE + FRAME_SIZE64_SIZE;
-        frame->buffer = malloc(frame->size + str_size);
+        frame->buffer = (uint8_t *)malloc(frame->size + str_size);
 
         frame->buffer[1] = 127;
         frame->buffer[2] = 0;
@@ -377,7 +377,7 @@ static int module_call(module_data_t *mod)
 
     lua_pop(lua, 2); // request + headers
 
-    client->response = calloc(1, sizeof(http_response_t));
+    client->response = (http_response_t *)calloc(1, sizeof(*client->response));
     client->response->mod = mod;
     client->response->frame_queue = asc_list_init();
     client->on_send = on_websocket_send;

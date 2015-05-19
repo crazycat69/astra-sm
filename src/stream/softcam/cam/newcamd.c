@@ -158,7 +158,7 @@ static uint8_t xor_sum(const uint8_t *mem, int len)
 
 static void on_timeout(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     asc_timer_destroy(mod->timeout);
     mod->timeout = NULL;
@@ -181,7 +181,7 @@ static void on_timeout(void *arg)
 
 static void on_newcamd_close(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     if(!mod->sock)
         return;
@@ -234,7 +234,7 @@ static void on_newcamd_close(void *arg)
 
 static void on_newcamd_ready(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     memset(mod->buffer, 0, NEWCAMD_HEADER_SIZE);
 
@@ -319,7 +319,7 @@ static void on_newcamd_ready(void *arg)
 
 static void on_newcamd_read_packet(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     if(mod->buffer_skip < 2)
     {
@@ -511,7 +511,7 @@ static void on_newcamd_read_packet(void *arg)
         static const int info_size = 3 + 8; /* ident + sa */
 
         free(mod->prov_buffer);
-        mod->prov_buffer = calloc(prov_count, info_size);
+        mod->prov_buffer = (uint8_t *)calloc(prov_count, info_size);
 
         for(int i = 0; i < prov_count; i++)
         {
@@ -533,7 +533,7 @@ static void on_newcamd_read_packet(void *arg)
 
 static void on_newcamd_read_init(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     const ssize_t len = asc_socket_recv(  mod->sock
                                         , &mod->buffer[mod->buffer_skip]
@@ -575,7 +575,7 @@ static void on_newcamd_read_init(void *arg)
 
 static void on_newcamd_connect(void *arg)
 {
-    module_data_t *mod = arg;
+    module_data_t *mod = (module_data_t *)arg;
 
     mod->status = 1;
 
@@ -637,7 +637,7 @@ static void newcamd_send_em(  module_data_t *mod
         return;
     }
 
-    em_packet_t *packet = malloc(sizeof(em_packet_t));
+    em_packet_t *packet = (em_packet_t *)malloc(sizeof(*packet));
     memcpy(packet->buffer, buffer, size);
     packet->buffer_size = size;
     packet->decrypt = decrypt;
@@ -647,7 +647,7 @@ static void newcamd_send_em(  module_data_t *mod
     {
         asc_list_for(mod->__cam.packet_queue)
         {
-            em_packet_t *queue_item = asc_list_data(mod->__cam.packet_queue);
+            em_packet_t *queue_item = (em_packet_t *)asc_list_data(mod->__cam.packet_queue);
             if(   queue_item->decrypt == decrypt
                && queue_item->arg == arg
                && (queue_item->buffer[0] == 0x80 || queue_item->buffer[0] == 0x81))
