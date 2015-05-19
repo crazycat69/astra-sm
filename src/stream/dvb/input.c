@@ -586,11 +586,11 @@ static void module_options_t(module_data_t *mod)
         else if(!strcasecmp(string_val, "2K")) mod->fe->transmitmode = TRANSMISSION_MODE_2K;
         else if(!strcasecmp(string_val, "8K")) mod->fe->transmitmode = TRANSMISSION_MODE_8K;
         else if(!strcasecmp(string_val, "4K")) mod->fe->transmitmode = TRANSMISSION_MODE_4K;
-#if DVB_API >= 503
+#ifdef HAVE_DVBAPI_T2
         else if(!strcasecmp(string_val, "1K")) mod->fe->transmitmode = TRANSMISSION_MODE_1K;
         else if(!strcasecmp(string_val, "16K")) mod->fe->transmitmode = TRANSMISSION_MODE_16K;
         else if(!strcasecmp(string_val, "32K")) mod->fe->transmitmode = TRANSMISSION_MODE_32K;
-#endif
+#endif /* HAVE_DVBAPI_T2 */
         else
             option_unknown_type(mod, __transmitmode, string_val);
     }
@@ -683,15 +683,13 @@ static void module_options(module_data_t *mod)
         mod->fe->type = DVB_TYPE_T;
         mod->fe->delivery_system = SYS_DVBT;
     }
-#if DVB_API >= 503
+#ifdef HAVE_DVBAPI_T2
     else if(!strcasecmp(string_val, "T2"))
     {
         mod->fe->type = DVB_TYPE_T;
         mod->fe->delivery_system = SYS_DVBT2;
     }
-#else
-#   warning "DVB-T2 Disabled. DVB-API < 5.3"
-#endif
+#endif /* HAVE_DVBAPI_T2 */
     else if(!strcasecmp(string_val, "C"))
     {
         mod->fe->type = DVB_TYPE_C;
@@ -707,7 +705,6 @@ static void module_options(module_data_t *mod)
         mod->fe->type = DVB_TYPE_C;
         mod->fe->delivery_system = SYS_DVBC_ANNEX_B;
     }
-#if DVB_API >= 506
     else if(!strcasecmp(string_val, "C/A"))
     {
         mod->fe->type = DVB_TYPE_C;
@@ -718,18 +715,6 @@ static void module_options(module_data_t *mod)
         mod->fe->type = DVB_TYPE_C;
         mod->fe->delivery_system = SYS_DVBC_ANNEX_C;
     }
-#else
-    else if(!strcasecmp(string_val, "C/A"))
-    {
-        mod->fe->type = DVB_TYPE_C;
-        mod->fe->delivery_system = SYS_DVBC_ANNEX_AC;
-    }
-    else if(!strcasecmp(string_val, "C/C"))
-    {
-        mod->fe->type = DVB_TYPE_C;
-        mod->fe->delivery_system = SYS_DVBC_ANNEX_AC;
-    }
-#endif
     else if(!strcasecmp(string_val, "ATSC"))
     {
         mod->fe->type = DVB_TYPE_ATSC;

@@ -35,7 +35,7 @@ ssize_t pread(int fd, void *buffer, size_t size, off_t off)
 char *strndup(const char *str, size_t max)
 {
     size_t len = strnlen(str, max);
-    char *res = malloc(len + 1);
+    char *res = (char *)malloc(len + 1);
     if (res)
     {
         memcpy(res, str, len);

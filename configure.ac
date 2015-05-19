@@ -550,6 +550,47 @@ AC_PREPROC_IFELSE([
     AC_MSG_RESULT([yes])
     AC_DEFINE([HAVE_DVBAPI], [1], [Define to 1 if you have a usable DVB API])
 
+    # DVB-T2 (DVB API >= 5.3)
+    have_dvbapi_t2="no"
+    AC_MSG_CHECKING([for DVB-T2 support])
+    AC_COMPILE_IFELSE([
+        AC_LANG_PROGRAM([[
+            #include <linux/dvb/frontend.h>
+        ]], [[
+            fe_delivery_system_t sys = SYS_DVBT2;
+            fe_transmit_mode_t tm;
+            tm = TRANSMISSION_MODE_1K;
+            tm = TRANSMISSION_MODE_16K;
+            tm = TRANSMISSION_MODE_32K;
+        ]])
+    ], [
+        AC_MSG_RESULT([yes])
+        AC_DEFINE([HAVE_DVBAPI_T2], [1], [Define to 1 if your system supports DVB-T2])
+        have_dvbapi_t2="yes"
+    ], [
+        AC_MSG_RESULT([no])
+    ])
+    AS_IF([test "x${have_dvbapi_t2}" = "xno"], [
+        AC_MSG_WARN([DVB API 5.3 or higher required for DVB-T2 support]) ])
+
+    # DVB-C annex A/C defines (DVB API >= 5.6)
+    AC_MSG_CHECKING([DVB-C annex A/C definitions])
+    AC_COMPILE_IFELSE([
+        AC_LANG_PROGRAM([[
+            #include <linux/dvb/frontend.h>
+        ]], [[
+            fe_delivery_system_t sys;
+            sys = SYS_DVBC_ANNEX_A;
+            sys = SYS_DVBC_ANNEX_C;
+        ]])
+    ], [
+        AC_MSG_RESULT([separate A and C])
+        AC_DEFINE([HAVE_DVBAPI_C_ANNEX_AC], [1],
+            [Define to 1 if you have separate constants for DVB-C annex A and C])
+    ], [
+        AC_MSG_RESULT([single constant])
+    ])
+
     have_dvbapi="yes"
 ], [
     AC_MSG_RESULT([no])
@@ -820,8 +861,12 @@ AS_IF([test "x${have_aio}" = "xyes"], [
 
 # dvb api
 echo -n "Linux DVB API:         "
-AS_IF([test "x${have_dvbapi}" = "xyes"],
-    [echo "yes"], [echo "no"])
+AS_IF([test "x${have_dvbapi}" = "xyes"], [
+    AS_IF([test "x${have_dvbapi_t2}" = "xyes"],
+        [echo "yes"], [echo "old version (no DVB-T2)"])
+], [
+    echo "no"
+])
 
 # inscript
 echo -n "Built-in scripts:      "
