@@ -28,12 +28,12 @@ uint8_t * str_to_hex(const char *str, uint8_t *hex, int len);
 
 /* crc8.c */
 
-uint8_t crc8(const uint8_t *buffer, size_t len) __func_pure;
+uint8_t crc8(const uint8_t *buffer, size_t len) __func_pure __wur;
 
 /* crc32b.c */
 
 #define CRC32_SIZE 4
-uint32_t crc32b(const uint8_t *buffer, int size) __func_pure;
+uint32_t crc32b(const uint8_t *buffer, int size) __func_pure __wur;
 
 /* sha1.c */
 
@@ -52,8 +52,8 @@ void sha1_final(sha1_ctx_t *context, uint8_t digest[SHA1_DIGEST_SIZE]);
 
 /* base64.c */
 
-char * base64_encode(const void *in, size_t in_size, size_t *out_size);
-void * base64_decode(const char *in, size_t in_size, size_t *out_size);
+char *base64_encode(const void *in, size_t in_size, size_t *out_size) __wur;
+void *base64_decode(const char *in, size_t in_size, size_t *out_size) __wur;
 
 /* md5.c */
 
@@ -74,6 +74,6 @@ void md5_crypt(const char *pw, const char *salt, char passwd[36]);
 
 /* iso8859.c */
 
-char * iso8859_decode(const uint8_t *data, size_t size);
+char *iso8859_decode(const uint8_t *data, size_t size) __wur;
 
 #endif /* _ASTRA_UTILS_H_ */

@@ -56,7 +56,7 @@ typedef struct
 
 typedef void (*psi_callback_t)(void *, mpegts_psi_t *);
 
-mpegts_psi_t * mpegts_psi_init(mpegts_packet_type_t type, uint16_t pid);
+mpegts_psi_t * mpegts_psi_init(mpegts_packet_type_t type, uint16_t pid) __wur;
 void mpegts_psi_destroy(mpegts_psi_t *psi);
 
 void mpegts_psi_mux(mpegts_psi_t *psi, const uint8_t *ts, psi_callback_t callback, void *arg);

@@ -185,7 +185,7 @@ struct mpegts_pes_t
     ts_callback_t on_ts;
 };
 
-mpegts_pes_t *mpegts_pes_init(uint16_t pid);
+mpegts_pes_t *mpegts_pes_init(uint16_t pid) __wur;
 void mpegts_pes_destroy(mpegts_pes_t *pes);
 
 bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts);

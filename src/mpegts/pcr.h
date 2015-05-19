@@ -91,6 +91,6 @@
     TS_SET_PCR_FIELDS(__x, ((__v) / 300), ((__v) % 300));
 
 /* usecs between two PCR values */
-uint64_t mpegts_pcr_block_us(uint64_t *pcr_last, const uint64_t *pcr_current);
+uint64_t mpegts_pcr_block_us(uint64_t *pcr_last, const uint64_t *pcr_current) __wur;
 
 #endif /* _TS_PCR_ */

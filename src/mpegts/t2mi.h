@@ -25,7 +25,7 @@
 
 typedef struct mpegts_t2mi_t mpegts_t2mi_t;
 
-mpegts_t2mi_t *mpegts_t2mi_init(void);
+mpegts_t2mi_t *mpegts_t2mi_init(void) __wur;
 void mpegts_t2mi_destroy(mpegts_t2mi_t *mi);
 
 void mpegts_t2mi_set_fname(mpegts_t2mi_t *mi, const char *format, ...) __fmt_printf(2, 3);

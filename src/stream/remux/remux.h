@@ -43,8 +43,8 @@ typedef struct
     size_t pid_cnt;
 } ts_program_t;
 
-ts_program_t *ts_program_init(uint16_t pnr, uint16_t pid);
-ts_program_t *ts_program_find(const module_data_t *mod, uint16_t pid) __func_pure;
+ts_program_t *ts_program_init(uint16_t pnr, uint16_t pid) __wur;
+ts_program_t *ts_program_find(const module_data_t *mod, uint16_t pid) __func_pure __wur;
 void ts_program_destroy(ts_program_t *p);
 
 /*

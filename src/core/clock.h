@@ -22,7 +22,7 @@
 #ifndef _ASC_CLOCK_H_
 #define _ASC_CLOCK_H_ 1
 
-uint64_t asc_utime(void);
+uint64_t asc_utime(void) __wur;
 void asc_usleep(uint64_t usec);
 
 #endif /* _ASC_CLOCK_H_ */
