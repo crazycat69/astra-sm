@@ -977,7 +977,7 @@ function astra_parse_options(idx)
         local next_idx = set_option(idx)
         if next_idx == -1 then
             print("unknown option: " .. argv[idx])
-            astra.exit()
+            os.exit(1)
         end
         idx = next_idx
     end
