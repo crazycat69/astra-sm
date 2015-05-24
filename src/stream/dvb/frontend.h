@@ -29,8 +29,6 @@
 
 typedef struct dvb_fe_t dvb_fe_t;
 
-#define FE_MODULATION_NONE 0xFFFF
-
 typedef enum
 {
     DVB_TYPE_UNKNOWN = 0,
@@ -51,6 +49,7 @@ struct dvb_fe_t
     /* FE Config */
     fe_delivery_system_t delivery_system;
     fe_modulation_t modulation;
+    bool default_modulation;
 
     int frequency;
     int symbolrate;

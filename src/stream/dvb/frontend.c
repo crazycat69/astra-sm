@@ -320,7 +320,7 @@ static void fe_tune_s(dvb_fe_t *fe)
     DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_SYMBOL_RATE,       fe->symbolrate);
     DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_INNER_FEC,         fe->fec);
     DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_INVERSION,         INVERSION_AUTO);
-    if(fe->modulation != FE_MODULATION_NONE)
+    if(!fe->default_modulation)
     {
         DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_MODULATION,    fe->modulation);
     }
@@ -364,8 +364,11 @@ static void fe_tune_t(dvb_fe_t *fe)
     DTV_PROPERTY_BEGIN(cmdseq, cmdlist);
     DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_DELIVERY_SYSTEM,   fe->delivery_system);
     DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_FREQUENCY,         fe->frequency);
-    DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_MODULATION,        fe->modulation);
     DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_INVERSION,         INVERSION_AUTO);
+    if(!fe->default_modulation)
+    {
+        DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_MODULATION,    fe->modulation);
+    }
 
     switch(fe->bandwidth)
     {
@@ -418,8 +421,11 @@ static void fe_tune_c(dvb_fe_t *fe)
     DTV_PROPERTY_BEGIN(cmdseq, cmdlist);
     DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_DELIVERY_SYSTEM,   fe->delivery_system);
     DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_FREQUENCY,         fe->frequency);
-    DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_MODULATION,        fe->modulation);
     DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_INVERSION,         INVERSION_AUTO);
+    if(!fe->default_modulation)
+    {
+        DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_MODULATION,    fe->modulation);
+    }
 
     DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_SYMBOL_RATE,       fe->symbolrate);
     DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_INNER_FEC,         fe->fec);
@@ -450,8 +456,11 @@ static void fe_tune_atsc(dvb_fe_t *fe)
     DTV_PROPERTY_BEGIN(cmdseq, cmdlist);
     DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_DELIVERY_SYSTEM,   fe->delivery_system);
     DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_FREQUENCY,         fe->frequency);
-    DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_MODULATION,        fe->modulation);
     DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_INVERSION,         INVERSION_AUTO);
+    if(!fe->default_modulation)
+    {
+        DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_MODULATION,    fe->modulation);
+    }
 
     DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_TUNE,              0);
 

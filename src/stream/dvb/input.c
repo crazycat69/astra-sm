@@ -742,7 +742,7 @@ static void module_options(module_data_t *mod)
     static const char __modulation[] = "modulation";
     if(module_option_string(__modulation, &string_val, NULL))
     {
-        if(!strcasecmp(string_val, "NONE")) mod->fe->modulation = FE_MODULATION_NONE;
+        if(!strcasecmp(string_val, "NONE")) mod->fe->default_modulation = true;
         else if(!strcasecmp(string_val, "QPSK")) mod->fe->modulation = QPSK;
         else if(!strcasecmp(string_val, "QAM16")) mod->fe->modulation = QAM_16;
         else if(!strcasecmp(string_val, "QAM32")) mod->fe->modulation = QAM_32;
@@ -760,7 +760,7 @@ static void module_options(module_data_t *mod)
             option_unknown_type(mod, __modulation, string_val);
     }
     else
-        mod->fe->modulation = FE_MODULATION_NONE;
+        mod->fe->default_modulation = true;
 
     mod->fe->timeout = 5;
     module_option_number("timeout", &mod->fe->timeout);
