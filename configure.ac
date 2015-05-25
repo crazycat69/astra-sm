@@ -759,6 +759,10 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wvector-operation-performance], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wwrite-strings], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wformat=2], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wc++-compat], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wdisabled-optimization], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Winvalid-pch], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wshadow], [WARN_CFLAGS])
 
     # GCC-specific
     AX_CHECK_CFLAG([-Wjump-misses-init], [WARN_CFLAGS])
@@ -784,7 +788,6 @@ AS_IF([test "x${enable_suggestions}" = "xyes"], [
     AX_CHECK_CFLAG([-Wunsafe-loop-optimizations], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstrict-overflow=5], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wcast-align], [WARN_CFLAGS])
-    AX_CHECK_CFLAG([-Wc++-compat], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-fipa-pure-const], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-fstrict-overflow])
 ], [

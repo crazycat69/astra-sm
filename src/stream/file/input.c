@@ -241,7 +241,7 @@ static void thread_loop(void *arg)
         if(block_time == 0 || block_time > 500000)
         {
             asc_log_error(  MSG("block time out of range: %" PRIu64 "ms block_size: %zu")
-                          , (uint64_t)(block_time / 1000), block_size);
+                          , block_time / 1000, block_size);
             mod->buffer_skip += block_size;
 
             reset = true;
