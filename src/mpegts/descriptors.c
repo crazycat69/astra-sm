@@ -55,23 +55,32 @@ static void push_description_text(const uint8_t *data)
     luaL_pushresult(&b);
 }
 
-static inline char safe_char(char c)
+static char *strncpy_print(char *dest, const uint8_t *src, size_t len)
 {
-    return (c > 0x1f && c < 0x7f) ? c : '.';
+    char *p = dest;
+
+    for (size_t i = 0; i < len; i++)
+    {
+        const char c = src[i];
+        *(p++) = (c > 0x1f && c < 0x7f) ? c : '.';
+    }
+    *p = '\0';
+
+    return dest;
 }
 
-static char *fancy_hex_str(const uint8_t *ptr, const uint8_t len)
+static char *fancy_hex_str(const uint8_t *ptr, size_t len)
 {
     char *buf = (char *)calloc(1, HEX_BUFSIZE);
     asc_assert(buf != NULL, "calloc() failed");
 
-    unsigned int pos = 0;
+    size_t pos = 0;
     buf[pos++] = '0';
     buf[pos++] = 'x';
 
-    for(unsigned int i = 0; i < len; i++)
+    for (size_t i = 0; i < len; i++)
     {
-        const unsigned int space = HEX_BUFSIZE - pos;
+        const size_t space = HEX_BUFSIZE - pos;
 
         if (space <= sizeof(__strip))
         {
@@ -128,10 +137,7 @@ DESC_FUNCTION(cas)
 DESC_FUNCTION(lang)
 {
     char lang[4];
-    lang[0] = safe_char((char)desc[2]);
-    lang[1] = safe_char((char)desc[3]);
-    lang[2] = safe_char((char)desc[4]);
-    lang[3] = 0x00;
+    strncpy_print(lang, &desc[2], 3);
 
     lua_pushstring(lua, lang);
     lua_setfield(lua, -2, "lang");
@@ -170,7 +176,8 @@ DESC_FUNCTION(service)
 
 DESC_FUNCTION(short_event)
 {
-    const char lang[] = { desc[2], desc[3], desc[4], 0x00 };
+    char lang[4];
+    strncpy_print(lang, &desc[2], 3);
     lua_pushstring(lua, lang);
     lua_setfield(lua, -2, "lang");
 
@@ -191,7 +198,8 @@ DESC_FUNCTION(extended_event)
     lua_pushnumber(lua, desc[2] & 0x0F);
     lua_setfield(lua, -2, "last_desc_num");
 
-    const char lang[] = { desc[3], desc[4], desc[5], 0x00 };
+    char lang[4];
+    strncpy_print(lang, &desc[3], 3);
     lua_pushstring(lua, lang);
     lua_setfield(lua, -2, "lang");
 
@@ -287,7 +295,8 @@ DESC_FUNCTION(parental_rating)
         const int item_count = luaL_len(lua, -1) + 1;
         lua_pushnumber(lua, item_count);
 
-        const char country[] = { _item_ptr[0], _item_ptr[1], _item_ptr[2], 0x00 };
+        char country[4];
+        strncpy_print(country, &_item_ptr[0], 3);
         lua_pushstring(lua, country);
         lua_setfield(lua, -2, "country");
 
@@ -316,10 +325,7 @@ DESC_FUNCTION(teletext)
         lua_newtable(lua);
 
         char lang[4];
-        lang[0] = safe_char((char)desc[0]);
-        lang[1] = safe_char((char)desc[1]);
-        lang[2] = safe_char((char)desc[2]);
-        lang[3] = 0x00;
+        strncpy_print(lang, desc, 3);
 
         lua_pushstring(lua, lang);
         lua_setfield(lua, -2, "lang");
