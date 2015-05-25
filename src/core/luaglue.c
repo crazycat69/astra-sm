@@ -1,5 +1,5 @@
 /*
- * Astra Core (Module options)
+ * Astra Core (Lua API)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>

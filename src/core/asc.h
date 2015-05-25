@@ -33,7 +33,6 @@
 #include "timer.h"
 #include "clock.h"
 #include "strbuffer.h"
-#include "option.h"
 #include "stream.h"
 #include "luaglue.h"
 

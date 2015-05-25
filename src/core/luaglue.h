@@ -21,11 +21,6 @@
 #ifndef _ASC_LUAGLUE_H_
 #define _ASC_LUAGLUE_H_ 1
 
-#define lua_stack_debug(_lua) printf("%s:%d %s(): stack:%d\n"                                   \
-                        , __FILE__, __LINE__, __FUNCTION__, lua_gettop(_lua))
-
-#define lua_foreach(_lua, _idx) for(lua_pushnil(_lua); lua_next(_lua, _idx); lua_pop(_lua, 1))
-
 typedef int (*module_callback_t)(module_data_t *);
 
 typedef struct
@@ -33,6 +28,16 @@ typedef struct
     const char *name;
     module_callback_t method;
 } module_method_t;
+
+bool module_option_number(const char *name, int *number);
+bool module_option_string(const char *name, const char **string, size_t *length);
+bool module_option_boolean(const char *name, bool *boolean);
+
+#define lua_stack_debug(_lua) \
+    printf("%s:%d %s(): stack:%d\n", __FILE__, __LINE__, __FUNCTION__, lua_gettop(_lua))
+
+#define lua_foreach(_lua, _idx) \
+    for(lua_pushnil(_lua); lua_next(_lua, _idx); lua_pop(_lua, 1))
 
 #define MODULE_OPTIONS_IDX 2
 
