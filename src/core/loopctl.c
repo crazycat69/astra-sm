@@ -24,9 +24,6 @@
 jmp_buf main_loop;
 bool is_main_loop_idle = true;
 
-/* FIXME: move lua stuff to separate unit in core */
-lua_State *lua = NULL;
-
 void astra_exit(void)
 {
 #ifndef _WIN32

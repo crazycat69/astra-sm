@@ -29,6 +29,8 @@ typedef struct
     module_callback_t method;
 } module_method_t;
 
+extern lua_State *lua;
+
 bool module_option_number(const char *name, int *number);
 bool module_option_string(const char *name, const char **string, size_t *length);
 bool module_option_boolean(const char *name, bool *boolean);
