@@ -12,6 +12,12 @@ libastra_la_LDFLAGS = -module -static
 libastra_la_LIBADD = $(LIBRT) $(LUA_LIBS)
 libastra_la_SOURCES =
 
+# add Lua script path
+if !HAVE_MINGW
+libastra_la_CFLAGS += \
+    -DASC_SCRIPT_DIR='"$(sysconfdir)/astra/scripts"'
+endif
+
 # core/
 libastra_la_SOURCES += \
     core/clock.c \
@@ -181,12 +187,6 @@ astra_CFLAGS = $(AM_CFLAGS)
 astra_LDADD = \
     libastra.la \
     libstream.la
-
-# add Lua script path
-if !HAVE_MINGW
-astra_CFLAGS += \
-    -DASC_SPATH='"$(sysconfdir)/astra/scripts"'
-endif
 
 #
 # Built sources

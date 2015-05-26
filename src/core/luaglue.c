@@ -21,8 +21,57 @@
 
 #include <astra.h>
 
+#define MSG(_msg) "[core/luaglue] " _msg
+
+/* search path for Lua */
+#ifdef ASC_SCRIPT_DIR
+#   define __SCRIPT_DIR ";" ASC_SCRIPT_DIR ASC_PATH_SEPARATOR "?.lua"
+#else
+#   define __SCRIPT_DIR
+#endif
+
+#define PACKAGE_PATH \
+    "." ASC_PATH_SEPARATOR "?.lua" __SCRIPT_DIR
+
 /* global Lua state */
 lua_State *lua = NULL;
+
+static int (*const astra_mods[])(lua_State *) = {
+    LUA_CORE_BINDINGS
+    LUA_STREAM_BINDINGS
+    NULL
+};
+
+void asc_lua_core_init(void)
+{
+    asc_assert(lua == NULL, MSG("lua is already initialized"));
+
+    lua = luaL_newstate();
+    asc_assert(lua != NULL, MSG("luaL_newstate() failed"));
+    luaL_openlibs(lua);
+
+    /* load modules */
+    for (size_t i = 0; astra_mods[i] != NULL; i++)
+        astra_mods[i](lua);
+
+    /* change package.path */
+#ifdef DEBUG
+    asc_log_info(MSG("setting package.path to '%s'"), PACKAGE_PATH);
+#endif
+
+    lua_getglobal(lua, "package");
+    lua_pushstring(lua, PACKAGE_PATH);
+    lua_setfield(lua, -2, "path");
+    lua_pushstring(lua, "");
+    lua_setfield(lua, -2, "cpath");
+    lua_pop(lua, 1);
+}
+
+__asc_inline
+void asc_lua_core_destroy(void)
+{
+    ASC_FREE(lua, lua_close);
+}
 
 bool module_option_number(const char *name, int *number)
 {

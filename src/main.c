@@ -25,12 +25,6 @@
 
 static bool is_sighup = false;
 
-static int (*astra_mods[])(lua_State *) = {
-    LUA_CORE_BINDINGS
-    LUA_STREAM_BINDINGS
-    NULL
-};
-
 #ifndef _WIN32
 static void signal_handler(int signum)
 {
@@ -102,38 +96,12 @@ int main(int argc, const char **argv)
 astra_reload_entry:
 
     asc_srand();
+
+    asc_lua_core_init();
     asc_thread_core_init();
     asc_timer_core_init();
     asc_socket_core_init();
     asc_event_core_init();
-
-    lua = luaL_newstate();
-    luaL_openlibs(lua);
-
-    /* load modules */
-    for(int i = 0; astra_mods[i]; i++)
-        astra_mods[i](lua);
-
-    /* change package.path */
-    lua_getglobal(lua, "package");
-
-#ifndef _WIN32
-#   define ASC_PATH_SEP "/"
-#else
-#   define ASC_PATH_SEP "\\"
-#endif
-
-#if !defined(_WIN32) && defined(ASC_SPATH)
-    static const char *asc_spath = ";" ASC_SPATH ASC_PATH_SEP "?.lua";
-#else
-    static const char *asc_spath = "";
-#endif
-
-    lua_pushfstring(lua, "." ASC_PATH_SEP "?.lua%s", asc_spath);
-    lua_setfield(lua, -2, "path");
-    lua_pushstring(lua, "");
-    lua_setfield(lua, -2, "cpath");
-    lua_pop(lua, 1);
 
     /* argv table */
     lua_newtable(lua);
@@ -223,13 +191,11 @@ astra_reload_entry:
     }
 
     /* destroy */
-    lua_close(lua);
-    lua = NULL;
-
     asc_event_core_destroy();
     asc_socket_core_destroy();
     asc_timer_core_destroy();
     asc_thread_core_destroy();
+    asc_lua_core_destroy();
 
     asc_log_info("[main] %s", (main_loop_status == 2) ? "reload" : "exit");
     asc_log_core_destroy();

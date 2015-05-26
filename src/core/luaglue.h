@@ -31,6 +31,9 @@ typedef struct
 
 extern lua_State *lua;
 
+void asc_lua_core_init(void);
+void asc_lua_core_destroy(void);
+
 bool module_option_number(const char *name, int *number);
 bool module_option_string(const char *name, const char **string, size_t *length);
 bool module_option_boolean(const char *name, bool *boolean);

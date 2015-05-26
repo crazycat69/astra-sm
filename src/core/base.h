@@ -24,7 +24,7 @@
 #ifdef _WIN32
 #   include <winsock2.h>
 #   include <windows.h>
-#endif
+#endif /* _WIN32 */
 
 #include <stddef.h>
 #include <stdint.h>
@@ -51,6 +51,12 @@
 
 #define ASC_FREE(_o, _m) if(_o != NULL) { _m(_o); _o = NULL; }
 
+#ifndef _WIN32
+#   define ASC_PATH_SEPARATOR "/"
+#else
+#   define ASC_PATH_SEPARATOR "\\"
+#endif /* _WIN32 */
+
 #define __uarg(_x) {(void)_x;}
 
 #if defined(__GNUC_GNU_INLINE__) \
@@ -63,7 +69,7 @@
 
 #ifndef __wur
 #   define __wur __attribute__(( __warn_unused_result__ ))
-#endif
+#endif /* __wur */
 
 #define __fmt_printf(__index, __first) \
     __attribute__((__format__(__printf__, __index, __first)))
