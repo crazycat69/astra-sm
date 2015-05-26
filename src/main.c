@@ -191,11 +191,11 @@ astra_reload_entry:
     }
 
     /* destroy */
+    asc_lua_core_destroy();
     asc_event_core_destroy();
     asc_socket_core_destroy();
     asc_timer_core_destroy();
     asc_thread_core_destroy();
-    asc_lua_core_destroy();
 
     asc_log_info("[main] %s", (main_loop_status == 2) ? "reload" : "exit");
     asc_log_core_destroy();
