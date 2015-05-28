@@ -61,8 +61,7 @@ void asc_timer_core_loop(void)
             continue;
         }
 
-        const uint64_t cur = asc_utime();
-        if(cur >= timer->next_shot)
+        if(asc_utime() >= timer->next_shot)
         {
             if(timer->interval == 0)
             {
@@ -75,8 +74,8 @@ void asc_timer_core_loop(void)
             else
             {
                 is_main_loop_idle = false;
-                timer->next_shot = cur + timer->interval;
                 timer->callback(timer->arg);
+                timer->next_shot = asc_utime() + timer->interval;
             }
         }
     }
