@@ -2,6 +2,7 @@
 /src/astra
 /lua/luac
 /tests/t2mi_decap
+/tests/unit_tests
 /tools/mkscript
 /tools/tonegen
 

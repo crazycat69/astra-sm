@@ -9,9 +9,15 @@ AM_LDADD = \
 # Unit tests
 #
 if HAVE_CHECK
-# TODO: actually write those
-check_PROGRAMS =
+check_PROGRAMS = unit_tests
 TESTS = $(check_PROGRAMS)
+AM_COLOR_TESTS = no
+
+unit_tests_LDADD = $(AM_LDADD)
+unit_tests_SOURCES = \
+    unit_tests.c \
+    core_clock.c \
+    core_timer.c
 endif
 
 #
