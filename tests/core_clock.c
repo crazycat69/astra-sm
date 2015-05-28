@@ -45,17 +45,17 @@ START_TEST(func_asc_usleep)
 
     for (size_t i = 0; i < ASC_ARRAY_SIZE(intervals); i++)
     {
-        const unsigned sleep = intervals[i];
+        const unsigned usecs = intervals[i];
 
         const uint64_t time_a = asc_utime();
-        asc_usleep(sleep);
+        asc_usleep(usecs);
 
         const uint64_t time_b = asc_utime();
         ck_assert_msg(time_b > time_a, "Time did not increase");
 
         const uint64_t duration = time_b - time_a;
-        ck_assert_msg(duration >= (sleep * 0.9) && duration <= (sleep * 1.3)
-                      , "Requested %uus sleep, got %" PRIu64 "us", sleep, duration);
+        ck_assert_msg(duration >= (usecs * 0.9) && duration <= (usecs * 1.3)
+                      , "Requested %uus sleep, got %" PRIu64 "us", usecs, duration);
     }
 }
 END_TEST

@@ -26,6 +26,8 @@
 gmon.out
 *.gcda
 *.gcno
+*.log
+*.trs
 
 # autotools stuff
 .deps

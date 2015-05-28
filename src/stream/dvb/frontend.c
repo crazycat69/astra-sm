@@ -160,11 +160,11 @@ static void fe_check_status(dvb_fe_t *fe)
 
 static void fe_event(dvb_fe_t *fe)
 {
-    struct dvb_frontend_event fe_event;
+    struct dvb_frontend_event event;
 
     while(1) /* read all events */
     {
-        if(ioctl(fe->fe_fd, FE_GET_EVENT, &fe_event) != 0)
+        if(ioctl(fe->fe_fd, FE_GET_EVENT, &event) != 0)
         {
             if(errno == EWOULDBLOCK)
                 return;
@@ -172,7 +172,7 @@ static void fe_event(dvb_fe_t *fe)
             return;
         }
 
-        if(fe_event.status & FE_HAS_LOCK)
+        if(event.status & FE_HAS_LOCK)
             fe->do_retune = 0;
     }
 }
