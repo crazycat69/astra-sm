@@ -64,7 +64,7 @@ AS_IF([test -z "${compiler_lang}"], [
     AC_MSG_ERROR([$CC doesn't support C nor C++]) ])
 
 AS_IF([test "x${compiler_lang}" = "xC++"], [
-    AX_CHECK_CFLAGS([-fpermissive -fkeep-inline-functions])
+    AX_CHECK_CFLAGS([-fkeep-inline-functions])
 ])
 
 #

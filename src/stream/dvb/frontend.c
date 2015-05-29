@@ -67,7 +67,7 @@ static void fe_read_status(dvb_fe_t *fe, fe_status_t fe_status)
     const char sy = (fe_status & FE_HAS_SYNC) ? 'Y' : '_';
     const char sl = (fe_status & FE_HAS_LOCK) ? 'L' : '_';
 
-    fe_status_t fe_status_diff = fe_status ^ fe->status;
+    const fe_status_t fe_status_diff = (fe_status_t)(fe_status ^ fe->status);
     fe->status = fe_status;
     fe->lock = (fe_status & FE_HAS_LOCK) != 0;
 
@@ -202,10 +202,9 @@ static void diseqc_setup(dvb_fe_t *fe)
 
     asc_usleep(15000);
 
-    struct dvb_diseqc_master_cmd cmd =
-    {
-        .msg = { 0xE0, 0x10, 0x38, 0x00, 0x00, 0x00 },
-        .msg_len = 4
+    struct dvb_diseqc_master_cmd cmd = {
+        { 0xE0, 0x10, 0x38, 0x00, 0x00, 0x00 }, /* msg */
+        4, /* msg_len */
     };
 
     cmd.msg[3] = 0xF0
@@ -248,10 +247,9 @@ static void diseqc_setup(dvb_fe_t *fe)
 
 static void unicable_setup(dvb_fe_t *fe)
 {
-    struct dvb_diseqc_master_cmd cmd =
-    {
-        .msg = { 0xE0, 0x10, 0x5A, 0x00, 0x00, 0x00 },
-        .msg_len = 5
+    struct dvb_diseqc_master_cmd cmd = {
+        { 0xE0, 0x10, 0x5A, 0x00, 0x00, 0x00 }, /* msg */
+        5, /* msg_len */
     };
 
     const int t = (fe->frequency / 1000 + fe->uni_frequency + 2) / 4 - 350;
