@@ -105,12 +105,8 @@ static void check_device_net(void)
             break;
         }
 
-        struct dvb_net_if net =
-        {
-            .pid = 0,
-            .if_num = 0,
-            .feedtype = 0
-        };
+        struct dvb_net_if net;
+        memset(&net, 0, sizeof(net));
         if(ioctl(fd, NET_ADD_IF, &net) != 0)
         {
             lua_pushfstring(lua, "NET_ADD_IF failed [%s]", strerror(errno));

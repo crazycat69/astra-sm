@@ -21,7 +21,6 @@
 #ifndef _ASC_H_
 #define _ASC_H_ 1
 
-#include "base.h"
 #include "assert.h"
 #include "compat.h"
 #include "event.h"
