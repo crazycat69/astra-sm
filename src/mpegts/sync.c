@@ -372,7 +372,7 @@ void mpegts_sync_loop(void *arg)
         else if (!mpegts_sync_space(sx)
                  && !mpegts_sync_resize(sx, 0))
         {
-            asc_log_error(MSG("stream does not seem to contain PCR; resetting"));
+            asc_log_error(MSG("PCR absent or invalid; resetting buffer"));
             mpegts_sync_reset(sx, SYNC_RESET_ALL);
         }
 
@@ -477,8 +477,19 @@ bool mpegts_sync_push(mpegts_sync_t *sx, const void *buf, size_t count)
 {
     while (mpegts_sync_space(sx) < count)
     {
-        if (!mpegts_sync_resize(sx, 0))
+        const bool expanded = mpegts_sync_resize(sx, 0);
+
+        if (!expanded)
+        {
+            if (!sx->num_blocks)
+            {
+                /* buffer is at maximum size, yet we couldn't find PCR */
+                asc_log_error(MSG("PCR absent or invalid; dropping %zu packet%s")
+                              , count, (count > 1) ? "s" : "");
+            }
+
             return false;
+        }
     }
 
     size_t left = count;
