@@ -26,6 +26,7 @@ typedef struct
 {
     jmp_buf jmp;
     bool idle;
+    bool hup;
 } asc_main_loop_t;
 
 extern asc_main_loop_t main_loop;

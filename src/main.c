@@ -25,19 +25,18 @@
 
 #define LUA_GC_TIMEOUT (1 * 1000 * 1000)
 
-static bool is_sighup = false;
-
 #ifndef _WIN32
 static void signal_handler(int signum)
 {
     switch(signum)
     {
         case SIGHUP:
-            asc_log_hup();
-            is_sighup = true;
+            main_loop.hup = true;
             return;
+
         case SIGPIPE:
             return;
+
         default:
             astra_exit();
     }
@@ -48,11 +47,10 @@ static bool WINAPI signal_handler(DWORD signum)
     switch(signum)
     {
         case CTRL_C_EVENT:
-            astra_exit();
-            break;
         case CTRL_BREAK_EVENT:
             astra_exit();
             break;
+
         default:
             break;
     }
@@ -98,6 +96,7 @@ int main(int argc, const char **argv)
 astra_reload_entry:
 
     asc_srand();
+    memset(&main_loop, 0, sizeof(main_loop));
 
     asc_lua_core_init();
     asc_thread_core_init();
@@ -162,9 +161,10 @@ astra_reload_entry:
             asc_timer_core_loop();
             asc_thread_core_loop();
 
-            if(is_sighup)
+            if(main_loop.hup)
             {
-                is_sighup = false;
+                main_loop.hup = false;
+                asc_log_hup();
 
                 lua_getglobal(lua, "on_sighup");
                 if(lua_isfunction(lua, -1))
