@@ -21,7 +21,7 @@
 
 #include <astra.h>
 
-#define MSG(_msg) "[core/luaglue] " _msg
+#define MSG(_msg) "[core/lua] " _msg
 
 /* search path for Lua */
 #ifdef ASC_SCRIPT_DIR

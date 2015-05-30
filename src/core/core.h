@@ -33,6 +33,6 @@
 #include "clock.h"
 #include "strbuffer.h"
 #include "stream.h"
-#include "luaglue.h"
+#include "luapi.h"
 
 #endif /* _ASC_H_ */
