@@ -21,6 +21,8 @@
 
 #include <astra.h>
 
+#define MSG(_msg) "[main] " _msg
+
 jmp_buf main_loop;
 bool is_main_loop_idle = true;
 
@@ -35,18 +37,18 @@ void astra_exit(void)
 
 void astra_abort(void)
 {
-    asc_log_error("[main] abort execution");
+    asc_log_error(MSG("abort execution"));
 
     if (lua != NULL)
     {
-        asc_log_error("[main] Lua backtrace:");
+        asc_log_error(MSG("Lua backtrace:"));
 
         lua_Debug ar;
         int level = 1;
         while(lua_getstack(lua, level, &ar))
         {
             lua_getinfo(lua, "nSl", &ar);
-            asc_log_error("[main] %d: %s:%d -- %s [%s]"
+            asc_log_error(MSG("%d: %s:%d -- %s [%s]")
                           , level, ar.short_src, ar.currentline
                           , (ar.name) ? ar.name : "<unknown>"
                           , ar.what);
