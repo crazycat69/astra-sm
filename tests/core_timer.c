@@ -34,10 +34,10 @@ static uint64_t run_loop(unsigned ms)
     asc_timer_t *const stopper = asc_timer_one_shot(ms, on_stop, NULL);
     ck_assert(stopper != NULL);
 
-    for (stop_loop = false; !stop_loop; is_main_loop_idle = true)
+    for (stop_loop = false; !stop_loop; main_loop.idle = true)
     {
         asc_timer_core_loop();
-        if (is_main_loop_idle)
+        if (main_loop.idle)
             asc_usleep(1000);
     }
 

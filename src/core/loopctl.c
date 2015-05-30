@@ -23,13 +23,12 @@
 
 #define MSG(_msg) "[main] " _msg
 
-jmp_buf main_loop;
-bool is_main_loop_idle = true;
+asc_main_loop_t main_loop;
 
 void astra_exit(void)
 {
 #ifndef _WIN32
-    longjmp(main_loop, 1);
+    longjmp(main_loop.jmp, 1);
 #else
     exit(0);
 #endif
@@ -61,5 +60,5 @@ void astra_abort(void)
 
 void astra_reload(void)
 {
-    longjmp(main_loop, 2);
+    longjmp(main_loop.jmp, 2);
 }

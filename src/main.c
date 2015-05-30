@@ -119,7 +119,7 @@ astra_reload_entry:
     uint64_t gc_check_timeout = current_time;
 
     /* start */
-    const int main_loop_status = setjmp(main_loop);
+    const int main_loop_status = setjmp(main_loop.jmp);
     if(main_loop_status == 0)
     {
         lua_getglobal(lua, "inscript");
@@ -156,7 +156,7 @@ astra_reload_entry:
 
         while(true)
         {
-            is_main_loop_idle = true;
+            main_loop.idle = true;
 
             asc_event_core_loop();
             asc_timer_core_loop();
@@ -170,13 +170,13 @@ astra_reload_entry:
                 if(lua_isfunction(lua, -1))
                 {
                     lua_call(lua, 0, 0);
-                    is_main_loop_idle = false;
+                    main_loop.idle = false;
                 }
                 else
                     lua_pop(lua, 1);
             }
 
-            if(is_main_loop_idle)
+            if(main_loop.idle)
             {
                 current_time = asc_utime();
                 if((current_time - gc_check_timeout) >= GC_TIMEOUT)

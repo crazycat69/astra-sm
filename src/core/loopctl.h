@@ -22,8 +22,13 @@
 #ifndef _ASC_LOOPCTL_H_
 #define _ASC_LOOPCTL_H_ 1
 
-extern jmp_buf main_loop;
-extern bool is_main_loop_idle;
+typedef struct
+{
+    jmp_buf jmp;
+    bool idle;
+} asc_main_loop_t;
+
+extern asc_main_loop_t main_loop;
 
 void astra_exit(void) __noreturn;
 void astra_abort(void) __noreturn;
