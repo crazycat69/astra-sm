@@ -159,13 +159,12 @@ asc_socket_t * asc_socket_open_udp4(void * arg)
 
 asc_socket_t * asc_socket_open_sctp4(void * arg)
 {
-#ifndef IPPROTO_SCTP
-    __uarg(arg);
-    asc_log_error("[core/socket] SCTP protocol is not available");
-    astra_abort();
-#else
+#ifdef IPPROTO_SCTP
     return __socket_open(PF_INET, SOCK_STREAM, IPPROTO_SCTP, arg);
-#endif
+#else
+    asc_log_error("[core/socket] SCTP support unavailable; falling back to TCP");
+    return asc_socket_open_tcp4(arg);
+#endif /* IPPROTO_SCTP */
 }
 
 /*
@@ -609,17 +608,15 @@ void asc_socket_set_nonblock(asc_socket_t *sock, bool is_nonblock)
 
 #ifdef _WIN32
     unsigned long nonblock = (is_nonblock == true) ? 1 : 0;
-    if(ioctlsocket(sock->fd, FIONBIO, &nonblock) != NO_ERROR)
+    const int ret = ioctlsocket(sock->fd, FIONBIO, &nonblock);
 #else
-    int flags = (is_nonblock == true)
-              ? (fcntl(sock->fd, F_GETFL) | O_NONBLOCK)
-              : (fcntl(sock->fd, F_GETFL) & ~O_NONBLOCK);
-    if(fcntl(sock->fd, F_SETFL, flags) == -1)
+    const int flags = (is_nonblock == true)
+                    ? (fcntl(sock->fd, F_GETFL) | O_NONBLOCK)
+                    : (fcntl(sock->fd, F_GETFL) & ~O_NONBLOCK);
+    const int ret = fcntl(sock->fd, F_SETFL, flags);
 #endif
-    {
-        asc_log_error(MSG("failed to set NONBLOCK [%s]"), asc_socket_error());
-        astra_abort();
-    }
+
+    asc_assert(ret == 0, MSG("failed to set NONBLOCK [%s]"), asc_socket_error());
 }
 
 void asc_socket_set_sockaddr(asc_socket_t *sock, const char *addr, int port)
@@ -645,9 +642,9 @@ void asc_socket_set_non_delay(asc_socket_t *sock, int is_on)
             setsockopt(sock->fd, sock->protocol, SCTP_NODELAY, (void *)&is_on, sizeof(is_on));
 #else
             asc_log_error("[core/socket] SCTP_NODELAY is not available");
-#endif
+#endif /* SCTP_NODELAY */
             break;
-#endif
+#endif /* IPPROTO_SCTP */
         case IPPROTO_TCP:
             setsockopt(sock->fd, sock->protocol, TCP_NODELAY, (void *)&is_on, sizeof(is_on));
             break;
