@@ -31,6 +31,8 @@
  *                  - abort execution
  *      astra.exit()
  *                  - normal exit from astra
+ *      astra.reload()
+ *                  - restart without terminating the process
  */
 
 #include <astra.h>
@@ -49,11 +51,11 @@ static int _astra_abort(lua_State *L)
     astra_abort();
 }
 
-__noreturn
 static int _astra_reload(lua_State *L)
 {
     __uarg(L);
     astra_reload();
+    return 0;
 }
 
 MODULE_LUA_BINDING(astra)

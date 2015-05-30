@@ -27,12 +27,13 @@ typedef struct
     jmp_buf jmp;
     bool idle;
     bool hup;
+    bool reload;
 } asc_main_loop_t;
 
 extern asc_main_loop_t main_loop;
 
 void astra_exit(void) __noreturn;
 void astra_abort(void) __noreturn;
-void astra_reload(void) __noreturn;
+void astra_reload(void);
 
 #endif /* _ASC_LOOPCTL_H_ */

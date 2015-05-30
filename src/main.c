@@ -34,6 +34,10 @@ static void signal_handler(int signum)
             main_loop.hup = true;
             return;
 
+        case SIGUSR1:
+            astra_reload();
+            return;
+
         case SIGPIPE:
             return;
 
@@ -87,6 +91,7 @@ int main(int argc, const char **argv)
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
     signal(SIGPIPE, signal_handler);
+    signal(SIGUSR1, signal_handler);
     signal(SIGHUP, signal_handler);
     signal(SIGQUIT, signal_handler);
 #else
@@ -176,6 +181,11 @@ astra_reload_entry:
                     lua_pop(lua, 1);
             }
 
+            if(main_loop.reload)
+            {
+                break;
+            }
+
             if(main_loop.idle)
             {
                 current_time = asc_utime();
@@ -197,10 +207,10 @@ astra_reload_entry:
     asc_timer_core_destroy();
     asc_thread_core_destroy();
 
-    asc_log_info("[main] %s", (main_loop_status == 2) ? "reload" : "exit");
+    asc_log_info("[main] %s", (main_loop.reload) ? "reload" : "exit");
     asc_log_core_destroy();
 
-    if(main_loop_status == 2)
+    if(main_loop.reload)
         goto astra_reload_entry;
 
     return 0;

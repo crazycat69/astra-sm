@@ -60,5 +60,5 @@ void astra_abort(void)
 
 void astra_reload(void)
 {
-    longjmp(main_loop.jmp, 2);
+    main_loop.reload = true;
 }
