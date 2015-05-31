@@ -101,13 +101,9 @@ int main(int argc, const char **argv)
 astra_reload_entry:
 
     asc_srand();
-    memset(&main_loop, 0, sizeof(main_loop));
 
-    asc_lua_core_init();
-    asc_thread_core_init();
-    asc_timer_core_init();
-    asc_socket_core_init();
-    asc_event_core_init();
+    memset(&main_loop, 0, sizeof(main_loop));
+    astra_core_init();
 
     /* argv table */
     lua_newtable(lua);
@@ -201,14 +197,8 @@ astra_reload_entry:
     }
 
     /* destroy */
-    asc_lua_core_destroy();
-    asc_event_core_destroy();
-    asc_socket_core_destroy();
-    asc_timer_core_destroy();
-    asc_thread_core_destroy();
-
     asc_log_info("[main] %s", (main_loop.reload) ? "reload" : "exit");
-    asc_log_core_destroy();
+    astra_core_destroy();
 
     if(main_loop.reload)
         goto astra_reload_entry;

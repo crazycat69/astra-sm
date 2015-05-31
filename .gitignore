@@ -16,6 +16,7 @@
 # more binaries
 *.a
 *.exe
+*.dll
 *.la
 *.lo
 *.luac

@@ -23,6 +23,7 @@ libastra_la_SOURCES += \
     core/clock.c \
     core/compat.c \
     core/event.c \
+    core/init.c \
     core/list.c \
     core/log.c \
     core/loopctl.c \
