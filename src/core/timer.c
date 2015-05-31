@@ -66,14 +66,14 @@ void asc_timer_core_loop(void)
             if(timer->interval == 0)
             {
                 // one shot timer
-                main_loop.idle = false;
+                main_loop->idle = false;
                 timer->callback(timer->arg);
                 timer->callback = NULL;
                 ++is_detached;
             }
             else
             {
-                main_loop.idle = false;
+                main_loop->idle = false;
                 timer->callback(timer->arg);
                 timer->next_shot = asc_utime() + timer->interval;
             }

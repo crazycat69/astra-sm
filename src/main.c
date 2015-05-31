@@ -31,7 +31,7 @@ static void signal_handler(int signum)
     switch(signum)
     {
         case SIGHUP:
-            main_loop.hup = true;
+            main_loop->hup = true;
             return;
 
         case SIGUSR1:
@@ -101,8 +101,6 @@ int main(int argc, const char **argv)
 astra_reload_entry:
 
     asc_srand();
-
-    memset(&main_loop, 0, sizeof(main_loop));
     astra_core_init();
 
     /* argv table */
@@ -119,7 +117,7 @@ astra_reload_entry:
     uint64_t gc_check_timeout = current_time;
 
     /* start */
-    const int main_loop_status = setjmp(main_loop.jmp);
+    const int main_loop_status = setjmp(main_loop->jmp);
     if(main_loop_status == 0)
     {
         lua_getglobal(lua, "inscript");
@@ -156,33 +154,33 @@ astra_reload_entry:
 
         while(true)
         {
-            main_loop.idle = true;
+            main_loop->idle = true;
 
             asc_event_core_loop();
             asc_timer_core_loop();
             asc_thread_core_loop();
 
-            if(main_loop.hup)
+            if(main_loop->hup)
             {
-                main_loop.hup = false;
+                main_loop->hup = false;
                 asc_log_hup();
 
                 lua_getglobal(lua, "on_sighup");
                 if(lua_isfunction(lua, -1))
                 {
                     lua_call(lua, 0, 0);
-                    main_loop.idle = false;
+                    main_loop->idle = false;
                 }
                 else
                     lua_pop(lua, 1);
             }
 
-            if(main_loop.reload)
+            if(main_loop->reload)
             {
                 break;
             }
 
-            if(main_loop.idle)
+            if(main_loop->idle)
             {
                 current_time = asc_utime();
                 if((current_time - gc_check_timeout) >= LUA_GC_TIMEOUT)
@@ -197,10 +195,12 @@ astra_reload_entry:
     }
 
     /* destroy */
-    asc_log_info("[main] %s", (main_loop.reload) ? "reload" : "exit");
+    const bool again = main_loop->reload;
+    asc_log_info("[main] %s", again ? "reload" : "exit");
+
     astra_core_destroy();
 
-    if(main_loop.reload)
+    if(again)
         goto astra_reload_entry;
 
     return 0;

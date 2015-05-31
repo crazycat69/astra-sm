@@ -1,3 +1,23 @@
+/*
+ * Astra: Unit tests
+ * http://cesbo.com/astra
+ *
+ * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 #include "unit_tests.h"
 
 typedef struct
@@ -13,11 +33,16 @@ static bool stop_loop;
 static bool timed_out;
 
 /*
- * XXX
+ * test fixture
  */
 static void setup(void)
 {
-    asc_timer_core_init();
+    astra_core_init();
+}
+
+static void teardown(void)
+{
+    astra_core_destroy();
 }
 
 static void on_stop(void *arg)
@@ -34,10 +59,10 @@ static uint64_t run_loop(unsigned ms)
     asc_timer_t *const stopper = asc_timer_one_shot(ms, on_stop, NULL);
     ck_assert(stopper != NULL);
 
-    for (stop_loop = false; !stop_loop; main_loop.idle = true)
+    for (stop_loop = false; !stop_loop; main_loop->idle = true)
     {
         asc_timer_core_loop();
-        if (main_loop.idle)
+        if (main_loop->idle)
             asc_usleep(1000);
     }
 
@@ -45,11 +70,6 @@ static uint64_t run_loop(unsigned ms)
     fail_unless(bench <= (ms * 1.3));
 
     return bench;
-}
-
-static void teardown(void)
-{
-    asc_timer_core_destroy();
 }
 
 /*

@@ -22,19 +22,27 @@
 
 void astra_core_init(void)
 {
+    /* call order doesn't really matter here */
     asc_lua_core_init();
+
     asc_thread_core_init();
     asc_timer_core_init();
     asc_socket_core_init();
     asc_event_core_init();
+
+    asc_main_loop_init();
 }
 
 void astra_core_destroy(void)
 {
+    /* this frees streaming modules */
     asc_lua_core_destroy();
+
     asc_event_core_destroy();
     asc_socket_core_destroy();
     asc_timer_core_destroy();
     asc_thread_core_destroy();
+
+    asc_main_loop_destroy();
     asc_log_core_destroy();
 }

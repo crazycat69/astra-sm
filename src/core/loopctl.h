@@ -30,7 +30,10 @@ typedef struct
     bool reload;
 } asc_main_loop_t;
 
-extern asc_main_loop_t main_loop;
+extern asc_main_loop_t *main_loop;
+
+void asc_main_loop_init(void);
+void asc_main_loop_destroy(void);
 
 void astra_exit(void) __noreturn;
 void astra_abort(void) __noreturn;

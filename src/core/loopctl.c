@@ -23,12 +23,25 @@
 
 #define MSG(_msg) "[main] " _msg
 
-asc_main_loop_t main_loop;
+asc_main_loop_t *main_loop;
+
+__asc_inline
+void asc_main_loop_init(void)
+{
+    main_loop = (asc_main_loop_t *)calloc(1, sizeof(*main_loop));
+    asc_assert(main_loop != NULL, MSG("calloc() failed"));
+}
+
+__asc_inline
+void asc_main_loop_destroy(void)
+{
+    ASC_FREE(main_loop, free);
+}
 
 void astra_exit(void)
 {
 #ifndef _WIN32
-    longjmp(main_loop.jmp, 1);
+    longjmp(main_loop->jmp, 1);
 #else
     exit(0);
 #endif
@@ -60,5 +73,5 @@ void astra_abort(void)
 
 void astra_reload(void)
 {
-    main_loop.reload = true;
+    main_loop->reload = true;
 }
