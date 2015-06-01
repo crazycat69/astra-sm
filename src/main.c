@@ -160,7 +160,11 @@ astra_reload_entry:
             asc_timer_core_loop();
             asc_thread_core_loop();
 
-            if(main_loop->hup)
+            if(main_loop->shutdown || main_loop->reload)
+            {
+                break;
+            }
+            else if(main_loop->hup)
             {
                 main_loop->hup = false;
                 asc_log_hup();
@@ -173,11 +177,6 @@ astra_reload_entry:
                 }
                 else
                     lua_pop(lua, 1);
-            }
-
-            if(main_loop->reload)
-            {
-                break;
             }
 
             if(main_loop->idle)

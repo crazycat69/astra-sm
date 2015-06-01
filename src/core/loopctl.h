@@ -28,6 +28,7 @@ typedef struct
     bool idle;
     bool hup;
     bool reload;
+    bool shutdown;
 } asc_main_loop_t;
 
 extern asc_main_loop_t *main_loop;
@@ -38,5 +39,6 @@ void asc_main_loop_destroy(void);
 void astra_exit(void) __noreturn;
 void astra_abort(void) __noreturn;
 void astra_reload(void);
+void astra_shutdown(void);
 
 #endif /* _ASC_LOOPCTL_H_ */

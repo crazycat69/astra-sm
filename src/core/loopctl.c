@@ -75,3 +75,8 @@ void astra_reload(void)
 {
     main_loop->reload = true;
 }
+
+void astra_shutdown(void)
+{
+    main_loop->shutdown = true;
+}

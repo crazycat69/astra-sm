@@ -33,6 +33,8 @@
  *                  - normal exit from astra
  *      astra.reload()
  *                  - restart without terminating the process
+ *      astra.shutdown()
+ *                  - schedule graceful shutdown
  */
 
 #include <astra.h>
@@ -58,6 +60,13 @@ static int _astra_reload(lua_State *L)
     return 0;
 }
 
+static int _astra_shutdown(lua_State *L)
+{
+    __uarg(L);
+    astra_shutdown();
+    return 0;
+}
+
 MODULE_LUA_BINDING(astra)
 {
     static luaL_Reg astra_api[] =
@@ -65,6 +74,7 @@ MODULE_LUA_BINDING(astra)
         { "exit", _astra_exit },
         { "abort", _astra_abort },
         { "reload", _astra_reload },
+        { "shutdown", _astra_shutdown },
         { NULL, NULL }
     };
 
