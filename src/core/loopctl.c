@@ -23,6 +23,9 @@
 
 #define MSG(_msg) "[main] " _msg
 
+/* garbage collector interval */
+#define LUA_GC_TIMEOUT (1 * 1000 * 1000)
+
 asc_main_loop_t *main_loop;
 
 __asc_inline
@@ -41,13 +44,70 @@ void asc_main_loop_destroy(void)
 __asc_inline
 void asc_main_loop_set(uint32_t flag)
 {
-    main_loop->flags |= flag;
+    if (main_loop != NULL)
+        main_loop->flags |= flag;
 }
 
 __asc_inline
 void asc_main_loop_busy(void)
 {
     asc_main_loop_set(MAIN_LOOP_NO_SLEEP);
+}
+
+bool asc_main_loop_run(void)
+{
+    uint64_t current_time = asc_utime();
+    uint64_t gc_check_timeout = current_time;
+
+    while (true)
+    {
+        asc_event_core_loop();
+        asc_timer_core_loop();
+        asc_thread_core_loop();
+
+        if (main_loop->flags)
+        {
+            const uint32_t flags = main_loop->flags;
+            main_loop->flags = 0;
+
+            if (flags & MAIN_LOOP_SHUTDOWN)
+            {
+                //asc_log_info(MSG("shutting down"));
+                return false;
+            }
+            else if (flags & MAIN_LOOP_RELOAD)
+            {
+                //asc_log_info(MSG("restarting"));
+                return true;
+            }
+            else if (flags & MAIN_LOOP_SIGHUP)
+            {
+                asc_log_hup();
+
+                lua_getglobal(lua, "on_sighup");
+                if(lua_isfunction(lua, -1))
+                {
+                    lua_call(lua, 0, 0);
+                    asc_main_loop_busy();
+                }
+                else
+                    lua_pop(lua, 1);
+            }
+            else if (flags & MAIN_LOOP_NO_SLEEP)
+                continue;
+        }
+
+        current_time = asc_utime();
+        if ((current_time - gc_check_timeout) >= LUA_GC_TIMEOUT)
+        {
+            gc_check_timeout = current_time;
+            lua_gc(lua, LUA_GCCOLLECT, 0);
+        }
+
+        asc_usleep(1000);
+    }
+
+    //return false;
 }
 
 void astra_exit(void)

@@ -23,8 +23,6 @@
 #   include <signal.h>
 #endif
 
-#define LUA_GC_TIMEOUT (1 * 1000 * 1000)
-
 #ifndef _WIN32
 static void signal_handler(int signum)
 {
@@ -113,9 +111,6 @@ astra_reload_entry:
     }
     lua_setglobal(lua, "argv");
 
-    uint64_t current_time = asc_utime();
-    uint64_t gc_check_timeout = current_time;
-
     /* start */
     bool again = false;
     const int main_loop_status = setjmp(main_loop->jmp);
@@ -153,54 +148,7 @@ astra_reload_entry:
                 luaL_error(lua, "[main] %s", lua_tostring(lua, -1));
         }
 
-        while (true)
-        {
-            asc_event_core_loop();
-            asc_timer_core_loop();
-            asc_thread_core_loop();
-
-            if (main_loop->flags)
-            {
-                const uint32_t flags = main_loop->flags;
-                main_loop->flags = 0;
-
-                if (flags & MAIN_LOOP_SHUTDOWN)
-                {
-                    again = false;
-                    break;
-                }
-                else if (flags & MAIN_LOOP_RELOAD)
-                {
-                    again = true;
-                    break;
-                }
-                else if (flags & MAIN_LOOP_SIGHUP)
-                {
-                    asc_log_hup();
-
-                    lua_getglobal(lua, "on_sighup");
-                    if (lua_isfunction(lua, -1))
-                    {
-                        lua_call(lua, 0, 0);
-                        asc_main_loop_busy();
-                    }
-                    else
-                        lua_pop(lua, 1);
-                }
-
-                if (flags & MAIN_LOOP_NO_SLEEP)
-                    continue;
-            }
-
-            current_time = asc_utime();
-            if ((current_time - gc_check_timeout) >= LUA_GC_TIMEOUT)
-            {
-                gc_check_timeout = current_time;
-                lua_gc(lua, LUA_GCCOLLECT, 0);
-            }
-
-            asc_usleep(1000);
-        }
+        again = asc_main_loop_run();
     }
 
     /* destroy */

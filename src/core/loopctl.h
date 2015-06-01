@@ -44,6 +44,8 @@ void asc_main_loop_destroy(void);
 void asc_main_loop_set(uint32_t flag);
 void asc_main_loop_busy(void);
 
+bool asc_main_loop_run(void);
+
 void astra_exit(void) __noreturn;
 void astra_abort(void) __noreturn;
 void astra_reload(void);
