@@ -38,6 +38,18 @@ void asc_main_loop_destroy(void)
     ASC_FREE(main_loop, free);
 }
 
+__asc_inline
+void asc_main_loop_set(uint32_t flag)
+{
+    main_loop->flags |= flag;
+}
+
+__asc_inline
+void asc_main_loop_busy(void)
+{
+    asc_main_loop_set(MAIN_LOOP_NO_SLEEP);
+}
+
 void astra_exit(void)
 {
 #ifndef _WIN32
@@ -73,10 +85,10 @@ void astra_abort(void)
 
 void astra_reload(void)
 {
-    main_loop->reload = true;
+    asc_main_loop_set(MAIN_LOOP_RELOAD);
 }
 
 void astra_shutdown(void)
 {
-    main_loop->shutdown = true;
+    asc_main_loop_set(MAIN_LOOP_SHUTDOWN);
 }

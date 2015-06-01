@@ -22,19 +22,27 @@
 #ifndef _ASC_LOOPCTL_H_
 #define _ASC_LOOPCTL_H_ 1
 
+enum
+{
+    MAIN_LOOP_NO_SLEEP = 0x00000001,
+    MAIN_LOOP_SIGHUP   = 0x00000002,
+    MAIN_LOOP_RELOAD   = 0x00000004,
+    MAIN_LOOP_SHUTDOWN = 0x00000008,
+};
+
 typedef struct
 {
     jmp_buf jmp;
-    bool idle;
-    bool hup;
-    bool reload;
-    bool shutdown;
+    uint32_t flags;
 } asc_main_loop_t;
 
 extern asc_main_loop_t *main_loop;
 
 void asc_main_loop_init(void);
 void asc_main_loop_destroy(void);
+
+void asc_main_loop_set(uint32_t flag);
+void asc_main_loop_busy(void);
 
 void astra_exit(void) __noreturn;
 void astra_abort(void) __noreturn;

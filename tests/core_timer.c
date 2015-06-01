@@ -59,11 +59,13 @@ static uint64_t run_loop(unsigned ms)
     asc_timer_t *const stopper = asc_timer_one_shot(ms, on_stop, NULL);
     ck_assert(stopper != NULL);
 
-    for (stop_loop = false; !stop_loop; main_loop->idle = true)
+    for (stop_loop = false; !stop_loop; main_loop->flags = 0)
     {
         asc_timer_core_loop();
-        if (main_loop->idle)
-            asc_usleep(1000);
+        if (main_loop->flags & MAIN_LOOP_NO_SLEEP)
+            continue;
+
+        asc_usleep(1000);
     }
 
     const uint64_t bench = (asc_utime() - start) / 1000;

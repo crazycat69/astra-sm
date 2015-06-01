@@ -119,7 +119,7 @@ void asc_thread_core_loop(void)
         {
             if(thread->buffer->count > 0)
             {
-                main_loop->idle = false;
+                asc_main_loop_busy();
                 thread->on_read(thread->arg);
                 if(thread_observer.is_changed)
                     break;
@@ -128,7 +128,7 @@ void asc_thread_core_loop(void)
 
         if(thread->on_close && thread->is_closed)
         {
-            main_loop->idle = false;
+            asc_main_loop_busy();
             thread->on_close(thread->arg);
             if(thread_observer.is_changed)
                 break;

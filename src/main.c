@@ -31,7 +31,7 @@ static void signal_handler(int signum)
     switch(signum)
     {
         case SIGHUP:
-            main_loop->hup = true;
+            asc_main_loop_set(MAIN_LOOP_SIGHUP);
             return;
 
         case SIGUSR1:
@@ -117,6 +117,7 @@ astra_reload_entry:
     uint64_t gc_check_timeout = current_time;
 
     /* start */
+    bool again = false;
     const int main_loop_status = setjmp(main_loop->jmp);
     if(main_loop_status == 0)
     {
@@ -152,49 +153,57 @@ astra_reload_entry:
                 luaL_error(lua, "[main] %s", lua_tostring(lua, -1));
         }
 
-        while(true)
+        while (true)
         {
-            main_loop->idle = true;
-
             asc_event_core_loop();
             asc_timer_core_loop();
             asc_thread_core_loop();
 
-            if(main_loop->shutdown || main_loop->reload)
+            if (main_loop->flags)
             {
-                break;
-            }
-            else if(main_loop->hup)
-            {
-                main_loop->hup = false;
-                asc_log_hup();
+                const uint32_t flags = main_loop->flags;
+                main_loop->flags = 0;
 
-                lua_getglobal(lua, "on_sighup");
-                if(lua_isfunction(lua, -1))
+                if (flags & MAIN_LOOP_SHUTDOWN)
                 {
-                    lua_call(lua, 0, 0);
-                    main_loop->idle = false;
+                    again = false;
+                    break;
                 }
-                else
-                    lua_pop(lua, 1);
-            }
-
-            if(main_loop->idle)
-            {
-                current_time = asc_utime();
-                if((current_time - gc_check_timeout) >= LUA_GC_TIMEOUT)
+                else if (flags & MAIN_LOOP_RELOAD)
                 {
-                    gc_check_timeout = current_time;
-                    lua_gc(lua, LUA_GCCOLLECT, 0);
+                    again = true;
+                    break;
+                }
+                else if (flags & MAIN_LOOP_SIGHUP)
+                {
+                    asc_log_hup();
+
+                    lua_getglobal(lua, "on_sighup");
+                    if (lua_isfunction(lua, -1))
+                    {
+                        lua_call(lua, 0, 0);
+                        asc_main_loop_busy();
+                    }
+                    else
+                        lua_pop(lua, 1);
                 }
 
-                asc_usleep(1000);
+                if (flags & MAIN_LOOP_NO_SLEEP)
+                    continue;
             }
+
+            current_time = asc_utime();
+            if ((current_time - gc_check_timeout) >= LUA_GC_TIMEOUT)
+            {
+                gc_check_timeout = current_time;
+                lua_gc(lua, LUA_GCCOLLECT, 0);
+            }
+
+            asc_usleep(1000);
         }
     }
 
     /* destroy */
-    const bool again = main_loop->reload;
     asc_log_info("[main] %s", again ? "reload" : "exit");
 
     astra_core_destroy();
