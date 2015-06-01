@@ -107,7 +107,7 @@ void asc_event_core_init(void)
 
 void asc_event_core_destroy(void)
 {
-    if(!event_observer.fd)
+    if(!event_observer.event_list || !event_observer.fd)
         return;
 
     close(event_observer.fd);
@@ -127,8 +127,7 @@ void asc_event_core_destroy(void)
         prev_event = event;
     }
 
-    asc_list_destroy(event_observer.event_list);
-    event_observer.event_list = NULL;
+    ASC_FREE(event_observer.event_list, asc_list_destroy);
 }
 
 void asc_event_core_loop(void)
@@ -474,6 +473,9 @@ void asc_event_core_init(void)
 
 void asc_event_core_destroy(void)
 {
+    if (!event_observer.event_list)
+        return;
+
     asc_event_t *prev_event = NULL;
     for(asc_list_first(event_observer.event_list)
         ; !asc_list_eol(event_observer.event_list)
@@ -488,8 +490,7 @@ void asc_event_core_destroy(void)
         prev_event = event;
     }
 
-    asc_list_destroy(event_observer.event_list);
-    event_observer.event_list = NULL;
+    ASC_FREE(event_observer.event_list, asc_list_destroy);
 }
 
 void asc_event_core_loop(void)
