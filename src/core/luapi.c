@@ -55,7 +55,7 @@ void asc_lua_core_init(void)
         astra_mods[i](lua);
 
     /* change package.path */
-#ifdef DEBUG
+#ifdef LUA_DEBUG
     asc_log_info(MSG("setting package.path to '%s'"), PACKAGE_PATH);
 #endif
 
