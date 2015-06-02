@@ -41,7 +41,7 @@ static void signal_handler(int signum)
             return;
 
         default:
-            astra_exit();
+            astra_shutdown();
     }
 }
 #else
@@ -51,7 +51,7 @@ static bool WINAPI signal_handler(DWORD signum)
     {
         case CTRL_C_EVENT:
         case CTRL_BREAK_EVENT:
-            astra_exit();
+            astra_shutdown();
             break;
 
         default:

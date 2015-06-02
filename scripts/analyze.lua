@@ -68,7 +68,7 @@ function on_analyze(instance, data)
         end
         if arg_n then
             arg_n = arg_n - 1
-            if arg_n == 0 then astra.exit() end
+            if arg_n == 0 then astra.shutdown() end
         end
     end
 end
