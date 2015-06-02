@@ -53,12 +53,6 @@ void asc_main_loop_set(uint32_t flag)
         main_loop->flags |= flag;
 }
 
-__asc_inline
-void asc_main_loop_busy(void)
-{
-    asc_main_loop_set(MAIN_LOOP_NO_SLEEP);
-}
-
 bool asc_main_loop_run(void)
 {
     uint64_t current_time = asc_utime();
@@ -111,14 +105,4 @@ bool asc_main_loop_run(void)
     }
 
     //return false;
-}
-
-void astra_reload(void)
-{
-    asc_main_loop_set(MAIN_LOOP_RELOAD);
-}
-
-void astra_shutdown(void)
-{
-    asc_main_loop_set(MAIN_LOOP_SHUTDOWN);
 }

@@ -32,13 +32,19 @@ enum
 
 void asc_main_loop_init(void);
 void asc_main_loop_destroy(void);
-
 void asc_main_loop_set(uint32_t flag);
-void asc_main_loop_busy(void);
-
 bool asc_main_loop_run(void);
 
-void astra_reload(void);
-void astra_shutdown(void);
+#define asc_main_loop_busy() \
+    asc_main_loop_set(MAIN_LOOP_NO_SLEEP)
+
+#define astra_reload() \
+    asc_main_loop_set(MAIN_LOOP_RELOAD)
+
+#define astra_shutdown() \
+    asc_main_loop_set(MAIN_LOOP_SHUTDOWN)
+
+#define astra_sighup() \
+    asc_main_loop_set(MAIN_LOOP_SIGHUP)
 
 #endif /* _ASC_LOOPCTL_H_ */
