@@ -45,8 +45,6 @@ void asc_main_loop_busy(void);
 
 bool asc_main_loop_run(void);
 
-void astra_exit(void) __noreturn;
-void astra_abort(void) __noreturn;
 void astra_reload(void);
 void astra_shutdown(void);
 

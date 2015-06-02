@@ -20,6 +20,8 @@
 
 #include <astra.h>
 
+#define MSG(_msg) "[core] " _msg
+
 void astra_core_init(void)
 {
     /* call order doesn't really matter here */
@@ -45,4 +47,36 @@ void astra_core_destroy(void)
 
     asc_main_loop_destroy();
     asc_log_core_destroy();
+}
+
+void astra_exit(void)
+{
+    asc_log_debug(MSG("immediate exit requested"));
+
+    astra_core_destroy();
+    exit(EXIT_SUCCESS);
+}
+
+void astra_abort(void)
+{
+    asc_log_error(MSG("abort execution"));
+
+    if (lua != NULL)
+    {
+        asc_log_error(MSG("Lua backtrace:"));
+
+        lua_Debug ar;
+        int level = 1;
+        while (lua_getstack(lua, level, &ar))
+        {
+            lua_getinfo(lua, "nSl", &ar);
+            asc_log_error(MSG("%d: %s:%d -- %s [%s]")
+                          , level, ar.short_src, ar.currentline
+                          , (ar.name) ? ar.name : "<unknown>"
+                          , ar.what);
+            ++level;
+        }
+    }
+
+    abort();
 }

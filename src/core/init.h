@@ -24,4 +24,7 @@
 void astra_core_init(void);
 void astra_core_destroy(void);
 
+void astra_exit(void) __noreturn;
+void astra_abort(void) __noreturn;
+
 #endif /* _ASC_INIT_H_ */
