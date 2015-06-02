@@ -172,9 +172,6 @@ case "${host_os}" in
         AX_CHECK_WINFUNC(setsockopt, [ setsockopt(0, 0, 0, NULL, sl) ])
         AX_CHECK_WINFUNC(shutdown, [ shutdown(0, 0) ])
         AX_CHECK_WINFUNC(socket, [ socket(0, 0, 0) ])
-
-        # standard C
-        AX_CHECK_WINFUNC(setjmp, [ setjmp(NULL) ])
     ;;
 
     cygwin*)
@@ -200,7 +197,7 @@ esac
 
 AS_IF([test "${SYS}" != "mingw"], [
     AX_CHECK_HEADERS_REQ([stdbool.h syslog.h sys/socket.h arpa/inet.h netinet/in.h netinet/tcp.h netdb.h ifaddrs.h fcntl.h sys/ioctl.h])
-    AX_CHECK_FUNCS_REQ([getpid signal syslog closelog mkstemp link fchmod access unlink gethostname setjmp getnameinfo inet_ntoa socket setsockopt bind listen accept getaddrinfo freeaddrinfo connect recv recvfrom send sendto getsockname htons shutdown fcntl ioctl localtime_r])
+    AX_CHECK_FUNCS_REQ([getpid signal syslog closelog mkstemp link fchmod access unlink gethostname getnameinfo inet_ntoa socket setsockopt bind listen accept getaddrinfo freeaddrinfo connect recv recvfrom send sendto getsockname htons shutdown fcntl ioctl localtime_r])
 
     # pthread
     AX_PTHREAD([
@@ -256,8 +253,8 @@ AC_MSG_NOTICE([using ${event_mechanism} for event notification])
 #
 # Checks for headers and functions common to all platforms
 #
-AX_CHECK_HEADERS_REQ([dirent.h inttypes.h stdarg.h stddef.h stdint.h stdbool.h stdio.h stdlib.h sys/types.h sys/stat.h sys/time.h setjmp.h time.h string.h unistd.h errno.h])
-AX_CHECK_FUNCS_REQ([clock lseek localtime longjmp malloc realloc memchr memset memcpy srand strcasecmp strchr strdup strerror strftime strncasecmp strpbrk strrchr strspn strstr strtoul time snprintf vsnprintf memmove])
+AX_CHECK_HEADERS_REQ([dirent.h inttypes.h stdarg.h stddef.h stdint.h stdbool.h stdio.h stdlib.h sys/types.h sys/stat.h sys/time.h time.h string.h unistd.h errno.h])
+AX_CHECK_FUNCS_REQ([clock lseek localtime malloc realloc memchr memset memcpy srand strcasecmp strchr strdup strerror strftime strncasecmp strpbrk strrchr strspn strstr strtoul time snprintf vsnprintf memmove])
 
 # optional headers
 AC_CHECK_HEADERS([netinet/sctp.h])
