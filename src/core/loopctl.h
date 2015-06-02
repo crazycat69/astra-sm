@@ -30,13 +30,6 @@ enum
     MAIN_LOOP_SHUTDOWN = 0x00000008,
 };
 
-typedef struct
-{
-    uint32_t flags;
-} asc_main_loop_t;
-
-extern asc_main_loop_t *main_loop;
-
 void asc_main_loop_init(void);
 void asc_main_loop_destroy(void);
 

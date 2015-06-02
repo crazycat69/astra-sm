@@ -26,6 +26,11 @@
 /* garbage collector interval */
 #define LUA_GC_TIMEOUT (1 * 1000 * 1000)
 
+typedef struct
+{
+    uint32_t flags;
+} asc_main_loop_t;
+
 asc_main_loop_t *main_loop;
 
 __asc_inline
