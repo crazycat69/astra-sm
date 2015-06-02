@@ -126,7 +126,7 @@ astra_reload_entry:
         {
             printf(PACKAGE_STRING "\n");
             printf("Usage: %s script.lua [OPTIONS]\n", argv[0]);
-            astra_exit();
+            astra_exit(EXIT_FAILURE);
         }
 
         int ret = -1;
@@ -138,7 +138,7 @@ astra_reload_entry:
         else
         {
             printf("Error: initial script isn't found\n");
-            astra_exit();
+            astra_exit(EXIT_FAILURE);
         }
 
         if(ret != 0)

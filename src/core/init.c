@@ -49,12 +49,12 @@ void astra_core_destroy(void)
     asc_log_core_destroy();
 }
 
-void astra_exit(void)
+void astra_exit(int status)
 {
-    asc_log_debug(MSG("immediate exit requested"));
+    asc_log_debug(MSG("immediate exit requested, rc=%d"), status);
 
     astra_core_destroy();
-    exit(EXIT_SUCCESS);
+    exit(status);
 }
 
 void astra_abort(void)

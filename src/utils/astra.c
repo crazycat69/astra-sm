@@ -43,7 +43,7 @@ __noreturn
 static int _astra_exit(lua_State *L)
 {
     __uarg(L);
-    astra_exit();
+    astra_exit(EXIT_SUCCESS);
 }
 
 __noreturn
