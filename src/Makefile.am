@@ -26,7 +26,7 @@ libastra_la_SOURCES += \
     core/init.c \
     core/list.c \
     core/log.c \
-    core/loopctl.c \
+    core/mainloop.c \
     core/luapi.c \
     core/socket.c \
     core/strbuffer.c \

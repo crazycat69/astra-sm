@@ -32,6 +32,7 @@ gmon.out
 
 # autotools stuff
 .deps
+.libs
 .dirstamp
 Makefile
 Makefile.in

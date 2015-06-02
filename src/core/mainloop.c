@@ -1,5 +1,5 @@
 /*
- * Astra Core (Main loop control)
+ * Astra Core (Main loop)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
@@ -21,7 +21,7 @@
 
 #include <astra.h>
 
-#define MSG(_msg) "[main] " _msg
+#define MSG(_msg) "[mainloop] " _msg
 
 /* garbage collector interval */
 #define LUA_GC_TIMEOUT (1 * 1000 * 1000)

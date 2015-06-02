@@ -27,7 +27,7 @@
 #include "event.h"
 #include "list.h"
 #include "log.h"
-#include "loopctl.h"
+#include "mainloop.h"
 #include "socket.h"
 #include "thread.h"
 #include "timer.h"
