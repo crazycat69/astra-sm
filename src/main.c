@@ -101,7 +101,7 @@ astra_reload_entry:
     asc_srand();
     astra_core_init();
 
-    /* argv table */
+    /* pass command line to lua */
     lua_newtable(lua);
     for(int i = 1; i < argc; ++i)
     {
@@ -111,52 +111,45 @@ astra_reload_entry:
     }
     lua_setglobal(lua, "argv");
 
-    /* start */
-    bool again = false;
-    const int main_loop_status = setjmp(main_loop->jmp);
-    if(main_loop_status == 0)
+    /* run built-in script */
+    lua_getglobal(lua, "inscript");
+    if(lua_isfunction(lua, -1))
     {
-        lua_getglobal(lua, "inscript");
-        if(lua_isfunction(lua, -1))
+        lua_call(lua, 0, 0);
+    }
+    else
+    {
+        lua_pop(lua, 1);
+
+        if(argc < 2)
         {
-            lua_call(lua, 0, 0);
+            printf(PACKAGE_STRING "\n");
+            printf("Usage: %s script.lua [OPTIONS]\n", argv[0]);
+            astra_exit();
         }
+
+        int ret = -1;
+
+        if(argv[1][0] == '-' && argv[1][1] == 0)
+            ret = luaL_dofile(lua, NULL);
+        else if(!access(argv[1], R_OK))
+            ret = luaL_dofile(lua, argv[1]);
         else
         {
-            lua_pop(lua, 1);
-
-            if(argc < 2)
-            {
-                printf(PACKAGE_STRING "\n");
-                printf("Usage: %s script.lua [OPTIONS]\n", argv[0]);
-                astra_exit();
-            }
-
-            int ret = -1;
-
-            if(argv[1][0] == '-' && argv[1][1] == 0)
-                ret = luaL_dofile(lua, NULL);
-            else if(!access(argv[1], R_OK))
-                ret = luaL_dofile(lua, argv[1]);
-            else
-            {
-                printf("Error: initial script isn't found\n");
-                astra_exit();
-            }
-
-            if(ret != 0)
-                luaL_error(lua, "[main] %s", lua_tostring(lua, -1));
+            printf("Error: initial script isn't found\n");
+            astra_exit();
         }
 
-        again = asc_main_loop_run();
+        if(ret != 0)
+            luaL_error(lua, "[main] %s", lua_tostring(lua, -1));
     }
 
-    /* destroy */
-    asc_log_info("[main] %s", again ? "reload" : "exit");
-
+    /* start main loop */
+    const bool again = asc_main_loop_run();
+    asc_log_info("[main] %s", again ? "restarting" : "shutting down");
     astra_core_destroy();
 
-    if(again)
+    if (again)
         goto astra_reload_entry;
 
     return 0;

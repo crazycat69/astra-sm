@@ -72,12 +72,10 @@ bool asc_main_loop_run(void)
 
             if (flags & MAIN_LOOP_SHUTDOWN)
             {
-                //asc_log_info(MSG("shutting down"));
                 return false;
             }
             else if (flags & MAIN_LOOP_RELOAD)
             {
-                //asc_log_info(MSG("restarting"));
                 return true;
             }
             else if (flags & MAIN_LOOP_SIGHUP)
@@ -112,11 +110,8 @@ bool asc_main_loop_run(void)
 
 void astra_exit(void)
 {
-#ifndef _WIN32
-    longjmp(main_loop->jmp, 1);
-#else
-    exit(0);
-#endif
+    astra_core_destroy();
+    exit(EXIT_SUCCESS);
 }
 
 void astra_abort(void)

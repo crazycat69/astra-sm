@@ -32,7 +32,6 @@ enum
 
 typedef struct
 {
-    jmp_buf jmp;
     uint32_t flags;
 } asc_main_loop_t;
 
