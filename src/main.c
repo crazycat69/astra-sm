@@ -22,44 +22,40 @@
 #include <astra.h>
 #ifndef _WIN32
 #   include <signal.h>
-#endif
+#endif /* !_WIN32 */
 
 #ifndef _WIN32
 static void signal_handler(int signum)
 {
-    switch(signum)
+    switch (signum)
     {
         case SIGHUP:
-            asc_main_loop_set(MAIN_LOOP_SIGHUP);
+            astra_sighup();
             return;
 
         case SIGUSR1:
             astra_reload();
             return;
 
-        case SIGPIPE:
-            return;
-
         default:
             astra_shutdown();
     }
 }
-#else
+#else /* !_WIN32 */
 static bool WINAPI signal_handler(DWORD signum)
 {
-    switch(signum)
+    switch (signum)
     {
         case CTRL_C_EVENT:
         case CTRL_BREAK_EVENT:
             astra_shutdown();
-            break;
 
         default:
             break;
     }
     return true;
 }
-#endif
+#endif /* !_WIN32 */
 
 static void asc_srand(void)
 {
@@ -67,9 +63,9 @@ static void asc_srand(void)
     unsigned long b = time(NULL);
 #ifndef _WIN32
     unsigned long c = getpid();
-#else
+#else /* !_WIN32 */
     unsigned long c = GetCurrentProcessId();
-#endif
+#endif /* !_WIN32 */
 
     a = a - b;  a = a - c;  a = a ^ (c >> 13);
     b = b - c;  b = b - a;  b = b ^ (a << 8);
@@ -89,13 +85,13 @@ int main(int argc, const char **argv)
 #ifndef _WIN32
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
-    signal(SIGPIPE, signal_handler);
     signal(SIGUSR1, signal_handler);
     signal(SIGHUP, signal_handler);
     signal(SIGQUIT, signal_handler);
-#else
+    signal(SIGPIPE, SIG_IGN);
+#else /* !_WIN32 */
     SetConsoleCtrlHandler((PHANDLER_ROUTINE)signal_handler, true);
-#endif
+#endif /* !_WIN32 */
 
 astra_reload_entry:
 
