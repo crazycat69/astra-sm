@@ -20,11 +20,10 @@
  */
 
 #include <astra.h>
-#ifndef _WIN32
-#   include <signal.h>
-#endif /* !_WIN32 */
 
 #ifndef _WIN32
+#include <signal.h>
+
 static void signal_handler(int signum)
 {
     switch (signum)
@@ -41,8 +40,18 @@ static void signal_handler(int signum)
             astra_shutdown();
     }
 }
+
+static void signal_setup(void)
+{
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+    signal(SIGUSR1, signal_handler);
+    signal(SIGHUP, signal_handler);
+    signal(SIGQUIT, signal_handler);
+    signal(SIGPIPE, SIG_IGN);
+}
 #else /* !_WIN32 */
-static bool WINAPI signal_handler(DWORD signum)
+static bool WINAPI ctrl_handler(DWORD signum)
 {
     switch (signum)
     {
@@ -53,7 +62,13 @@ static bool WINAPI signal_handler(DWORD signum)
         default:
             break;
     }
+
     return true;
+}
+
+static void signal_setup(void)
+{
+    SetConsoleCtrlHandler((PHANDLER_ROUTINE)ctrl_handler, true);
 }
 #endif /* !_WIN32 */
 
@@ -82,19 +97,9 @@ static void asc_srand(void)
 
 int main(int argc, const char **argv)
 {
-#ifndef _WIN32
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
-    signal(SIGUSR1, signal_handler);
-    signal(SIGHUP, signal_handler);
-    signal(SIGQUIT, signal_handler);
-    signal(SIGPIPE, SIG_IGN);
-#else /* !_WIN32 */
-    SetConsoleCtrlHandler((PHANDLER_ROUTINE)signal_handler, true);
-#endif /* !_WIN32 */
+    signal_setup();
 
 astra_reload_entry:
-
     asc_srand();
     astra_core_init();
 
