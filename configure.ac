@@ -217,7 +217,7 @@ AM_CONDITIONAL(HAVE_CYGWIN, [test "${SYS}" = "cygwin"])
 
 # Choose event mechanism
 case "${host_os}" in
-    mingw32*)
+    mingw*)
         event_mechanism="select"
         AX_CHECK_WINFUNC(select, [ select(0, NULL, NULL, NULL, NULL) ])
         AC_DEFINE([WITH_SELECT],
