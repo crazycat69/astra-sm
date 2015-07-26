@@ -78,7 +78,7 @@
         (__x)[9] = ((__b) >> 1) & 0xff; \
         (__x)[10] = 0x7e | (((__b) << 7) & 0x80) | (((__e) >> 8) & 0x1); \
         (__x)[11] = (__e) & 0xff; \
-    } while(0);
+    } while (0)
 
 /* get PCR value */
 #define TS_GET_PCR(__x) \

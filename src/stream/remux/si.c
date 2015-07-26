@@ -37,7 +37,7 @@
             __list = (__type *)__tmp; \
             __list[__cnt++] = __val; \
         } \
-    } while(0);
+    } while (0)
 
 static inline bool list_contains_pid(const uint16_t list[]
                                      , size_t cnt

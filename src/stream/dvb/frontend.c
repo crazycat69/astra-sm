@@ -22,13 +22,13 @@
 
 #define MSG(_msg) "[dvb_input %d:%d] " _msg, fe->adapter, fe->device
 
-#define DTV_PROPERTY_BEGIN(_cmdseq, _cmdlist)                                                   \
-    _cmdseq.num = 0;                                                                            \
+#define DTV_PROPERTY_BEGIN(_cmdseq, _cmdlist) \
+    _cmdseq.num = 0; \
     _cmdseq.props = _cmdlist
 
-#define DTV_PROPERTY_SET(_cmdseq, _cmdlist, _cmd, _data)                                        \
-    _cmdlist[_cmdseq.num].cmd = _cmd;                                                           \
-    _cmdlist[_cmdseq.num].u.data = _data;                                                       \
+#define DTV_PROPERTY_SET(_cmdseq, _cmdlist, _cmd, _data) \
+    _cmdlist[_cmdseq.num].cmd = _cmd; \
+    _cmdlist[_cmdseq.num].u.data = _data; \
     ++_cmdseq.num
 
 static void fe_clear(dvb_fe_t *fe)

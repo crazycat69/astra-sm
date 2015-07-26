@@ -45,9 +45,9 @@
 #if defined(BYTE_ORDER) && BYTE_ORDER == LITTLE_ENDIAN
 #   define FETCH_32(p) (*(const uint32_t *)(p))
 #elif defined(BYTE_ORDER) && BYTE_ORDER == BIG_ENDIAN
-#   define FETCH_32(p)                                                   \
-                       (((uint32_t)*((const uint8_t *)(p))) |            \
-                       (((uint32_t)*((const uint8_t *)(p) + 1)) << 8) |  \
+#   define FETCH_32(p) \
+                       (((uint32_t)*((const uint8_t *)(p))) | \
+                       (((uint32_t)*((const uint8_t *)(p) + 1)) << 8) | \
                        (((uint32_t)*((const uint8_t *)(p) + 2)) << 16) | \
                        (((uint32_t)*((const uint8_t *)(p) + 3)) << 24))
 #else
@@ -90,28 +90,28 @@ static uint8_t PADDING[64] = { 0x80, /* zeros */ };
  * FF, GG, HH, and II transformations for rounds 1, 2, 3, and 4.
  * Rotation is separate from addition to prevent recomputation.
  */
-#define FF(a, b, c, d, x, s, ac) {                                          \
-    (a) += F((b), (c), (d)) + (x) + (unsigned long long)(ac);               \
-    (a) = ROTATE_LEFT((a), (s));                                            \
-    (a) += (b);                                                             \
+#define FF(a, b, c, d, x, s, ac) { \
+    (a) += F((b), (c), (d)) + (x) + (unsigned long long)(ac); \
+    (a) = ROTATE_LEFT((a), (s)); \
+    (a) += (b); \
 }
 
-#define GG(a, b, c, d, x, s, ac) {                                          \
-    (a) += G((b), (c), (d)) + (x) + (unsigned long long)(ac);               \
-    (a) = ROTATE_LEFT((a), (s));                                            \
-    (a) += (b);                                                             \
+#define GG(a, b, c, d, x, s, ac) { \
+    (a) += G((b), (c), (d)) + (x) + (unsigned long long)(ac); \
+    (a) = ROTATE_LEFT((a), (s)); \
+    (a) += (b); \
 }
 
-#define HH(a, b, c, d, x, s, ac) {                                          \
-    (a) += H((b), (c), (d)) + (x) + (unsigned long long)(ac);               \
-    (a) = ROTATE_LEFT((a), (s));                                            \
-    (a) += (b);                                                             \
+#define HH(a, b, c, d, x, s, ac) { \
+    (a) += H((b), (c), (d)) + (x) + (unsigned long long)(ac); \
+    (a) = ROTATE_LEFT((a), (s)); \
+    (a) += (b); \
 }
 
-#define II(a, b, c, d, x, s, ac) {                                          \
-    (a) += I((b), (c), (d)) + (x) + (unsigned long long)(ac);               \
-    (a) = ROTATE_LEFT((a), (s));                                            \
-    (a) += (b);                                                             \
+#define II(a, b, c, d, x, s, ac) { \
+    (a) += I((b), (c), (d)) + (x) + (unsigned long long)(ac); \
+    (a) = ROTATE_LEFT((a), (s)); \
+    (a) += (b); \
 }
 
 /*

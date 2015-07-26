@@ -32,7 +32,7 @@ typedef struct
 bool parse_skip_word(const char *str, size_t size, size_t *skip);
 bool parse_skip_space(const char *str, size_t size, size_t *skip);
 bool parse_skip_line(const char *str, size_t size, size_t *skip);
-#define parse_get_line_size(_str, _skip)                                                        \
+#define parse_get_line_size(_str, _skip) \
     (((_skip >= 2) && (_str[_skip - 2] == '\r')) ? (_skip - 2) : (_skip - 1))
 
 bool http_parse_request(const char *, size_t size, parse_match_t *);

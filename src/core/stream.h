@@ -52,102 +52,102 @@ void __module_stream_destroy(module_stream_t *stream);
 void __module_stream_attach(module_stream_t *stream, module_stream_t *child);
 void __module_stream_send(void *arg, const uint8_t *ts);
 
-#define module_stream_init(_mod, _on_ts)                                                        \
-    {                                                                                           \
-        _mod->__stream.self = _mod;                                                             \
-        _mod->__stream.on_ts = _on_ts;                                                          \
-        __module_stream_init(&_mod->__stream);                                                  \
-        lua_getfield(lua, MODULE_OPTIONS_IDX, "upstream");                                      \
-        if(lua_type(lua, -1) == LUA_TLIGHTUSERDATA)                                             \
-        {                                                                                       \
-            module_stream_t *_stream = (module_stream_t *)lua_touserdata(lua, -1);              \
-            __module_stream_attach(_stream, &_mod->__stream);                                   \
-        }                                                                                       \
-        lua_pop(lua, 1);                                                                        \
-    }
+#define module_stream_init(_mod, _on_ts) \
+    do { \
+        _mod->__stream.self = _mod; \
+        _mod->__stream.on_ts = _on_ts; \
+        __module_stream_init(&_mod->__stream); \
+        lua_getfield(lua, MODULE_OPTIONS_IDX, "upstream"); \
+        if(lua_type(lua, -1) == LUA_TLIGHTUSERDATA) \
+        { \
+            module_stream_t *_stream = (module_stream_t *)lua_touserdata(lua, -1); \
+            __module_stream_attach(_stream, &_mod->__stream); \
+        } \
+        lua_pop(lua, 1); \
+    } while (0)
 
-#define module_stream_demux_set(_mod, _join_pid, _leave_pid)                                    \
-    {                                                                                           \
-        _mod->__stream.pid_list = (uint8_t *)calloc(MAX_PID, sizeof(uint8_t));                  \
-        _mod->__stream.join_pid = _join_pid;                                                    \
-        _mod->__stream.leave_pid = _leave_pid;                                                  \
-    }
+#define module_stream_demux_set(_mod, _join_pid, _leave_pid) \
+    do { \
+        _mod->__stream.pid_list = (uint8_t *)calloc(MAX_PID, sizeof(uint8_t)); \
+        _mod->__stream.join_pid = _join_pid; \
+        _mod->__stream.leave_pid = _leave_pid; \
+    } while (0)
 
-#define module_stream_destroy(_mod)                                                             \
-    {                                                                                           \
-        if(_mod->__stream.self)                                                                 \
-        {                                                                                       \
-            if(_mod->__stream.pid_list)                                                         \
-            {                                                                                   \
-                for(int __i = 0; __i < MAX_PID; ++__i)                                          \
-                {                                                                               \
-                    if(_mod->__stream.pid_list[__i])                                            \
-                    {                                                                           \
-                        module_stream_demux_leave_pid(_mod, __i);                               \
-                    }                                                                           \
-                }                                                                               \
-                free(_mod->__stream.pid_list);                                                  \
-                _mod->__stream.pid_list = NULL;                                                 \
-            }                                                                                   \
-            __module_stream_destroy(&_mod->__stream);                                           \
-            _mod->__stream.self = NULL;                                                         \
-        }                                                                                       \
-    }
+#define module_stream_destroy(_mod) \
+    do { \
+        if(_mod->__stream.self) \
+        { \
+            if(_mod->__stream.pid_list) \
+            { \
+                for(int __i = 0; __i < MAX_PID; ++__i) \
+                { \
+                    if(_mod->__stream.pid_list[__i]) \
+                    { \
+                        module_stream_demux_leave_pid(_mod, __i); \
+                    } \
+                } \
+                free(_mod->__stream.pid_list); \
+                _mod->__stream.pid_list = NULL; \
+            } \
+            __module_stream_destroy(&_mod->__stream); \
+            _mod->__stream.self = NULL; \
+        } \
+    } while (0)
 
-#define module_stream_send(_mod, _ts)                                                           \
+#define module_stream_send(_mod, _ts) \
     __module_stream_send(&_mod->__stream, _ts)
 
 // demux
 
-#define module_stream_demux_check_pid(_mod, _pid)                                               \
+#define module_stream_demux_check_pid(_mod, _pid) \
     (_mod->__stream.pid_list[_pid] > 0)
 
-#define module_stream_demux_join_pid(_mod, _pid)                                                \
-    {                                                                                           \
-        const uint16_t ___pid = _pid;                                                           \
-        asc_assert(_mod->__stream.pid_list != NULL                                              \
-                   , "%s:%d module_stream_demux_set() is required", __FILE__, __LINE__);        \
-        ++_mod->__stream.pid_list[___pid];                                                      \
-        if(_mod->__stream.pid_list[___pid] == 1                                                 \
-           && _mod->__stream.parent                                                             \
-           && _mod->__stream.parent->join_pid)                                                  \
-        {                                                                                       \
-            _mod->__stream.parent->join_pid(_mod->__stream.parent->self, ___pid);               \
-        }                                                                                       \
-    }
+#define module_stream_demux_join_pid(_mod, _pid) \
+    do { \
+        const uint16_t ___pid = _pid; \
+        asc_assert(_mod->__stream.pid_list != NULL \
+                   , "%s:%d module_stream_demux_set() is required", __FILE__, __LINE__); \
+        ++_mod->__stream.pid_list[___pid]; \
+        if(_mod->__stream.pid_list[___pid] == 1 \
+           && _mod->__stream.parent \
+           && _mod->__stream.parent->join_pid) \
+        { \
+            _mod->__stream.parent->join_pid(_mod->__stream.parent->self, ___pid); \
+        } \
+    } while (0)
 
-#define module_stream_demux_leave_pid(_mod, _pid)                                               \
-    {                                                                                           \
-        const uint16_t ___pid = _pid;                                                           \
-        asc_assert(_mod->__stream.pid_list != NULL                                              \
-                   , "%s:%d module_stream_demux_set() is required", __FILE__, __LINE__);        \
-        if(_mod->__stream.pid_list[___pid] > 0)                                                 \
-        {                                                                                       \
-            --_mod->__stream.pid_list[___pid];                                                  \
-            if(_mod->__stream.pid_list[___pid] == 0                                             \
-               && _mod->__stream.parent                                                         \
-               && _mod->__stream.parent->leave_pid)                                             \
-            {                                                                                   \
-                _mod->__stream.parent->leave_pid(_mod->__stream.parent->self, ___pid);          \
-            }                                                                                   \
-        }                                                                                       \
-        else                                                                                    \
-        {                                                                                       \
-            asc_log_error("%s:%d module_stream_demux_leave_pid() double call pid:%d"            \
-                          , __FILE__, __LINE__, ___pid);                                        \
-        }                                                                                       \
-    }
+#define module_stream_demux_leave_pid(_mod, _pid) \
+    do { \
+        const uint16_t ___pid = _pid; \
+        asc_assert(_mod->__stream.pid_list != NULL \
+                   , "%s:%d module_stream_demux_set() is required", __FILE__, __LINE__); \
+        if(_mod->__stream.pid_list[___pid] > 0) \
+        { \
+            --_mod->__stream.pid_list[___pid]; \
+            if(_mod->__stream.pid_list[___pid] == 0 \
+               && _mod->__stream.parent \
+               && _mod->__stream.parent->leave_pid) \
+            { \
+                _mod->__stream.parent->leave_pid(_mod->__stream.parent->self, ___pid); \
+            } \
+        } \
+        else \
+        { \
+            asc_log_error("%s:%d module_stream_demux_leave_pid() double call pid:%d" \
+                          , __FILE__, __LINE__, ___pid); \
+        } \
+    } while (0)
 
 // base
 
-#define MODULE_STREAM_METHODS()                                                                 \
-    static int module_stream_stream(module_data_t *mod)                                         \
-    {                                                                                           \
-        lua_pushlightuserdata(lua, &mod->__stream);                                             \
-        return 1;                                                                               \
+#define MODULE_STREAM_METHODS() \
+    static int module_stream_stream(module_data_t *mod) \
+    { \
+        lua_pushlightuserdata(lua, &mod->__stream); \
+        return 1; \
     }
 
-#define MODULE_STREAM_METHODS_REF()                                                             \
+#define MODULE_STREAM_METHODS_REF() \
     { "stream", module_stream_stream }
 
 #endif /* _ASC_STREAM_H_ */
