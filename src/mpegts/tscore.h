@@ -55,22 +55,25 @@
     )
 
 #define TS_GET_PID(_ts) ((uint16_t)(((_ts[1] & 0x1F) << 8) | _ts[2]))
-#define TS_SET_PID(_ts, _pid)                                                                   \
-    {                                                                                           \
-        uint8_t *__ts = _ts;                                                                    \
-        const uint16_t __pid = _pid;                                                            \
-        __ts[1] = (__ts[1] & ~0x1F) | ((__pid >> 8) & 0x1F);                                    \
-        __ts[2] = __pid & 0xFF;                                                                 \
-    }
+#define TS_SET_PID(_ts, _pid) \
+    do { \
+        uint8_t *__ts = _ts; \
+        const uint16_t __pid = _pid; \
+        __ts[1] = (__ts[1] & ~0x1F) | ((__pid >> 8) & 0x1F); \
+        __ts[2] = __pid & 0xFF; \
+    } while (0)
 
 #define TS_GET_CC(_ts) (_ts[3] & 0x0F)
-#define TS_SET_CC(_ts, _cc) { _ts[3] = (_ts[3] & 0xF0) | ((_cc) & 0x0F); }
+#define TS_SET_CC(_ts, _cc) \
+    do { \
+        _ts[3] = (_ts[3] & 0xF0) | ((_cc) & 0x0F); \
+    } while (0)
 
-#define TS_GET_PAYLOAD(_ts) (                                                                   \
-    (!TS_IS_PAYLOAD(_ts)) ? (NULL) : (                                                          \
-        (!TS_IS_AF(_ts)) ? (&_ts[TS_HEADER_SIZE]) : (                                           \
-            (_ts[4] > TS_BODY_SIZE - 1) ? (NULL) : (&_ts[TS_HEADER_SIZE + 1 + _ts[4]]))         \
-        )                                                                                       \
+#define TS_GET_PAYLOAD(_ts) ( \
+    (!TS_IS_PAYLOAD(_ts)) ? (NULL) : ( \
+        (!TS_IS_AF(_ts)) ? (&_ts[TS_HEADER_SIZE]) : ( \
+            (_ts[4] > TS_BODY_SIZE - 1) ? (NULL) : (&_ts[TS_HEADER_SIZE + 1 + _ts[4]])) \
+        ) \
     )
 
 typedef void (*ts_callback_t)(void *, const uint8_t *);

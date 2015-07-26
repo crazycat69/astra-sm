@@ -91,39 +91,39 @@ void module_cam_reset(module_cam_t *cam);
 em_packet_t * module_cam_queue_pop(module_cam_t *cam) __wur;
 void module_cam_queue_flush(module_cam_t *cam, module_decrypt_t *decrypt);
 
-#define module_cam_init(_mod, _connect, _disconnect, _send_em)                                  \
-    {                                                                                           \
-        _mod->__cam.self = _mod;                                                                \
-        _mod->__cam.decrypt_list = asc_list_init();                                             \
-        _mod->__cam.prov_list = asc_list_init();                                                \
-        _mod->__cam.packet_queue = asc_list_init();                                             \
-        _mod->__cam.connect = _connect;                                                         \
-        _mod->__cam.disconnect = _disconnect;                                                   \
-        _mod->__cam.send_em = _send_em;                                                         \
+#define module_cam_init(_mod, _connect, _disconnect, _send_em) \
+    do { \
+        _mod->__cam.self = _mod; \
+        _mod->__cam.decrypt_list = asc_list_init(); \
+        _mod->__cam.prov_list = asc_list_init(); \
+        _mod->__cam.packet_queue = asc_list_init(); \
+        _mod->__cam.connect = _connect; \
+        _mod->__cam.disconnect = _disconnect; \
+        _mod->__cam.send_em = _send_em; \
+    } while (0)
+
+#define module_cam_destroy(_mod) \
+    do { \
+        module_cam_reset(&_mod->__cam); \
+        for(  asc_list_first(_mod->__cam.decrypt_list) \
+            ; !asc_list_eol(_mod->__cam.decrypt_list) \
+            ; asc_list_first(_mod->__cam.decrypt_list)) \
+        { \
+            asc_list_remove_current(_mod->__cam.decrypt_list); \
+        } \
+        asc_list_destroy(_mod->__cam.decrypt_list); \
+        asc_list_destroy(_mod->__cam.prov_list); \
+        asc_list_destroy(_mod->__cam.packet_queue); \
+    } while (0)
+
+#define MODULE_CAM_METHODS() \
+    static int module_cam_cam(module_data_t *mod) \
+    { \
+        lua_pushlightuserdata(lua, &mod->__cam); \
+        return 1; \
     }
 
-#define module_cam_destroy(_mod)                                                                \
-    {                                                                                           \
-        module_cam_reset(&_mod->__cam);                                                         \
-        for(  asc_list_first(_mod->__cam.decrypt_list)                                          \
-            ; !asc_list_eol(_mod->__cam.decrypt_list)                                           \
-            ; asc_list_first(_mod->__cam.decrypt_list))                                         \
-        {                                                                                       \
-            asc_list_remove_current(_mod->__cam.decrypt_list);                                  \
-        }                                                                                       \
-        asc_list_destroy(_mod->__cam.decrypt_list);                                             \
-        asc_list_destroy(_mod->__cam.prov_list);                                                \
-        asc_list_destroy(_mod->__cam.packet_queue);                                             \
-    }
-
-#define MODULE_CAM_METHODS()                                                                    \
-    static int module_cam_cam(module_data_t *mod)                                               \
-    {                                                                                           \
-        lua_pushlightuserdata(lua, &mod->__cam);                                                \
-        return 1;                                                                               \
-    }
-
-#define MODULE_CAM_METHODS_REF()                                                                \
+#define MODULE_CAM_METHODS_REF() \
     { "cam", module_cam_cam }
 
 /*
@@ -155,17 +155,17 @@ struct module_cas_t
 #define MODULE_CAS_PROTO(_name) \
     module_cas_t * CAS_INIT(_name)(module_decrypt_t *decrypt);
 
-#define MODULE_CAS(_name)                                                                       \
-    module_cas_t * CAS_INIT(_name)(module_decrypt_t *decrypt)                                   \
-    {                                                                                           \
-        if(!cas_check_caid(decrypt->cam->caid)) return NULL;                                    \
-        module_data_t *mod = (module_data_t *)calloc(1, sizeof(*mod));                          \
-        mod->__cas.self = mod;                                                                  \
-        mod->__cas.decrypt = decrypt;                                                           \
-        mod->__cas.check_descriptor = cas_check_descriptor;                                     \
-        mod->__cas.check_em = cas_check_em;                                                     \
-        mod->__cas.check_keys = cas_check_keys;                                                 \
-        return &mod->__cas;                                                                     \
+#define MODULE_CAS(_name) \
+    module_cas_t * CAS_INIT(_name)(module_decrypt_t *decrypt) \
+    { \
+        if(!cas_check_caid(decrypt->cam->caid)) return NULL; \
+        module_data_t *mod = (module_data_t *)calloc(1, sizeof(*mod)); \
+        mod->__cas.self = mod; \
+        mod->__cas.decrypt = decrypt; \
+        mod->__cas.check_descriptor = cas_check_descriptor; \
+        mod->__cas.check_em = cas_check_em; \
+        mod->__cas.check_keys = cas_check_keys; \
+        return &mod->__cas; \
     }
 
 /* known CAS list */

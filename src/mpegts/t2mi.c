@@ -37,13 +37,13 @@
 #define L1_CURRENT_MAX_AUX 16
 
 #define asc_log_error_once(...) \
-    { \
+    do { \
         if (!mi->warned) \
         { \
             asc_log_error(__VA_ARGS__); \
             mi->warned = false; \
         } \
-    }
+    } while (0)
 
 /* T2-MI packet types */
 enum
@@ -317,10 +317,10 @@ uint64_t read_bit_field(const uint8_t **ptr, unsigned *off, unsigned size)
 }
 
 #define BIT_SET_PTR(__data) \
-    { \
+    do { \
         ptr = (__data); \
         off = 0; \
-    }
+    } while (0)
 
 #define BIT_FIELD_FUNC(__size) \
     read_bit_field(&ptr, &off, (__size))
@@ -329,14 +329,14 @@ uint64_t read_bit_field(const uint8_t **ptr, unsigned *off, unsigned size)
     (__where) = BIT_FIELD_FUNC(__size)
 
 #define BIT_SKIP(__size) \
-    { \
+    do { \
         off += (__size); \
         while (off >= 8) \
         { \
             ptr++; \
             off -= 8; \
         } \
-    }
+    } while (0)
 
 /* round up bit length to nearest byte */
 #define BITS_TO_BYTES(__data_bits) \
