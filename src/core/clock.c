@@ -24,7 +24,11 @@
 __asc_inline
 uint64_t asc_utime(void)
 {
-#ifdef HAVE_CLOCK_GETTIME
+#ifdef _WIN32
+    uint64_t systime;
+    GetSystemTimeAsFileTime((LPFILETIME)&systime);
+    return systime / 10;
+#elif defined(HAVE_CLOCK_GETTIME)
     struct timespec ts;
 
     if(clock_gettime(CLOCK_MONOTONIC, &ts) == EINVAL)
