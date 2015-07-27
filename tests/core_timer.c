@@ -29,7 +29,6 @@ typedef struct
     unsigned interval;
 } timer_test_t;
 
-static bool stop_loop;
 static bool timed_out;
 
 /*
@@ -48,7 +47,8 @@ static void teardown(void)
 static void on_stop(void *arg)
 {
     __uarg(arg);
-    stop_loop = timed_out = true;
+    timed_out = true;
+    astra_shutdown();
 }
 
 static uint64_t run_loop(unsigned ms)
@@ -59,14 +59,7 @@ static uint64_t run_loop(unsigned ms)
     asc_timer_t *const stopper = asc_timer_one_shot(ms, on_stop, NULL);
     ck_assert(stopper != NULL);
 
-    for (stop_loop = false; !stop_loop; main_loop->flags = 0)
-    {
-        asc_timer_core_loop();
-        if (main_loop->flags & MAIN_LOOP_NO_SLEEP)
-            continue;
-
-        asc_usleep(1000);
-    }
+    asc_main_loop_run();
 
     const uint64_t bench = (asc_utime() - start) / 1000;
     fail_unless(bench <= (ms * 1.3));
@@ -130,7 +123,7 @@ static void on_single_timer(void *arg)
 {
     unsigned *const count = (unsigned *)arg;
     if (++(*count) >= 10)
-        stop_loop = true;
+        astra_shutdown();
 }
 
 START_TEST(single_timer)
