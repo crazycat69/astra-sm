@@ -256,8 +256,8 @@ AC_MSG_NOTICE([using ${event_mechanism} for event notification])
 #
 # Checks for headers and functions common to all platforms
 #
-AX_CHECK_HEADERS_REQ([dirent.h inttypes.h stdarg.h stddef.h stdint.h stdbool.h stdio.h stdlib.h sys/types.h sys/stat.h sys/time.h setjmp.h time.h string.h unistd.h errno.h])
-AX_CHECK_FUNCS_REQ([clock lseek localtime longjmp malloc realloc memchr memset memcpy srand strcasecmp strchr strdup strerror strftime strncasecmp strpbrk strrchr strspn strstr strtoul time snprintf vsnprintf memmove])
+AX_CHECK_HEADERS_REQ([dirent.h inttypes.h stdarg.h stddef.h stdint.h stdbool.h stdio.h stdlib.h sys/types.h sys/stat.h sys/time.h time.h string.h unistd.h errno.h])
+AX_CHECK_FUNCS_REQ([clock lseek localtime malloc realloc memchr memset memcpy srand strcasecmp strchr strdup strerror strftime strncasecmp strpbrk strrchr strspn strstr strtoul time snprintf vsnprintf memmove gettimeofday])
 
 # optional headers
 AC_CHECK_HEADERS([netinet/sctp.h])
@@ -284,12 +284,6 @@ AC_SEARCH_LIBS([clock_gettime], [rt], [
         [1], [Define to 1 if you have the `clock_gettime' function.])
 ])
 AX_RESTORE_FLAGS
-
-AC_CHECK_FUNCS([gettimeofday])
-AS_IF(
-    [ test "x${ac_cv_func_clock_gettime}" != "xyes" \
-      && test "x${ac_cv_func_gettimeofday}" != "xyes" ],
-    [ AC_MSG_ERROR([no function to get time]) ])
 
 # POSIX AIO: used by `file'
 have_aio="no"
