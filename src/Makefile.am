@@ -183,7 +183,7 @@ endif
 # Main binary
 #
 bin_PROGRAMS += astra
-astra_SOURCES = main.c
+astra_SOURCES = main.c sighandler.c
 astra_CFLAGS = $(AM_CFLAGS)
 astra_LDADD = \
     libastra.la \

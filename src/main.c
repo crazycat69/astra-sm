@@ -20,57 +20,7 @@
  */
 
 #include <astra.h>
-
-#ifndef _WIN32
-#include <signal.h>
-
-static void signal_handler(int signum)
-{
-    switch (signum)
-    {
-        case SIGHUP:
-            astra_sighup();
-            return;
-
-        case SIGUSR1:
-            astra_reload();
-            return;
-
-        default:
-            astra_shutdown();
-    }
-}
-
-static void signal_setup(void)
-{
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
-    signal(SIGUSR1, signal_handler);
-    signal(SIGHUP, signal_handler);
-    signal(SIGQUIT, signal_handler);
-    signal(SIGPIPE, SIG_IGN);
-}
-#else /* !_WIN32 */
-static bool WINAPI ctrl_handler(DWORD signum)
-{
-    switch (signum)
-    {
-        case CTRL_C_EVENT:
-        case CTRL_BREAK_EVENT:
-            astra_shutdown();
-
-        default:
-            break;
-    }
-
-    return true;
-}
-
-static void signal_setup(void)
-{
-    SetConsoleCtrlHandler((PHANDLER_ROUTINE)ctrl_handler, true);
-}
-#endif /* !_WIN32 */
+#include "sighandler.h"
 
 static void asc_srand(void)
 {
@@ -102,6 +52,7 @@ int main(int argc, const char **argv)
 astra_reload_entry:
     asc_srand();
     astra_core_init();
+    signal_enable(true);
 
     /* pass command line to lua */
     lua_newtable(lua);
@@ -149,10 +100,13 @@ astra_reload_entry:
     /* start main loop */
     const bool again = asc_main_loop_run();
     asc_log_info("[main] %s", again ? "restarting" : "shutting down");
+
+    signal_enable(false);
     astra_core_destroy();
 
     if (again)
         goto astra_reload_entry;
 
+    signal_cleanup();
     return 0;
 }
