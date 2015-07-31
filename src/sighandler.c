@@ -55,7 +55,7 @@ static bool quit_thread = true;
 static void perror_exit(int errnum, const char *str)
 {
     fprintf(stderr, "%s: %s\n", str, strerror(errnum));
-    exit(EXIT_FAILURE);
+    _exit(EXIT_FAILURE);
 }
 
 static void *thread_loop(void *arg)
@@ -164,12 +164,21 @@ void signal_cleanup(void)
     if (ret != 0)
         perror_exit(ret, "pthread_sigmask()");
 }
+
 #else /* !_WIN32 */
+
 /* TODO: move these to core/thread.h */
 #define mutex_lock(__mutex) WaitForSingleObject(__mutex, INFINITE)
 #define mutex_unlock(__mutex) while (ReleaseMutex(__mutex))
 
-static HANDLE signal_lock;
+#define SERVICE_NAME (char *)PACKAGE_NAME
+
+static SERVICE_STATUS service_status;
+static SERVICE_STATUS_HANDLE service_status_handle = NULL;
+static HANDLE service_event = NULL;
+static HANDLE service_thread = NULL;
+
+static HANDLE signal_lock = NULL;
 static bool ignore_ctrl = true;
 
 static void perror_exit(DWORD errnum, const char *str)
@@ -183,10 +192,74 @@ static void perror_exit(DWORD errnum, const char *str)
 
     /* NOTE: FormatMessage() appends a newline to error message */ \
     fprintf(stderr, "%s: %s", str, msg);
-    exit(EXIT_FAILURE);
+    _exit(EXIT_FAILURE);
 }
 
-static BOOL WINAPI ctrl_handler(DWORD type)
+#ifdef DEBUG
+static void redirect_stdio(void)
+{
+    static const char logfile[] = "\\stdio.log";
+
+    char buf[MAX_PATH];
+    if (!GetModuleFileName(NULL, buf, sizeof(buf)))
+        perror_exit(GetLastError(), "GetModuleFileName()");
+
+    char *const p = strrchr(buf, '\\');
+    if (p != NULL)
+        *p = '\0';
+    else
+        strncpy(buf, ".", sizeof("."));
+
+    strncat(buf, logfile, sizeof(buf) - strlen(buf) - 1);
+
+    if (freopen(buf, "w", stdout) == NULL)
+        perror_exit(errno, "freopen()");
+
+    if (freopen(buf, "w", stderr) == NULL)
+        perror_exit(errno, "freopen()");
+
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+}
+#endif
+
+static inline void service_set_state(DWORD state)
+{
+    service_status.dwCurrentState = state;
+    SetServiceStatus(service_status_handle, &service_status);
+}
+
+static void WINAPI service_handler(DWORD control)
+{
+    switch (control)
+    {
+        case SERVICE_CONTROL_STOP:
+            if (service_status.dwCurrentState == SERVICE_RUNNING)
+            {
+                /*
+                 * NOTE: stop pending state should really be set by
+                 *       signal_enable(), but then we'd have to somehow
+                 *       filter out soft restart requests.
+                 */
+                service_set_state(SERVICE_STOP_PENDING);
+
+                mutex_lock(signal_lock);
+                if (!ignore_ctrl)
+                    astra_shutdown();
+                mutex_unlock(signal_lock);
+            }
+            break;
+
+        case SERVICE_CONTROL_INTERROGATE:
+            service_set_state(service_status.dwCurrentState);
+            break;
+
+        default:
+            break;
+    }
+}
+
+static BOOL WINAPI console_handler(DWORD type)
 {
     /* handlers are run in separate threads */
     mutex_lock(signal_lock);
@@ -213,6 +286,131 @@ static BOOL WINAPI ctrl_handler(DWORD type)
     return ret;
 }
 
+static void WINAPI service_main(DWORD argc, LPTSTR *argv)
+{
+    __uarg(argc);
+    __uarg(argv);
+
+#ifdef DEBUG
+    redirect_stdio();
+#endif /* DEBUG */
+
+    /* register control handler */
+    ignore_ctrl = false;
+    service_status_handle =
+        RegisterServiceCtrlHandler(SERVICE_NAME, service_handler);
+
+    if (service_status_handle == NULL)
+        perror_exit(GetLastError(), "RegisterServiceCtrlHandler()");
+
+    /* report to SCM */
+    service_set_state(SERVICE_START_PENDING);
+
+    /* notify main thread */
+    SetEvent(service_event);
+}
+
+static DWORD WINAPI service_thread_proc(void *arg)
+{
+    __uarg(arg);
+
+    /*
+     * NOTE: here we use a dedicated thread for the blocking call
+     *       to StartServiceCtrlDispatcher(), which allows us to keep
+     *       the normal startup routine unaltered.
+     */
+    static const SERVICE_TABLE_ENTRY svclist[] = {
+        { SERVICE_NAME, service_main },
+        { NULL, NULL },
+    };
+
+    if (!StartServiceCtrlDispatcher(svclist))
+        return GetLastError();
+
+    return ERROR_SUCCESS;
+}
+
+static bool service_initialize(void)
+{
+    /* initialize service state struct */
+    memset(&service_status, 0, sizeof(service_status));
+    service_status.dwServiceType = SERVICE_WIN32_OWN_PROCESS;
+    service_status.dwControlsAccepted = SERVICE_ACCEPT_STOP;
+    service_status.dwCurrentState = SERVICE_STOPPED;
+
+    /* attempt to connect to SCM */
+    service_event = CreateEvent(NULL, false, false, NULL);
+    if (service_event == NULL)
+        perror_exit(GetLastError(), "CreateEvent()");
+
+    service_thread = CreateThread(NULL, 0, service_thread_proc, NULL, 0, NULL);
+    if (service_thread == NULL)
+        perror_exit(GetLastError(), "CreateThread()");
+
+    const HANDLE handles[2] = { service_event, service_thread };
+    const DWORD ret = WaitForMultipleObjects(2, handles, false, INFINITE);
+    ASC_FREE(service_event, CloseHandle);
+
+    if (ret == WAIT_OBJECT_0)
+    {
+        /* service_event fired; SCM connection successful */
+        return true;
+    }
+    else if (ret == WAIT_OBJECT_0 + 1)
+    {
+        /* service_thread exited; we're probably running from a console */
+        DWORD exit_code = ERROR_INTERNAL_ERROR;
+        if (GetExitCodeThread(service_thread, &exit_code))
+        {
+            if (exit_code == ERROR_SUCCESS)
+                /* shouldn't return success this early */
+                exit_code = ERROR_INTERNAL_ERROR;
+        }
+
+        if (exit_code != ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
+            perror_exit(exit_code, "StartServiceCtrlDispatcher()");
+
+        ASC_FREE(service_thread, CloseHandle);
+    }
+    else
+    {
+        /* shouldn't happen */
+        if (ret != WAIT_FAILED)
+            SetLastError(ERROR_INTERNAL_ERROR);
+
+        perror_exit(GetLastError(), "WaitForMultipleObjects()");
+    }
+
+    return false;
+}
+
+static bool service_destroy(void)
+{
+    if (service_thread != NULL)
+    {
+        /*
+         * TODO: set dwWin32ExitCode if we're exiting because of an error
+         */
+
+        /* report service shutdown, join dispatcher thread */
+        if (service_status_handle != NULL)
+            service_set_state(SERVICE_STOPPED);
+        else
+            TerminateThread(service_thread, ERROR_SUCCESS);
+
+        WaitForSingleObject(service_thread, INFINITE);
+        ASC_FREE(service_thread, CloseHandle);
+
+        /* reset service state */
+        memset(&service_status, 0, sizeof(service_status));
+        service_status_handle = NULL;
+
+        return true;
+    }
+
+    return false;
+}
+
 void signal_setup(void)
 {
     /* create and lock signal handling mutex */
@@ -220,10 +418,13 @@ void signal_setup(void)
     if (signal_lock == NULL)
         perror_exit(GetLastError(), "CreateMutex()");
 
-    /* register console event handler */
-    ignore_ctrl = false;
-    if (!SetConsoleCtrlHandler(ctrl_handler, true))
-        perror_exit(GetLastError(), "SetConsoleCtrlHandler()");
+    /* install console control handler if not started as a service */
+    if (!service_initialize())
+    {
+        ignore_ctrl = false;
+        if (!SetConsoleCtrlHandler(console_handler, true))
+            perror_exit(GetLastError(), "SetConsoleCtrlHandler()");
+    }
 }
 
 void signal_cleanup(void)
@@ -232,20 +433,30 @@ void signal_cleanup(void)
     ignore_ctrl = true;
     mutex_unlock(signal_lock);
 
-    /* remove ctrl handler; this also joins handler threads */
-    if (!SetConsoleCtrlHandler(ctrl_handler, false))
-        perror_exit(GetLastError(), "SetConsoleCtrlHandler()");
+    if (!service_destroy())
+    {
+        /* remove ctrl handler; this also joins handler threads */
+        if (!SetConsoleCtrlHandler(console_handler, false))
+            perror_exit(GetLastError(), "SetConsoleCtrlHandler()");
+    }
 
     /* free mutex */
-    if (!CloseHandle(signal_lock))
-        perror_exit(GetLastError(), "CloseHandle()");
+    ASC_FREE(signal_lock, CloseHandle);
 }
 #endif /* !_WIN32 */
 
 void signal_enable(bool running)
 {
     if (running)
+    {
+#ifdef _WIN32
+        /* mark service as running on first init */
+        if (service_status.dwCurrentState == SERVICE_START_PENDING)
+            service_set_state(SERVICE_RUNNING);
+#endif /* !_WIN32 */
+
         mutex_unlock(signal_lock);
+    }
     else
         mutex_lock(signal_lock);
 }
