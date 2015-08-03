@@ -196,6 +196,20 @@ static void perror_exit(DWORD errnum, const char *str)
 }
 
 #ifdef DEBUG
+static int reopen(int fd, const char *pathname)
+{
+    const int file = open(pathname, O_WRONLY | O_CREAT | O_APPEND
+                          , S_IRUSR | S_IWUSR);
+
+    if (file == -1)
+        return -1;
+
+    const int ret = dup2(file, fd);
+    close(file);
+
+    return ret;
+}
+
 static void redirect_stdio(void)
 {
     static const char logfile[] = "\\stdio.log";
@@ -212,11 +226,11 @@ static void redirect_stdio(void)
 
     strncat(buf, logfile, sizeof(buf) - strlen(buf) - 1);
 
-    if (freopen(buf, "w", stdout) == NULL)
-        perror_exit(errno, "freopen()");
+    if (reopen(STDOUT_FILENO, buf) == -1)
+        perror_exit(errno, "reopen()");
 
-    if (freopen(buf, "w", stderr) == NULL)
-        perror_exit(errno, "freopen()");
+    if (reopen(STDERR_FILENO, buf) == -1)
+        perror_exit(errno, "reopen()");
 
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
