@@ -49,8 +49,7 @@ void asc_main_loop_destroy(void)
 __asc_inline
 void asc_main_loop_set(uint32_t flag)
 {
-    if (main_loop != NULL)
-        main_loop->flags |= flag;
+    main_loop->flags |= flag;
 }
 
 bool asc_main_loop_run(void)
@@ -103,6 +102,4 @@ bool asc_main_loop_run(void)
 
         asc_usleep(1000);
     }
-
-    //return false;
 }
