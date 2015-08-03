@@ -106,6 +106,28 @@ static void *thread_loop(void *arg)
     return NULL;
 }
 
+static void signal_cleanup(void)
+{
+    /* ask signal thread to quit */
+    quit_thread = true;
+    pthread_mutex_unlock(&signal_lock);
+    if (pthread_kill(signal_thread, SIGTERM) == 0)
+        pthread_join(signal_thread, NULL);
+
+    /* restore old handlers for ignored signals */
+    for (size_t i = 0; i < ASC_ARRAY_SIZE(siglist); i++)
+    {
+        const struct signal_setup *const ss = &siglist[i];
+        if (ss->ignore)
+            signal(ss->signum, ss->oldhandler);
+    }
+
+    /* restore old signal mask */
+    const int ret = pthread_sigmask(SIG_SETMASK, &old_mask, NULL);
+    if (ret != 0)
+        perror_exit(ret, "pthread_sigmask()");
+}
+
 void signal_setup(void)
 {
     /* block signals of interest before starting any threads */
@@ -141,28 +163,8 @@ void signal_setup(void)
     ret = pthread_create(&signal_thread, NULL, &thread_loop, NULL);
     if (ret != 0)
         perror_exit(ret, "pthread_create()");
-}
 
-void signal_cleanup(void)
-{
-    /* ask signal thread to quit */
-    quit_thread = true;
-    pthread_mutex_unlock(&signal_lock);
-    if (pthread_kill(signal_thread, SIGTERM) == 0)
-        pthread_join(signal_thread, NULL);
-
-    /* restore old handlers for ignored signals */
-    for (size_t i = 0; i < ASC_ARRAY_SIZE(siglist); i++)
-    {
-        const struct signal_setup *const ss = &siglist[i];
-        if (ss->ignore)
-            signal(ss->signum, ss->oldhandler);
-    }
-
-    /* restore old signal mask */
-    const int ret = pthread_sigmask(SIG_SETMASK, &old_mask, NULL);
-    if (ret != 0)
-        perror_exit(ret, "pthread_sigmask()");
+    atexit(signal_cleanup);
 }
 
 #else /* !_WIN32 */
@@ -425,23 +427,7 @@ static bool service_destroy(void)
     return false;
 }
 
-void signal_setup(void)
-{
-    /* create and lock signal handling mutex */
-    signal_lock = CreateMutex(NULL, true, NULL);
-    if (signal_lock == NULL)
-        perror_exit(GetLastError(), "CreateMutex()");
-
-    /* install console control handler if not started as a service */
-    if (!service_initialize())
-    {
-        ignore_ctrl = false;
-        if (!SetConsoleCtrlHandler(console_handler, true))
-            perror_exit(GetLastError(), "SetConsoleCtrlHandler()");
-    }
-}
-
-void signal_cleanup(void)
+static void signal_cleanup(void)
 {
     /* dismiss any threads waiting for lock */
     ignore_ctrl = true;
@@ -456,6 +442,24 @@ void signal_cleanup(void)
 
     /* free mutex */
     ASC_FREE(signal_lock, CloseHandle);
+}
+
+void signal_setup(void)
+{
+    /* create and lock signal handling mutex */
+    signal_lock = CreateMutex(NULL, true, NULL);
+    if (signal_lock == NULL)
+        perror_exit(GetLastError(), "CreateMutex()");
+
+    /* install console control handler if not started as a service */
+    if (!service_initialize())
+    {
+        ignore_ctrl = false;
+        if (!SetConsoleCtrlHandler(console_handler, true))
+            perror_exit(GetLastError(), "SetConsoleCtrlHandler()");
+    }
+
+    atexit(signal_cleanup);
 }
 #endif /* !_WIN32 */
 

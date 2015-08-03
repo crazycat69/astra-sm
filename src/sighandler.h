@@ -22,7 +22,6 @@
 #define _SIGHANDLER_H_ 1
 
 void signal_setup(void);
-void signal_cleanup(void);
 void signal_enable(bool running);
 
 #endif /* _SIGHANDLER_H_ */

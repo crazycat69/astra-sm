@@ -107,6 +107,5 @@ astra_reload_entry:
     if (again)
         goto astra_reload_entry;
 
-    signal_cleanup();
     return 0;
 }
