@@ -404,9 +404,12 @@ static bool service_destroy(void)
 {
     if (service_thread != NULL)
     {
-        /*
-         * TODO: set dwWin32ExitCode if we're exiting because of an error
-         */
+        /* notify SCM if we're exiting because of an error */
+        if (astra_exit_status != EXIT_SUCCESS)
+        {
+            service_status.dwWin32ExitCode = ERROR_SERVICE_SPECIFIC_ERROR;
+            service_status.dwServiceSpecificExitCode = astra_exit_status;
+        }
 
         /* report service shutdown, join dispatcher thread */
         if (service_status_handle != NULL)
