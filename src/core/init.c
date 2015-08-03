@@ -24,6 +24,8 @@
 
 #define EXIT_ABORT 2
 
+int astra_exit_status = 0;
+
 void astra_core_init(void)
 {
     /* call order doesn't really matter here */
@@ -56,6 +58,7 @@ void astra_exit(int status)
     asc_log_debug(MSG("immediate exit requested, rc=%d"), status);
 
     astra_core_destroy();
+    astra_exit_status = status;
     exit(status);
 }
 
@@ -80,5 +83,6 @@ void astra_abort(void)
         }
     }
 
+    astra_exit_status = EXIT_ABORT;
     exit(EXIT_ABORT);
 }

@@ -21,6 +21,8 @@
 #ifndef _ASC_INIT_H_
 #define _ASC_INIT_H_ 1
 
+extern int astra_exit_status;
+
 void astra_core_init(void);
 void astra_core_destroy(void);
 
