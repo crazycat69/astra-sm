@@ -22,6 +22,8 @@
 
 #define MSG(_msg) "[core] " _msg
 
+#define EXIT_ABORT 2
+
 void astra_core_init(void)
 {
     /* call order doesn't really matter here */
@@ -78,5 +80,5 @@ void astra_abort(void)
         }
     }
 
-    abort();
+    exit(EXIT_ABORT);
 }
