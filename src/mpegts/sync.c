@@ -74,7 +74,7 @@ struct mpegts_sync_t
     void *arg;
     sync_callback_t on_read;
     ts_callback_t on_write;
-#ifdef DEBUG
+#ifdef SYNC_DEBUG
     uint64_t last_report;
 #endif
 
@@ -268,7 +268,7 @@ bool seek_pcr(mpegts_sync_t *sx)
             {
                 /* clock reset or wrap around */
                 delta += PCR_MAX + 1;
-#ifdef DEBUG
+#ifdef SYNC_DEBUG
                 const int ms = delta / (PCR_TIME_BASE / 1000);
                 asc_log_debug(MSG("PCR decreased, assuming wrap around with delta %dms"), ms);
 #endif
@@ -401,7 +401,7 @@ void mpegts_sync_loop(void *arg)
         if (filled < thresh && sx->size > MIN_BUFFER_SIZE)
             mpegts_sync_resize(sx, sx->size / 2);
 
-#ifdef DEBUG
+#ifdef SYNC_DEBUG
         if (time_now - sx->last_report > 10000000) /* 10 sec */
         {
             const unsigned int percent = (filled * 100) / sx->size;
