@@ -47,7 +47,7 @@ options = {
         dvb_conf = parse_url(argv[idx])
         if not dvb_conf or dvb_conf.format ~= "dvb" then
             log.error("[femon] wrong address format")
-            astra.exit()
+            astra.exit(1)
         end
         return 0
     end,

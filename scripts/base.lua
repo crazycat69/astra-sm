@@ -906,12 +906,12 @@ Astra Options:
         print(_G.options_usage)
     end
 
-    os.exit(0)
+    astra.exit()
 end
 
 function astra_version()
     print(astra.fullname)
-    os.exit(0)
+    astra.exit()
 end
 
 astra_options = {
@@ -977,7 +977,7 @@ function astra_parse_options(idx)
         local next_idx = set_option(idx)
         if next_idx == -1 then
             print("unknown option: " .. argv[idx])
-            os.exit(1)
+            astra.exit(1)
         end
         idx = next_idx
     end
