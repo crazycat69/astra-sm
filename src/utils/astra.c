@@ -22,15 +22,19 @@
  * Set of the astra methods and variables for lua
  *
  * Variables:
+ *      astra.package
+ *                  - string, autoconf package name
  *      astra.version
  *                  - string, astra version string
+ *      astra.fullname
+ *                  - string, package plus version
  *      astra.debug - boolean, is a debug version
  *
  * Methods:
  *      astra.abort()
  *                  - abort execution
- *      astra.exit()
- *                  - normal exit from astra
+ *      astra.exit([status])
+ *                  - immediate exit from astra
  *      astra.reload()
  *                  - restart without terminating the process
  *      astra.shutdown()
@@ -42,8 +46,8 @@
 __noreturn
 static int lua_astra_exit(lua_State *L)
 {
-    __uarg(L);
-    astra_exit(EXIT_SUCCESS);
+    int status = luaL_optinteger(L, 1, EXIT_SUCCESS);
+    astra_exit(status);
 }
 
 __noreturn
