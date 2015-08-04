@@ -22,47 +22,63 @@
  * Set of the astra methods and variables for lua
  *
  * Variables:
+ *      astra.package
+ *                  - string, autoconf package name
  *      astra.version
  *                  - string, astra version string
+ *      astra.fullname
+ *                  - string, package plus version
  *      astra.debug - boolean, is a debug version
  *
  * Methods:
  *      astra.abort()
  *                  - abort execution
- *      astra.exit()
- *                  - normal exit from astra
+ *      astra.exit([status])
+ *                  - immediate exit from astra
+ *      astra.reload()
+ *                  - restart without terminating the process
+ *      astra.shutdown()
+ *                  - schedule graceful shutdown
  */
 
 #include <astra.h>
 
 __noreturn
-static int _astra_exit(lua_State *L)
+static int lua_astra_exit(lua_State *L)
 {
-    __uarg(L);
-    astra_exit();
+    int status = luaL_optinteger(L, 1, EXIT_SUCCESS);
+    astra_exit(status);
 }
 
 __noreturn
-static int _astra_abort(lua_State *L)
+static int lua_astra_abort(lua_State *L)
 {
     __uarg(L);
     astra_abort();
 }
 
-__noreturn
-static int _astra_reload(lua_State *L)
+static int lua_astra_reload(lua_State *L)
 {
     __uarg(L);
     astra_reload();
+    return 0;
+}
+
+static int lua_astra_shutdown(lua_State *L)
+{
+    __uarg(L);
+    astra_shutdown();
+    return 0;
 }
 
 MODULE_LUA_BINDING(astra)
 {
     static luaL_Reg astra_api[] =
     {
-        { "exit", _astra_exit },
-        { "abort", _astra_abort },
-        { "reload", _astra_reload },
+        { "exit", lua_astra_exit },
+        { "abort", lua_astra_abort },
+        { "reload", lua_astra_reload },
+        { "shutdown", lua_astra_shutdown },
         { NULL, NULL }
     };
 

@@ -88,6 +88,9 @@ void asc_thread_core_init(void)
 
 void asc_thread_core_destroy(void)
 {
+    if (!thread_observer.thread_list)
+        return;
+
     asc_thread_t *prev_thread = NULL;
     for(asc_list_first(thread_observer.thread_list)
         ; !asc_list_eol(thread_observer.thread_list)
@@ -102,8 +105,7 @@ void asc_thread_core_destroy(void)
         prev_thread = thread;
     }
 
-    asc_list_destroy(thread_observer.thread_list);
-    thread_observer.thread_list = NULL;
+    ASC_FREE(thread_observer.thread_list, asc_list_destroy);
 }
 
 void asc_thread_core_loop(void)
@@ -119,7 +121,7 @@ void asc_thread_core_loop(void)
         {
             if(thread->buffer->count > 0)
             {
-                is_main_loop_idle = false;
+                asc_main_loop_busy();
                 thread->on_read(thread->arg);
                 if(thread_observer.is_changed)
                     break;
@@ -128,7 +130,7 @@ void asc_thread_core_loop(void)
 
         if(thread->on_close && thread->is_closed)
         {
-            is_main_loop_idle = false;
+            asc_main_loop_busy();
             thread->on_close(thread->arg);
             if(thread_observer.is_changed)
                 break;

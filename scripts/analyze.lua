@@ -68,7 +68,7 @@ function on_analyze(instance, data)
         end
         if arg_n then
             arg_n = arg_n - 1
-            if arg_n == 0 then astra.exit() end
+            if arg_n == 0 then astra.shutdown() end
         end
     end
 end
@@ -83,7 +83,7 @@ function start_analyze(instance, addr)
     local conf = parse_url(addr)
     if not conf then
         log.error("[analyze] wrong url format")
-        astra.exit()
+        astra.exit(1)
     end
 
     conf.name = "analyze"
@@ -92,16 +92,16 @@ function start_analyze(instance, addr)
     if conf.format == "file" then
         if utils.stat(conf.filename).type ~= "file" then
             log.error("[analyze] file not found")
-            astra.exit()
+            astra.exit(1)
         end
 
         conf.on_error = function()
-            astra.exit()
+            astra.exit(1)
         end
 
     elseif conf.format == "http" then
         conf.on_error = function(code, message)
-            astra.exit()
+            astra.exit(1)
         end
 
     elseif conf.format == "dvb" then

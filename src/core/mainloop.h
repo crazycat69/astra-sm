@@ -1,5 +1,5 @@
 /*
- * Astra Core (Main loop control)
+ * Astra Core (Main loop)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
@@ -22,11 +22,29 @@
 #ifndef _ASC_LOOPCTL_H_
 #define _ASC_LOOPCTL_H_ 1
 
-extern jmp_buf main_loop;
-extern bool is_main_loop_idle;
+enum
+{
+    MAIN_LOOP_NO_SLEEP = 0x00000001,
+    MAIN_LOOP_SIGHUP   = 0x00000002,
+    MAIN_LOOP_RELOAD   = 0x00000004,
+    MAIN_LOOP_SHUTDOWN = 0x00000008,
+};
 
-void astra_exit(void) __noreturn;
-void astra_abort(void) __noreturn;
-void astra_reload(void) __noreturn;
+void asc_main_loop_init(void);
+void asc_main_loop_destroy(void);
+void asc_main_loop_set(uint32_t flag);
+bool asc_main_loop_run(void);
+
+#define asc_main_loop_busy() \
+    asc_main_loop_set(MAIN_LOOP_NO_SLEEP)
+
+#define astra_reload() \
+    asc_main_loop_set(MAIN_LOOP_RELOAD)
+
+#define astra_shutdown() \
+    asc_main_loop_set(MAIN_LOOP_SHUTDOWN)
+
+#define astra_sighup() \
+    asc_main_loop_set(MAIN_LOOP_SIGHUP)
 
 #endif /* _ASC_LOOPCTL_H_ */

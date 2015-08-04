@@ -5,7 +5,7 @@ function main()
 
     if not dvbls then
         log.error("dvbls module is not found")
-        astra.exit()
+        astra.exit(1)
     end
 
     local dvb_list = dvbls()

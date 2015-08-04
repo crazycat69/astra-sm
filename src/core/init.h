@@ -1,8 +1,8 @@
 /*
- * Astra Core
+ * Astra Core (Initialization)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,22 +18,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _ASC_H_
-#define _ASC_H_ 1
+#ifndef _ASC_INIT_H_
+#define _ASC_INIT_H_ 1
 
-#include "assert.h"
-#include "compat.h"
-#include "init.h"
-#include "event.h"
-#include "list.h"
-#include "log.h"
-#include "mainloop.h"
-#include "socket.h"
-#include "thread.h"
-#include "timer.h"
-#include "clock.h"
-#include "strbuffer.h"
-#include "stream.h"
-#include "luapi.h"
+extern int astra_exit_status;
 
-#endif /* _ASC_H_ */
+void astra_core_init(void);
+void astra_core_destroy(void);
+
+void astra_exit(int status) __noreturn;
+void astra_abort(void) __noreturn;
+
+#endif /* _ASC_INIT_H_ */

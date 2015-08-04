@@ -23,9 +23,10 @@ libastra_la_SOURCES += \
     core/clock.c \
     core/compat.c \
     core/event.c \
+    core/init.c \
     core/list.c \
     core/log.c \
-    core/loopctl.c \
+    core/mainloop.c \
     core/luapi.c \
     core/socket.c \
     core/strbuffer.c \
@@ -182,7 +183,7 @@ endif
 # Main binary
 #
 bin_PROGRAMS += astra
-astra_SOURCES = main.c
+astra_SOURCES = main.c sighandler.c
 astra_CFLAGS = $(AM_CFLAGS)
 astra_LDADD = \
     libastra.la \

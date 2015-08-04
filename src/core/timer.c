@@ -29,7 +29,7 @@ struct asc_timer_t
     uint64_t next_shot;
 };
 
-static asc_list_t *timer_list = NULL;
+static asc_list_t *timer_list;
 
 void asc_timer_core_init(void)
 {
@@ -38,14 +38,17 @@ void asc_timer_core_init(void)
 
 void asc_timer_core_destroy(void)
 {
+    if (!timer_list)
+        return;
+
     asc_list_first(timer_list);
     while(!asc_list_eol(timer_list))
     {
         free(asc_list_data(timer_list));
         asc_list_remove_current(timer_list);
     }
-    asc_list_destroy(timer_list);
-    timer_list = NULL;
+
+    ASC_FREE(timer_list, asc_list_destroy);
 }
 
 void asc_timer_core_loop(void)
@@ -66,14 +69,14 @@ void asc_timer_core_loop(void)
             if(timer->interval == 0)
             {
                 // one shot timer
-                is_main_loop_idle = false;
+                asc_main_loop_busy();
                 timer->callback(timer->arg);
                 timer->callback = NULL;
                 ++is_detached;
             }
             else
             {
-                is_main_loop_idle = false;
+                asc_main_loop_busy();
                 timer->callback(timer->arg);
                 timer->next_shot = asc_utime() + timer->interval;
             }

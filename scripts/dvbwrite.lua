@@ -6,7 +6,7 @@ function main()
 
     if not dvbls then
         log.error("dvbls module is not found")
-        os.exit(1)
+        astra.exit(1)
     end
 
     local fh = assert(io.open(out_file, "w"))
@@ -43,7 +43,7 @@ function main()
     fh:write("}\n")
     fh:close()
 
-    os.exit(0)
+    astra.exit()
 end
 
 out_file = nil

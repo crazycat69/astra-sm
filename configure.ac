@@ -172,9 +172,6 @@ case "${host_os}" in
         AX_CHECK_WINFUNC(setsockopt, [ setsockopt(0, 0, 0, NULL, sl) ])
         AX_CHECK_WINFUNC(shutdown, [ shutdown(0, 0) ])
         AX_CHECK_WINFUNC(socket, [ socket(0, 0, 0) ])
-
-        # standard C
-        AX_CHECK_WINFUNC(setjmp, [ setjmp(NULL) ])
     ;;
 
     cygwin*)
@@ -200,7 +197,7 @@ esac
 
 AS_IF([test "${SYS}" != "mingw"], [
     AX_CHECK_HEADERS_REQ([stdbool.h syslog.h sys/socket.h arpa/inet.h netinet/in.h netinet/tcp.h netdb.h ifaddrs.h fcntl.h sys/ioctl.h])
-    AX_CHECK_FUNCS_REQ([getpid signal syslog closelog mkstemp link fchmod access unlink gethostname setjmp getnameinfo inet_ntoa socket setsockopt bind listen accept getaddrinfo freeaddrinfo connect recv recvfrom send sendto getsockname htons shutdown fcntl ioctl localtime_r])
+    AX_CHECK_FUNCS_REQ([getpid signal syslog closelog mkstemp link fchmod access unlink gethostname getnameinfo inet_ntoa socket setsockopt bind listen accept getaddrinfo freeaddrinfo connect recv recvfrom send sendto getsockname htons shutdown fcntl ioctl localtime_r])
 
     # pthread
     AX_PTHREAD([

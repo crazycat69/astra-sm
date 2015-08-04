@@ -107,7 +107,7 @@ void asc_event_core_init(void)
 
 void asc_event_core_destroy(void)
 {
-    if(!event_observer.fd)
+    if(!event_observer.event_list || !event_observer.fd)
         return;
 
     close(event_observer.fd);
@@ -127,8 +127,7 @@ void asc_event_core_destroy(void)
         prev_event = event;
     }
 
-    asc_list_destroy(event_observer.event_list);
-    event_observer.event_list = NULL;
+    ASC_FREE(event_observer.event_list, asc_list_destroy);
 }
 
 void asc_event_core_loop(void)
@@ -167,21 +166,21 @@ void asc_event_core_loop(void)
 #endif
         if(event->on_read && is_rd)
         {
-            is_main_loop_idle = false;
+            asc_main_loop_busy();
             event->on_read(event->arg);
             if(event_observer.is_changed)
                 break;
         }
         if(event->on_error && is_er)
         {
-            is_main_loop_idle = false;
+            asc_main_loop_busy();
             event->on_error(event->arg);
             if(event_observer.is_changed)
                 break;
         }
         if(event->on_write && is_wr)
         {
-            is_main_loop_idle = false;
+            asc_main_loop_busy();
             event->on_write(event->arg);
             if(event_observer.is_changed)
                 break;
@@ -358,21 +357,21 @@ void asc_event_core_loop(void)
         asc_event_t *event = event_observer.event_list[i];
         if(event->on_read && (revents & POLLIN))
         {
-            is_main_loop_idle = false;
+            asc_main_loop_busy();
             event->on_read(event->arg);
             if(event_observer.is_changed)
                 break;
         }
         if(event->on_error && (revents & (POLLERR | POLLHUP | POLLNVAL)))
         {
-            is_main_loop_idle = false;
+            asc_main_loop_busy();
             event->on_error(event->arg);
             if(event_observer.is_changed)
                 break;
         }
         if(event->on_write && (revents & POLLOUT))
         {
-            is_main_loop_idle = false;
+            asc_main_loop_busy();
             event->on_write(event->arg);
             if(event_observer.is_changed)
                 break;
@@ -474,6 +473,9 @@ void asc_event_core_init(void)
 
 void asc_event_core_destroy(void)
 {
+    if (!event_observer.event_list)
+        return;
+
     asc_event_t *prev_event = NULL;
     for(asc_list_first(event_observer.event_list)
         ; !asc_list_eol(event_observer.event_list)
@@ -488,8 +490,7 @@ void asc_event_core_destroy(void)
         prev_event = event;
     }
 
-    asc_list_destroy(event_observer.event_list);
-    event_observer.event_list = NULL;
+    ASC_FREE(event_observer.event_list, asc_list_destroy);
 }
 
 void asc_event_core_loop(void)
@@ -524,21 +525,21 @@ void asc_event_core_loop(void)
             asc_event_t *event = (asc_event_t *)asc_list_data(event_observer.event_list);
             if(event->on_read && FD_ISSET(event->fd, &rset))
             {
-                is_main_loop_idle = false;
+                asc_main_loop_busy();
                 event->on_read(event->arg);
                 if(event_observer.is_changed)
                     break;
             }
             if(event->on_error && FD_ISSET(event->fd, &eset))
             {
-                is_main_loop_idle = false;
+                asc_main_loop_busy();
                 event->on_error(event->arg);
                 if(event_observer.is_changed)
                     break;
             }
             if(event->on_write && FD_ISSET(event->fd, &wset))
             {
-                is_main_loop_idle = false;
+                asc_main_loop_busy();
                 event->on_write(event->arg);
                 if(event_observer.is_changed)
                     break;
