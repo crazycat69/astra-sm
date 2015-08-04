@@ -40,27 +40,27 @@
 #include <astra.h>
 
 __noreturn
-static int _astra_exit(lua_State *L)
+static int lua_astra_exit(lua_State *L)
 {
     __uarg(L);
     astra_exit(EXIT_SUCCESS);
 }
 
 __noreturn
-static int _astra_abort(lua_State *L)
+static int lua_astra_abort(lua_State *L)
 {
     __uarg(L);
     astra_abort();
 }
 
-static int _astra_reload(lua_State *L)
+static int lua_astra_reload(lua_State *L)
 {
     __uarg(L);
     astra_reload();
     return 0;
 }
 
-static int _astra_shutdown(lua_State *L)
+static int lua_astra_shutdown(lua_State *L)
 {
     __uarg(L);
     astra_shutdown();
@@ -71,10 +71,10 @@ MODULE_LUA_BINDING(astra)
 {
     static luaL_Reg astra_api[] =
     {
-        { "exit", _astra_exit },
-        { "abort", _astra_abort },
-        { "reload", _astra_reload },
-        { "shutdown", _astra_shutdown },
+        { "exit", lua_astra_exit },
+        { "abort", lua_astra_abort },
+        { "reload", lua_astra_reload },
+        { "shutdown", lua_astra_shutdown },
         { NULL, NULL }
     };
 
