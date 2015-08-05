@@ -103,8 +103,6 @@ START_TEST(iterations)
 END_TEST
 
 /* block thread then call astra_shutdown() until it aborts */
-#define EXIT_ABORT 2
-
 static void on_block(void *arg)
 {
     __uarg(arg);
@@ -118,7 +116,7 @@ static void on_block(void *arg)
 
 static void on_process_abort(void)
 {
-    ck_assert(astra_exit_status == EXIT_ABORT);
+    ck_assert(astra_exit_status == EXIT_MAINLOOP);
 }
 
 START_TEST(blocked_thread)
@@ -141,14 +139,18 @@ Suite *core_mainloop(void)
 
     TCase *const tc = tcase_create("default");
     tcase_add_checked_fixture(tc, setup, teardown);
-#ifndef _WIN32
-    tcase_set_timeout(tc, 5);
-#endif
+
+    if (can_fork != CK_NOFORK)
+        tcase_set_timeout(tc, 5);
 
     tcase_add_test(tc, controls);
-    tcase_add_exit_test(tc, exit_status, EXIT_TEST);
     tcase_add_test(tc, iterations);
-    tcase_add_exit_test(tc, blocked_thread, EXIT_ABORT);
+
+    if (can_fork != CK_NOFORK)
+    {
+        tcase_add_exit_test(tc, exit_status, EXIT_TEST);
+        tcase_add_exit_test(tc, blocked_thread, EXIT_MAINLOOP);
+    }
 
     suite_add_tcase(s, tc);
 

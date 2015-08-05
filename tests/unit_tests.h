@@ -24,6 +24,8 @@
 #ifndef _UNIT_TESTS_H_
 #define _UNIT_TESTS_H_ 1
 
+extern enum fork_status can_fork;
+
 /* core */
 Suite *core_clock(void);
 Suite *core_mainloop(void);

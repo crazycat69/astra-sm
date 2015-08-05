@@ -29,6 +29,7 @@
 typedef struct
 {
     uint32_t flags;
+    unsigned stop_cnt;
 } asc_main_loop_t;
 
 asc_main_loop_t *main_loop;
@@ -70,6 +71,7 @@ bool asc_main_loop_run(void)
 
             if (flags & MAIN_LOOP_SHUTDOWN)
             {
+                main_loop->stop_cnt = 0;
                 return false;
             }
             else if (flags & MAIN_LOOP_RELOAD)
@@ -102,4 +104,28 @@ bool asc_main_loop_run(void)
 
         asc_usleep(1000);
     }
+}
+
+void astra_shutdown(void)
+{
+    if (main_loop->flags & MAIN_LOOP_SHUTDOWN)
+    {
+        if (++main_loop->stop_cnt >= 3)
+        {
+            /*
+             * NOTE: can't use regular exit() here as this is usually
+             *       run by a signal handler thread. cleanup will try to
+             *       join the thread on itself, possibly resulting in
+             *       a deadlock.
+             */
+            _exit(EXIT_MAINLOOP);
+        }
+        else if (main_loop->stop_cnt >= 2)
+        {
+            asc_log_error(MSG("main thread appears to be blocked; "
+                              "will abort on next shutdown request"));
+        }
+    }
+
+    asc_main_loop_set(MAIN_LOOP_SHUTDOWN);
 }

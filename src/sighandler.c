@@ -21,12 +21,23 @@
 #include <astra.h>
 #include "sighandler.h"
 
+#define LOCK_WAIT 5000 /* ms */
+
+static inline void lock_timeout(void)
+{
+    char msg[] = "sighandler: wait timeout for mutex\n";
+    write(STDERR_FILENO, msg, sizeof(msg));
+
+    _exit(EXIT_SIGHANDLER);
+}
+
 #ifndef _WIN32
 #include <signal.h>
 #include <pthread.h>
 
 /* TODO: move these to core/thread.h */
 #define mutex_lock(__mutex) pthread_mutex_lock(&__mutex)
+#define mutex_timedlock(__mutex, __ms) __mutex_timedlock(&__mutex, (__ms))
 #define mutex_unlock(__mutex) pthread_mutex_unlock(&__mutex)
 
 struct signal_setup
@@ -52,10 +63,28 @@ static pthread_t signal_thread;
 static pthread_mutex_t signal_lock = PTHREAD_MUTEX_INITIALIZER;
 static bool quit_thread = true;
 
+static bool __mutex_timedlock(pthread_mutex_t *mutex, unsigned ms)
+{
+    struct timespec ts = { 0, 0 };
+#ifdef HAVE_CLOCK_GETTIME
+    if (clock_gettime(CLOCK_REALTIME, &ts) != 0)
+#endif
+        ts.tv_sec = time(NULL);
+
+    /* try not to overflow tv_nsec */
+    ts.tv_sec += (ms / 1000);
+    ts.tv_nsec += (ms % 1000) * 1000000;
+    ts.tv_sec += ts.tv_nsec / 1000000000;
+    ts.tv_nsec %= 1000000000;
+
+    const int ret = pthread_mutex_timedlock(mutex, &ts);
+    return (ret == 0);
+}
+
 static void perror_exit(int errnum, const char *str)
 {
     fprintf(stderr, "%s: %s\n", str, strerror(errnum));
-    _exit(EXIT_FAILURE);
+    _exit(EXIT_SIGHANDLER);
 }
 
 static void *thread_loop(void *arg)
@@ -69,7 +98,18 @@ static void *thread_loop(void *arg)
         if (ret != 0)
             perror_exit(ret, "sigwait()");
 
-        pthread_mutex_lock(&signal_lock);
+        if (!mutex_timedlock(signal_lock, LOCK_WAIT))
+        {
+            /*
+             * looks like the main thread disabled signal handling and
+             * then got blocked during cleanup or some other routine.
+             */
+            if (signum == SIGINT || signum == SIGTERM)
+                lock_timeout();
+
+            continue;
+        }
+
         if (quit_thread)
         {
             /* signal handling is being shut down */
@@ -171,6 +211,7 @@ void signal_setup(void)
 
 /* TODO: move these to core/thread.h */
 #define mutex_lock(__mutex) WaitForSingleObject(__mutex, INFINITE)
+#define mutex_timedlock(__mutex, __ms) __mutex_timedlock(__mutex, (__ms))
 #define mutex_unlock(__mutex) while (ReleaseMutex(__mutex))
 
 #define SERVICE_NAME (char *)PACKAGE_NAME
@@ -183,6 +224,12 @@ static HANDLE service_thread = NULL;
 static HANDLE signal_lock = NULL;
 static bool ignore_ctrl = true;
 
+static bool __mutex_timedlock(HANDLE mutex, unsigned ms)
+{
+    DWORD ret = WaitForSingleObject(mutex, ms);
+    return (ret == WAIT_OBJECT_0);
+}
+
 static void perror_exit(DWORD errnum, const char *str)
 {
     LPTSTR msg = NULL;
@@ -194,7 +241,7 @@ static void perror_exit(DWORD errnum, const char *str)
 
     /* NOTE: FormatMessage() appends a newline to error message */
     fprintf(stderr, "%s: %s", str, msg);
-    _exit(EXIT_FAILURE);
+    _exit(EXIT_SIGHANDLER);
 }
 
 #ifdef DEBUG
@@ -259,10 +306,17 @@ static void WINAPI service_handler(DWORD control)
                  */
                 service_set_state(SERVICE_STOP_PENDING);
 
-                mutex_lock(signal_lock);
-                if (!ignore_ctrl)
-                    astra_shutdown();
-                mutex_unlock(signal_lock);
+                if (mutex_timedlock(signal_lock, LOCK_WAIT))
+                {
+                    if (!ignore_ctrl)
+                        astra_shutdown();
+
+                    mutex_unlock(signal_lock);
+                }
+                else
+                {
+                    lock_timeout();
+                }
             }
             break;
 
@@ -277,29 +331,28 @@ static void WINAPI service_handler(DWORD control)
 
 static BOOL WINAPI console_handler(DWORD type)
 {
-    /* handlers are run in separate threads */
-    mutex_lock(signal_lock);
-    if (ignore_ctrl)
-    {
-        mutex_unlock(signal_lock);
-        return true;
-    }
-
-    bool ret = true;
+    /* NOTE: handlers are run in separate threads */
     switch (type)
     {
         case CTRL_C_EVENT:
         case CTRL_BREAK_EVENT:
         case CTRL_CLOSE_EVENT:
-            astra_shutdown();
-            break;
+            if (mutex_timedlock(signal_lock, LOCK_WAIT))
+            {
+                if (!ignore_ctrl)
+                    astra_shutdown();
+
+                mutex_unlock(signal_lock);
+            }
+            else
+            {
+                lock_timeout();
+            }
+            return true;
 
         default:
-            ret = false;
+            return false;
     }
-
-    mutex_unlock(signal_lock);
-    return ret;
 }
 
 static void WINAPI service_main(DWORD argc, LPTSTR *argv)

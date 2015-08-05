@@ -219,9 +219,9 @@ Suite *core_timer(void)
 
     TCase *const tc = tcase_create("default");
     tcase_add_checked_fixture(tc, setup, teardown);
-#ifndef _WIN32
-    tcase_set_timeout(tc, 5);
-#endif
+
+    if (can_fork != CK_NOFORK)
+        tcase_set_timeout(tc, 5);
 
     tcase_add_test(tc, empty_loop);
     tcase_add_test(tc, millisecond);

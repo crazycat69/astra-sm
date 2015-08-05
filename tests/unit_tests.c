@@ -20,6 +20,8 @@
 
 #include "unit_tests.h"
 
+enum fork_status can_fork;
+
 int main(void)
 {
     SRunner *sr = NULL;
@@ -27,7 +29,10 @@ int main(void)
     for (suite_func_t *p = suite_list; *p != NULL; p++)
     {
         if (sr == NULL)
+        {
             sr = srunner_create((*p)());
+            can_fork = srunner_fork_status(sr);
+        }
         else
             srunner_add_suite(sr, (*p)());
     }
