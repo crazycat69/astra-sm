@@ -21,6 +21,16 @@
 #include <astra.h>
 #include "sighandler.h"
 
+#define LOCK_WAIT 5000 /* ms */
+
+static inline void lock_timeout(void)
+{
+    char msg[] = "sighandler: wait timeout for mutex\n";
+    write(STDERR_FILENO, msg, sizeof(msg));
+
+    _exit(EXIT_FAILURE);
+}
+
 #ifndef _WIN32
 #include <signal.h>
 #include <pthread.h>
@@ -88,7 +98,18 @@ static void *thread_loop(void *arg)
         if (ret != 0)
             perror_exit(ret, "sigwait()");
 
-        pthread_mutex_lock(&signal_lock);
+        if (!mutex_timedlock(signal_lock, LOCK_WAIT))
+        {
+            /*
+             * looks like the main thread disabled signal handling and
+             * then got blocked during cleanup or some other routine.
+             */
+            if (signum == SIGINT || signum == SIGTERM)
+                lock_timeout();
+
+            continue;
+        }
+
         if (quit_thread)
         {
             /* signal handling is being shut down */
@@ -285,10 +306,17 @@ static void WINAPI service_handler(DWORD control)
                  */
                 service_set_state(SERVICE_STOP_PENDING);
 
-                mutex_lock(signal_lock);
-                if (!ignore_ctrl)
-                    astra_shutdown();
-                mutex_unlock(signal_lock);
+                if (mutex_timedlock(signal_lock, LOCK_WAIT))
+                {
+                    if (!ignore_ctrl)
+                        astra_shutdown();
+
+                    mutex_unlock(signal_lock);
+                }
+                else
+                {
+                    lock_timeout();
+                }
             }
             break;
 
@@ -303,29 +331,28 @@ static void WINAPI service_handler(DWORD control)
 
 static BOOL WINAPI console_handler(DWORD type)
 {
-    /* handlers are run in separate threads */
-    mutex_lock(signal_lock);
-    if (ignore_ctrl)
-    {
-        mutex_unlock(signal_lock);
-        return true;
-    }
-
-    bool ret = true;
+    /* NOTE: handlers are run in separate threads */
     switch (type)
     {
         case CTRL_C_EVENT:
         case CTRL_BREAK_EVENT:
         case CTRL_CLOSE_EVENT:
-            astra_shutdown();
-            break;
+            if (mutex_timedlock(signal_lock, LOCK_WAIT))
+            {
+                if (!ignore_ctrl)
+                    astra_shutdown();
+
+                mutex_unlock(signal_lock);
+            }
+            else
+            {
+                lock_timeout();
+            }
+            return true;
 
         default:
-            ret = false;
+            return false;
     }
-
-    mutex_unlock(signal_lock);
-    return ret;
 }
 
 static void WINAPI service_main(DWORD argc, LPTSTR *argv)
