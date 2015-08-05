@@ -22,8 +22,6 @@
 
 #define MSG(_msg) "[core] " _msg
 
-#define EXIT_ABORT 2
-
 int astra_exit_status = 0;
 
 void astra_core_init(void)

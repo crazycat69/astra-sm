@@ -103,8 +103,6 @@ START_TEST(iterations)
 END_TEST
 
 /* block thread then call astra_shutdown() until it aborts */
-#define EXIT_ABORT 2
-
 static void on_block(void *arg)
 {
     __uarg(arg);

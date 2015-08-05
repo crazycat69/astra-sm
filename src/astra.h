@@ -87,6 +87,9 @@
 #define __func_const __attribute__((__const__))
 #define __noreturn __attribute__((__noreturn__))
 
+/* additional exit codes */
+#define EXIT_ABORT      2   /* astra_abort() */
+
 /*
  * public interface
  */
