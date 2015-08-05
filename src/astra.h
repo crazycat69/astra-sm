@@ -89,6 +89,7 @@
 
 /* additional exit codes */
 #define EXIT_ABORT      2   /* astra_abort() */
+#define EXIT_SIGHANDLER 101 /* signal handling error */
 
 /*
  * public interface

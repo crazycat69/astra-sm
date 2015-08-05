@@ -28,7 +28,7 @@ static inline void lock_timeout(void)
     char msg[] = "sighandler: wait timeout for mutex\n";
     write(STDERR_FILENO, msg, sizeof(msg));
 
-    _exit(EXIT_FAILURE);
+    _exit(EXIT_SIGHANDLER);
 }
 
 #ifndef _WIN32
@@ -84,7 +84,7 @@ static bool __mutex_timedlock(pthread_mutex_t *mutex, unsigned ms)
 static void perror_exit(int errnum, const char *str)
 {
     fprintf(stderr, "%s: %s\n", str, strerror(errnum));
-    _exit(EXIT_FAILURE);
+    _exit(EXIT_SIGHANDLER);
 }
 
 static void *thread_loop(void *arg)
@@ -241,7 +241,7 @@ static void perror_exit(DWORD errnum, const char *str)
 
     /* NOTE: FormatMessage() appends a newline to error message */
     fprintf(stderr, "%s: %s", str, msg);
-    _exit(EXIT_FAILURE);
+    _exit(EXIT_SIGHANDLER);
 }
 
 #ifdef DEBUG
