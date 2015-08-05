@@ -62,24 +62,25 @@ void astra_exit(int status)
 
 void astra_abort(void)
 {
-    asc_log_error(MSG("abort execution"));
-
+    int level = 0;
     if (lua != NULL)
     {
-        asc_log_error(MSG("Lua backtrace:"));
-
         lua_Debug ar;
-        int level = 1;
         while (lua_getstack(lua, level, &ar))
         {
+            if (++level == 1)
+                asc_log_error(MSG("abort execution. lua backtrace:"));
+
             lua_getinfo(lua, "nSl", &ar);
             asc_log_error(MSG("%d: %s:%d -- %s [%s]")
                           , level, ar.short_src, ar.currentline
                           , (ar.name) ? ar.name : "<unknown>"
                           , ar.what);
-            ++level;
         }
     }
+
+    if (level == 0)
+        asc_log_error(MSG("abort execution"));
 
     astra_exit_status = EXIT_ABORT;
     exit(EXIT_ABORT);
