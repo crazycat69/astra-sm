@@ -26,6 +26,7 @@
 
 /* core */
 Suite *core_clock(void);
+Suite *core_mainloop(void);
 Suite *core_timer(void);
 
 /* unit test list */
@@ -34,6 +35,7 @@ typedef Suite (*(*const suite_func_t)(void));
 static suite_func_t suite_list[] = {
     /* core */
     core_clock,
+    core_mainloop,
     core_timer,
 
     NULL,

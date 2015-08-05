@@ -17,6 +17,7 @@ unit_tests_LDADD = $(AM_LDADD)
 unit_tests_SOURCES = \
     unit_tests.c \
     core_clock.c \
+    core_mainloop.c \
     core_timer.c
 endif
 
