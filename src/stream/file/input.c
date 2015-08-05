@@ -58,6 +58,7 @@ struct module_data_t
 
     asc_thread_t *thread;
     asc_thread_buffer_t *thread_output;
+    bool thread_run;
 
     uint32_t overflow;
     uint8_t *buffer;
@@ -200,7 +201,7 @@ static void thread_loop(void *arg)
         return;
     }
 
-    while(mod->fd > 0)
+    while(mod->thread_run && mod->fd > 0)
     {
         if(reset)
         {
@@ -307,6 +308,7 @@ static void on_thread_close(void *arg)
 {
     module_data_t *mod = (module_data_t *)arg;
 
+    mod->thread_run = false;
     if(mod->fd > 0)
     {
         close(mod->fd);
@@ -424,6 +426,7 @@ static void module_init(module_data_t *mod)
 
     mod->thread = asc_thread_init(mod);
     mod->thread_output = asc_thread_buffer_init(mod->buffer_size);
+    mod->thread_run = true;
     asc_thread_start(  mod->thread
                      , thread_loop
                      , on_thread_read, mod->thread_output
