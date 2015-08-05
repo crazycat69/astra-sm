@@ -149,10 +149,13 @@ static void *thread_loop(void *arg)
 static void signal_cleanup(void)
 {
     /* ask signal thread to quit */
-    quit_thread = true;
-    pthread_mutex_unlock(&signal_lock);
-    if (pthread_kill(signal_thread, SIGTERM) == 0)
-        pthread_join(signal_thread, NULL);
+    if (!pthread_equal(pthread_self(), signal_thread))
+    {
+        quit_thread = true;
+        pthread_mutex_unlock(&signal_lock);
+        if (pthread_kill(signal_thread, SIGTERM) == 0)
+            pthread_join(signal_thread, NULL);
+    }
 
     /* restore old handlers for ignored signals */
     for (size_t i = 0; i < ASC_ARRAY_SIZE(siglist); i++)
