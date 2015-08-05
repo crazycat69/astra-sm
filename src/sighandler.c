@@ -192,7 +192,7 @@ static void perror_exit(DWORD errnum, const char *str)
                   , NULL, errnum, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT)
                   , (LPTSTR)&msg, 0, NULL);
 
-    /* NOTE: FormatMessage() appends a newline to error message */ \
+    /* NOTE: FormatMessage() appends a newline to error message */
     fprintf(stderr, "%s: %s", str, msg);
     _exit(EXIT_FAILURE);
 }

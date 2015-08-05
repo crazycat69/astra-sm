@@ -59,7 +59,8 @@ static uint64_t run_loop(unsigned ms)
     asc_timer_t *const stopper = asc_timer_one_shot(ms, on_stop, NULL);
     ck_assert(stopper != NULL);
 
-    asc_main_loop_run();
+    const bool again = asc_main_loop_run();
+    ck_assert(again == false);
 
     const uint64_t bench = (asc_utime() - start) / 1000;
     fail_unless(bench <= (ms * 1.3));
@@ -129,9 +130,11 @@ static void on_single_timer(void *arg)
 START_TEST(single_timer)
 {
     unsigned triggered = 0;
-    asc_timer_init(40, on_single_timer, &triggered);
-    const uint64_t bench = run_loop(500);
+    asc_timer_t *const timer =
+        asc_timer_init(40, on_single_timer, &triggered);
+    ck_assert(timer != NULL);
 
+    const uint64_t bench = run_loop(500);
     ck_assert(bench >= 400);
     ck_assert(timed_out == false);
     ck_assert(triggered == 10);
@@ -148,7 +151,9 @@ static void on_single_one_shot(void *arg)
 START_TEST(single_one_shot)
 {
     unsigned triggered = 0;
-    asc_timer_one_shot(50, on_single_one_shot, &triggered);
+    asc_timer_t *const timer =
+        asc_timer_one_shot(50, on_single_one_shot, &triggered);
+    ck_assert(timer != NULL);
     run_loop(150);
 
     ck_assert(triggered == 1);
@@ -169,8 +174,14 @@ static void on_try_cancel(void *arg)
 
 START_TEST(cancel_one_shot)
 {
-    asc_timer_t *const timer = asc_timer_one_shot(200, on_cancel_failed, NULL);
-    asc_timer_one_shot(100, on_try_cancel, timer);
+    asc_timer_t *const timer1 =
+        asc_timer_one_shot(200, on_cancel_failed, NULL);
+    ck_assert(timer1 != NULL);
+
+    asc_timer_t *const timer2 =
+        asc_timer_one_shot(100, on_try_cancel, timer1);
+    ck_assert(timer2 != NULL);
+
     run_loop(300);
 }
 END_TEST

@@ -33,7 +33,7 @@ enum
 void asc_main_loop_init(void);
 void asc_main_loop_destroy(void);
 void asc_main_loop_set(uint32_t flag);
-bool asc_main_loop_run(void);
+bool asc_main_loop_run(void) __wur;
 
 #define asc_main_loop_busy() \
     asc_main_loop_set(MAIN_LOOP_NO_SLEEP)
