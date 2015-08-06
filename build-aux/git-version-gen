@@ -1,17 +1,37 @@
 #! /bin/sh
 
-version=$(git describe --match "v[0-9]*" --abbrev=7 HEAD)
+unset version
 
-version=`echo -n $version | sed \
-    -e 's/^v//' \
-    -e 's/-\([0-9]*\)-g.*/.\1/' \
-    -e 's/-g\(.*\)/-\1/'`
+# get current branch
+ref=`git symbolic-ref HEAD 2>/dev/null`
+branch=`echo $ref | sed -e 's/^.*\///'`
 
-if [ "$version" != "" ]; then
-    echo -n $version
-else
+# get commit no. and hash
+describe=`git describe --match "v[0-9]*" --abbrev=7 HEAD 2>/dev/null`
+hash=`echo $describe | sed -e 's/^.*-g//'`
+vtag=`echo $describe | sed -e 's/-.*$//'`
+
+if [ -z "$hash" -o -z "$vtag" ]; then
+    unset branch
+fi
+
+if [ "$branch" = "master" ]; then
+    # tag and commit no. (hash)
+    commitno=`git rev-list "$vtag"..HEAD | wc -l | awk '{print $1}'`
+    if [ "$commitno" = "0" ]; then
+        version="${vtag}"
+    else
+        version="${vtag}.${commitno}"
+    fi
+elif [ -n "$branch" ]; then
+    # tag, branch and commit hash
+    version="${vtag}-${branch}-${hash}"
+fi
+
+if [ -z "$version" ]; then
     echo -n "UNKNOWN"
     exit 1
 fi
 
-exit 0
+version=`echo $version | sed -e 's/^v//'`
+echo -n "$version"
