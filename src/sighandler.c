@@ -44,7 +44,7 @@ struct signal_setup
 {
     const int signum;
     const bool ignore;
-    sighandler_t oldhandler;
+    void (*oldhandler)(int);
 };
 
 static struct signal_setup siglist[] = {
