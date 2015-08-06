@@ -1108,7 +1108,7 @@ static void on_ready_send_request(void *arg)
 static void lua_make_request(module_data_t *mod)
 {
     asc_assert(lua_istable(lua, -1),
-        MSG("%s() requires table on top of the stack"), __FUNCTION__);
+        MSG("%s() requires table on top of the stack"), __func__);
 
     lua_getfield(lua, -1, __method);
     const char *method = lua_isstring(lua, -1) ? lua_tostring(lua, -1) : __default_method;
