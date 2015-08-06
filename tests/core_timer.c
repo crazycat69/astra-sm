@@ -161,7 +161,7 @@ START_TEST(single_one_shot)
 END_TEST
 
 /* cancel one shot timer */
-static void on_cancel_failed(void *arg)
+static void __func_pure on_cancel_failed(void *arg)
 {
     __uarg(arg);
     fail("timer did not get cancelled");
