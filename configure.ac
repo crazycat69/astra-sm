@@ -10,19 +10,19 @@ m4_if(pkg_version, [UNKNOWN],
 #
 # Autotools setup
 #
-AC_PREREQ([2.63])
+AC_PREREQ([2.60])
 AC_INIT([Astra SM], [pkg_version])
-AC_USE_SYSTEM_EXTENSIONS
 
 AC_CONFIG_SRCDIR([src/astra.h])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux/m4])
 AC_CANONICAL_SYSTEM
+AC_USE_SYSTEM_EXTENSIONS
 
 AM_INIT_AUTOMAKE([1.11 foreign dist-xz no-dist-gzip subdir-objects -Wall -Werror])
 AM_MAINTAINER_MODE([enable])
-AM_SILENT_RULES([yes])
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_PRESERVE_HELP_ORDER
 
 # Checks for programs
