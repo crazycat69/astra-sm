@@ -60,7 +60,7 @@ static sigset_t block_mask;
 static sigset_t old_mask;
 
 static pthread_t signal_thread;
-static pthread_mutex_t signal_lock = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t signal_lock;
 static bool quit_thread = true;
 
 static bool __mutex_timedlock(pthread_mutex_t *mutex, unsigned ms)
@@ -151,10 +151,14 @@ static void signal_cleanup(void)
     /* ask signal thread to quit */
     if (!pthread_equal(pthread_self(), signal_thread))
     {
+        pthread_mutex_lock(&signal_lock);
         quit_thread = true;
         pthread_mutex_unlock(&signal_lock);
+
         if (pthread_kill(signal_thread, SIGTERM) == 0)
             pthread_join(signal_thread, NULL);
+
+        pthread_mutex_destroy(&signal_lock);
     }
 
     /* restore old handlers for ignored signals */
@@ -195,6 +199,22 @@ void signal_setup(void)
     int ret = pthread_sigmask(SIG_BLOCK, &block_mask, &old_mask);
     if (ret != 0)
         perror_exit(ret, "pthread_sigmask()");
+
+    /* initialize signal lock */
+    pthread_mutexattr_t attr;
+    ret = pthread_mutexattr_init(&attr);
+    if (ret != 0)
+        perror_exit(ret, "pthread_mutexattr_init()");
+
+    ret = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
+    if (ret != 0)
+        perror_exit(ret, "pthread_mutexattr_settype()");
+
+    ret = pthread_mutex_init(&signal_lock, &attr);
+    if (ret != 0)
+        perror_exit(ret, "pthread_mutex_init()");
+
+    pthread_mutexattr_destroy(&attr);
 
     /* delay any actions until main thread finishes initialization */
     ret = pthread_mutex_lock(&signal_lock);
@@ -489,6 +509,7 @@ static bool service_destroy(void)
 static void signal_cleanup(void)
 {
     /* dismiss any threads waiting for lock */
+    mutex_lock(signal_lock);
     ignore_ctrl = true;
     mutex_unlock(signal_lock);
 
@@ -524,6 +545,8 @@ void signal_setup(void)
 
 void signal_enable(bool running)
 {
+    mutex_lock(signal_lock);
+
     if (running)
     {
 #ifdef _WIN32
@@ -534,6 +557,4 @@ void signal_enable(bool running)
 
         mutex_unlock(signal_lock);
     }
-    else
-        mutex_lock(signal_lock);
 }
