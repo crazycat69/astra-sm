@@ -115,20 +115,26 @@ static void _log(int type, const char *msg, va_list ap)
             switch(type)
             {
                 case LOG_TYPE_WARNING:
+                    /* yellow */
                     if(write(STDOUT_FILENO, "\x1b[33m", 5) != -1)
                         reset_color = true;
                     break;
+
                 case LOG_TYPE_ERROR:
+                    /* red */
                     if(write(STDOUT_FILENO, "\x1b[31m", 5) != -1)
                         reset_color = true;
                     break;
+
                 default:
                     break;
             }
         }
-        const int r = write(1, buffer, len_2);
-        if(reset_color && write(STDOUT_FILENO, "\x1b[0m", 4) != -1) {};
-        if(r == -1)
+        const int ret = write(STDOUT_FILENO, buffer, len_2);
+        if(reset_color)
+            write(STDOUT_FILENO, "\x1b[0m", 4);
+
+        if(ret == -1)
         {
             fprintf(stderr, MSG("failed to write to stdout: %s\n")
                     , strerror(errno));
@@ -207,9 +213,8 @@ void asc_log_hup(void)
 
     if(__log.fd == -1)
     {
-        __log.sout = true;
-        asc_log_error(MSG("failed to open %s: %s"), __log.filename
-                      , strerror(errno));
+        fprintf(stderr, MSG("failed to open %s: %s\n"), __log.filename
+                , strerror(errno));
     }
 }
 
