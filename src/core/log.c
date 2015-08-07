@@ -220,19 +220,15 @@ void asc_log_core_destroy(void)
     if(__log.syslog)
     {
         closelog();
-        free(__log.syslog);
-        __log.syslog = NULL;
+        ASC_FREE(__log.syslog, free);
     }
 #endif /* !_WIN32 */
 
     __log.color = false;
     __log.debug = false;
     __log.sout = true;
-    if(__log.filename)
-    {
-        free(__log.filename);
-        __log.filename = NULL;
-    }
+
+    ASC_FREE(__log.filename, free);
 }
 
 __asc_inline
@@ -255,13 +251,9 @@ void asc_log_set_color(bool val)
 
 void asc_log_set_file(const char *val)
 {
-    if(__log.filename)
-    {
-        free(__log.filename);
-        __log.filename = NULL;
-    }
+    ASC_FREE(__log.filename, free);
 
-    if(val)
+    if(val && strlen(val))
         __log.filename = strdup(val);
 
     asc_log_hup();
@@ -273,8 +265,7 @@ void asc_log_set_syslog(const char *val)
     if(__log.syslog)
     {
         closelog();
-        free(__log.syslog);
-        __log.syslog = NULL;
+        ASC_FREE(__log.syslog, free);
     }
 
     if(!val)
