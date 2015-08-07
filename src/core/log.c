@@ -21,8 +21,8 @@
 #include <astra.h>
 
 #ifndef _WIN32
-#include <syslog.h>
-#endif
+#   include <syslog.h>
+#endif /* !_WIN32 */
 
 typedef struct
 {
@@ -33,19 +33,19 @@ typedef struct
     char *filename;
 #ifndef _WIN32
     char *syslog;
-#endif
+#endif /* !_WIN32 */
 } log_t;
 
 log_t __log =
 {
-    0,
+    -1,
     false,
     false,
     true,
     NULL,
 #ifndef _WIN32
     NULL,
-#endif
+#endif /* !_WIN32 */
 };
 
 enum
@@ -68,7 +68,7 @@ static int _get_type_syslog(int type)
         default: return LOG_ERR;
     }
 }
-#endif
+#endif /* !_WIN32 */
 
 static const char * _get_type_str(int type)
 {
@@ -100,7 +100,7 @@ static void _log(int type, const char *msg, va_list ap)
 #ifndef _WIN32
     if(__log.syslog)
         syslog(_get_type_syslog(type), "%s", &buffer[len_1]);
-#endif
+#endif /* !_WIN32 */
 
     buffer[len_2] = '\n';
     ++len_2;
@@ -130,8 +130,15 @@ static void _log(int type, const char *msg, va_list ap)
             fprintf(stderr, "[log] failed to write to the stdout [%s]\n", strerror(errno));
     }
 
-    if(__log.fd && write(__log.fd, buffer, len_2) == -1)
-        fprintf(stderr, "[log] failed to write to the file [%s]\n", strerror(errno));
+    if(__log.fd != -1)
+    {
+        const int ret = write(__log.fd, buffer, len_2);
+        if (ret == -1)
+        {
+            fprintf(stderr, "[log] failed to write to the file [%s]\n"
+                    , strerror(errno));
+        }
+    }
 }
 
 void asc_log_info(const char *msg, ...)
@@ -177,10 +184,10 @@ bool asc_log_is_debug(void)
 
 void asc_log_hup(void)
 {
-    if(__log.fd > 1)
+    if(__log.fd != -1)
     {
         close(__log.fd);
-        __log.fd = 0;
+        __log.fd = -1;
     }
 
     if(!__log.filename)
@@ -191,22 +198,22 @@ void asc_log_hup(void)
                     , S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 #else
                     , S_IRUSR | S_IWUSR);
-#endif
+#endif /* !_WIN32 */
 
     if(__log.fd == -1)
     {
-        __log.fd = 0;
         __log.sout = true;
-        asc_log_error("[core/log] failed to open %s (%s)", __log.filename, strerror(errno));
+        asc_log_error("[core/log] failed to open %s (%s)"
+                      , __log.filename, strerror(errno));
     }
 }
 
 void asc_log_core_destroy(void)
 {
-    if(__log.fd != 1)
+    if(__log.fd != -1)
     {
         close(__log.fd);
-        __log.fd = 0;
+        __log.fd = -1;
     }
 
 #ifndef _WIN32
@@ -216,7 +223,7 @@ void asc_log_core_destroy(void)
         free(__log.syslog);
         __log.syslog = NULL;
     }
-#endif
+#endif /* !_WIN32 */
 
     __log.color = false;
     __log.debug = false;
@@ -276,4 +283,4 @@ void asc_log_set_syslog(const char *val)
     __log.syslog = strdup(val);
     openlog(__log.syslog, LOG_PID | LOG_CONS, LOG_USER);
 }
-#endif
+#endif /* !_WIN32 */
