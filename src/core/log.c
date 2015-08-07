@@ -24,6 +24,8 @@
 #   include <syslog.h>
 #endif /* !_WIN32 */
 
+#define MSG(_msg) "[core/log] " _msg
+
 typedef struct
 {
     int fd;
@@ -127,7 +129,10 @@ static void _log(int type, const char *msg, va_list ap)
         const int r = write(1, buffer, len_2);
         if(reset_color && write(STDOUT_FILENO, "\x1b[0m", 4) != -1) {};
         if(r == -1)
-            fprintf(stderr, "[log] failed to write to the stdout [%s]\n", strerror(errno));
+        {
+            fprintf(stderr, MSG("failed to write to stdout: %s\n")
+                    , strerror(errno));
+        }
     }
 
     if(__log.fd != -1)
@@ -135,7 +140,7 @@ static void _log(int type, const char *msg, va_list ap)
         const int ret = write(__log.fd, buffer, len_2);
         if (ret == -1)
         {
-            fprintf(stderr, "[log] failed to write to the file [%s]\n"
+            fprintf(stderr, MSG("failed to write to log file: %s\n")
                     , strerror(errno));
         }
     }
@@ -203,8 +208,8 @@ void asc_log_hup(void)
     if(__log.fd == -1)
     {
         __log.sout = true;
-        asc_log_error("[core/log] failed to open %s (%s)"
-                      , __log.filename, strerror(errno));
+        asc_log_error(MSG("failed to open %s: %s"), __log.filename
+                      , strerror(errno));
     }
 }
 
