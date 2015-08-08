@@ -134,7 +134,13 @@ bool asc_socket_would_block(void)
 static asc_socket_t * __socket_open(int family, int type, int protocol, void * arg)
 {
     const int fd = socket(family, type, protocol);
-    asc_assert(fd != -1, "[core/socket] failed to open socket [%s]", asc_socket_error());
+    asc_assert(fd != -1, "[core/socket] failed to open socket [%s]"
+               , asc_socket_error());
+
+#ifndef _WIN32
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
+#endif
+
     asc_socket_t *sock = (asc_socket_t *)calloc(1, sizeof(asc_socket_t));
     sock->fd = fd;
     sock->mreq.imr_multiaddr.s_addr = INADDR_NONE;
@@ -403,23 +409,32 @@ void asc_socket_listen(  asc_socket_t *sock
  *
  */
 
-bool asc_socket_accept(asc_socket_t *sock, asc_socket_t **client_ptr, void * arg)
+bool asc_socket_accept(asc_socket_t *sock, asc_socket_t **client_ptr
+                       , void * arg)
 {
-    asc_socket_t *client = (asc_socket_t *)calloc(1, sizeof(asc_socket_t));
-    socklen_t sin_size = sizeof(client->addr);
-    client->fd = accept(sock->fd, (struct sockaddr *)&client->addr, &sin_size);
-    if(client->fd <= 0)
+    struct sockaddr_in addr;
+    socklen_t addrlen = sizeof(addr);
+
+    const int fd = accept(sock->fd, (struct sockaddr *)&addr, &addrlen);
+    if(fd == -1)
     {
         asc_log_error(MSG("accept() failed [%s]"), asc_socket_error());
-        free(client);
         *client_ptr = NULL;
+
         return false;
     }
 
+#ifndef _WIN32
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
+#endif
+
+    asc_socket_t *client = (asc_socket_t *)calloc(1, sizeof(asc_socket_t));
+    client->fd = fd;
+    client->addr = addr;
     client->arg = arg;
     asc_socket_set_nonblock(client, true);
-
     *client_ptr = client;
+
     return true;
 }
 
@@ -859,9 +874,14 @@ static int __asc_socket_multicast_cmd(asc_socket_t *sock, int cmd)
         (cmd == IP_ADD_MEMBERSHIP) ? 0x16 : 0x17,
         sock->mreq.imr_multiaddr.s_addr);
 
-    int raw_sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+    const int raw_sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
     if(raw_sock == -1)
         return -1;
+
+#ifndef _WIN32
+    fcntl(fd, F_SETFD, FD_CLOEXEC);
+#endif
+
     r = sendto(raw_sock, &buffer, IP_HEADER_SIZE + IGMP_HEADER_SIZE, 0,
         (struct sockaddr *)&dst, sizeof(struct sockaddr_in));
     close(raw_sock);
