@@ -99,9 +99,12 @@ void asc_event_core_init(void)
 #else
     event_observer.fd = epoll_create(EV_LIST_SIZE);
 #endif
-
     asc_assert(event_observer.fd != -1
                , MSG("failed to init event observer [%s]")
+               , strerror(errno));
+
+    const int ret = fcntl(event_observer.fd, F_SETFD, FD_CLOEXEC);
+    asc_assert(ret == 0, MSG("failed to set FD_CLOEXEC: %s")
                , strerror(errno));
 }
 
