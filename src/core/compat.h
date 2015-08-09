@@ -61,6 +61,10 @@
 #   endif
 #endif /* O_CLOEXEC */
 
+#if !defined(WSA_FLAG_NO_HANDLE_INHERIT) && defined(_WIN32)
+#   define WSA_FLAG_NO_HANDLE_INHERIT 0x80
+#endif /* !WSA_FLAG_NO_HANDLE_INHERIT */
+
 #ifndef EWOULDBLOCK
 #   define EWOULDBLOCK EAGAIN
 #endif /* EWOULDBLOCK */
