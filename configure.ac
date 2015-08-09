@@ -259,11 +259,12 @@ AX_CHECK_FUNCS_REQ([clock lseek localtime malloc realloc memchr memset memcpy sr
 # optional headers
 AC_CHECK_HEADERS([netinet/sctp.h])
 
-# replaceable functions
-AC_CHECK_FUNCS([pread strndup strnlen])
-
-# posix_memalign(): used by `file'
-AC_CHECK_FUNCS([posix_memalign])
+# optional functions
+#   pread(), strndup(), strnlen(): replaceables
+#   posix_memalign(): used by stream/file
+#   accept4(): used by core/socket
+#   pipe2(): used for spawning child processes
+AC_CHECK_FUNCS([pread strndup strnlen posix_memalign accept4 pipe2])
 
 # getifaddrs(): used by utils.c
 AC_CHECK_FUNCS([getifaddrs],
