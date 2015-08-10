@@ -109,7 +109,7 @@ static bool open_file(module_data_t *mod)
     if(mod->fd)
         close(mod->fd);
 
-    mod->fd = open(mod->filename, O_RDONLY | O_BINARY);
+    mod->fd = open(mod->filename, O_RDONLY | O_BINARY | O_CLOEXEC);
     if(mod->fd <= 0)
     {
         mod->fd = 0;
@@ -412,8 +412,8 @@ static void module_init(module_data_t *mod)
 
     if(mod->lock)
     {
-        int fd = open(mod->lock, O_RDONLY);
-        if(fd)
+        const int fd = open(mod->lock, O_RDONLY | O_CLOEXEC);
+        if(fd != -1)
         {
             char skip_str[64];
             const int l = read(fd, skip_str, sizeof(skip_str));

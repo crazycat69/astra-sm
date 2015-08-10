@@ -507,8 +507,13 @@ void fe_open(dvb_fe_t *fe)
     char dev_name[32];
     sprintf(dev_name, "/dev/dvb/adapter%d/frontend%d", fe->adapter, fe->device);
 
-    fe->fe_fd = open(dev_name,
-        (fe->type != DVB_TYPE_UNKNOWN) ? (O_RDWR | O_NONBLOCK) : (O_RDONLY | O_NONBLOCK));
+    int flags = O_NONBLOCK | O_CLOEXEC;
+    if (fe->type != DVB_TYPE_UNKNOWN)
+        flags |= O_RDWR;
+    else
+        flags |= O_RDONLY;
+
+    fe->fe_fd = open(dev_name, flags);
     if(fe->fe_fd <= 0)
     {
         asc_log_error(MSG("failed to open frontend [%s]"), strerror(errno));

@@ -100,7 +100,7 @@ static void thread_loop(void *arg)
     module_data_t *mod = (module_data_t *)arg;
     uint8_t ts[TS_PACKET_SIZE];
 
-    mod->dec_sec_fd = open(mod->dev_name, O_RDONLY);
+    mod->dec_sec_fd = open(mod->dev_name, O_RDONLY | O_CLOEXEC);
 
     while(1)
     {
@@ -121,7 +121,7 @@ static void thread_loop(void *arg)
 
 static void sec_open(module_data_t *mod)
 {
-    mod->enc_sec_fd = open(mod->dev_name, O_WRONLY | O_NONBLOCK);
+    mod->enc_sec_fd = open(mod->dev_name, O_WRONLY | O_NONBLOCK | O_CLOEXEC);
     if(mod->enc_sec_fd <= 0)
     {
         asc_log_error(MSG("failed to open sec [%s]"), strerror(errno));
