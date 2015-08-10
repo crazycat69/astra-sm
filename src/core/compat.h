@@ -27,7 +27,7 @@
 #   else
 #       define __WORDSIZE 32
 #   endif
-#endif /* __WORDSIZE */
+#endif /* !__WORDSIZE */
 
 #ifndef __PRI64_PREFIX
 #   if __WORDSIZE == 64 && !defined(__llvm__)
@@ -35,15 +35,15 @@
 #   else
 #       define __PRI64_PREFIX "ll"
 #   endif
-#endif /* __PRI64_PREFIX */
+#endif /* !__PRI64_PREFIX */
 
 #ifndef PRId64
 #   define PRId64 __PRI64_PREFIX "d"
-#endif /* PRId64 */
+#endif /* !PRId64 */
 
 #ifndef PRIu64
 #   define PRIu64 __PRI64_PREFIX "u"
-#endif /* PRIu64 */
+#endif /* !PRIu64 */
 
 #ifndef O_BINARY
 #   ifdef _O_BINARY
@@ -51,7 +51,7 @@
 #   else
 #       define O_BINARY 0
 #   endif
-#endif /* O_BINARY */
+#endif /* !O_BINARY */
 
 #ifndef O_CLOEXEC
 #   ifdef _O_NOINHERIT
@@ -59,7 +59,19 @@
 #   else
 #       define O_CLOEXEC 0
 #   endif
-#endif /* O_CLOEXEC */
+#endif /* !O_CLOEXEC */
+
+#ifndef S_IRUSR
+#   ifdef _S_IREAD
+#       define S_IRUSR _S_IREAD
+#   endif
+#endif /* !S_IRUSR */
+
+#ifndef S_IWUSR
+#   ifdef _S_IWRITE
+#       define S_IWUSR _S_IWRITE
+#   endif
+#endif /* !S_IWUSR */
 
 #if !defined(WSA_FLAG_NO_HANDLE_INHERIT) && defined(_WIN32)
 #   define WSA_FLAG_NO_HANDLE_INHERIT 0x80
@@ -67,7 +79,7 @@
 
 #ifndef EWOULDBLOCK
 #   define EWOULDBLOCK EAGAIN
-#endif /* EWOULDBLOCK */
+#endif /* !EWOULDBLOCK */
 
 #ifndef HAVE_PREAD
 ssize_t pread(int fd, void *buffer, size_t size, off_t off);
