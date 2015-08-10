@@ -78,6 +78,37 @@ struct asc_event_t
  *                  88o8
  */
 
+static inline int __event_init(void)
+{
+    int fd = -1;
+
+#if defined(EV_TYPE_KQUEUE) && defined(HAVE_KQUEUE1)
+    /* kqueue1() is only present on NetBSD as of this writing */
+    fd = kqueue1(O_CLOEXEC);
+#elif defined(EV_TYPE_EPOLL) && defined(HAVE_EPOLL_CREATE1)
+    /* epoll_create1() first appeared in Linux kernel 2.6.27 */
+    fd = epoll_create1(O_CLOEXEC);
+#endif
+    if (fd != -1)
+        return fd;
+
+#if defined(EV_TYPE_KQUEUE)
+    fd = kqueue();
+#elif defined(EV_TYPE_EPOLL)
+    fd = epoll_create(EV_LIST_SIZE);
+#endif
+    if (fd == -1)
+        return fd;
+
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
+    {
+        close(fd);
+        fd = -1;
+    }
+
+    return fd;
+}
+
 typedef struct
 {
     asc_list_t *event_list;
@@ -94,17 +125,9 @@ void asc_event_core_init(void)
     memset(&event_observer, 0, sizeof(event_observer));
     event_observer.event_list = asc_list_init();
 
-#if defined(EV_TYPE_KQUEUE)
-    event_observer.fd = kqueue();
-#else
-    event_observer.fd = epoll_create(EV_LIST_SIZE);
-#endif
+    event_observer.fd = __event_init();
     asc_assert(event_observer.fd != -1
                , MSG("failed to init event observer [%s]")
-               , strerror(errno));
-
-    const int ret = fcntl(event_observer.fd, F_SETFD, FD_CLOEXEC);
-    asc_assert(ret == 0, MSG("failed to set FD_CLOEXEC: %s")
                , strerror(errno));
 }
 

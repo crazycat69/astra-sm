@@ -228,6 +228,7 @@ case "${host_os}" in
         event_mechanism="kqueue"
         AX_CHECK_HEADERS_REQ([sys/event.h])
         AX_CHECK_FUNCS_REQ([kqueue kevent])
+        AC_CHECK_FUNCS([kqueue1])
         AC_DEFINE([WITH_KQUEUE],
             [1], [Define to use kqueue for event notification])
     ;;
@@ -236,6 +237,7 @@ case "${host_os}" in
         event_mechanism="epoll"
         AX_CHECK_HEADERS_REQ([sys/epoll.h])
         AX_CHECK_FUNCS_REQ([epoll_create epoll_ctl epoll_wait])
+        AC_CHECK_FUNCS([epoll_create1])
         AC_DEFINE([WITH_EPOLL],
             [1], [Define to use epoll for event notification])
     ;;
