@@ -30,7 +30,9 @@
 #include <dirent.h>
 
 #include <linux/dvb/frontend.h>
-#include <linux/dvb/net.h>
+#ifdef HAVE_LINUX_DVB_NET_H
+#   include <linux/dvb/net.h>
+#endif
 
 static int count;
 static char dev_name[512];
@@ -91,10 +93,12 @@ static int get_last_int(const char *str)
 
 static void check_device_net(void)
 {
+    char dvb_mac[] = "de:ad:00:00:be:ef";
+
+#ifdef HAVE_LINUX_DVB_NET_H
     sprintf(dev_name, "/dev/dvb/adapter%d/net%d", adapter, device);
 
     int fd = open(dev_name, O_RDWR | O_NONBLOCK);
-    static char dvb_mac[] = "00:00:00:00:00:00";
     int success = 0;
 
     do
@@ -147,6 +151,9 @@ static void check_device_net(void)
         lua_setfield(lua, -2, "net_error");
         lua_pushstring(lua, "ERROR");
     }
+#else
+    lua_pushstring(lua, dvb_mac);
+#endif /* HAVE_LINUX_DVB_NET_H */
 
     lua_setfield(lua, -2, "mac");
 }
