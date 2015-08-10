@@ -146,7 +146,8 @@ static inline int __socket(int family, int type, int protocol)
     if (fd == -1)
         return fd;
 
-    if (!SetHandleInformation((HANDLE)fd, HANDLE_FLAG_INHERIT, 0))
+    const HANDLE sock = (HANDLE)((intptr_t)fd);
+    if (!SetHandleInformation(sock, HANDLE_FLAG_INHERIT, 0))
     {
         closesocket(fd);
         fd = -1;
