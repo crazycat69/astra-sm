@@ -215,41 +215,70 @@ AM_CONDITIONAL(HAVE_FREEBSD, [test "${SYS}" = "freebsd"])
 AM_CONDITIONAL(HAVE_MINGW, [test "${SYS}" = "mingw"])
 AM_CONDITIONAL(HAVE_CYGWIN, [test "${SYS}" = "cygwin"])
 
+#
 # Choose event mechanism
-case "${host_os}" in
-    mingw*)
-        event_mechanism="select"
-        AX_CHECK_WINFUNC(select, [ select(0, NULL, NULL, NULL, NULL) ])
-        AC_DEFINE([WITH_SELECT],
-            [1], [Define to use select() for event notification])
-    ;;
+#
+event_mechanism=""
+# TODO: add option to set this manually
 
-    freebsd*|darwin*)
-        event_mechanism="kqueue"
-        AX_CHECK_HEADERS_REQ([sys/event.h])
-        AX_CHECK_FUNCS_REQ([kqueue kevent])
-        AC_CHECK_FUNCS([kqueue1])
-        AC_DEFINE([WITH_KQUEUE],
-            [1], [Define to use kqueue for event notification])
-    ;;
-
-    linux*)
+# epoll (Linux-specific)
+AS_IF([test "x${event_mechanism}" = "x"], [
+    epoll_failed="no"
+    AC_CHECK_HEADER([sys/epoll.h], [
+        AC_CHECK_FUNCS([epoll_create epoll_ctl epoll_wait], [],
+            [ epoll_failed="yes" ])
+    ], [
+        epoll_failed="yes"
+    ])
+    AS_IF([test "x${epoll_failed}" = "xno"], [
         event_mechanism="epoll"
-        AX_CHECK_HEADERS_REQ([sys/epoll.h])
-        AX_CHECK_FUNCS_REQ([epoll_create epoll_ctl epoll_wait])
         AC_CHECK_FUNCS([epoll_create1])
         AC_DEFINE([WITH_EPOLL],
             [1], [Define to use epoll for event notification])
-    ;;
+    ])
+])
 
-    *)
+# kqueue (various BSD)
+AS_IF([test "x${event_mechanism}" = "x"], [
+    kqueue_failed="no"
+    AC_CHECK_HEADER([sys/event.h], [
+        AC_CHECK_FUNCS([kqueue kevent], [],
+            [ kqueue_failed="yes" ])
+    ], [
+        kqueue_failed="yes"
+    ])
+    AS_IF([test "x${kqueue_failed}" = "xno"], [
+        event_mechanism="kqueue"
+        AC_CHECK_FUNCS([kqueue1])
+        AC_DEFINE([WITH_KQUEUE],
+            [1], [Define to use kqueue for event notification])
+    ])
+])
+
+# poll
+AS_IF([test "x${event_mechanism}" = "x"], [
+    poll_failed="no"
+    AC_CHECK_HEADER([poll.h], [
+        AC_CHECK_FUNCS([poll], [],
+            [ poll_failed="yes" ])
+    ], [
+        poll_failed="yes"
+    ])
+    AS_IF([test "x${poll_failed}" = "xno"], [
         event_mechanism="poll"
-        AX_CHECK_HEADERS_REQ([poll.h])
-        AX_CHECK_FUNCS_REQ([poll])
         AC_DEFINE([WITH_POLL],
             [1], [Define to use poll() for event notification])
-    ;;
-esac
+    ])
+])
+
+# select
+AS_IF([test "x${event_mechanism}" = "x"], [
+    # no need to check, it's present on every system
+    event_mechanism="select"
+    AC_DEFINE([WITH_SELECT],
+        [1], [Define to use select() for event notification])
+])
+
 AC_MSG_NOTICE([using ${event_mechanism} for event notification])
 
 #
