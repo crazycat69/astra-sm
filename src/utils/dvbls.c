@@ -32,6 +32,8 @@
 #include <linux/dvb/frontend.h>
 #include <linux/dvb/net.h>
 
+#define MSG(_msg) "[dvbls] " _msg
+
 static int count;
 static char dev_name[512];
 
@@ -46,7 +48,11 @@ static void iterate_dir(const char *dir, const char *filter, void (*callback)(co
     DIR *dirp = opendir(dir);
     if(!dirp)
     {
-        printf("ERROR: opendir() failed %s [%s]\n", dir, strerror(errno));
+        if(errno != ENOENT)
+        {
+            asc_log_error(MSG("opendir() failed: %s: %s"),
+                          dir, strerror(errno));
+        }
         return;
     }
 
@@ -241,6 +247,10 @@ static int dvbls_scan(lua_State *L)
     count = 0;
     lua_newtable(lua);
     iterate_dir("/dev/dvb", __adapter, check_adapter);
+
+    if(count == 0)
+        asc_log_debug(MSG("no DVB adapters found"));
+
     return 1;
 }
 
