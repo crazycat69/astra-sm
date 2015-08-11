@@ -93,13 +93,13 @@ static void check_device_net(void)
 {
     sprintf(dev_name, "/dev/dvb/adapter%d/net%d", adapter, device);
 
-    int fd = open(dev_name, O_RDWR | O_NONBLOCK);
+    const int fd = open(dev_name, O_RDWR | O_NONBLOCK | O_CLOEXEC);
     static char dvb_mac[] = "00:00:00:00:00:00";
     int success = 0;
 
     do
     {
-        if(fd <= 0)
+        if(fd == -1)
         {
             lua_pushfstring(lua, "failed to open [%s]", strerror(errno));
             break;
@@ -139,7 +139,7 @@ static void check_device_net(void)
         success = 1;
     } while(0);
 
-    if(fd > 0)
+    if(fd != -1)
         close(fd);
 
     if (!success)
@@ -157,16 +157,16 @@ static void check_device_fe(void)
 
     bool is_busy = false;
 
-    int fd = open(dev_name, O_RDWR | O_NONBLOCK);
-    if(fd <= 0)
+    int fd = open(dev_name, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+    if(fd == -1)
     {
         is_busy = true;
-        fd = open(dev_name, O_RDONLY | O_NONBLOCK);
+        fd = open(dev_name, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
     }
 
     static const char _error[] = "error";
 
-    if(fd <= 0)
+    if(fd == -1)
     {
         lua_pushfstring(lua, "failed to open [%s]", strerror(errno));
         lua_setfield(lua, -2, _error);
