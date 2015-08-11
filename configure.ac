@@ -140,38 +140,9 @@ case "${host_os}" in
         AC_CHECK_LIB(ws2_32, main,
             [], AC_MSG_ERROR([cannot link with ws2_32.dll]) )
 
-        # winapi exclusive
-        AX_CHECK_WINFUNC(CloseHandle, [ CloseHandle(0) ])
-        AX_CHECK_WINFUNC(CreateThread, [ CreateThread(0, 0, 0, 0, 0, 0) ])
-        AX_CHECK_WINFUNC(GetCurrentProcessId, [ GetCurrentProcessId() ])
-        AX_CHECK_WINFUNC(LocalFree, [ LocalFree(0) ])
-        AX_CHECK_WINFUNC(SetConsoleCtrlHandler, [ SetConsoleCtrlHandler(0, 0) ])
-        AX_CHECK_WINFUNC(WaitForSingleObject, [ WaitForSingleObject(0, 0) ])
-        AX_CHECK_WINFUNC(WSAStartup, [ WSAStartup(0, 0) ])
+        # sanity checks, just in case
         AX_CHECK_WINFUNC(WSAGetLastError, [ WSAGetLastError() ])
         AX_CHECK_WINFUNC(WSACleanup, [ WSACleanup() ])
-
-        # networking
-        AX_CHECK_WINFUNC(accept, [ accept(0, &sa, &sl) ])
-        AX_CHECK_WINFUNC(bind, [ bind(0, &sa, sl) ])
-        AX_CHECK_WINFUNC(connect, [ connect(0, &sa, sl) ])
-        AX_CHECK_WINFUNC(freeaddrinfo, [ freeaddrinfo(&ai) ])
-        AX_CHECK_WINFUNC(getaddrinfo, [ getaddrinfo(NULL, NULL, &ai, &pai) ])
-        AX_CHECK_WINFUNC(gethostname, [ gethostname(0, 0) ])
-        AX_CHECK_WINFUNC(getnameinfo, [ getnameinfo(&sa, sl, NULL, 0, NULL, 0, 0) ])
-        AX_CHECK_WINFUNC(getsockname, [ getsockname(0, &sa, &sl) ])
-        AX_CHECK_WINFUNC(htons, [ htons(0) ])
-        AX_CHECK_WINFUNC(inet_ntoa, [ inet_ntoa(in) ])
-        AX_CHECK_WINFUNC(ioctlsocket, [ ioctlsocket(0, 0, 0) ])
-
-        AX_CHECK_WINFUNC(listen, [ listen(0, 0) ])
-        AX_CHECK_WINFUNC(recv, [ recv(0, NULL, 0, 0) ])
-        AX_CHECK_WINFUNC(recvfrom, [ recvfrom(0, NULL, 0, 0, &sa, &sl) ])
-        AX_CHECK_WINFUNC(send, [ send(0, NULL, 0, 0) ])
-        AX_CHECK_WINFUNC(sendto, [ sendto(0, NULL, 0, 0, &sa, sl) ])
-        AX_CHECK_WINFUNC(setsockopt, [ setsockopt(0, 0, 0, NULL, sl) ])
-        AX_CHECK_WINFUNC(shutdown, [ shutdown(0, 0) ])
-        AX_CHECK_WINFUNC(socket, [ socket(0, 0, 0) ])
     ;;
 
     cygwin*)
