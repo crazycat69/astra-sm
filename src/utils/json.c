@@ -20,6 +20,8 @@
 
 #include <astra.h>
 
+#define MSG(_msg) "[json] " _msg
+
 /*
  * ooooooooooo oooo   oooo  oooooooo8   ooooooo  ooooooooo  ooooooooooo
  *  888    88   8888o  88 o888     88 o888   888o 888    88o 888    88
@@ -82,7 +84,8 @@ static void set_value(lua_State *L, string_buffer_t *buffer)
         case LUA_TNUMBER:
         {
             char number[32];
-            const int size = snprintf(number, sizeof(number), "%.14g", lua_tonumber(L, -1));
+            const int size = snprintf(number, sizeof(number), "%.14g"
+                                      , lua_tonumber(L, -1));
             string_buffer_addlstring(buffer, number, size);
             break;
         }
@@ -483,7 +486,9 @@ static int json_load(lua_State *L)
     const int fd = open(filename, O_RDONLY | O_BINARY | O_CLOEXEC);
     if(fd == -1)
     {
-        asc_log_error("[json] json.load(%s) failed to open [%s]", filename, strerror(errno));
+        asc_log_error(MSG("json.load(%s) failed to open [%s]")
+                      , filename, strerror(errno));
+
         lua_pushnil(L);
         return 1;
     }
@@ -496,7 +501,9 @@ static int json_load(lua_State *L)
         const ssize_t r = read(fd, &json[skip], sb.st_size - skip);
         if(r == -1)
         {
-            asc_log_error("[json] json.load(%s) failed to read [%s]", filename, strerror(errno));
+            asc_log_error(MSG("json.load(%s) failed to read [%s]")
+                          , filename, strerror(errno));
+
             lua_pushnil(L);
             skip = 0;
             break;
@@ -532,7 +539,9 @@ static int json_save(lua_State *L)
     const int fd = open(filename, flags, mode);
     if(fd == -1)
     {
-        asc_log_error("[json] json.save(%s) failed to open [%s]", filename, strerror(errno));
+        asc_log_error(MSG("json.save(%s) failed to open [%s]")
+                      , filename, strerror(errno));
+
         lua_pushboolean(lua, false);
         return 1;
     }
@@ -553,7 +562,9 @@ static int json_save(lua_State *L)
     }
     else
     {
-        asc_log_error("[json] json.save(%s) failed to write [%s]", filename, strerror(errno));
+        asc_log_error(MSG("json.save(%s) failed to write [%s]")
+                      , filename, strerror(errno));
+
         lua_pushboolean(lua, false);
     }
 
