@@ -504,10 +504,11 @@ static void fe_tune(dvb_fe_t *fe)
 
 void fe_open(dvb_fe_t *fe)
 {
-    char dev_name[32];
-    sprintf(dev_name, "/dev/dvb/adapter%d/frontend%d", fe->adapter, fe->device);
+    char dev_name[64];
+    snprintf(dev_name, sizeof(dev_name), "/dev/dvb/adapter%d/frontend%d"
+             , fe->adapter, fe->device);
 
-    int flags = O_NONBLOCK | O_CLOEXEC;
+    int flags = O_NONBLOCK;
     if (fe->type != DVB_TYPE_UNKNOWN)
         flags |= O_RDWR;
     else

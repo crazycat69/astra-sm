@@ -99,7 +99,7 @@ static void check_device_net(void)
 {
     sprintf(dev_name, "/dev/dvb/adapter%d/net%d", adapter, device);
 
-    const int fd = open(dev_name, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+    const int fd = open(dev_name, O_RDWR | O_NONBLOCK);
     static char dvb_mac[] = "00:00:00:00:00:00";
     int success = 0;
 
@@ -163,11 +163,11 @@ static void check_device_fe(void)
 
     bool is_busy = false;
 
-    int fd = open(dev_name, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+    int fd = open(dev_name, O_RDWR | O_NONBLOCK);
     if(fd == -1)
     {
         is_busy = true;
-        fd = open(dev_name, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+        fd = open(dev_name, O_RDONLY | O_NONBLOCK);
     }
 
     static const char _error[] = "error";

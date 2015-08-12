@@ -210,9 +210,11 @@ static void dvr_on_read(void *arg)
 
 static void dvr_open(module_data_t *mod)
 {
-    char dev_name[32];
-    sprintf(dev_name, "/dev/dvb/adapter%d/dvr%d", mod->adapter, mod->device);
-    mod->dvr_fd = open(dev_name, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+    char dev_name[64];
+    snprintf(dev_name, sizeof(dev_name), "/dev/dvb/adapter%d/dvr%d"
+             , mod->adapter, mod->device);
+
+    mod->dvr_fd = open(dev_name, O_RDONLY | O_NONBLOCK);
     if(mod->dvr_fd <= 0)
     {
         asc_log_error(MSG("failed to open dvr [%s]"), strerror(errno));
@@ -277,7 +279,7 @@ static void __dmx_join_pid(module_data_t *mod, int fd, uint16_t pid)
 
 static int __dmx_open(module_data_t *mod)
 {
-    const int fd = open(mod->dmx_dev_name, O_WRONLY | O_CLOEXEC);
+    const int fd = open(mod->dmx_dev_name, O_WRONLY);
     if(fd <= 0)
     {
         asc_log_error(MSG("failed to open demux [%s]"), strerror(errno));

@@ -483,7 +483,7 @@ static int json_load(lua_State *L)
 {
     luaL_checktype(L, -1, LUA_TSTRING);
     const char *filename = lua_tostring(L, -1);
-    const int fd = open(filename, O_RDONLY | O_BINARY | O_CLOEXEC);
+    const int fd = open(filename, O_RDONLY);
     if(fd == -1)
     {
         asc_log_error(MSG("json.load(%s) failed to open [%s]")
@@ -530,11 +530,8 @@ static int json_save(lua_State *L)
     luaL_checktype(L, -1, LUA_TTABLE);
 
     const char *filename = lua_tostring(L, -2);
-    const int flags = O_WRONLY | O_CREAT | O_TRUNC | O_BINARY | O_CLOEXEC;
-    mode_t mode = S_IRUSR | S_IWUSR;
-#if defined(S_IRGRP) && defined(S_IROTH)
-    mode |= (S_IRGRP | S_IROTH);
-#endif
+    const int flags = O_WRONLY | O_CREAT | O_TRUNC;
+    const mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
     const int fd = open(filename, flags, mode);
     if(fd == -1)

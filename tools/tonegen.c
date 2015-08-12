@@ -34,11 +34,6 @@
 #include <errno.h>
 #include <math.h>
 
-/* windows text mode thingy */
-#ifndef O_BINARY
-#   define O_BINARY 0
-#endif /* O_BINARY */
-
 /* M_PI may not be present in math.h */
 #ifndef M_PI
 #   define M_PI 3.14159265358979323846264338327

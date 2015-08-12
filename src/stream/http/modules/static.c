@@ -194,7 +194,7 @@ static int module_call(module_data_t *mod)
 
     char *filename = (char *)malloc(PATH_MAX);
     sprintf(filename, "%s%s", mod->path, &path[mod->path_skip]);
-    client->response->file_fd = open(filename, O_RDONLY | O_CLOEXEC);
+    client->response->file_fd = open(filename, O_RDONLY);
     free(filename);
     if(client->response->file_fd == -1)
     {

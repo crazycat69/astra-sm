@@ -1705,10 +1705,11 @@ void ca_remove_pnr(dvb_ca_t *ca, uint16_t pnr)
 
 void ca_open(dvb_ca_t *ca)
 {
-    char dev_name[32];
-    sprintf(dev_name, "/dev/dvb/adapter%d/ca%d", ca->adapter, ca->device);
+    char dev_name[64];
+    snprintf(dev_name, sizeof(dev_name), "/dev/dvb/adapter%d/ca%d"
+             , ca->adapter, ca->device);
 
-    ca->ca_fd = open(dev_name, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+    ca->ca_fd = open(dev_name, O_RDWR | O_NONBLOCK);
     if(ca->ca_fd <= 0)
     {
         if(errno != ENOENT)

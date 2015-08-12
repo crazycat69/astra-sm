@@ -204,11 +204,8 @@ void asc_log_hup(void)
     if(!__log.filename)
         return;
 
-    const int flags = O_WRONLY | O_CREAT | O_APPEND | O_CLOEXEC;
-    mode_t mode = S_IRUSR | S_IWUSR;
-#if defined(S_IRGRP) && defined(S_IROTH)
-    mode |= (S_IRGRP | S_IROTH);
-#endif
+    const int flags = O_WRONLY | O_CREAT | O_APPEND;
+    const mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
     __log.fd = open(__log.filename, flags, mode);
     if(__log.fd == -1)
