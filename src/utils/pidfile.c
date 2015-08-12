@@ -44,7 +44,7 @@ static inline int __mkstemp(char *tpl)
     if (fd == -1)
         return fd;
 
-    if (fcntl(fd, F_SETFD, O_CLOEXEC) != 0)
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
     {
         close(fd);
         fd = -1;
