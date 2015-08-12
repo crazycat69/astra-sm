@@ -448,6 +448,7 @@ void asc_socket_listen(  asc_socket_t *sock
  *
  */
 
+#ifndef _WIN32
 #ifndef HAVE_ACCEPT4
 static inline
 int __accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
@@ -456,7 +457,6 @@ int __accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
     if (fd == -1)
         return fd;
 
-#ifndef _WIN32
     /*
      * NOTE: if some other thread does fork-exec while we're
      *       between accept() and fcntl(), the child still inherits
@@ -467,7 +467,6 @@ int __accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
         close(fd);
         fd = -1;
     }
-#endif /* !_WIN32 */
 
     return fd;
 }
@@ -479,6 +478,14 @@ int __accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 #   define __accept(__fd, __addr, __addrlen) \
         accept4(__fd, __addr, __addrlen, SOCK_CLOEXEC)
 #endif /* !HAVE_ACCEPT4 */
+#else /* !_WIN32 */
+    /*
+     * NOTE: Windows client sockets get their no-inherit setting
+     *       from the server socket. Nothing needs to be done, we just
+     *       accept() as usual.
+     */
+#   define __accept(...) accept(__VA_ARGS__)
+#endif /* !_WIN32 */
 
 bool asc_socket_accept(asc_socket_t *sock, asc_socket_t **client_ptr
                        , void * arg)

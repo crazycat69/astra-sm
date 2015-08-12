@@ -531,8 +531,10 @@ void asc_event_core_loop(void)
     memcpy(&wset, &event_observer.wmaster, sizeof(wset));
     memcpy(&eset, &event_observer.emaster, sizeof(eset));
 
-    static struct timeval timeout = { .tv_sec = 0, .tv_usec = 0 };
-    const int ret = select(event_observer.max_fd + 1, &rset, &wset, &eset, &timeout);
+    static struct timeval timeout = { 0, 0 };
+    const int ret = select(event_observer.max_fd + 1
+                           , &rset, &wset, &eset, &timeout);
+
     if(ret == -1)
     {
 #ifdef _WIN32
