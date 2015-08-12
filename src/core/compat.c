@@ -19,6 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define ASC_COMPAT_NOWRAP
 #include <astra.h>
 
 #ifndef HAVE_PREAD
@@ -52,3 +53,41 @@ size_t strnlen(const char *str, size_t max)
     return end ? (size_t)(end - str) : max;
 }
 #endif
+
+int cx_open(const char *path, int flags, ...)
+{
+    mode_t mode = 0;
+
+    if (flags & O_CREAT)
+    {
+        va_list ap;
+        va_start(ap, flags);
+        mode = va_arg(ap, int);
+        va_end(ap);
+    }
+
+#ifdef _O_BINARY
+    /*
+     * NOTE: win32 text mode is not particularly useful except
+     *       for causing bugs and slowing down writes.
+     */
+    flags |= _O_BINARY;
+#endif /* _O_BINARY */
+
+#ifdef O_CLOEXEC
+    int fd = open(path, flags | O_CLOEXEC, mode);
+#else
+    /* older system with no atomic way of setting FD_CLOEXEC */
+    int fd = open(path, flags, mode);
+    if (fd == -1)
+        return fd;
+
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
+    {
+        close(fd);
+        fd = -1;
+    }
+#endif /* O_CLOEXEC */
+
+    return fd;
+}
