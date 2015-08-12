@@ -49,9 +49,13 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
+#ifndef __cplusplus
+#   include <lua.h>
+#   include <lualib.h>
+#   include <lauxlib.h>
+#else
+#   include <lua.hpp>
+#endif /* !__cplusplus */
 
 /*
  * common macros
