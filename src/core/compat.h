@@ -56,8 +56,6 @@
 #ifndef O_CLOEXEC
 #   ifdef _O_NOINHERIT
 #       define O_CLOEXEC _O_NOINHERIT
-#   else
-#       define O_CLOEXEC 0
 #   endif
 #endif /* !O_CLOEXEC */
 
