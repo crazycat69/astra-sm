@@ -586,6 +586,9 @@ AC_PREPROC_IFELSE([
         AC_MSG_RESULT([single constant])
     ])
 
+    # Network header (not present on FreeBSD)
+    AC_CHECK_HEADERS([linux/dvb/net.h])
+
     have_dvbapi="yes"
 ], [
     AC_MSG_RESULT([no])

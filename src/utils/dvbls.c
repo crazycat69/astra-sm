@@ -30,7 +30,9 @@
 #include <dirent.h>
 
 #include <linux/dvb/frontend.h>
-#include <linux/dvb/net.h>
+#ifdef HAVE_LINUX_DVB_NET_H
+#   include <linux/dvb/net.h>
+#endif
 
 #define MSG(_msg) "[dvbls] " _msg
 
@@ -97,10 +99,10 @@ static int get_last_int(const char *str)
 
 static void check_device_net(void)
 {
+#ifdef HAVE_LINUX_DVB_NET_H
     sprintf(dev_name, "/dev/dvb/adapter%d/net%d", adapter, device);
 
     const int fd = open(dev_name, O_RDWR | O_NONBLOCK);
-    static char dvb_mac[] = "00:00:00:00:00:00";
     int success = 0;
 
     do
@@ -128,10 +130,13 @@ static void check_device_net(void)
             lua_pushfstring(lua, "SIOCGIFHWADDR failed [%s]", strerror(errno));
         else
         {
-            const uint8_t *mac = (uint8_t *)ifr.ifr_hwaddr.sa_data;
-            sprintf(dvb_mac, "%02X:%02X:%02X:%02X:%02X:%02X"
-                    , mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-            lua_pushstring(lua, dvb_mac);
+            const uint8_t *const p = (uint8_t *)ifr.ifr_hwaddr.sa_data;
+
+            char mac[32];
+            snprintf(mac, sizeof(mac), "%02X:%02X:%02X:%02X:%02X:%02X"
+                     , p[0], p[1], p[2], p[3], p[4], p[5]);
+
+            lua_pushstring(lua, mac);
         }
         close(sock);
 
@@ -153,6 +158,10 @@ static void check_device_net(void)
         lua_setfield(lua, -2, "net_error");
         lua_pushstring(lua, "ERROR");
     }
+#else
+    static const char dummy_mac[] = "DE:AD:00:00:BE:EF";
+    lua_pushstring(lua, dummy_mac);
+#endif /* HAVE_LINUX_DVB_NET_H */
 
     lua_setfield(lua, -2, "mac");
 }
