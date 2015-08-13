@@ -153,7 +153,7 @@ asc_thread_t * asc_thread_init(void *arg)
 #ifdef _WIN32
 static DWORD WINAPI asc_thread_loop(void *arg)
 #else
-static void * asc_thread_loop(void *arg)
+static void *asc_thread_loop(void *arg)
 #endif
 {
     asc_thread_t *thread = (asc_thread_t *)arg;
@@ -162,11 +162,7 @@ static void * asc_thread_loop(void *arg)
     thread->loop(thread->arg);
     thread->is_closed = true;
 
-#ifdef _WIN32
     return 0;
-#else
-    pthread_exit(NULL);
-#endif
 }
 
 void asc_thread_start(  asc_thread_t *thread
