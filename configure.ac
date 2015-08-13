@@ -124,7 +124,7 @@ AC_SYS_LARGEFILE
 #
 case "${host_os}" in
     mingw*)
-        SYS=mingw
+        SYS=win32
         AX_CHECK_HEADERS_REQ([windows.h winsock2.h ws2tcpip.h])
 
         AC_DEFINE([WIN32_LEAN_AND_MEAN],
@@ -145,46 +145,24 @@ case "${host_os}" in
         AX_CHECK_WINFUNC(WSACleanup, [ WSACleanup() ])
     ;;
 
-    cygwin*)
-        SYS=cygwin
-    ;;
-
-    linux*)
-        SYS=linux
-    ;;
-
-    darwin*)
-        SYS=macos
-    ;;
-
-    freebsd*)
-        SYS=freebsd
-    ;;
-
     *)
-        SYS=unknown
+        SYS=posix
+        AX_CHECK_HEADERS_REQ([syslog.h sys/socket.h arpa/inet.h netinet/in.h netinet/tcp.h netdb.h ifaddrs.h fcntl.h sys/ioctl.h])
+        AX_CHECK_FUNCS_REQ([getpid signal syslog closelog mkstemp link fchmod access unlink gethostname getnameinfo inet_ntoa socket setsockopt bind listen accept getaddrinfo freeaddrinfo connect recv recvfrom send sendto getsockname htons shutdown fcntl ioctl localtime_r])
+
+        # pthread
+        AX_PTHREAD([
+            LIBS="$PTHREAD_LIBS $LIBS"
+            CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+            CC="$PTHREAD_CC"
+        ], [
+            AC_MSG_ERROR([missing pthread support])
+        ])
     ;;
 esac
 
-AS_IF([test "${SYS}" != "mingw"], [
-    AX_CHECK_HEADERS_REQ([stdbool.h syslog.h sys/socket.h arpa/inet.h netinet/in.h netinet/tcp.h netdb.h ifaddrs.h fcntl.h sys/ioctl.h])
-    AX_CHECK_FUNCS_REQ([getpid signal syslog closelog mkstemp link fchmod access unlink gethostname getnameinfo inet_ntoa socket setsockopt bind listen accept getaddrinfo freeaddrinfo connect recv recvfrom send sendto getsockname htons shutdown fcntl ioctl localtime_r])
-
-    # pthread
-    AX_PTHREAD([
-        LIBS="$PTHREAD_LIBS $LIBS"
-        CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
-        CC="$PTHREAD_CC"
-    ], [ AC_MSG_ERROR([missing pthread support]) ])
-])
-
-AM_CONDITIONAL(HAVE_LINUX, [test "${SYS}" = "linux"])
-AM_CONDITIONAL(HAVE_MACOS, [test "${SYS}" = "macos"])
-AM_CONDITIONAL(HAVE_FREEBSD, [test "${SYS}" = "freebsd"])
-
-# windows variants
-AM_CONDITIONAL(HAVE_MINGW, [test "${SYS}" = "mingw"])
-AM_CONDITIONAL(HAVE_CYGWIN, [test "${SYS}" = "cygwin"])
+AM_CONDITIONAL(HAVE_WIN32, [test "${SYS}" = "win32"])
+AM_CONDITIONAL(HAVE_POSIX, [test "${SYS}" = "posix"])
 
 #
 # Choose event mechanism
@@ -352,16 +330,18 @@ AS_IF([test "x${with_lua}" != "xno"], [
         AC_MSG_WARN([Astra requires Lua library version 5.2 or higher])
         AS_IF([test "x${with_lua}" != "xyes"], [
             AC_MSG_WARN([Bundled version will be built and statically linked])
-
-            LUA_CFLAGS="-I\$(top_srcdir)/lua"
-            LUA_LIBS="\$(top_srcdir)/lua/liblua.la"
-
-            AS_IF([test "x${with_lua_compiler}" != "xno"], [
-                LUAC="\$(top_srcdir)/lua/luac\$(EXEEXT)"
-            ])
         ], [
             AC_MSG_ERROR([Pass --without-lua to build bundled version])
         ])
+    ])
+])
+
+AS_IF([test "x${have_lua}" = "xno"], [
+    LUA_CFLAGS="-I\$(top_srcdir)/lua"
+    LUA_LIBS="\$(top_srcdir)/lua/liblua.la"
+
+    AS_IF([test "x${with_lua_compiler}" != "xno"], [
+        LUAC="\$(top_srcdir)/lua/luac\$(EXEEXT)"
     ])
 ])
 
@@ -405,7 +385,7 @@ AX_EXTLIB_PARAM(libaio,
     [enable libaio for file I/O (Linux only)] )
 
 have_libaio="no"
-AS_IF([test "x${have_aio}" = "xyes" -a "${SYS}" = "linux"], [
+AS_IF([test "x${have_aio}" = "xyes"], [
     AS_IF([test "x${with_libaio}" != "xno"], [
         AX_SAVE_FLAGS
         CFLAGS="$CFLAGS $LIBAIO_CFLAGS"
@@ -628,7 +608,7 @@ stream_modules="analyze channel transmit"
 
 # asi
 AX_STREAM_MODULE(asi, [DVB-ASI input module],
-    [test "${SYS}" = "linux"], [this module requires Linux])
+    [test "x${SYS}" = "xposix"], [not available on Windows])
 
 # biss_encrypt
 AX_STREAM_MODULE(biss, [BISS software scrambler],
@@ -824,7 +804,7 @@ echo "-----------------------"
 echo "Version:               ${PACKAGE_STRING}"
 echo
 echo "Compiler:              ${CC}"
-echo "Building for:          ${SYS} (${host})"
+echo "Building for:          ${host_os}"
 echo "Event mechanism:       ${event_mechanism}"
 
 # large file support

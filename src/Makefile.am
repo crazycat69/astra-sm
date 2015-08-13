@@ -13,7 +13,7 @@ libastra_la_LIBADD = $(LIBRT) $(LUA_LIBS)
 libastra_la_SOURCES =
 
 # add Lua script path
-if !HAVE_MINGW
+if HAVE_POSIX
 libastra_la_CFLAGS += \
     -DASC_SCRIPT_DIR='"$(sysconfdir)/astra/scripts"'
 endif
@@ -65,7 +65,7 @@ libastra_la_SOURCES += \
     utils/dvbls.c
 endif
 
-if !HAVE_MINGW
+if HAVE_POSIX
 # no pid files on Windows
 libastra_la_SOURCES += \
     utils/pidfile.c
