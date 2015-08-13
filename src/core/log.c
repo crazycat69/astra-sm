@@ -204,13 +204,10 @@ void asc_log_hup(void)
     if(!__log.filename)
         return;
 
-    __log.fd = open(__log.filename, O_WRONLY | O_CREAT | O_APPEND
-#ifndef _WIN32
-                    , S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-#else
-                    , S_IRUSR | S_IWUSR);
-#endif /* !_WIN32 */
+    const int flags = O_WRONLY | O_CREAT | O_APPEND;
+    const mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
+    __log.fd = open(__log.filename, flags, mode);
     if(__log.fd == -1)
     {
         fprintf(stderr, MSG("failed to open %s: %s\n"), __log.filename

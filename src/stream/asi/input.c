@@ -116,12 +116,15 @@ static void module_init(module_data_t *mod)
     }
     module_option_boolean("budget", &mod->budget);
 
-    char dev_name[16];
-    sprintf(dev_name, "/dev/asirx%d", mod->adapter);
+    char dev_name[32];
+    snprintf(dev_name, sizeof(dev_name), "/dev/asirx%d", mod->adapter);
+
     mod->fd = open(dev_name, O_RDONLY);
     if(mod->fd <= 0)
     {
-        asc_log_error(MSG("failed to open device %s [%s]"), dev_name, strerror(errno));
+        asc_log_error(MSG("failed to open device %s [%s]")
+                      , dev_name, strerror(errno));
+
         mod->fd = 0;
         return;
     }

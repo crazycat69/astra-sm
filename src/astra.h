@@ -49,24 +49,36 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include <lua.h>
-#include <lualib.h>
-#include <lauxlib.h>
+#ifndef __cplusplus
+#   include <lua.h>
+#   include <lualib.h>
+#   include <lauxlib.h>
+#else
+#   include <lua.hpp>
+#endif /* !__cplusplus */
 
 /*
  * common macros
  */
-#define ASC_ARRAY_SIZE(_a) (sizeof(_a) / sizeof(_a[0]))
+#define ASC_ARRAY_SIZE(_a) \
+    (sizeof(_a) / sizeof(_a[0]))
 
-#define ASC_FREE(_o, _m) if(_o != NULL) { _m(_o); _o = NULL; }
+#define ASC_FREE(_o, _m) \
+    do { \
+        if (_o != NULL) { \
+            _m(_o); \
+            _o = NULL; \
+        } \
+    } while (0)
+
+#define __uarg(_x) \
+    do { (void)_x; } while (0)
 
 #ifndef _WIN32
 #   define ASC_PATH_SEPARATOR "/"
 #else
 #   define ASC_PATH_SEPARATOR "\\"
 #endif /* _WIN32 */
-
-#define __uarg(_x) { (void)_x; }
 
 #if defined(__GNUC_GNU_INLINE__) \
     || (defined(__GNUC__) && !defined(__GNUC_STDC_INLINE__))
@@ -76,6 +88,7 @@
 #   define __asc_inline extern inline
 #endif
 
+/* function attributes */
 #ifndef __wur
 #   define __wur __attribute__((__warn_unused_result__))
 #endif /* __wur */

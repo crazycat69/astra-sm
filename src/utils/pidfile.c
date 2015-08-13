@@ -28,10 +28,6 @@
  *      pidfile("/path/to/file.pid")
  */
 
-#ifdef _WIN32
-#   error "pidfile module is not for win32"
-#else
-
 #include <astra.h>
 
 struct module_data_t
@@ -41,7 +37,24 @@ struct module_data_t
 
 static const char *filename = NULL;
 
-/* required */
+#ifndef HAVE_MKOSTEMP
+static inline int __mkstemp(char *tpl)
+{
+    int fd = mkstemp(tpl);
+    if (fd == -1)
+        return fd;
+
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
+    {
+        close(fd);
+        fd = -1;
+    }
+
+    return fd;
+}
+#else /* !HAVE_MKOSTEMP */
+#   define __mkstemp(__tpl) mkostemp(__tpl, O_CLOEXEC)
+#endif /* !HAVE_MKOSTEMP */
 
 static void module_init(module_data_t *mod)
 {
@@ -60,7 +73,7 @@ static void module_init(module_data_t *mod)
 
     static char tmp_pidfile[256];
     snprintf(tmp_pidfile, sizeof(tmp_pidfile), "%s.XXXXXX", filename);
-    int fd = mkstemp(tmp_pidfile);
+    const int fd = __mkstemp(tmp_pidfile);
     if(fd == -1)
     {
         asc_log_error("[pidfile %s] mkstemp() failed [%s]", filename, strerror(errno));
@@ -108,5 +121,3 @@ MODULE_LUA_METHODS()
     { NULL, NULL }
 };
 MODULE_LUA_REGISTER(pidfile)
-
-#endif

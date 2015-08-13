@@ -21,13 +21,18 @@
 #ifndef _ASC_COMPAT_H_
 #define _ASC_COMPAT_H_ 1
 
+/*
+ * replacement defines
+ */
+
+/* [u]int64_t format specs as per C99 */
 #ifndef __WORDSIZE
 #   if defined __x86_64__ && !defined __ILP32__
 #       define __WORDSIZE 64
 #   else
 #       define __WORDSIZE 32
 #   endif
-#endif /* __WORDSIZE */
+#endif /* !__WORDSIZE */
 
 #ifndef __PRI64_PREFIX
 #   if __WORDSIZE == 64 && !defined(__llvm__)
@@ -35,27 +40,57 @@
 #   else
 #       define __PRI64_PREFIX "ll"
 #   endif
-#endif /* __PRI64_PREFIX */
+#endif /* !__PRI64_PREFIX */
 
 #ifndef PRId64
 #   define PRId64 __PRI64_PREFIX "d"
-#endif /* PRId64 */
+#endif /* !PRId64 */
 
 #ifndef PRIu64
 #   define PRIu64 __PRI64_PREFIX "u"
-#endif /* PRIu64 */
+#endif /* !PRIu64 */
 
-#ifndef O_BINARY
-#   ifdef _O_BINARY
-#       define O_BINARY _O_BINARY
-#   else
-#       define O_BINARY 0
-#   endif
-#endif /* O_BINARY */
+/* win32-specific defines */
+#ifdef _WIN32
+    /* open() no-inherit flag */
+#   ifndef O_CLOEXEC
+#       define O_CLOEXEC _O_NOINHERIT
+#   endif /* !O_CLOEXEC */
 
+    /* WSASocket() no-inherit flag; appeared in Win7 SP1 */
+#   ifndef WSA_FLAG_NO_HANDLE_INHERIT
+#       define WSA_FLAG_NO_HANDLE_INHERIT 0x80
+#   endif /* !WSA_FLAG_NO_HANDLE_INHERIT */
+
+    /* file create modes */
+#   ifndef S_IRUSR
+#       define S_IRUSR _S_IREAD
+#   endif /* !S_IRUSR */
+#   ifndef S_IWUSR
+#       define S_IWUSR _S_IWRITE
+#   endif /* !S_IWUSR */
+#   ifndef S_IRGRP
+#       define S_IRGRP 0
+#   endif /* !S_IRGRP */
+#   ifndef S_IWGRP
+#       define S_IWGRP 0
+#   endif /* !S_IWGRP */
+#   ifndef S_IROTH
+#       define S_IROTH 0
+#   endif /* !S_IROTH */
+#   ifndef S_IWOTH
+#       define S_IWOTH 0
+#   endif /* !S_IWOTH */
+#endif /* _WIN32 */
+
+/* not defined on some systems */
 #ifndef EWOULDBLOCK
 #   define EWOULDBLOCK EAGAIN
-#endif /* EWOULDBLOCK */
+#endif /* !EWOULDBLOCK */
+
+/*
+ * replacement functions
+ */
 
 #ifndef HAVE_PREAD
 ssize_t pread(int fd, void *buffer, size_t size, off_t off);
@@ -68,5 +103,18 @@ char *strndup(const char *str, size_t max);
 #ifndef HAVE_STRNLEN
 size_t strnlen(const char *str, size_t max) __func_pure;
 #endif
+
+/*
+ * standard function wrappers
+ */
+
+int cx_open(const char *path, int flags, ...);
+
+#ifndef ASC_COMPAT_NOWRAP
+#   ifdef open
+#       undef open
+#   endif
+#   define open(...) cx_open(__VA_ARGS__)
+#endif /* !ASC_COMPAT_NOWRAP */
 
 #endif /* _ASC_COMPAT_H_ */

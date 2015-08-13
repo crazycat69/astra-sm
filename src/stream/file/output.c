@@ -280,12 +280,11 @@ static void module_init(module_data_t *mod)
         mod->buffer = (uint8_t *)malloc(mod->buffer_size);
     }
 
-    int flags = O_CREAT | O_APPEND | O_WRONLY | O_BINARY;
-    int mode = S_IRUSR | S_IWUSR;
+    int flags = O_CREAT | O_APPEND | O_WRONLY;
+    const mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
 #ifdef HAVE_AIO
     flags |= O_NONBLOCK;
-    mode |= S_IRGRP | S_IROTH;
 #endif
 
 #ifdef O_DIRECT
@@ -294,16 +293,15 @@ static void module_init(module_data_t *mod)
 #endif
 
     mod->fd = open(mod->config.filename, flags, mode);
-
-    struct stat st;
-    fstat(mod->fd, &st);
-    mod->file_size = st.st_size;
-
     if(mod->fd <= 0)
     {
         asc_log_error(MSG("failed to open file [%s]"), strerror(errno));
         astra_abort();
     }
+
+    struct stat st;
+    fstat(mod->fd, &st);
+    mod->file_size = st.st_size;
 
 #ifdef HAVE_AIO
     if(mod->config.aio)

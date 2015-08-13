@@ -30,8 +30,6 @@ AC_DEFUN([AX_CHECK_WINFUNC], [
             #include <windows.h>
             #include <winsock2.h>
             #include <ws2tcpip.h>
-            #include <string.h>
-            #include <setjmp.h>
         ]], [[
             struct in_addr in;
             struct sockaddr sa;

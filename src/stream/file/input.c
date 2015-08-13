@@ -109,7 +109,7 @@ static bool open_file(module_data_t *mod)
     if(mod->fd)
         close(mod->fd);
 
-    mod->fd = open(mod->filename, O_RDONLY | O_BINARY);
+    mod->fd = open(mod->filename, O_RDONLY);
     if(mod->fd <= 0)
     {
         mod->fd = 0;
@@ -348,20 +348,19 @@ static void on_thread_read(void *arg)
 
 static void timer_skip_set(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
-    char skip_str[64];
-    int fd = open(mod->lock, O_CREAT | O_WRONLY | O_TRUNC
-#ifndef _WIN32
-                  , S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
-#else
-                  , S_IRUSR | S_IWUSR);
-#endif
+    module_data_t *const mod = (module_data_t *)arg;
 
-    if(fd > 0)
+    const int flags = O_CREAT | O_WRONLY | O_TRUNC;
+    const mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+
+    const int fd = open(mod->lock, flags, mode);
+    if (fd != -1)
     {
-        const int l = sprintf(skip_str, "%zu", mod->file_skip);
-        if(write(fd, skip_str, l) <= 0)
-            {};
+        char skip_str[64];
+        const int len = snprintf(skip_str, sizeof(skip_str)
+                                 , "%zu", mod->file_skip);
+
+        write(fd, skip_str, len);
         close(fd);
     }
 }
@@ -412,13 +411,14 @@ static void module_init(module_data_t *mod)
 
     if(mod->lock)
     {
-        int fd = open(mod->lock, O_RDONLY);
-        if(fd)
+        const int fd = open(mod->lock, O_RDONLY);
+        if(fd != -1)
         {
             char skip_str[64];
-            const int l = read(fd, skip_str, sizeof(skip_str));
-            if(l > 0)
+            const int len = read(fd, skip_str, sizeof(skip_str));
+            if(len > 0)
                 mod->file_skip = strtoul(skip_str, NULL, 10);
+
             close(fd);
         }
         mod->timer_skip = asc_timer_init(2000, timer_skip_set, mod);

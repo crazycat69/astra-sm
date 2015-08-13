@@ -1705,8 +1705,9 @@ void ca_remove_pnr(dvb_ca_t *ca, uint16_t pnr)
 
 void ca_open(dvb_ca_t *ca)
 {
-    char dev_name[32];
-    sprintf(dev_name, "/dev/dvb/adapter%d/ca%d", ca->adapter, ca->device);
+    char dev_name[64];
+    snprintf(dev_name, sizeof(dev_name), "/dev/dvb/adapter%d/ca%d"
+             , ca->adapter, ca->device);
 
     ca->ca_fd = open(dev_name, O_RDWR | O_NONBLOCK);
     if(ca->ca_fd <= 0)
@@ -1714,6 +1715,7 @@ void ca_open(dvb_ca_t *ca)
         if(errno != ENOENT)
             asc_log_error(MSG("CA: failed to open ca [%s]"), strerror(errno));
         ca->ca_fd = 0;
+
         return;
     }
 

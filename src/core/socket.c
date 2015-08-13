@@ -131,10 +131,55 @@ bool asc_socket_would_block(void)
  *
  */
 
-static asc_socket_t * __socket_open(int family, int type, int protocol, void * arg)
+static inline int __socket(int family, int type, int protocol)
 {
-    const int fd = socket(family, type, protocol);
-    asc_assert(fd != -1, "[core/socket] failed to open socket [%s]", asc_socket_error());
+    int fd;
+
+#ifdef _WIN32
+    fd = WSASocket(family, type, protocol, NULL, 0
+                   , WSA_FLAG_NO_HANDLE_INHERIT);
+    if (fd != -1)
+        return fd;
+
+    /* probably pre-7/SP1 version of Windows */
+    fd = WSASocket(family, type, protocol, NULL, 0, 0);
+    if (fd == -1)
+        return fd;
+
+    const HANDLE sock = (HANDLE)((intptr_t)fd);
+    if (!SetHandleInformation(sock, HANDLE_FLAG_INHERIT, 0))
+    {
+        closesocket(fd);
+        fd = -1;
+    }
+#else /* _WIN32 */
+#ifdef SOCK_CLOEXEC
+    /* try newer atomic API first */
+    fd = socket(family, type | SOCK_CLOEXEC, protocol);
+    if (fd != -1)
+        return fd;
+#endif /* SOCK_CLOEXEC */
+
+    fd = socket(family, type, protocol);
+    if (fd == -1)
+        return fd;
+
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
+    {
+        close(fd);
+        fd = -1;
+    }
+#endif /* _WIN32 */
+
+    return fd;
+}
+
+static asc_socket_t *sock_init(int family, int type, int protocol, void *arg)
+{
+    const int fd = __socket(family, type, protocol);
+    asc_assert(fd != -1, "[core/socket] failed to open socket [%s]"
+               , asc_socket_error());
+
     asc_socket_t *sock = (asc_socket_t *)calloc(1, sizeof(asc_socket_t));
     sock->fd = fd;
     sock->mreq.imr_multiaddr.s_addr = INADDR_NONE;
@@ -142,25 +187,25 @@ static asc_socket_t * __socket_open(int family, int type, int protocol, void * a
     sock->type = type;
     sock->protocol = protocol;
     sock->arg = arg;
-
     asc_socket_set_nonblock(sock, true);
+
     return sock;
 }
 
-asc_socket_t * asc_socket_open_tcp4(void * arg)
+asc_socket_t *asc_socket_open_tcp4(void *arg)
 {
-    return __socket_open(PF_INET, SOCK_STREAM, IPPROTO_TCP, arg);
+    return sock_init(PF_INET, SOCK_STREAM, IPPROTO_TCP, arg);
 }
 
-asc_socket_t * asc_socket_open_udp4(void * arg)
+asc_socket_t *asc_socket_open_udp4(void *arg)
 {
-    return __socket_open(PF_INET, SOCK_DGRAM, IPPROTO_UDP, arg);
+    return sock_init(PF_INET, SOCK_DGRAM, IPPROTO_UDP, arg);
 }
 
-asc_socket_t * asc_socket_open_sctp4(void * arg)
+asc_socket_t *asc_socket_open_sctp4(void *arg)
 {
 #ifdef IPPROTO_SCTP
-    return __socket_open(PF_INET, SOCK_STREAM, IPPROTO_SCTP, arg);
+    return sock_init(PF_INET, SOCK_STREAM, IPPROTO_SCTP, arg);
 #else
     asc_log_error("[core/socket] SCTP support unavailable; falling back to TCP");
     return asc_socket_open_tcp4(arg);
@@ -403,23 +448,67 @@ void asc_socket_listen(  asc_socket_t *sock
  *
  */
 
-bool asc_socket_accept(asc_socket_t *sock, asc_socket_t **client_ptr, void * arg)
+#ifndef _WIN32
+#ifndef HAVE_ACCEPT4
+static inline
+int __accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
-    asc_socket_t *client = (asc_socket_t *)calloc(1, sizeof(asc_socket_t));
-    socklen_t sin_size = sizeof(client->addr);
-    client->fd = accept(sock->fd, (struct sockaddr *)&client->addr, &sin_size);
-    if(client->fd <= 0)
+    int fd = accept(sockfd, addr, addrlen);
+    if (fd == -1)
+        return fd;
+
+    /*
+     * NOTE: if some other thread does fork-exec while we're
+     *       between accept() and fcntl(), the child still inherits
+     *       the socket.
+     */
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
+    {
+        close(fd);
+        fd = -1;
+    }
+
+    return fd;
+}
+#else /* !HAVE_ACCEPT4 */
+    /*
+     * NOTE: accept4() is Linux-specific, but also seems to be
+     *       present on FreeBSD 10.
+     */
+#   define __accept(__fd, __addr, __addrlen) \
+        accept4(__fd, __addr, __addrlen, SOCK_CLOEXEC)
+#endif /* !HAVE_ACCEPT4 */
+#else /* !_WIN32 */
+    /*
+     * NOTE: Windows client sockets get their no-inherit setting
+     *       from the server socket. Nothing needs to be done, we just
+     *       accept() as usual.
+     */
+#   define __accept(...) accept(__VA_ARGS__)
+#endif /* !_WIN32 */
+
+bool asc_socket_accept(asc_socket_t *sock, asc_socket_t **client_ptr
+                       , void * arg)
+{
+    struct sockaddr_in addr;
+    socklen_t addrlen = sizeof(addr);
+
+    const int fd = __accept(sock->fd, (struct sockaddr *)&addr, &addrlen);
+    if(fd == -1)
     {
         asc_log_error(MSG("accept() failed [%s]"), asc_socket_error());
-        free(client);
         *client_ptr = NULL;
+
         return false;
     }
 
+    asc_socket_t *client = (asc_socket_t *)calloc(1, sizeof(asc_socket_t));
+    client->fd = fd;
+    client->addr = addr;
     client->arg = arg;
     asc_socket_set_nonblock(client, true);
-
     *client_ptr = client;
+
     return true;
 }
 
@@ -859,9 +948,10 @@ static int __asc_socket_multicast_cmd(asc_socket_t *sock, int cmd)
         (cmd == IP_ADD_MEMBERSHIP) ? 0x16 : 0x17,
         sock->mreq.imr_multiaddr.s_addr);
 
-    int raw_sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+    const int raw_sock = __socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
     if(raw_sock == -1)
         return -1;
+
     r = sendto(raw_sock, &buffer, IP_HEADER_SIZE + IGMP_HEADER_SIZE, 0,
         (struct sockaddr *)&dst, sizeof(struct sockaddr_in));
     close(raw_sock);

@@ -140,38 +140,9 @@ case "${host_os}" in
         AC_CHECK_LIB(ws2_32, main,
             [], AC_MSG_ERROR([cannot link with ws2_32.dll]) )
 
-        # winapi exclusive
-        AX_CHECK_WINFUNC(CloseHandle, [ CloseHandle(0) ])
-        AX_CHECK_WINFUNC(CreateThread, [ CreateThread(0, 0, 0, 0, 0, 0) ])
-        AX_CHECK_WINFUNC(GetCurrentProcessId, [ GetCurrentProcessId() ])
-        AX_CHECK_WINFUNC(LocalFree, [ LocalFree(0) ])
-        AX_CHECK_WINFUNC(SetConsoleCtrlHandler, [ SetConsoleCtrlHandler(0, 0) ])
-        AX_CHECK_WINFUNC(WaitForSingleObject, [ WaitForSingleObject(0, 0) ])
-        AX_CHECK_WINFUNC(WSAStartup, [ WSAStartup(0, 0) ])
+        # sanity checks, just in case
         AX_CHECK_WINFUNC(WSAGetLastError, [ WSAGetLastError() ])
         AX_CHECK_WINFUNC(WSACleanup, [ WSACleanup() ])
-
-        # networking
-        AX_CHECK_WINFUNC(accept, [ accept(0, &sa, &sl) ])
-        AX_CHECK_WINFUNC(bind, [ bind(0, &sa, sl) ])
-        AX_CHECK_WINFUNC(connect, [ connect(0, &sa, sl) ])
-        AX_CHECK_WINFUNC(freeaddrinfo, [ freeaddrinfo(&ai) ])
-        AX_CHECK_WINFUNC(getaddrinfo, [ getaddrinfo(NULL, NULL, &ai, &pai) ])
-        AX_CHECK_WINFUNC(gethostname, [ gethostname(0, 0) ])
-        AX_CHECK_WINFUNC(getnameinfo, [ getnameinfo(&sa, sl, NULL, 0, NULL, 0, 0) ])
-        AX_CHECK_WINFUNC(getsockname, [ getsockname(0, &sa, &sl) ])
-        AX_CHECK_WINFUNC(htons, [ htons(0) ])
-        AX_CHECK_WINFUNC(inet_ntoa, [ inet_ntoa(in) ])
-        AX_CHECK_WINFUNC(ioctlsocket, [ ioctlsocket(0, 0, 0) ])
-
-        AX_CHECK_WINFUNC(listen, [ listen(0, 0) ])
-        AX_CHECK_WINFUNC(recv, [ recv(0, NULL, 0, 0) ])
-        AX_CHECK_WINFUNC(recvfrom, [ recvfrom(0, NULL, 0, 0, &sa, &sl) ])
-        AX_CHECK_WINFUNC(send, [ send(0, NULL, 0, 0) ])
-        AX_CHECK_WINFUNC(sendto, [ sendto(0, NULL, 0, 0, &sa, sl) ])
-        AX_CHECK_WINFUNC(setsockopt, [ setsockopt(0, 0, 0, NULL, sl) ])
-        AX_CHECK_WINFUNC(shutdown, [ shutdown(0, 0) ])
-        AX_CHECK_WINFUNC(socket, [ socket(0, 0, 0) ])
     ;;
 
     cygwin*)
@@ -215,39 +186,70 @@ AM_CONDITIONAL(HAVE_FREEBSD, [test "${SYS}" = "freebsd"])
 AM_CONDITIONAL(HAVE_MINGW, [test "${SYS}" = "mingw"])
 AM_CONDITIONAL(HAVE_CYGWIN, [test "${SYS}" = "cygwin"])
 
+#
 # Choose event mechanism
-case "${host_os}" in
-    mingw*)
-        event_mechanism="select"
-        AX_CHECK_WINFUNC(select, [ select(0, NULL, NULL, NULL, NULL) ])
-        AC_DEFINE([WITH_SELECT],
-            [1], [Define to use select() for event notification])
-    ;;
+#
+event_mechanism=""
+# TODO: add option to set this manually
 
-    freebsd*|darwin*)
-        event_mechanism="kqueue"
-        AX_CHECK_HEADERS_REQ([sys/event.h])
-        AX_CHECK_FUNCS_REQ([kqueue kevent])
-        AC_DEFINE([WITH_KQUEUE],
-            [1], [Define to use kqueue for event notification])
-    ;;
-
-    linux*)
+# epoll (Linux-specific)
+AS_IF([test "x${event_mechanism}" = "x"], [
+    epoll_failed="no"
+    AC_CHECK_HEADER([sys/epoll.h], [
+        AC_CHECK_FUNCS([epoll_create epoll_ctl epoll_wait], [],
+            [ epoll_failed="yes" ])
+    ], [
+        epoll_failed="yes"
+    ])
+    AS_IF([test "x${epoll_failed}" = "xno"], [
         event_mechanism="epoll"
-        AX_CHECK_HEADERS_REQ([sys/epoll.h])
-        AX_CHECK_FUNCS_REQ([epoll_create epoll_ctl epoll_wait])
+        AC_CHECK_FUNCS([epoll_create1])
         AC_DEFINE([WITH_EPOLL],
             [1], [Define to use epoll for event notification])
-    ;;
+    ])
+])
 
-    *)
+# kqueue (various BSD)
+AS_IF([test "x${event_mechanism}" = "x"], [
+    kqueue_failed="no"
+    AC_CHECK_HEADER([sys/event.h], [
+        AC_CHECK_FUNCS([kqueue kevent], [],
+            [ kqueue_failed="yes" ])
+    ], [
+        kqueue_failed="yes"
+    ])
+    AS_IF([test "x${kqueue_failed}" = "xno"], [
+        event_mechanism="kqueue"
+        AC_CHECK_FUNCS([kqueue1])
+        AC_DEFINE([WITH_KQUEUE],
+            [1], [Define to use kqueue for event notification])
+    ])
+])
+
+# poll
+AS_IF([test "x${event_mechanism}" = "x"], [
+    poll_failed="no"
+    AC_CHECK_HEADER([poll.h], [
+        AC_CHECK_FUNCS([poll], [],
+            [ poll_failed="yes" ])
+    ], [
+        poll_failed="yes"
+    ])
+    AS_IF([test "x${poll_failed}" = "xno"], [
         event_mechanism="poll"
-        AX_CHECK_HEADERS_REQ([poll.h])
-        AX_CHECK_FUNCS_REQ([poll])
         AC_DEFINE([WITH_POLL],
             [1], [Define to use poll() for event notification])
-    ;;
-esac
+    ])
+])
+
+# select
+AS_IF([test "x${event_mechanism}" = "x"], [
+    # no need to check, it's present on every system
+    event_mechanism="select"
+    AC_DEFINE([WITH_SELECT],
+        [1], [Define to use select() for event notification])
+])
+
 AC_MSG_NOTICE([using ${event_mechanism} for event notification])
 
 #
@@ -259,11 +261,13 @@ AX_CHECK_FUNCS_REQ([clock lseek localtime malloc realloc memchr memset memcpy sr
 # optional headers
 AC_CHECK_HEADERS([netinet/sctp.h])
 
-# replaceable functions
-AC_CHECK_FUNCS([pread strndup strnlen])
-
-# posix_memalign(): used by `file'
-AC_CHECK_FUNCS([posix_memalign])
+# optional functions
+#   pread(), strndup(), strnlen(): replaceables
+#   posix_memalign(): used by stream/file
+#   accept4(): used by core/socket
+#   pipe2(): used for spawning child processes
+#   mkostemp(): used for creating pidfiles
+AC_CHECK_FUNCS([pread strndup strnlen posix_memalign accept4 pipe2 mkostemp])
 
 # getifaddrs(): used by utils.c
 AC_CHECK_FUNCS([getifaddrs],
