@@ -568,6 +568,24 @@ kill_output_module.np = function(channel_data, output_id)
     end
 end
 
+--
+-- Output: pipe://
+--
+
+init_output_module.pipe = function(channel_data, output_id)
+    local output_data = channel_data.output[output_id]
+    output_data.output = pipe_output({
+        upstream = channel_data.tail:stream(),
+        command = output_data.config.command,
+        -- TODO: add sync/no_sync
+    })
+end
+
+kill_output_module.pipe = function(channel_data, output_id)
+    local output_data = channel_data.output[output_id]
+    output_data.output = nil
+end
+
 --   oooooooo8 ooooo ooooo      o      oooo   oooo oooo   oooo ooooooooooo ooooo
 -- o888     88  888   888      888      8888o  88   8888o  88   888    88   888
 -- 888          888ooo888     8  88     88 888o88   88 888o88   888ooo8     888

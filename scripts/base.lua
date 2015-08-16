@@ -293,6 +293,11 @@ parse_url_format.file = function(url, data)
     return true
 end
 
+parse_url_format.pipe = function(url, data)
+    data.command = url
+    return true
+end
+
 function parse_url(url)
     if not url then return nil end
 
@@ -830,6 +835,18 @@ kill_input_module.dvb = function(module, conf)
             dvb_input_instance_list[instance_id] = nil
         end
     end
+end
+
+--
+-- Input: pipe://
+--
+
+init_input_module.pipe = function(conf)
+    return pipe_input(conf)
+end
+
+kill_input_module.pipe = function(module)
+    --
 end
 
 -- ooooo         oooooooooo  ooooooooooo ooooo         ooooooo      o      ooooooooo

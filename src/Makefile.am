@@ -135,6 +135,13 @@ libstream_la_SOURCES += \
     stream/http/utils.c
 endif
 
+### pipe ###
+if HAVE_STREAM_PIPE
+libstream_la_SOURCES += \
+    stream/pipe/input.c \
+    stream/pipe/output.c
+endif
+
 ### remux ###
 if HAVE_STREAM_REMUX
 libstream_la_SOURCES += \
