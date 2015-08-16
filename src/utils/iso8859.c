@@ -21,7 +21,7 @@
 
 #include <astra.h>
 
-static uint8_t * iso8859_1_decode(const uint8_t *data, size_t size)
+static uint8_t *iso8859_1_decode(const uint8_t *data, size_t size)
 {
     uint8_t *text = (uint8_t *)malloc(size * 2 + 1);
     uint8_t c;
@@ -46,7 +46,7 @@ static uint8_t * iso8859_1_decode(const uint8_t *data, size_t size)
     return text;
 }
 
-static uint8_t * iso8859_1_encode(const uint8_t *data, size_t size)
+static uint8_t *iso8859_1_encode(const uint8_t *data, size_t size)
 {
     uint8_t *text = (uint8_t *)malloc(size + 1);
     uint8_t c;
@@ -70,7 +70,7 @@ static uint8_t * iso8859_1_encode(const uint8_t *data, size_t size)
     return text;
 }
 
-static uint8_t * iso8859_2_decode(const uint8_t *data, size_t size)
+static uint8_t *iso8859_2_decode(const uint8_t *data, size_t size)
 {
     uint8_t *text = (uint8_t *)malloc(size * 2 + 1);
     uint8_t c;
@@ -126,7 +126,7 @@ static uint8_t * iso8859_2_decode(const uint8_t *data, size_t size)
     return text;
 }
 
-static uint8_t * iso8859_4_decode(const uint8_t *data, size_t size)
+static uint8_t *iso8859_4_decode(const uint8_t *data, size_t size)
 {
     uint8_t *text = (uint8_t *)malloc(size * 2 + 1);
     uint8_t c;
@@ -182,7 +182,7 @@ static uint8_t * iso8859_4_decode(const uint8_t *data, size_t size)
     return text;
 }
 
-static uint8_t * iso8859_5_decode(const uint8_t *data, size_t size)
+static uint8_t *iso8859_5_decode(const uint8_t *data, size_t size)
 {
     uint8_t *text = (uint8_t *)malloc(size * 2 + 1);
     uint8_t c, u1, u2;
@@ -215,7 +215,7 @@ static uint8_t * iso8859_5_decode(const uint8_t *data, size_t size)
     return text;
 }
 
-static uint8_t * iso8859_5_encode(const uint8_t *data, size_t size)
+static uint8_t *iso8859_5_encode(const uint8_t *data, size_t size)
 {
     uint8_t *text = (uint8_t *)malloc(size + 1);
     uint8_t c;
@@ -248,7 +248,7 @@ static uint8_t * iso8859_5_encode(const uint8_t *data, size_t size)
     return text;
 }
 
-static uint8_t * iso8859_7_decode(const uint8_t *data, size_t size)
+static uint8_t *iso8859_7_decode(const uint8_t *data, size_t size)
 {
     uint8_t *text = (uint8_t *)malloc(size * 2 + 1);
     uint8_t c, u1, u2;
@@ -283,7 +283,7 @@ static uint8_t * iso8859_7_decode(const uint8_t *data, size_t size)
     return text;
 }
 
-static uint8_t * iso8859_8_decode(const uint8_t *data, size_t size)
+static uint8_t *iso8859_8_decode(const uint8_t *data, size_t size)
 {
     uint8_t *text = (uint8_t *)malloc(size * 2 + 1);
     uint8_t c;
@@ -315,7 +315,7 @@ static uint8_t * iso8859_8_decode(const uint8_t *data, size_t size)
     return text;
 }
 
-static uint8_t * iso8859_9_decode(const uint8_t *data, size_t size)
+static uint8_t *iso8859_9_decode(const uint8_t *data, size_t size)
 {
     uint8_t *text = (uint8_t *)malloc(size * 2 + 1);
     uint8_t c;
@@ -382,7 +382,7 @@ static uint8_t * iso8859_9_decode(const uint8_t *data, size_t size)
     return text;
 }
 
-char * iso8859_decode(const uint8_t *data, size_t size)
+char *iso8859_decode(const uint8_t *data, size_t size)
 {
     if(size == 0)
     {
@@ -421,12 +421,16 @@ char * iso8859_decode(const uint8_t *data, size_t size)
         return (char *)iso8859_1_decode(data, size); // Western European
     }
 
+    /* dump raw data */
     static const char unknown_charset[] = "unknown charset: 0x";
-    size_t skip = sizeof(unknown_charset) - 1;
-    char *text = (char *)malloc(skip + (size * 2) + 1);
-    memcpy(text, unknown_charset, sizeof(unknown_charset));
-    for(uint8_t i = 0; i < size; ++i)
-        skip += sprintf(&text[skip], "%02X", data[i]);
+    const size_t buf_size = sizeof(unknown_charset) + (size * 2);
+
+    char *const text = (char *)calloc(1, buf_size);
+    asc_assert(text != NULL, "[iso8859] calloc() failed");
+
+    size_t skip = snprintf(text, buf_size, "%s", unknown_charset);
+    for(size_t i = 0; i < size; i++)
+        skip += snprintf(&text[skip], buf_size - skip, "%02X", data[i]);
 
     return text;
 }
