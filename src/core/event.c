@@ -262,12 +262,15 @@ static void asc_event_subscribe(asc_event_t *event)
     ret = epoll_ctl(event_observer.fd, EPOLL_CTL_MOD, event->fd, &ed);
 #endif
 
-    asc_assert(ret != -1, MSG("failed to set fd=%d [%s]"), event->fd, strerror(errno));
+    asc_assert(ret != -1, MSG("failed to set fd=%d [%s]")
+               , event->fd, strerror(errno));
 }
 
-asc_event_t * asc_event_init(int fd, void *arg)
+asc_event_t *asc_event_init(int fd, void *arg)
 {
-    asc_event_t *event = (asc_event_t *)calloc(1, sizeof(asc_event_t));
+    asc_event_t *event = (asc_event_t *)calloc(1, sizeof(*event));
+    asc_assert(event != NULL, MSG("calloc() failed"));
+
     event->fd = fd;
     event->arg = arg;
 
@@ -275,8 +278,12 @@ asc_event_t * asc_event_init(int fd, void *arg)
     EV_OTYPE ed;
     ed.data.ptr = event;
     ed.events = EPOLLCLOSE;
-    const int ret = epoll_ctl(event_observer.fd, EPOLL_CTL_ADD, event->fd, &ed);
-    asc_assert(ret != -1, MSG("failed to attach fd=%d [%s]"), event->fd, strerror(errno));
+
+    const int ret = epoll_ctl(event_observer.fd
+                              , EPOLL_CTL_ADD, event->fd, &ed);
+
+    asc_assert(ret != -1, MSG("failed to attach fd=%d [%s]")
+               , event->fd, strerror(errno));
 #endif
 
     asc_list_insert_tail(event_observer.event_list, event);
@@ -413,7 +420,8 @@ static void asc_event_subscribe(asc_event_t *event)
         if(event_observer.event_list[i]->fd == event->fd)
             break;
     }
-    asc_assert(i < event_observer.fd_count, MSG("filed to set fd=%d"), event->fd);
+    asc_assert(i < event_observer.fd_count
+               , MSG("failed to set fd=%d"), event->fd);
 
     event_observer.fd_list[i].events = 0;
     if(event->on_read)
@@ -422,13 +430,15 @@ static void asc_event_subscribe(asc_event_t *event)
         event_observer.fd_list[i].events |= POLLOUT;
 }
 
-asc_event_t * asc_event_init(int fd, void *arg)
+asc_event_t *asc_event_init(int fd, void *arg)
 {
     const int i = event_observer.fd_count;
     memset(&event_observer.fd_list[i], 0, sizeof(struct pollfd));
     event_observer.fd_list[i].fd = fd;
 
-    asc_event_t *event = (asc_event_t *)calloc(1, sizeof(asc_event_t));
+    asc_event_t *event = (asc_event_t *)calloc(1, sizeof(*event));
+    asc_assert(event != NULL, MSG("calloc() failed"));
+
     event_observer.event_list[i] = event;
     event->fd = fd;
     event->arg = arg;
@@ -594,9 +604,11 @@ static void asc_event_subscribe(asc_event_t *event)
         FD_CLR(event->fd, &event_observer.emaster);
 }
 
-asc_event_t * asc_event_init(int fd, void *arg)
+asc_event_t *asc_event_init(int fd, void *arg)
 {
-    asc_event_t *event = (asc_event_t *)calloc(1, sizeof(asc_event_t));
+    asc_event_t *event = (asc_event_t *)calloc(1, sizeof(*event));
+    asc_assert(event != NULL, MSG("calloc() failed"));
+
     event->fd = fd;
     event->arg = arg;
 
