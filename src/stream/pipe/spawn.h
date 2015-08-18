@@ -1,5 +1,5 @@
 /*
- * Astra Module: Pipe (Process spawning)
+ * Astra Core (Process spawning)
  *
  * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
  *
@@ -17,12 +17,23 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _SPAWN_H_
-#define _SPAWN_H_ 1
+#ifndef _ASC_SPAWN_H_
+#define _ASC_SPAWN_H_ 1
 
-/*
- * TODO: move this to core/spawn
- */
-pid_t pipe_spawn_child(const char *command, int *sin, int *sout, int *serr);
+/* TODO: move this to core/spawn */
 
-#endif /* _SPAWN_H_ */
+#ifndef _WIN32
+#   define asc_pipe_close(__fd) close(__fd)
+#else
+    /* NOTE: we use loopback TCP sockets as pipes on Windows */
+#   define asc_pipe_close(__fd) closesocket(__fd)
+    // XXX: we'll need asc_pipe_read/write as well;
+    //      read() / write() probably won't work on windows sockets.
+    // XXX: do we need to map winsock error codes?
+    // XXX: typedef HANDLE pid_t
+#endif /* !_WIN32 */
+
+pid_t asc_child_spawn(const char *command, int *sin, int *sout, int *serr);
+int asc_pipe_open(int fds[2], int *parent_fd, int parent_side);
+
+#endif /* _ASC_SPAWN_H_ */

@@ -1,5 +1,5 @@
 /*
- * Astra Module: Pipe (Process spawning)
+ * Astra Core (Process spawning)
  *
  * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
  *
@@ -20,11 +20,7 @@
 #include <astra.h>
 
 #ifndef _REMOVE_ME_
-    /*
-     * TODO: add Win32 support and put this under core/spawn
-     *       rename the spawning function `asc_spawn_child()'
-     *       maybe add asc_pid_t depending on the OS
-     */
+    /* TODO: add Win32 support and put this under core/spawn */
 #   include "spawn.h"
 #endif /* _REMOVE_ME_ */
 
@@ -90,8 +86,7 @@ fail:
 #endif /* !HAVE_PIPE2 */
 
 /* create a pipe with a non-blocking side and write its fd to parent_fd */
-static inline
-int make_pipe(int fds[2], int *parent_fd, int parent_side)
+int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
 {
     if (__pipe(fds) != 0)
         return -1;
@@ -112,22 +107,22 @@ int make_pipe(int fds[2], int *parent_fd, int parent_side)
 }
 
 /* create a child process with redirected stdio */
-pid_t pipe_spawn_child(const char *command, int *sin, int *sout, int *serr)
+pid_t asc_child_spawn(const char *command, int *sin, int *sout, int *serr)
 {
     pid_t pid = -1;
     int pipes[6] = { -1, -1, -1, -1, -1, -1 };
 
     /* make stdio pipes */
     int *to_child = &pipes[0];
-    if (make_pipe(to_child, sin, PIPE_WR) != 0)
+    if (asc_pipe_open(to_child, sin, PIPE_WR) != 0)
         goto fail;
 
     int *from_child = &pipes[2];
-    if (make_pipe(from_child, sout, PIPE_RD) != 0)
+    if (asc_pipe_open(from_child, sout, PIPE_RD) != 0)
         goto fail;
 
     int *err_pipe = &pipes[4];
-    if (make_pipe(err_pipe, serr, PIPE_RD) != 0)
+    if (asc_pipe_open(err_pipe, serr, PIPE_RD) != 0)
         goto fail;
 
     /* fork and exec */
@@ -181,5 +176,7 @@ fail:
     return -1;
 }
 #else /* !_WIN32 */
+    // XXX: asc_child_spawn() notes
+    //      close hThread right away, return hProcess (typedef'd as pid_t)
 #   error "FIXME: support creating child processes under Win32"
 #endif /* !_WIN32 */
