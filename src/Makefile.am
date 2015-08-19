@@ -138,8 +138,12 @@ endif
 ### pipe ###
 if HAVE_STREAM_PIPE
 libstream_la_SOURCES += \
+    stream/pipe/child.c \
+    stream/pipe/spawn.c \
     stream/pipe/input.c \
-    stream/pipe/output.c
+    stream/pipe/output.c \
+    stream/pipe/transcode.c \
+    stream/pipe/pipe.c
 endif
 
 ### remux ###
