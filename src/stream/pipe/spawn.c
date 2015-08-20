@@ -118,6 +118,12 @@ int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
     return 0;
 }
 
+__asc_inline
+int asc_pipe_close(int fd)
+{
+    return close(fd);
+}
+
 /* create a child process with redirected stdio */
 pid_t asc_child_spawn(const char *command, int *sin, int *sout, int *serr)
 {

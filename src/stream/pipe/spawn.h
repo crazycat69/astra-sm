@@ -23,17 +23,15 @@
 /* TODO: move this to core/spawn */
 
 #ifndef _WIN32
-#   define asc_pipe_close(__fd) close(__fd)
+typedef pid_t asc_pid_t;
 #else
-    /* NOTE: we use loopback TCP sockets as pipes on Windows */
-#   define asc_pipe_close(__fd) closesocket(__fd)
-    // XXX: we'll need asc_pipe_read/write as well;
-    //      read() / write() probably won't work on windows sockets.
-    // XXX: do we need to map winsock error codes?
-    // XXX: typedef HANDLE pid_t
+#   error "FIXME: add Win32 support"
 #endif /* !_WIN32 */
 
-pid_t asc_child_spawn(const char *command, int *sin, int *sout, int *serr);
+asc_pid_t asc_child_spawn(const char *command
+                          , int *sin, int *sout, int *serr);
+
 int asc_pipe_open(int fds[2], int *parent_fd, int parent_side);
+int asc_pipe_close(int fd);
 
 #endif /* _ASC_SPAWN_H_ */
