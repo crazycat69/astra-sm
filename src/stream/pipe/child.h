@@ -37,6 +37,7 @@ typedef struct
 {
     child_io_mode_t mode;
     child_io_callback_t on_flush;
+    bool ignore_read;
 } child_io_cfg_t;
 
 typedef struct
@@ -61,7 +62,7 @@ void asc_child_set_on_close(asc_child_t *child
                             , child_close_callback_t on_close);
 void asc_child_set_on_ready(asc_child_t *child
                             , event_callback_t on_ready);
-void asc_child_set_on_flush(asc_child_t *child, int child_fd
-                            , child_io_callback_t on_flush);
+void asc_child_toggle_input(asc_child_t *child
+                            , int child_fd, bool enable);
 
 #endif /* _ASC_CHILD_H_ */
