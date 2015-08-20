@@ -27,11 +27,20 @@
 #ifndef _WIN32
 #include <signal.h>
 
+/* maximum signal number */
+#ifndef NSIG
+#   ifdef _NSIG
+#       define NSIG _NSIG
+#   else
+#       define NSIG 64
+#   endif /* _NSIG */
+#endif /* !NSIG */
+
 #define PIPE_RD 0
 #define PIPE_WR 1
 
 /* async-signal-safe functions for child process */
-static inline
+static inline __func_pure
 size_t strlen_s(const char *s)
 {
     size_t n = 0;
@@ -85,23 +94,26 @@ fail:
 #   define __pipe(__fds) pipe2(__fds, O_CLOEXEC)
 #endif /* !HAVE_PIPE2 */
 
-/* create a pipe with a non-blocking side and write its fd to parent_fd */
+/* create a pipe with an optional non-blocking side and return its fd */
 int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
 {
     if (__pipe(fds) != 0)
         return -1;
 
-    if (fcntl(fds[parent_side], F_SETFL, O_NONBLOCK) != 0)
+    if (parent_fd != NULL)
     {
-        /* couldn't set non-blocking mode; this shouldn't happen */
-        close(fds[PIPE_RD]);
-        close(fds[PIPE_WR]);
-        fds[0] = fds[1] = -1;
+        if (fcntl(fds[parent_side], F_SETFL, O_NONBLOCK) != 0)
+        {
+            /* couldn't set non-blocking mode; this shouldn't happen */
+            close(fds[0]);
+            close(fds[1]);
+            fds[0] = fds[1] = -1;
 
-        return -1;
+            return -1;
+        }
+
+        *parent_fd = fds[parent_side];
     }
-
-    *parent_fd = fds[parent_side];
 
     return 0;
 }
@@ -113,15 +125,16 @@ pid_t asc_child_spawn(const char *command, int *sin, int *sout, int *serr)
     int pipes[6] = { -1, -1, -1, -1, -1, -1 };
 
     /* make stdio pipes */
-    int *to_child = &pipes[0];
+    int *const to_child = &pipes[0];
+    int *const from_child = &pipes[2];
+    int *const err_pipe = &pipes[4];
+
     if (asc_pipe_open(to_child, sin, PIPE_WR) != 0)
         goto fail;
 
-    int *from_child = &pipes[2];
     if (asc_pipe_open(from_child, sout, PIPE_RD) != 0)
         goto fail;
 
-    int *err_pipe = &pipes[4];
     if (asc_pipe_open(err_pipe, serr, PIPE_RD) != 0)
         goto fail;
 
@@ -130,21 +143,23 @@ pid_t asc_child_spawn(const char *command, int *sin, int *sout, int *serr)
     if (pid == 0)
     {
         /* we're the child; redirect stdio */
-        if (to_child[PIPE_RD] != STDIN_FILENO)
-            dup2(to_child[PIPE_RD], STDIN_FILENO);
+        dup2(to_child[PIPE_RD], STDIN_FILENO);
+        fcntl(to_child[PIPE_RD], F_SETFD, 0);
 
-        if (from_child[PIPE_WR] != STDOUT_FILENO)
-            dup2(from_child[PIPE_WR], STDOUT_FILENO);
+        dup2(from_child[PIPE_WR], STDOUT_FILENO);
+        fcntl(from_child[PIPE_WR], F_SETFD, 0);
 
-        if (err_pipe[PIPE_WR] != STDERR_FILENO)
-            dup2(err_pipe[PIPE_WR], STDERR_FILENO);
+        dup2(err_pipe[PIPE_WR], STDERR_FILENO);
+        fcntl(err_pipe[PIPE_WR], F_SETFD, 0);
 
-        // XXX: does an FD retain O_NONBLOCK after dup2()? after exec()?
+        /* reset signal handlers and masks */
+        for (size_t sig = 1; sig <= NSIG; sig++)
+        {
+            struct sigaction sa;
+            if (sigaction(sig, NULL, &sa) == 0 && sa.sa_handler != SIG_DFL)
+                signal(sig, SIG_DFL);
+        }
 
-        // XXX: if SIGPIPE is ignored in parent,
-        //      does the child retain SIG_IGN after exec()?
-
-        /* unmask all signals */
         sigset_t mask;
         sigemptyset(&mask);
         sigprocmask(SIG_SETMASK, &mask, NULL);
@@ -156,15 +171,13 @@ pid_t asc_child_spawn(const char *command, int *sin, int *sout, int *serr)
     }
     else if (pid > 0)
     {
-        /* we're the parent; close unused pipe ends */
+        /* we're the parent; close unused pipe ends and return */
         close(to_child[PIPE_RD]);
         close(from_child[PIPE_WR]);
         close(err_pipe[PIPE_WR]);
-    }
-    else
-        goto fail;
 
-    return pid;
+        return pid;
+    }
 
 fail:
     for (size_t i = 0; i < ASC_ARRAY_SIZE(pipes); i++)
