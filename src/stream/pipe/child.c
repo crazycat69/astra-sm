@@ -313,3 +313,12 @@ void asc_child_destroy(asc_child_t *child)
 
     asc_child_close(child);
 }
+
+asc_pid_t asc_child_pid(const asc_child_t *child)
+{
+#ifndef _WIN32
+    return child->pid;
+#else
+#   error "FIXME"
+#endif
+}
