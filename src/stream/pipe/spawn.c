@@ -150,13 +150,13 @@ pid_t asc_child_spawn(const char *command, int *sin, int *sout, int *serr)
     {
         /* we're the child; redirect stdio */
         dup2(to_child[PIPE_RD], STDIN_FILENO);
-        fcntl(to_child[PIPE_RD], F_SETFD, 0);
+        fcntl(STDIN_FILENO, F_SETFD, 0);
 
         dup2(from_child[PIPE_WR], STDOUT_FILENO);
-        fcntl(from_child[PIPE_WR], F_SETFD, 0);
+        fcntl(STDOUT_FILENO, F_SETFD, 0);
 
         dup2(err_pipe[PIPE_WR], STDERR_FILENO);
-        fcntl(err_pipe[PIPE_WR], F_SETFD, 0);
+        fcntl(STDERR_FILENO, F_SETFD, 0);
 
         /* reset signal handlers and masks */
         for (size_t sig = 1; sig <= NSIG; sig++)
