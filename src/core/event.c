@@ -40,11 +40,10 @@
 #   define EV_TYPE_EPOLL
 #   include <sys/epoll.h>
 #   define EV_OTYPE struct epoll_event
-#   ifdef EPOLLRDHUP
-#       define EPOLLCLOSE (EPOLLERR | EPOLLRDHUP)
-#   else
-#       define EPOLLCLOSE (EPOLLERR | EPOLLHUP)
+#   ifndef EPOLLRDHUP
+#       define EPOLLRDHUP 0
 #   endif
+#   define EPOLLCLOSE (EPOLLERR | EPOLLHUP | EPOLLRDHUP)
 #   define MSG(_msg) "[core/event epoll] " _msg
 #else
 #   error "Event notification interface not set"
