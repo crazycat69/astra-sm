@@ -170,6 +170,12 @@ pid_t asc_child_spawn(const char *command, int *sin, int *sout, int *serr)
         sigemptyset(&mask);
         sigprocmask(SIG_SETMASK, &mask, NULL);
 
+        /* detach from terminal */
+        setsid();
+
+        /* go to root directory */
+        chdir("/");
+
         /* try to run command */
         execle("/bin/sh", "sh", "-c", command, NULL, environ);
         perror_s("execl()");
