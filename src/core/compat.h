@@ -109,12 +109,20 @@ size_t strnlen(const char *str, size_t max) __func_pure;
  */
 
 int cx_open(const char *path, int flags, ...);
+int cx_socket(int family, int type, int protocol);
 
 #ifndef ASC_COMPAT_NOWRAP
+    /* open() */
 #   ifdef open
 #       undef open
 #   endif
 #   define open(...) cx_open(__VA_ARGS__)
+
+    /* socket() */
+#   ifdef socket
+#       undef socket
+#   endif
+#   define socket(...) cx_socket(__VA_ARGS__)
 #endif /* !ASC_COMPAT_NOWRAP */
 
 #endif /* _ASC_COMPAT_H_ */

@@ -131,52 +131,9 @@ bool asc_socket_would_block(void)
  *
  */
 
-static inline int __socket(int family, int type, int protocol)
-{
-    int fd;
-
-#ifdef _WIN32
-    fd = WSASocket(family, type, protocol, NULL, 0
-                   , WSA_FLAG_NO_HANDLE_INHERIT);
-    if (fd != -1)
-        return fd;
-
-    /* probably pre-7/SP1 version of Windows */
-    fd = WSASocket(family, type, protocol, NULL, 0, 0);
-    if (fd == -1)
-        return fd;
-
-    const HANDLE sock = (HANDLE)((intptr_t)fd);
-    if (!SetHandleInformation(sock, HANDLE_FLAG_INHERIT, 0))
-    {
-        closesocket(fd);
-        fd = -1;
-    }
-#else /* _WIN32 */
-#ifdef SOCK_CLOEXEC
-    /* try newer atomic API first */
-    fd = socket(family, type | SOCK_CLOEXEC, protocol);
-    if (fd != -1)
-        return fd;
-#endif /* SOCK_CLOEXEC */
-
-    fd = socket(family, type, protocol);
-    if (fd == -1)
-        return fd;
-
-    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
-    {
-        close(fd);
-        fd = -1;
-    }
-#endif /* _WIN32 */
-
-    return fd;
-}
-
 static asc_socket_t *sock_init(int family, int type, int protocol, void *arg)
 {
-    const int fd = __socket(family, type, protocol);
+    const int fd = socket(family, type, protocol);
     asc_assert(fd != -1, "[core/socket] failed to open socket [%s]"
                , asc_socket_error());
 
@@ -948,7 +905,7 @@ static int __asc_socket_multicast_cmd(asc_socket_t *sock, int cmd)
         (cmd == IP_ADD_MEMBERSHIP) ? 0x16 : 0x17,
         sock->mreq.imr_multiaddr.s_addr);
 
-    const int raw_sock = __socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
+    const int raw_sock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW);
     if(raw_sock == -1)
         return -1;
 

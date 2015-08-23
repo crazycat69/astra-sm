@@ -20,7 +20,14 @@
  */
 
 #define ASC_COMPAT_NOWRAP
+
 #include <astra.h>
+
+#ifdef _WIN32
+#   include <ws2tcpip.h>
+#else
+#   include <sys/socket.h>
+#endif /* _WIN32 */
 
 #ifndef HAVE_PREAD
 ssize_t pread(int fd, void *buffer, size_t size, off_t off)
@@ -88,6 +95,49 @@ int cx_open(const char *path, int flags, ...)
         fd = -1;
     }
 #endif /* O_CLOEXEC */
+
+    return fd;
+}
+
+int cx_socket(int family, int type, int protocol)
+{
+    int fd;
+
+#ifdef _WIN32
+    fd = WSASocket(family, type, protocol, NULL, 0
+                   , WSA_FLAG_NO_HANDLE_INHERIT);
+    if (fd != -1)
+        return fd;
+
+    /* probably pre-7/SP1 version of Windows */
+    fd = WSASocket(family, type, protocol, NULL, 0, 0);
+    if (fd == -1)
+        return fd;
+
+    const HANDLE sock = (HANDLE)((intptr_t)fd);
+    if (!SetHandleInformation(sock, HANDLE_FLAG_INHERIT, 0))
+    {
+        closesocket(fd);
+        fd = -1;
+    }
+#else /* _WIN32 */
+#ifdef SOCK_CLOEXEC
+    /* try newer atomic API first */
+    fd = socket(family, type | SOCK_CLOEXEC, protocol);
+    if (fd != -1)
+        return fd;
+#endif /* SOCK_CLOEXEC */
+
+    fd = socket(family, type, protocol);
+    if (fd == -1)
+        return fd;
+
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
+    {
+        close(fd);
+        fd = -1;
+    }
+#endif /* _WIN32 */
 
     return fd;
 }
