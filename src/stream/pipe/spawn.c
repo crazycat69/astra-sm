@@ -25,6 +25,8 @@
 #endif /* _REMOVE_ME_ */
 
 #ifndef _WIN32
+#include <sys/types.h>
+#include <sys/socket.h>
 #include <signal.h>
 
 /* maximum signal number */
@@ -68,36 +70,33 @@ void perror_s(const char *s)
     write(STDERR_FILENO, "\n", 1);
 }
 
-/* safety wrapper for pipe() to set the close-on-exec flag */
-#ifndef HAVE_PIPE2
+/* safety wrapper for socketpair() to set the close-on-exec flag */
 static inline
-int __pipe(int fds[2])
+int socketpipe(int fds[2])
 {
-    if (pipe(fds) != 0)
+#ifdef SOCK_CLOEXEC
+    if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, PF_UNSPEC, fds) == 0)
+        return 0;
+#endif /* SOCK_CLOEXEC */
+
+    if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, fds) != 0)
         return -1;
 
-    if (fcntl(fds[PIPE_RD], F_SETFD, FD_CLOEXEC) != 0)
-        goto fail;
-
-    if (fcntl(fds[PIPE_WR], F_SETFD, FD_CLOEXEC) != 0)
-        goto fail;
+    if (fcntl(fds[PIPE_RD], F_SETFD, FD_CLOEXEC) != 0
+        || fcntl(fds[PIPE_WR], F_SETFD, FD_CLOEXEC) != 0)
+    {
+        close(fds[PIPE_RD]);
+        close(fds[PIPE_WR]);
+        return -1;
+    }
 
     return 0;
-
-fail:
-    close(fds[PIPE_RD]);
-    close(fds[PIPE_WR]);
-
-    return -1;
 }
-#else
-#   define __pipe(__fds) pipe2(__fds, O_CLOEXEC)
-#endif /* !HAVE_PIPE2 */
 
 /* create a pipe with an optional non-blocking side and return its fd */
 int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
 {
-    if (__pipe(fds) != 0)
+    if (socketpipe(fds) != 0)
         return -1;
 
     if (parent_fd != NULL)
