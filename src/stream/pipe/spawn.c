@@ -24,8 +24,10 @@
 #   include "spawn.h"
 #endif /* _REMOVE_ME_ */
 
+#define PIPE_RD 0
+#define PIPE_WR 1
+
 #ifndef _WIN32
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <signal.h>
 
@@ -37,9 +39,6 @@
 #       define NSIG 64
 #   endif /* _NSIG */
 #endif /* !NSIG */
-
-#define PIPE_RD 0
-#define PIPE_WR 1
 
 /* async-signal-safe functions for child process */
 static inline __func_pure
@@ -71,7 +70,7 @@ void perror_s(const char *s)
 }
 
 /* safety wrapper for socketpair() to set the close-on-exec flag */
-static inline
+static
 int socketpipe(int fds[2])
 {
 #ifdef SOCK_CLOEXEC
@@ -93,6 +92,101 @@ int socketpipe(int fds[2])
     return 0;
 }
 
+#else /* _WIN32 */
+
+/* make selectable pipe by connecting two TCP sockets */
+static
+int socketpipe(int fds[2])
+{
+    union
+    {
+        struct sockaddr_in in;
+        struct sockaddr addr;
+    } sa_listen, sa_client, sa_req;
+
+    SOCKET listener = INVALID_SOCKET;
+    SOCKET client = INVALID_SOCKET;
+    SOCKET server = INVALID_SOCKET;
+
+    const int reuse = 1;
+    int addrlen = sizeof(sa_listen.in);
+
+    memset(&sa_listen, 0, sizeof(sa_listen));
+    sa_listen.in.sin_family = AF_INET;
+    sa_listen.in.sin_port = 0;
+    sa_listen.in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    memcpy(&sa_client, &sa_listen, sizeof(sa_listen));
+
+    /* establish listening socket */
+    listener = socket(AF_INET, SOCK_STREAM, 0);
+    if (listener == INVALID_SOCKET)
+        goto fail;
+
+    if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR
+                   , (char *)&reuse, sizeof(reuse)) != 0)
+        goto fail;
+
+    if (bind(listener, &sa_listen.addr, addrlen) != 0)
+        goto fail;
+
+    if (getsockname(listener, &sa_listen.addr, &addrlen) != 0)
+        goto fail;
+
+    if (listen(listener, SOMAXCONN) != 0)
+        goto fail;
+
+    /* make first socket, connect it to listener */
+    client = socket(AF_INET, SOCK_STREAM, 0);
+    if (client == INVALID_SOCKET)
+        goto fail;
+
+    if (bind(client, &sa_client.addr, addrlen) != 0)
+        goto fail;
+
+    if (getsockname(client, &sa_client.addr, &addrlen) != 0)
+        goto fail;
+
+    if (connect(client, &sa_listen.addr, addrlen) != 0)
+        goto fail;
+
+    /* accept the connection request */
+    while (true)
+    {
+        server = accept(listener, &sa_req.addr, &addrlen);
+        if (server == INVALID_SOCKET)
+            goto fail;
+
+        if (sa_req.in.sin_port == sa_client.in.sin_port
+            && sa_req.in.sin_addr.s_addr == sa_client.in.sin_addr.s_addr)
+        {
+            closesocket(listener);
+            break;
+        }
+
+        /* discard stray connection */
+        closesocket(server);
+        server = INVALID_SOCKET;
+    }
+
+    fds[0] = client;
+    fds[1] = server;
+
+    return 0;
+
+fail:
+    if (listener != INVALID_SOCKET)
+        closesocket(listener);
+
+    if (client != INVALID_SOCKET)
+        closesocket(client);
+
+    if (server != INVALID_SOCKET)
+        closesocket(server);
+
+    return -1;
+}
+#endif /* _WIN32 */
+
 /* create a pipe with an optional non-blocking side and return its fd */
 int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
 {
@@ -101,11 +195,18 @@ int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
 
     if (parent_fd != NULL)
     {
-        if (fcntl(fds[parent_side], F_SETFL, O_NONBLOCK) != 0)
+#ifdef _WIN32
+        unsigned long nonblock = 1;
+        const int ret = ioctlsocket(fds[parent_side], FIONBIO, &nonblock);
+#else
+        const int ret = fcntl(fds[parent_side], F_SETFL, O_NONBLOCK);
+#endif /* _WIN32 */
+
+        if (ret != 0)
         {
             /* couldn't set non-blocking mode; this shouldn't happen */
-            close(fds[0]);
-            close(fds[1]);
+            asc_pipe_close(fds[0]);
+            asc_pipe_close(fds[1]);
             fds[0] = fds[1] = -1;
 
             return -1;
@@ -120,11 +221,16 @@ int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
 __asc_inline
 int asc_pipe_close(int fd)
 {
+#ifdef _WIN32
+    return closesocket(fd);
+#else
     return close(fd);
+#endif /* _WIN32 */
 }
 
+#ifndef _WIN32
 /* create a child process with redirected stdio */
-pid_t asc_child_spawn(const char *command, int *sin, int *sout, int *serr)
+asc_pid_t asc_child_spawn(const char *command, int *sin, int *sout, int *serr)
 {
     pid_t pid = -1;
     int pipes[6] = { -1, -1, -1, -1, -1, -1 };
@@ -183,9 +289,9 @@ pid_t asc_child_spawn(const char *command, int *sin, int *sout, int *serr)
     else if (pid > 0)
     {
         /* we're the parent; close unused pipe ends and return */
-        close(to_child[PIPE_RD]);
-        close(from_child[PIPE_WR]);
-        close(err_pipe[PIPE_WR]);
+        asc_pipe_close(to_child[PIPE_RD]);
+        asc_pipe_close(from_child[PIPE_WR]);
+        asc_pipe_close(err_pipe[PIPE_WR]);
 
         return pid;
     }
@@ -194,13 +300,9 @@ fail:
     for (size_t i = 0; i < ASC_ARRAY_SIZE(pipes); i++)
     {
         if (pipes[i] != -1)
-            close(pipes[i]);
+            asc_pipe_close(pipes[i]);
     }
 
     return -1;
 }
-#else /* !_WIN32 */
-    // XXX: asc_child_spawn() notes
-    //      close hThread right away, return hProcess (typedef'd as pid_t)
-#   error "FIXME: support creating child processes under Win32"
 #endif /* !_WIN32 */

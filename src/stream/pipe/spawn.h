@@ -22,11 +22,8 @@
 
 /* TODO: move this to core/spawn */
 
-#ifndef _WIN32
+// XXX: should we use handles or pids on Windows?
 typedef pid_t asc_pid_t;
-#else
-#   error "FIXME: add Win32 support"
-#endif /* !_WIN32 */
 
 asc_pid_t asc_child_spawn(const char *command
                           , int *sin, int *sout, int *serr);
