@@ -187,6 +187,16 @@ fail:
 }
 #endif /* _WIN32 */
 
+__asc_inline
+int asc_pipe_close(int fd)
+{
+#ifdef _WIN32
+    return closesocket(fd);
+#else
+    return close(fd);
+#endif /* _WIN32 */
+}
+
 /* create a pipe with an optional non-blocking side and return its fd */
 int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
 {
@@ -216,16 +226,6 @@ int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
     }
 
     return 0;
-}
-
-__asc_inline
-int asc_pipe_close(int fd)
-{
-#ifdef _WIN32
-    return closesocket(fd);
-#else
-    return close(fd);
-#endif /* _WIN32 */
 }
 
 /* create a child process with redirected stdio */
