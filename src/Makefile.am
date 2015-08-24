@@ -29,6 +29,7 @@ libastra_la_SOURCES += \
     core/mainloop.c \
     core/luapi.c \
     core/socket.c \
+    core/spawn.c \
     core/strbuffer.c \
     core/stream.c \
     core/thread.c \
@@ -139,7 +140,6 @@ endif
 if HAVE_STREAM_PIPE
 libstream_la_SOURCES += \
     stream/pipe/child.c \
-    stream/pipe/spawn.c \
     stream/pipe/input.c \
     stream/pipe/output.c \
     stream/pipe/transcode.c \

@@ -19,11 +19,6 @@
 
 #include <astra.h>
 
-#ifndef _REMOVE_ME_
-    /* TODO: add Win32 support and put this under core/spawn */
-#   include "spawn.h"
-#endif /* _REMOVE_ME_ */
-
 #define PIPE_RD 0
 #define PIPE_WR 1
 

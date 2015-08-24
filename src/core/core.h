@@ -35,5 +35,6 @@
 #include "strbuffer.h"
 #include "stream.h"
 #include "luapi.h"
+#include "spawn.h"
 
 #endif /* _ASC_H_ */

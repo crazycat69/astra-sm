@@ -20,10 +20,6 @@
 #ifndef _ASC_SPAWN_H_
 #define _ASC_SPAWN_H_ 1
 
-/*
- * TODO: move this to core/spawn
- */
-
 #ifdef _WIN32
 typedef PROCESS_INFORMATION asc_process_t;
 #else
