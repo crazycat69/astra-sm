@@ -27,7 +27,7 @@
 #include <signal.h>
 
 /* user environment */
-#ifndef HAVE_DECL_ENVIRON
+#if !HAVE_DECL_ENVIRON
 extern char **environ;
 #endif /* !HAVE_DECL_ENVIRON */
 
