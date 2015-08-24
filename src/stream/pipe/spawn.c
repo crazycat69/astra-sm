@@ -228,7 +228,6 @@ int asc_pipe_close(int fd)
 #endif /* _WIN32 */
 }
 
-#ifndef _WIN32
 /* create a child process with redirected stdio */
 int asc_child_spawn(const char *command, asc_process_t *pid
                     , int *sin, int *sout, int *serr)
@@ -249,9 +248,47 @@ int asc_child_spawn(const char *command, asc_process_t *pid
     if (asc_pipe_open(err_pipe, serr, PIPE_RD) != 0)
         goto fail;
 
+#ifdef _WIN32
+    // TODO: create job object
+
+    /* fill in startup structs */
+    DWORD h_flags;
+    STARTUPINFO si;
+
+    memset(&si, 0, sizeof(si));
+    si.cb = sizeof(si);
+    si.hStdInput = ASC_TO_HANDLE(to_child[PIPE_RD]);
+    si.hStdOutput = ASC_TO_HANDLE(from_child[PIPE_WR]);
+    si.hStdError = ASC_TO_HANDLE(err_pipe[PIPE_WR]);
+    si.dwFlags |= STARTF_USESTDHANDLES; // |= ???
+    // TODO: hide GUI windows
+
+    /* enable inheritance on stdio handles */
+    h_flags = HANDLE_FLAG_INHERIT;
+    if (!SetHandleInformation(si.hStdInput, h_flags, h_flags))
+        goto fail;
+
+    if (!SetHandleInformation(si.hStdOutput, h_flags, h_flags))
+        goto fail;
+
+    if (!SetHandleInformation(si.hStdError, h_flags, h_flags))
+        goto fail;
+
+    /* try to run command */
+    if (!CreateProcess(NULL, (char *)command, NULL, NULL, true, 0
+                       , NULL, NULL, &si, &pid))
+        goto fail;
+
+#else /* _WIN32 */
+
     /* fork and exec */
     *pid = fork();
-    if (*pid == 0)
+    if (*pid < 0)
+    {
+        /* fork failed; go clean up pipes */
+        goto fail;
+    }
+    else if (*pid == 0)
     {
         /* we're the child; redirect stdio */
         dup2(to_child[PIPE_RD], STDIN_FILENO);
@@ -286,15 +323,14 @@ int asc_child_spawn(const char *command, asc_process_t *pid
         perror_s("execl()");
         _exit(127);
     }
-    else if (*pid > 0)
-    {
-        /* we're the parent; close unused pipe ends and return */
-        asc_pipe_close(to_child[PIPE_RD]);
-        asc_pipe_close(from_child[PIPE_WR]);
-        asc_pipe_close(err_pipe[PIPE_WR]);
+#endif /* _WIN32 */
 
-        return 0;
-    }
+    /* close pipe ends used by child */
+    asc_pipe_close(to_child[PIPE_RD]);
+    asc_pipe_close(from_child[PIPE_WR]);
+    asc_pipe_close(err_pipe[PIPE_WR]);
+
+    return 0;
 
 fail:
     for (size_t i = 0; i < ASC_ARRAY_SIZE(pipes); i++)
@@ -305,4 +341,3 @@ fail:
 
     return -1;
 }
-#endif /* !_WIN32 */
