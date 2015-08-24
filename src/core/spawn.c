@@ -26,6 +26,11 @@
 #include <sys/socket.h>
 #include <signal.h>
 
+/* user environment */
+#ifndef HAVE_DECL_ENVIRON
+extern char **environ;
+#endif /* !HAVE_DECL_ENVIRON */
+
 /* maximum signal number */
 #ifndef NSIG
 #   ifdef _NSIG

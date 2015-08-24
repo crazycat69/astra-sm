@@ -150,6 +150,8 @@ case "${host_os}" in
         AX_CHECK_HEADERS_REQ([syslog.h sys/socket.h arpa/inet.h netinet/in.h netinet/tcp.h netdb.h ifaddrs.h fcntl.h sys/ioctl.h])
         AX_CHECK_FUNCS_REQ([getpid signal syslog closelog mkstemp link fchmod access unlink gethostname getnameinfo inet_ntoa socket setsockopt bind listen accept getaddrinfo freeaddrinfo connect recv recvfrom send sendto getsockname htons shutdown fcntl ioctl localtime_r])
 
+        AC_CHECK_DECLS([environ])
+
         # pthread
         AX_PTHREAD([
             LIBS="$PTHREAD_LIBS $LIBS"
