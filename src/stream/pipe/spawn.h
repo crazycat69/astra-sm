@@ -20,13 +20,18 @@
 #ifndef _ASC_SPAWN_H_
 #define _ASC_SPAWN_H_ 1
 
-/* TODO: move this to core/spawn */
+/*
+ * TODO: move this to core/spawn
+ */
 
-// XXX: should we use handles or pids on Windows?
-typedef pid_t asc_pid_t;
+#ifdef _WIN32
+typedef PROCESS_INFORMATION asc_process_t;
+#else
+typedef pid_t asc_process_t;
+#endif /* _WIN32 */
 
-asc_pid_t asc_child_spawn(const char *command
-                          , int *sin, int *sout, int *serr);
+int asc_child_spawn(const char *command, asc_process_t *pid
+                    , int *sin, int *sout, int *serr);
 
 int asc_pipe_open(int fds[2], int *parent_fd, int parent_side);
 int asc_pipe_close(int fd);

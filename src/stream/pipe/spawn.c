@@ -230,9 +230,9 @@ int asc_pipe_close(int fd)
 
 #ifndef _WIN32
 /* create a child process with redirected stdio */
-asc_pid_t asc_child_spawn(const char *command, int *sin, int *sout, int *serr)
+int asc_child_spawn(const char *command, asc_process_t *pid
+                    , int *sin, int *sout, int *serr)
 {
-    pid_t pid = -1;
     int pipes[6] = { -1, -1, -1, -1, -1, -1 };
 
     /* make stdio pipes */
@@ -250,8 +250,8 @@ asc_pid_t asc_child_spawn(const char *command, int *sin, int *sout, int *serr)
         goto fail;
 
     /* fork and exec */
-    pid = fork();
-    if (pid == 0)
+    *pid = fork();
+    if (*pid == 0)
     {
         /* we're the child; redirect stdio */
         dup2(to_child[PIPE_RD], STDIN_FILENO);
@@ -286,14 +286,14 @@ asc_pid_t asc_child_spawn(const char *command, int *sin, int *sout, int *serr)
         perror_s("execl()");
         _exit(127);
     }
-    else if (pid > 0)
+    else if (*pid > 0)
     {
         /* we're the parent; close unused pipe ends and return */
         asc_pipe_close(to_child[PIPE_RD]);
         asc_pipe_close(from_child[PIPE_WR]);
         asc_pipe_close(err_pipe[PIPE_WR]);
 
-        return pid;
+        return 0;
     }
 
 fail:
