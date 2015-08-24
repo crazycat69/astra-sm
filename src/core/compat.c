@@ -114,7 +114,7 @@ int cx_socket(int family, int type, int protocol)
     if (fd == -1)
         return fd;
 
-    const HANDLE sock = (HANDLE)((intptr_t)fd);
+    const HANDLE sock = ASC_TO_HANDLE(fd);
     if (!SetHandleInformation(sock, HANDLE_FLAG_INHERIT, 0))
     {
         closesocket(fd);

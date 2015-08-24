@@ -81,6 +81,14 @@
 #   ifndef S_IWOTH
 #       define S_IWOTH 0
 #   endif /* !S_IWOTH */
+
+    /* cast int to HANDLE */
+#   define ASC_TO_HANDLE(__x) ((HANDLE)((intptr_t)(__x)))
+    /*
+     * NOTE: casting SOCKET to int to HANDLE is far from best practice,
+     *       however it seems to work on existing WinAPI implementations;
+     *       some future Windows version might break this.
+     */
 #endif /* _WIN32 */
 
 /* not defined on some systems */
