@@ -21,12 +21,16 @@
 #define _ASC_SPAWN_H_ 1
 
 #ifdef _WIN32
-typedef PROCESS_INFORMATION asc_process_t;
+typedef struct
+{
+    PROCESS_INFORMATION pi;
+    HANDLE job;
+} asc_process_t;
 #else
 typedef pid_t asc_process_t;
 #endif /* _WIN32 */
 
-int asc_child_spawn(const char *command, asc_process_t *pid
+int asc_child_spawn(const char *command, asc_process_t *proc
                     , int *sin, int *sout, int *serr);
 
 int asc_pipe_open(int fds[2], int *parent_fd, int parent_side);

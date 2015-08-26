@@ -126,6 +126,19 @@ int closesocket_s(SOCKET s)
     return ret;
 }
 
+/*
+static
+int prepare_socket(SOCKET sk)
+{
+    // enable TCP Fast Loopback on Win8+
+    // set TCP_NODELAY
+    // set SO_REUSEADDR
+    // XXX set buffer size?
+
+    return 0;
+}
+*/
+
 /* make selectable pipe by connecting two TCP sockets */
 static
 int socketpipe(int fds[2])
@@ -172,6 +185,9 @@ int socketpipe(int fds[2])
     if (client == INVALID_SOCKET)
         goto listen_fail;
 
+    // TODO: client, TCP_NODELAY
+    //    goto client_fail;
+
     if (bind(client, &sa_client.addr, addrlen) != 0)
         goto client_fail;
 
@@ -187,6 +203,9 @@ int socketpipe(int fds[2])
         server = accept(listener, &sa_req.addr, &addrlen);
         if (server == INVALID_SOCKET)
             goto client_fail;
+
+        // TODO: server, TCP_NODELAY
+        //    goto server_fail;
 
         if (sa_req.in.sin_port == sa_client.in.sin_port
             && sa_req.in.sin_addr.s_addr == sa_client.in.sin_addr.s_addr)
@@ -256,7 +275,7 @@ int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
 }
 
 /* create a child process with redirected stdio */
-int asc_child_spawn(const char *command, asc_process_t *pid
+int asc_child_spawn(const char *command, asc_process_t *proc
                     , int *sin, int *sout, int *serr)
 {
     int pipes[6] = { -1, -1, -1, -1, -1, -1 };
@@ -300,49 +319,52 @@ int asc_child_spawn(const char *command, asc_process_t *pid
     if (!SetHandleInformation(si.hStdError, h_flags, h_flags))
         goto fail;
 
-    /* create job object if needed */
-    static HANDLE kill_job;
-    if (kill_job == NULL && (kill_job = new_job_object()) == NULL)
-        goto fail;
-
     /* try to run command */
     if (!CreateProcess(NULL, command, NULL, NULL, true
                        , CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
                          | CREATE_SUSPENDED | CREATE_BREAKAWAY_FROM_JOB
-                       , NULL, NULL, &si, pid))
+                       , NULL, NULL, &si, &proc->pi))
     {
         goto fail;
     }
 
     /* check if the child's already got a job */
     bool in_job;
-    if (!IsProcessInJob(pid->hProcess, NULL, (PBOOL)&in_job))
+    if (!IsProcessInJob(proc->pi.hProcess, NULL, (PBOOL)&in_job))
         in_job = true;
 
-    /* if not, set it to terminate when parent quits */
-    if (!in_job && !AssignProcessToJobObject(kill_job, pid->hProcess))
+    if (!in_job)
     {
-        TerminateProcess(pid->hProcess, 0);
-        CloseHandle(pid->hProcess);
-        CloseHandle(pid->hThread);
+        /* set it to terminate when parent quits */
+        proc->job = new_job_object();
+        if (proc->job == NULL
+            || !AssignProcessToJobObject(proc->job, proc->pi.hProcess))
+        {
+            TerminateProcess(proc->pi.hProcess, 0);
+            CloseHandle(proc->pi.hProcess);
+            CloseHandle(proc->pi.hThread);
 
-        goto fail;
+            if (proc->job != NULL)
+                CloseHandle(proc->job);
+
+            goto fail;
+        }
     }
 
     /* begin execution */
-    ResumeThread(pid->hThread);
+    ResumeThread(proc->pi.hThread);
     SetLastError(ERROR_SUCCESS);
 
 #else /* _WIN32 */
 
     /* fork and exec */
-    *pid = fork();
-    if (*pid < 0)
+    *proc = fork();
+    if (*proc < 0)
     {
         /* fork failed; go clean up pipes */
         goto fail;
     }
-    else if (*pid == 0)
+    else if (*proc == 0)
     {
         /* we're the child; redirect stdio */
         dup2(to_child[PIPE_RD], STDIN_FILENO);
