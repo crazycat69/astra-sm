@@ -135,6 +135,8 @@ case "${host_os}" in
             [__gnu_printf__], [Don't use MS-style printf() format checks])
         AC_DEFINE([_WIN32_WINNT],
             [0x0501], [Require at least Windows XP])
+        AC_DEFINE([FD_SETSIZE],
+            [1024], [Increase maximum set size for select()])
 
         # check winsock
         AC_CHECK_LIB(ws2_32, main,
