@@ -31,7 +31,7 @@ typedef pid_t asc_process_t;
 #endif /* _WIN32 */
 
 int asc_child_spawn(const char *command, asc_process_t *proc
-                    , int *sin, int *sout, int *serr);
+                    , int *parent_sin, int *parent_sout, int *parent_serr);
 
 int asc_pipe_open(int fds[2], int *parent_fd, int parent_side);
 int asc_pipe_close(int fd);

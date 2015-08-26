@@ -19,12 +19,110 @@
 
 #include <astra.h>
 
+#ifndef _WIN32
+#   include <sys/socket.h>
+#   include <signal.h>
+#endif /* !_WIN32 */
+
 #define PIPE_RD 0
 #define PIPE_WR 1
 
-#ifndef _WIN32
-#include <sys/socket.h>
-#include <signal.h>
+/*
+ * spawning routines
+ */
+
+#ifdef _WIN32
+
+/* create job object with kill-on-close limit */
+static inline
+HANDLE create_kill_job(void)
+{
+    HANDLE jo = CreateJobObject(NULL, NULL);
+    if (jo == NULL)
+        return NULL;
+
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli;
+    memset(&jeli, 0, sizeof(jeli));
+    jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+
+    const JOBOBJECTINFOCLASS joic = JobObjectExtendedLimitInformation;
+    if (!SetInformationJobObject(jo, joic, &jeli, sizeof(jeli)))
+        ASC_FREE(jo, CloseHandle);
+
+    return jo;
+}
+
+/* create child process with redirected stdio */
+static
+int create_redirected(const char *command
+                      , HANDLE *job, PROCESS_INFORMATION *pi
+                      , HANDLE sin, HANDLE sout, HANDLE serr)
+{
+    /* enable inheritance on stdio handles */
+    const DWORD h_flags = HANDLE_FLAG_INHERIT;
+    if (!SetHandleInformation(sin, h_flags, h_flags))
+        return -1;
+
+    if (!SetHandleInformation(sout, h_flags, h_flags))
+        return -1;
+
+    if (!SetHandleInformation(serr, h_flags, h_flags))
+        return -1;
+
+    /* try to run command */
+    STARTUPINFO si;
+    memset(&si, 0, sizeof(si));
+
+    si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESHOWWINDOW | STARTF_USESTDHANDLES;
+    si.wShowWindow = SW_HIDE;
+    si.hStdInput = sin;
+    si.hStdOutput = sout;
+    si.hStdError = serr;
+
+    char *const buf = strdup(command);
+    const bool ret = CreateProcess(NULL, buf, NULL, NULL, true
+                                   , (CREATE_NEW_PROCESS_GROUP
+                                      | CREATE_NO_WINDOW
+                                      | CREATE_SUSPENDED
+                                      | CREATE_BREAKAWAY_FROM_JOB)
+                                   , NULL, NULL, &si, pi);
+    free(buf);
+
+    if (!ret)
+        return -1;
+
+    /* if possible, set child to terminate when parent quits */
+    BOOL in_job;
+    if (IsProcessInJob(pi->hProcess, NULL, &in_job) && !in_job)
+    {
+        HANDLE new_job = create_kill_job();
+        if (new_job == NULL
+            || !AssignProcessToJobObject(new_job, pi->hProcess))
+        {
+            TerminateProcess(pi->hProcess, 0);
+
+            ASC_FREE(pi->hProcess, CloseHandle);
+            ASC_FREE(pi->hThread, CloseHandle);
+            ASC_FREE(new_job, CloseHandle);
+
+            return -1;
+        }
+
+        *job = new_job;
+    }
+    else
+    {
+        *job = NULL;
+    }
+
+    /* begin execution */
+    ResumeThread(pi->hThread);
+
+    return 0;
+}
+
+#else /* _WIN32 */
 
 /* user environment */
 #if !HAVE_DECL_ENVIRON
@@ -69,62 +167,79 @@ void perror_s(const char *s)
     write(STDERR_FILENO, "\n", 1);
 }
 
-/* safety wrapper for socketpair() to set the close-on-exec flag */
+/* fork, redirect stdio and execute `command' */
 static
-int socketpipe(int fds[2])
+int fork_and_exec(const char *command, pid_t *out_pid
+                  , int sin, int sout, int serr)
 {
-#ifdef SOCK_CLOEXEC
-    if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, PF_UNSPEC, fds) == 0)
-        return 0;
-#endif /* SOCK_CLOEXEC */
-
-    if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, fds) != 0)
-        return -1;
-
-    if (fcntl(fds[PIPE_RD], F_SETFD, FD_CLOEXEC) != 0
-        || fcntl(fds[PIPE_WR], F_SETFD, FD_CLOEXEC) != 0)
+    const pid_t pid = fork();
+    if (pid == 0)
     {
-        close(fds[PIPE_RD]);
-        close(fds[PIPE_WR]);
-        return -1;
+        /* we're the child; redirect stdio */
+        dup2(sin, STDIN_FILENO);
+        fcntl(STDIN_FILENO, F_SETFD, 0);
+
+        dup2(sout, STDOUT_FILENO);
+        fcntl(STDOUT_FILENO, F_SETFD, 0);
+
+        dup2(serr, STDERR_FILENO);
+        fcntl(STDERR_FILENO, F_SETFD, 0);
+
+        /* reset signal handlers and masks */
+        for (size_t sig = 1; sig <= NSIG; sig++)
+        {
+            struct sigaction sa;
+            if (sigaction(sig, NULL, &sa) == 0 && sa.sa_handler != SIG_DFL)
+                signal(sig, SIG_DFL);
+        }
+
+        sigset_t mask;
+        sigemptyset(&mask);
+        sigprocmask(SIG_SETMASK, &mask, NULL);
+
+        /* detach from terminal */
+        setsid();
+
+        /* go to root directory */
+        chdir("/");
+
+        /* try to run command */
+        execle("/bin/sh", "sh", "-c", command, NULL, environ);
+        perror_s("execl()");
+        _exit(127);
+    }
+    else if (pid > 0)
+    {
+        /* we're the parent */
+        *out_pid = pid;
+        return 0;
     }
 
-    return 0;
+    return -1;
 }
 
-#else /* _WIN32 */
+#endif /* _WIN32 */
 
-/* create job object with kill-on-close limit */
+/*
+ * pipe-related functions
+ */
+
+/* close `n' sockets starting from `first' */
 static
-HANDLE new_job_object(void)
+void closeall(int *first, size_t n)
 {
-    HANDLE jo = CreateJobObject(NULL, NULL);
-    if (jo == NULL)
-        return NULL;
-
-    JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli;
-    memset(&jeli, 0, sizeof(jeli));
-    jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
-
-    const JOBOBJECTINFOCLASS joic = JobObjectExtendedLimitInformation;
-
-    if (!SetInformationJobObject(jo, joic, &jeli, sizeof(jeli)))
-        ASC_FREE(jo, CloseHandle);
-
-    return jo;
+    for (size_t i = 0; i < n; i++)
+    {
+        asc_pipe_close(*first);
+        *(first++) = -1;
+    }
 }
 
-/* close socket without clobbering last-error */
-static
-int closesocket_s(SOCKET s)
-{
-    const int olderr = GetLastError();
-    const int ret = closesocket(s);
-    if (ret == 0)
-        SetLastError(olderr);
+#ifdef _WIN32
 
-    return ret;
-}
+#ifndef SIO_LOOPBACK_FAST_PATH
+#   define SIO_LOOPBACK_FAST_PATH _WSAIOW(IOC_VENDOR, 16)
+#endif /* !SIO_LOOPBACK_FAST_PATH */
 
 /*
 static
@@ -138,6 +253,18 @@ int prepare_socket(SOCKET sk)
     return 0;
 }
 */
+
+/* close socket without clobbering last-error */
+static
+int closesocket_s(SOCKET s)
+{
+    const int olderr = GetLastError();
+    const int ret = closesocket(s);
+    if (ret == 0)
+        SetLastError(olderr);
+
+    return ret;
+}
 
 /* make selectable pipe by connecting two TCP sockets */
 static
@@ -231,17 +358,46 @@ listen_fail:
 fail:
     return -1;
 }
-#endif /* _WIN32 */
 
-__asc_inline
 int asc_pipe_close(int fd)
 {
-#ifdef _WIN32
     return closesocket_s(fd);
-#else
-    return close(fd);
-#endif /* _WIN32 */
 }
+
+#else /* _WIN32 */
+
+/* safety wrapper for socketpair() to set the close-on-exec flag */
+static
+int socketpipe(int fds[2])
+{
+#ifdef SOCK_CLOEXEC
+    if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, PF_UNSPEC, fds) == 0)
+        return 0;
+#endif /* SOCK_CLOEXEC */
+
+    if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, fds) != 0)
+        return -1;
+
+    if (fcntl(fds[PIPE_RD], F_SETFD, FD_CLOEXEC) != 0
+        || fcntl(fds[PIPE_WR], F_SETFD, FD_CLOEXEC) != 0)
+    {
+        closeall(fds, 2);
+        return -1;
+    }
+
+    return 0;
+}
+
+int asc_pipe_close(int fd)
+{
+    return close(fd);
+}
+
+#endif /* _WIN32 */
+
+/*
+ * public interface
+ */
 
 /* create a pipe with an optional non-blocking side and return its fd */
 int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
@@ -261,10 +417,7 @@ int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
         if (ret != 0)
         {
             /* couldn't set non-blocking mode; this shouldn't happen */
-            asc_pipe_close(fds[0]);
-            asc_pipe_close(fds[1]);
-            fds[0] = fds[1] = -1;
-
+            closeall(fds, 2);
             return -1;
         }
 
@@ -276,144 +429,52 @@ int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
 
 /* create a child process with redirected stdio */
 int asc_child_spawn(const char *command, asc_process_t *proc
-                    , int *sin, int *sout, int *serr)
+                    , int *parent_sin, int *parent_sout, int *parent_serr)
 {
+    /* make stdio pipes */
     int pipes[6] = { -1, -1, -1, -1, -1, -1 };
 
-    /* make stdio pipes */
-    int *const to_child = &pipes[0];
-    int *const from_child = &pipes[2];
-    int *const err_pipe = &pipes[4];
+    if (asc_pipe_open(&pipes[0], parent_sin, PIPE_WR) != 0)
+    {
+        /* nothing to close */
+        return -1;
+    }
 
-    if (asc_pipe_open(to_child, sin, PIPE_WR) != 0)
-        goto fail;
+    if (asc_pipe_open(&pipes[2], parent_sout, PIPE_RD) != 0)
+    {
+        closeall(pipes, 2);
+        return -1;
+    }
 
-    if (asc_pipe_open(from_child, sout, PIPE_RD) != 0)
-        goto fail;
+    if (asc_pipe_open(&pipes[4], parent_serr, PIPE_RD) != 0)
+    {
+        closeall(pipes, 4);
+        return -1;
+    }
 
-    if (asc_pipe_open(err_pipe, serr, PIPE_RD) != 0)
-        goto fail;
+    /* call OS-specific spawning function */
+    const int child_sin = pipes[0 + PIPE_RD];
+    const int child_sout = pipes[2 + PIPE_WR];
+    const int child_serr = pipes[4 + PIPE_WR];
 
 #ifdef _WIN32
-    /* fill in startup structs */
-    STARTUPINFO si;
-    memset(&si, 0, sizeof(si));
-
-    si.cb = sizeof(si);
-    si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
-    si.wShowWindow = SW_HIDE;
-    si.hStdInput = ASC_TO_HANDLE(to_child[PIPE_RD]);
-    si.hStdOutput = ASC_TO_HANDLE(from_child[PIPE_WR]);
-    si.hStdError = ASC_TO_HANDLE(err_pipe[PIPE_WR]);
-
-    /* enable inheritance on stdio handles */
-    DWORD h_flags;
-    h_flags = HANDLE_FLAG_INHERIT;
-
-    if (!SetHandleInformation(si.hStdInput, h_flags, h_flags))
-        goto fail;
-
-    if (!SetHandleInformation(si.hStdOutput, h_flags, h_flags))
-        goto fail;
-
-    if (!SetHandleInformation(si.hStdError, h_flags, h_flags))
-        goto fail;
-
-    /* try to run command */
-    if (!CreateProcess(NULL, command, NULL, NULL, true
-                       , CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
-                         | CREATE_SUSPENDED | CREATE_BREAKAWAY_FROM_JOB
-                       , NULL, NULL, &si, &proc->pi))
+    if (create_redirected(command, &proc->job, &proc->pi
+                          , ASC_TO_HANDLE(child_sin)
+                          , ASC_TO_HANDLE(child_sout)
+                          , ASC_TO_HANDLE(child_serr)) != 0)
+#else
+    if (fork_and_exec(command, proc
+                      , child_sin, child_sout, child_serr) != 0)
+#endif
     {
-        goto fail;
+        closeall(pipes, 6);
+        return -1;
     }
 
-    /* check if the child's already got a job */
-    bool in_job;
-    if (!IsProcessInJob(proc->pi.hProcess, NULL, (PBOOL)&in_job))
-        in_job = true;
-
-    if (!in_job)
-    {
-        /* set it to terminate when parent quits */
-        proc->job = new_job_object();
-        if (proc->job == NULL
-            || !AssignProcessToJobObject(proc->job, proc->pi.hProcess))
-        {
-            TerminateProcess(proc->pi.hProcess, 0);
-            CloseHandle(proc->pi.hProcess);
-            CloseHandle(proc->pi.hThread);
-
-            if (proc->job != NULL)
-                CloseHandle(proc->job);
-
-            goto fail;
-        }
-    }
-
-    /* begin execution */
-    ResumeThread(proc->pi.hThread);
-    SetLastError(ERROR_SUCCESS);
-
-#else /* _WIN32 */
-
-    /* fork and exec */
-    *proc = fork();
-    if (*proc < 0)
-    {
-        /* fork failed; go clean up pipes */
-        goto fail;
-    }
-    else if (*proc == 0)
-    {
-        /* we're the child; redirect stdio */
-        dup2(to_child[PIPE_RD], STDIN_FILENO);
-        fcntl(STDIN_FILENO, F_SETFD, 0);
-
-        dup2(from_child[PIPE_WR], STDOUT_FILENO);
-        fcntl(STDOUT_FILENO, F_SETFD, 0);
-
-        dup2(err_pipe[PIPE_WR], STDERR_FILENO);
-        fcntl(STDERR_FILENO, F_SETFD, 0);
-
-        /* reset signal handlers and masks */
-        for (size_t sig = 1; sig <= NSIG; sig++)
-        {
-            struct sigaction sa;
-            if (sigaction(sig, NULL, &sa) == 0 && sa.sa_handler != SIG_DFL)
-                signal(sig, SIG_DFL);
-        }
-
-        sigset_t mask;
-        sigemptyset(&mask);
-        sigprocmask(SIG_SETMASK, &mask, NULL);
-
-        /* detach from terminal */
-        setsid();
-
-        /* go to root directory */
-        chdir("/");
-
-        /* try to run command */
-        execle("/bin/sh", "sh", "-c", command, NULL, environ);
-        perror_s("execl()");
-        _exit(127);
-    }
-#endif /* _WIN32 */
-
-    /* close pipe ends used by child */
-    asc_pipe_close(to_child[PIPE_RD]);
-    asc_pipe_close(from_child[PIPE_WR]);
-    asc_pipe_close(err_pipe[PIPE_WR]);
+    /* close far side pipe ends */
+    asc_pipe_close(child_sin);
+    asc_pipe_close(child_sout);
+    asc_pipe_close(child_serr);
 
     return 0;
-
-fail:
-    for (size_t i = 0; i < ASC_ARRAY_SIZE(pipes); i++)
-    {
-        if (pipes[i] != -1)
-            asc_pipe_close(pipes[i]);
-    }
-
-    return -1;
 }
