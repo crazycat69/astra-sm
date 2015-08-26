@@ -94,6 +94,18 @@ int socketpipe(int fds[2])
 
 #else /* _WIN32 */
 
+/* close socket without clobbering last-error */
+static
+int closesocket_s(SOCKET s)
+{
+    const int olderr = GetLastError();
+    const int ret = closesocket(s);
+    if (ret == 0)
+        SetLastError(olderr);
+
+    return ret;
+}
+
 /* make selectable pipe by connecting two TCP sockets */
 static
 int socketpipe(int fds[2])
@@ -124,47 +136,47 @@ int socketpipe(int fds[2])
 
     if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR
                    , (char *)&reuse, sizeof(reuse)) != 0)
-        goto fail;
+        goto listen_fail;
 
     if (bind(listener, &sa_listen.addr, addrlen) != 0)
-        goto fail;
+        goto listen_fail;
 
     if (getsockname(listener, &sa_listen.addr, &addrlen) != 0)
-        goto fail;
+        goto listen_fail;
 
     if (listen(listener, SOMAXCONN) != 0)
-        goto fail;
+        goto listen_fail;
 
-    /* make first socket, connect it to listener */
+    /* open first pipe end, connect it to listener */
     client = cx_socket(AF_INET, SOCK_STREAM, 0);
     if (client == INVALID_SOCKET)
-        goto fail;
+        goto listen_fail;
 
     if (bind(client, &sa_client.addr, addrlen) != 0)
-        goto fail;
+        goto client_fail;
 
     if (getsockname(client, &sa_client.addr, &addrlen) != 0)
-        goto fail;
+        goto client_fail;
 
     if (connect(client, &sa_listen.addr, addrlen) != 0)
-        goto fail;
+        goto client_fail;
 
     /* accept the connection request */
     while (true)
     {
         server = accept(listener, &sa_req.addr, &addrlen);
         if (server == INVALID_SOCKET)
-            goto fail;
+            goto client_fail;
 
         if (sa_req.in.sin_port == sa_client.in.sin_port
             && sa_req.in.sin_addr.s_addr == sa_client.in.sin_addr.s_addr)
         {
-            closesocket(listener);
+            closesocket_s(listener);
             break;
         }
 
         /* discard stray connection */
-        closesocket(server);
+        closesocket_s(server);
         server = INVALID_SOCKET;
     }
 
@@ -173,16 +185,11 @@ int socketpipe(int fds[2])
 
     return 0;
 
+client_fail:
+    closesocket_s(client);
+listen_fail:
+    closesocket_s(listener);
 fail:
-    if (listener != INVALID_SOCKET)
-        closesocket(listener);
-
-    if (client != INVALID_SOCKET)
-        closesocket(client);
-
-    if (server != INVALID_SOCKET)
-        closesocket(server);
-
     return -1;
 }
 #endif /* _WIN32 */
@@ -191,7 +198,7 @@ __asc_inline
 int asc_pipe_close(int fd)
 {
 #ifdef _WIN32
-    return closesocket(fd);
+    return closesocket_s(fd);
 #else
     return close(fd);
 #endif /* _WIN32 */
