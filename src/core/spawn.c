@@ -94,6 +94,26 @@ int socketpipe(int fds[2])
 
 #else /* _WIN32 */
 
+/* create job object with kill-on-close limit */
+static
+HANDLE new_job_object(void)
+{
+    HANDLE jo = CreateJobObject(NULL, NULL);
+    if (jo == NULL)
+        return NULL;
+
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION jeli;
+    memset(&jeli, 0, sizeof(jeli));
+    jeli.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+
+    const JOBOBJECTINFOCLASS joic = JobObjectExtendedLimitInformation;
+
+    if (!SetInformationJobObject(jo, joic, &jeli, sizeof(jeli)))
+        ASC_FREE(jo, CloseHandle);
+
+    return jo;
+}
+
 /* close socket without clobbering last-error */
 static
 int closesocket_s(SOCKET s)
@@ -256,13 +276,10 @@ int asc_child_spawn(const char *command, asc_process_t *pid
         goto fail;
 
 #ifdef _WIN32
-    // TODO: create job object
-
     /* fill in startup structs */
-    DWORD h_flags;
     STARTUPINFO si;
-
     memset(&si, 0, sizeof(si));
+
     si.cb = sizeof(si);
     si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
     si.wShowWindow = SW_HIDE;
@@ -271,7 +288,9 @@ int asc_child_spawn(const char *command, asc_process_t *pid
     si.hStdError = ASC_TO_HANDLE(err_pipe[PIPE_WR]);
 
     /* enable inheritance on stdio handles */
+    DWORD h_flags;
     h_flags = HANDLE_FLAG_INHERIT;
+
     if (!SetHandleInformation(si.hStdInput, h_flags, h_flags))
         goto fail;
 
@@ -281,13 +300,38 @@ int asc_child_spawn(const char *command, asc_process_t *pid
     if (!SetHandleInformation(si.hStdError, h_flags, h_flags))
         goto fail;
 
+    /* create job object if needed */
+    static HANDLE kill_job;
+    if (kill_job == NULL && (kill_job = new_job_object()) == NULL)
+        goto fail;
+
     /* try to run command */
     if (!CreateProcess(NULL, command, NULL, NULL, true
                        , CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
+                         | CREATE_SUSPENDED | CREATE_BREAKAWAY_FROM_JOB
                        , NULL, NULL, &si, pid))
     {
         goto fail;
     }
+
+    /* check if the child's already got a job */
+    bool in_job;
+    if (!IsProcessInJob(pid->hProcess, NULL, (PBOOL)&in_job))
+        in_job = true;
+
+    /* if not, set it to terminate when parent quits */
+    if (!in_job && !AssignProcessToJobObject(kill_job, pid->hProcess))
+    {
+        TerminateProcess(pid->hProcess, 0);
+        CloseHandle(pid->hProcess);
+        CloseHandle(pid->hThread);
+
+        goto fail;
+    }
+
+    /* begin execution */
+    ResumeThread(pid->hThread);
+    SetLastError(ERROR_SUCCESS);
 
 #else /* _WIN32 */
 
