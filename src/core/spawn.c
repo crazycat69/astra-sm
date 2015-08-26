@@ -264,11 +264,11 @@ int asc_child_spawn(const char *command, asc_process_t *pid
 
     memset(&si, 0, sizeof(si));
     si.cb = sizeof(si);
+    si.dwFlags = STARTF_USESTDHANDLES | STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_HIDE;
     si.hStdInput = ASC_TO_HANDLE(to_child[PIPE_RD]);
     si.hStdOutput = ASC_TO_HANDLE(from_child[PIPE_WR]);
     si.hStdError = ASC_TO_HANDLE(err_pipe[PIPE_WR]);
-    si.dwFlags |= STARTF_USESTDHANDLES; // |= ???
-    // TODO: hide GUI windows
 
     /* enable inheritance on stdio handles */
     h_flags = HANDLE_FLAG_INHERIT;
@@ -282,9 +282,12 @@ int asc_child_spawn(const char *command, asc_process_t *pid
         goto fail;
 
     /* try to run command */
-    if (!CreateProcess(NULL, (char *)command, NULL, NULL, true, 0
-                       , NULL, NULL, &si, &pid))
+    if (!CreateProcess(NULL, command, NULL, NULL, true
+                       , CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW
+                       , NULL, NULL, &si, pid))
+    {
         goto fail;
+    }
 
 #else /* _WIN32 */
 
