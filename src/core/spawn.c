@@ -241,18 +241,40 @@ void closeall(int *first, size_t n)
 #   define SIO_LOOPBACK_FAST_PATH _WSAIOW(IOC_VENDOR, 16)
 #endif /* !SIO_LOOPBACK_FAST_PATH */
 
-/*
+#define PIPE_BUFFER (256 * 1024) /* 256 KiB */
+
 static
-int prepare_socket(SOCKET sk)
+int prepare_socket(SOCKET s)
 {
-    // enable TCP Fast Loopback on Win8+
-    // set TCP_NODELAY
-    // set SO_REUSEADDR
-    // XXX set buffer size?
+    int one = 1;
+
+    /* set SO_REUSEADDR */
+    if (setsockopt(s, SOL_SOCKET, SO_REUSEADDR
+                   , (char *)&one, sizeof(one)) != 0)
+        return -1;
+
+    /* set TCP_NODELAY */
+    if (setsockopt(s, IPPROTO_TCP, TCP_NODELAY
+                   , (char *)&one, sizeof(one)) != 0)
+        return -1;
+
+    /* set socket buffer size */
+    const int bufsiz = PIPE_BUFFER;
+    if (setsockopt(s, SOL_SOCKET, SO_SNDBUF
+                   , (const char *)&bufsiz, sizeof(bufsiz)) != 0)
+        return -1;
+
+    if (setsockopt(s, SOL_SOCKET, SO_RCVBUF
+                   , (const char *)&bufsiz, sizeof(bufsiz)) != 0)
+        return -1;
+
+    /* enable TCP Fast Loopback if available */
+    DWORD bytes = 0;
+    WSAIoctl(s, SIO_LOOPBACK_FAST_PATH, &one, sizeof(one)
+             , NULL, 0, &bytes, NULL, NULL);
 
     return 0;
 }
-*/
 
 /* close socket without clobbering last-error */
 static
@@ -280,7 +302,6 @@ int socketpipe(int fds[2])
     SOCKET client = INVALID_SOCKET;
     SOCKET server = INVALID_SOCKET;
 
-    const int reuse = 1;
     int addrlen = sizeof(sa_listen.in);
 
     memset(&sa_listen, 0, sizeof(sa_listen));
@@ -294,8 +315,7 @@ int socketpipe(int fds[2])
     if (listener == INVALID_SOCKET)
         goto fail;
 
-    if (setsockopt(listener, SOL_SOCKET, SO_REUSEADDR
-                   , (char *)&reuse, sizeof(reuse)) != 0)
+    if (prepare_socket(listener) != 0)
         goto listen_fail;
 
     if (bind(listener, &sa_listen.addr, addrlen) != 0)
@@ -312,8 +332,8 @@ int socketpipe(int fds[2])
     if (client == INVALID_SOCKET)
         goto listen_fail;
 
-    // TODO: client, TCP_NODELAY
-    //    goto client_fail;
+    if (prepare_socket(client) != 0)
+        goto client_fail;
 
     if (bind(client, &sa_client.addr, addrlen) != 0)
         goto client_fail;
@@ -331,8 +351,8 @@ int socketpipe(int fds[2])
         if (server == INVALID_SOCKET)
             goto client_fail;
 
-        // TODO: server, TCP_NODELAY
-        //    goto server_fail;
+        if (prepare_socket(server) != 0)
+            goto server_fail;
 
         if (sa_req.in.sin_port == sa_client.in.sin_port
             && sa_req.in.sin_addr.s_addr == sa_client.in.sin_addr.s_addr)
@@ -351,6 +371,8 @@ int socketpipe(int fds[2])
 
     return 0;
 
+server_fail:
+    closesocket_s(server);
 client_fail:
     closesocket_s(client);
 listen_fail:
