@@ -566,13 +566,14 @@ void asc_socket_connect(  asc_socket_t *sock, const char *addr, int port
 
 ssize_t asc_socket_recv(asc_socket_t *sock, void *buffer, size_t size)
 {
-    return recv(sock->fd, buffer, size, 0);
+    return recv(sock->fd, (char *)buffer, size, 0);
 }
 
 ssize_t asc_socket_recvfrom(asc_socket_t *sock, void *buffer, size_t size)
 {
     socklen_t slen = sizeof(struct sockaddr_in);
-    return recvfrom(sock->fd, buffer, size, 0, (struct sockaddr *)&sock->sockaddr, &slen);
+    return recvfrom(sock->fd, (char *)buffer, size, 0
+                    , (struct sockaddr *)&sock->sockaddr, &slen);
 }
 
 /*
@@ -586,7 +587,7 @@ ssize_t asc_socket_recvfrom(asc_socket_t *sock, void *buffer, size_t size)
 
 ssize_t asc_socket_send(asc_socket_t *sock, const void *buffer, size_t size)
 {
-    const ssize_t ret = send(sock->fd, buffer, size, 0);
+    const ssize_t ret = send(sock->fd, (const char *)buffer, size, 0);
     if(ret == -1)
     {
         if(asc_socket_would_block())
@@ -598,7 +599,8 @@ ssize_t asc_socket_send(asc_socket_t *sock, const void *buffer, size_t size)
 ssize_t asc_socket_sendto(asc_socket_t *sock, const void *buffer, size_t size)
 {
     const socklen_t slen = sizeof(struct sockaddr_in);
-    return sendto(sock->fd, buffer, size, 0, (struct sockaddr *)&sock->sockaddr, slen);
+    return sendto(sock->fd, (const char *)buffer, size, 0
+                  , (struct sockaddr *)&sock->sockaddr, slen);
 }
 
 /*
@@ -677,7 +679,8 @@ void asc_socket_set_sockaddr(asc_socket_t *sock, const char *addr, int port)
 
 void asc_socket_set_reuseaddr(asc_socket_t *sock, int is_on)
 {
-    setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR, (void *)&is_on, sizeof(is_on));
+    setsockopt(sock->fd, SOL_SOCKET, SO_REUSEADDR
+               , (const char *)&is_on, sizeof(is_on));
 }
 
 void asc_socket_set_non_delay(asc_socket_t *sock, int is_on)
@@ -687,14 +690,16 @@ void asc_socket_set_non_delay(asc_socket_t *sock, int is_on)
 #ifdef IPPROTO_SCTP
         case IPPROTO_SCTP:
 #ifdef SCTP_NODELAY
-            setsockopt(sock->fd, sock->protocol, SCTP_NODELAY, (void *)&is_on, sizeof(is_on));
+            setsockopt(sock->fd, sock->protocol, SCTP_NODELAY
+                       , (const char *)&is_on, sizeof(is_on));
 #else
-            asc_log_error("[core/socket] SCTP_NODELAY is not available");
+            asc_log_error(MSG("SCTP_NODELAY is not available"));
 #endif /* SCTP_NODELAY */
             break;
 #endif /* IPPROTO_SCTP */
         case IPPROTO_TCP:
-            setsockopt(sock->fd, sock->protocol, TCP_NODELAY, (void *)&is_on, sizeof(is_on));
+            setsockopt(sock->fd, sock->protocol, TCP_NODELAY
+                       , (const char *)&is_on, sizeof(is_on));
             break;
         default:
             break;
@@ -703,29 +708,38 @@ void asc_socket_set_non_delay(asc_socket_t *sock, int is_on)
 
 void asc_socket_set_keep_alive(asc_socket_t *sock, int is_on)
 {
-    setsockopt(sock->fd, SOL_SOCKET, SO_KEEPALIVE, (void *)&is_on, is_on);
+    setsockopt(sock->fd, SOL_SOCKET, SO_KEEPALIVE
+               , (const char *)&is_on, sizeof(is_on));
 }
 
 void asc_socket_set_broadcast(asc_socket_t *sock, int is_on)
 {
-    setsockopt(sock->fd, SOL_SOCKET, SO_BROADCAST, (void *)&is_on, sizeof(is_on));
+    setsockopt(sock->fd, SOL_SOCKET, SO_BROADCAST
+               , (const char *)&is_on, sizeof(is_on));
 }
 
 void asc_socket_set_timeout(asc_socket_t *sock, int rcvmsec, int sndmsec)
 {
 #ifdef _WIN32
     if(rcvmsec > 0)
-        setsockopt(sock->fd, SOL_SOCKET, SO_RCVTIMEO, (const char *)&rcvmsec, sizeof(rcvmsec));
+    {
+        setsockopt(sock->fd, SOL_SOCKET, SO_RCVTIMEO
+                   , (const char *)&rcvmsec, sizeof(rcvmsec));
+    }
+
     if(sndmsec > 0)
-        setsockopt(sock->fd, SOL_SOCKET, SO_SNDTIMEO, (const char *)&sndmsec, sizeof(sndmsec));
-#else
+    {
+        setsockopt(sock->fd, SOL_SOCKET, SO_SNDTIMEO
+                   , (const char *)&sndmsec, sizeof(sndmsec));
+    }
+#else /* _WIN32 */
     struct timeval tv;
 
     if(rcvmsec > 0)
     {
         tv.tv_sec = rcvmsec / 1000;
         tv.tv_usec = rcvmsec % 1000;
-        setsockopt(sock->fd, SOL_SOCKET, SO_RCVTIMEO, (void *)&tv, sizeof(tv));
+        setsockopt(sock->fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
     }
 
     if(sndmsec > 0)
@@ -735,9 +749,9 @@ void asc_socket_set_timeout(asc_socket_t *sock, int rcvmsec, int sndmsec)
             tv.tv_sec = sndmsec / 1000;
             tv.tv_usec = sndmsec % 1000;
         }
-        setsockopt(sock->fd, SOL_SOCKET, SO_SNDTIMEO, (void *)&tv, sizeof(tv));
+        setsockopt(sock->fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
     }
-#endif
+#endif /* _WIN32 */
 }
 
 static int _socket_set_buffer(int fd, int type, int size)
@@ -749,9 +763,9 @@ static int _socket_set_buffer(int fd, int type, int size)
 #else
     val = size;
 #endif
-    setsockopt(fd, SOL_SOCKET, type, (void *)&val, slen);
+    setsockopt(fd, SOL_SOCKET, type, (const char *)&val, slen);
     val = 0;
-    getsockopt(fd, SOL_SOCKET, type, (void *)&val, &slen);
+    getsockopt(fd, SOL_SOCKET, type, (char *)&val, &slen);
     return (slen && val == size);
 }
 
@@ -819,6 +833,7 @@ static void create_igmp_packet(uint8_t *buffer, uint8_t igmp_type, uint32_t dst_
     buffer[3] = (total_length) & 0xFF;
     // ID: buffer[4], buffer[5]
     // Fragmen offset: buffer[6], buffer[7]
+    buffer[6] = 0x40; // DF flag
     buffer[8] = 1; // TTL
     buffer[9] = IPPROTO_IGMP; // Protocol
     // Checksum
@@ -852,7 +867,8 @@ static void create_igmp_packet(uint8_t *buffer, uint8_t igmp_type, uint32_t dst_
     buffer[30] = (_dst_addr >> 8) & 0xFF;
     buffer[31] = (_dst_addr) & 0xFF;
 
-    const uint16_t igmp_checksum = in_chksum(&buffer[IP_HEADER_SIZE], IGMP_HEADER_SIZE);
+    const uint16_t igmp_checksum =
+        in_chksum(&buffer[IP_HEADER_SIZE], IGMP_HEADER_SIZE);
     buffer[26] = (igmp_checksum >> 8) & 0xFF;
     buffer[27] = (igmp_checksum) & 0xFF;
 }
@@ -862,11 +878,15 @@ void asc_socket_set_multicast_if(asc_socket_t *sock, const char *addr)
 {
     if(!addr)
         return;
+
     struct in_addr a;
     a.s_addr = inet_addr(addr);
-    if(setsockopt(sock->fd, IPPROTO_IP, IP_MULTICAST_IF, (void *)&a, sizeof(a)) == -1)
+
+    if(setsockopt(sock->fd, IPPROTO_IP, IP_MULTICAST_IF
+                  , (const char *)&a, sizeof(a)) == -1)
     {
-        asc_log_error(MSG("failed to set if \"%s\" (%s)"), addr, asc_socket_error());
+        asc_log_error(MSG("failed to set if \"%s\" (%s)")
+                      , addr, asc_socket_error());
     }
 }
 
@@ -874,34 +894,41 @@ void asc_socket_set_multicast_ttl(asc_socket_t *sock, int ttl)
 {
     if(ttl <= 0)
         return;
-    if(setsockopt(sock->fd, IPPROTO_IP, IP_MULTICAST_TTL, (void *)&ttl, sizeof(ttl)) == -1)
+
+    if(setsockopt(sock->fd, IPPROTO_IP, IP_MULTICAST_TTL
+                  , (const char *)&ttl, sizeof(ttl)) == -1)
     {
-        asc_log_error(MSG("failed to set ttl \"%d\" (%s)"), ttl, asc_socket_error());
+        asc_log_error(MSG("failed to set ttl \"%d\" (%s)")
+                      , ttl, asc_socket_error());
     }
 }
 
 void asc_socket_set_multicast_loop(asc_socket_t *sock, int is_on)
 {
-    setsockopt(sock->fd, IPPROTO_IP, IP_MULTICAST_LOOP, (void *)&is_on, sizeof(is_on));
+    setsockopt(sock->fd, IPPROTO_IP, IP_MULTICAST_LOOP
+               , (const char *)&is_on, sizeof(is_on));
 }
 
 /* multicast_* */
 
 static int __asc_socket_multicast_cmd(asc_socket_t *sock, int cmd)
 {
-    int r;
-
-    r = setsockopt(sock->fd, IPPROTO_IP, cmd, (void *)&sock->mreq, sizeof(sock->mreq));
-    if(r == -1)
+    int ret = setsockopt(sock->fd, IPPROTO_IP, cmd
+                         , (const char *)&sock->mreq, sizeof(sock->mreq));
+    if(ret == -1)
         return -1;
 
 #ifdef IGMP_EMULATION
     uint8_t buffer[IP_HEADER_SIZE + IGMP_HEADER_SIZE];
-    memset(buffer, 0, IP_HEADER_SIZE + IGMP_HEADER_SIZE);
+    memset(buffer, 0, sizeof(buffer));
 
     struct sockaddr_in dst;
+    memset(&dst, 0, sizeof(dst));
     dst.sin_addr.s_addr = sock->mreq.imr_multiaddr.s_addr;
     dst.sin_family = AF_INET;
+#ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
+    dst.sin_len = sizeof(dst);
+#endif
 
     create_igmp_packet(buffer,
         (cmd == IP_ADD_MEMBERSHIP) ? 0x16 : 0x17,
@@ -911,12 +938,12 @@ static int __asc_socket_multicast_cmd(asc_socket_t *sock, int cmd)
     if(raw_sock == -1)
         return -1;
 
-    r = sendto(raw_sock, &buffer, IP_HEADER_SIZE + IGMP_HEADER_SIZE, 0,
-        (struct sockaddr *)&dst, sizeof(struct sockaddr_in));
+    ret = sendto(raw_sock, (const char *)&buffer, sizeof(buffer), 0
+                 , (struct sockaddr *)&dst, sizeof(dst));
     close(raw_sock);
-    if(r == -1)
+    if(ret == -1)
         return -1;
-#endif
+#endif /* IGMP_EMULATION */
 
     return 0;
 }
@@ -927,7 +954,8 @@ void asc_socket_multicast_join(asc_socket_t *sock, const char *addr, const char 
     sock->mreq.imr_multiaddr.s_addr = inet_addr(addr);
     if(sock->mreq.imr_multiaddr.s_addr == INADDR_NONE)
     {
-        asc_log_error(MSG("failed to join multicast \"%s\" (%s)"), addr, asc_socket_error());
+        asc_log_error(MSG("failed to join multicast \"%s\" (%s)")
+                      , addr, asc_socket_error());
         return;
     }
     if(!IN_MULTICAST(ntohl(sock->mreq.imr_multiaddr.s_addr)))
@@ -944,8 +972,10 @@ void asc_socket_multicast_join(asc_socket_t *sock, const char *addr, const char 
 
     if(__asc_socket_multicast_cmd(sock, IP_ADD_MEMBERSHIP) == -1)
     {
-        asc_log_error(MSG("failed to join multicast \"%s\" (%s)"),
-            inet_ntoa(sock->mreq.imr_multiaddr), asc_socket_error());
+        asc_log_error(MSG("failed to join multicast \"%s\" (%s)")
+                      , inet_ntoa(sock->mreq.imr_multiaddr)
+                      , asc_socket_error());
+
         sock->mreq.imr_multiaddr.s_addr = INADDR_NONE;
     }
 }
@@ -957,8 +987,9 @@ void asc_socket_multicast_leave(asc_socket_t *sock)
 
     if(__asc_socket_multicast_cmd(sock, IP_DROP_MEMBERSHIP) == -1)
     {
-        asc_log_error(MSG("failed to leave multicast \"%s\" (%s)"),
-            inet_ntoa(sock->mreq.imr_multiaddr), asc_socket_error());
+        asc_log_error(MSG("failed to leave multicast \"%s\" (%s)")
+                      , inet_ntoa(sock->mreq.imr_multiaddr)
+                      , asc_socket_error());
     }
 }
 
@@ -978,6 +1009,7 @@ void asc_socket_multicast_renew(asc_socket_t *sock)
         return;
     }
 
-    asc_log_error(MSG("failed to renew multicast \"%s\" (%s)"),
-        inet_ntoa(sock->mreq.imr_multiaddr), asc_socket_error());
+    asc_log_error(MSG("failed to renew multicast \"%s\" (%s)")
+                  , inet_ntoa(sock->mreq.imr_multiaddr)
+                  , asc_socket_error());
 }
