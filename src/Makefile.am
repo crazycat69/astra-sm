@@ -22,6 +22,7 @@ endif
 libastra_la_SOURCES += \
     core/clock.c \
     core/compat.c \
+    core/error.c \
     core/event.c \
     core/init.c \
     core/list.c \

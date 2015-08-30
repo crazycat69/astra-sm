@@ -1040,7 +1040,7 @@ static void on_ready_send_content(void *arg)
                                               , cap);
     if(send_size == -1)
     {
-        asc_log_error(MSG("failed to send content [%s]"), asc_socket_error());
+        asc_log_error(MSG("failed to send content: %s"), asc_error_msg());
         on_close(mod);
         return;
     }
@@ -1073,7 +1073,7 @@ static void on_ready_send_request(void *arg)
                                               , cap);
     if(send_size == -1)
     {
-        asc_log_error(MSG("failed to send response [%s]"), asc_socket_error());
+        asc_log_error(MSG("failed to send response: %s"), asc_error_msg());
         on_close(mod);
         return;
     }
@@ -1211,8 +1211,8 @@ static void on_upstream_ready(void *arg)
         }
         else if(send_size == -1)
         {
-            asc_log_error(  MSG("failed to send ts (%zu bytes) [%s]")
-                          , block_size, asc_socket_error());
+            asc_log_error(MSG("failed to send ts (%zu bytes): %s")
+                          , block_size, asc_error_msg());
             on_close(mod);
             return;
         }

@@ -122,7 +122,7 @@ static void on_ready_send_file(void *arg)
 
     if(send_size == -1)
     {
-        http_client_error(client, "failed to send file [%s]", asc_socket_error());
+        http_client_error(client, "failed to send file: %s", asc_error_msg());
         http_client_close(client);
         return;
     }

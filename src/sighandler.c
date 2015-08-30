@@ -23,10 +23,19 @@
 
 #define LOCK_WAIT 5000 /* ms */
 
-static inline void lock_timeout(void)
+static void lock_timeout(void)
 {
     char msg[] = "sighandler: wait timeout for mutex\n";
     write(STDERR_FILENO, msg, sizeof(msg));
+
+    _exit(EXIT_SIGHANDLER);
+}
+
+static void perror_exit(int errnum, const char *str)
+{
+    char buf[512] = { 0 };
+    asc_strerror(errnum, buf, sizeof(buf));
+    fprintf(stderr, "%s: %s\n", str, buf);
 
     _exit(EXIT_SIGHANDLER);
 }
@@ -79,12 +88,6 @@ static bool __mutex_timedlock(pthread_mutex_t *mutex, unsigned ms)
 
     const int ret = pthread_mutex_timedlock(mutex, &ts);
     return (ret == 0);
-}
-
-static void perror_exit(int errnum, const char *str)
-{
-    fprintf(stderr, "%s: %s\n", str, strerror(errnum));
-    _exit(EXIT_SIGHANDLER);
 }
 
 static void *thread_loop(void *arg)
@@ -251,20 +254,6 @@ static bool __mutex_timedlock(HANDLE mutex, unsigned ms)
 {
     DWORD ret = WaitForSingleObject(mutex, ms);
     return (ret == WAIT_OBJECT_0);
-}
-
-static void perror_exit(DWORD errnum, const char *str)
-{
-    LPTSTR msg = NULL;
-    FormatMessage((FORMAT_MESSAGE_FROM_SYSTEM
-                   | FORMAT_MESSAGE_ALLOCATE_BUFFER
-                   | FORMAT_MESSAGE_IGNORE_INSERTS)
-                  , NULL, errnum, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT)
-                  , (LPTSTR)&msg, 0, NULL);
-
-    /* NOTE: FormatMessage() appends a newline to error message */
-    fprintf(stderr, "%s: %s", str, msg);
-    _exit(EXIT_SIGHANDLER);
 }
 
 #ifdef DEBUG

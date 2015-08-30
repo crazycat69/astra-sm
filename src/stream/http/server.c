@@ -498,7 +498,7 @@ static void on_ready_send_content(void *arg)
                                               , content_send);
     if(send_size == -1)
     {
-        asc_log_error(MSG("failed to send content [%s]"), asc_socket_error());
+        asc_log_error(MSG("failed to send content: %s"), asc_error_msg());
         on_client_close(client);
         return;
     }
@@ -595,7 +595,7 @@ static void on_ready_send_response(void *arg)
                                               , content_send);
     if(send_size == -1)
     {
-        asc_log_error(MSG("failed to send response [%s]"), asc_socket_error());
+        asc_log_error(MSG("failed to send response: %s"), asc_error_msg());
         on_client_close(client);
         return;
     }

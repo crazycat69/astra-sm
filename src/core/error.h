@@ -1,8 +1,8 @@
 /*
- * Astra Core
+ * Astra Core (Error Messages)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,24 +18,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _ASC_H_
-#define _ASC_H_ 1
+#ifndef _ASC_ERROR_H_
+#define _ASC_ERROR_H_ 1
 
-#include "assert.h"
-#include "compat.h"
-#include "init.h"
-#include "event.h"
-#include "list.h"
-#include "log.h"
-#include "mainloop.h"
-#include "socket.h"
-#include "thread.h"
-#include "timer.h"
-#include "clock.h"
-#include "strbuffer.h"
-#include "stream.h"
-#include "luapi.h"
-#include "spawn.h"
-#include "error.h"
+char *asc_strerror(int errnum, char *buf, size_t buflen);
+const char *asc_error_msg(void);
 
-#endif /* _ASC_H_ */
+#endif /* _ASC_ERROR_H_ */

@@ -132,7 +132,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
                 asc_socket_set_on_ready(mod->sock, on_ready);
             }
             else
-                asc_log_warning(MSG("sendto(): %s"), asc_socket_error());
+                asc_log_warning(MSG("sendto(): %s"), asc_error_msg());
         }
 
         mod->packet.skip = 0;

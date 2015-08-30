@@ -83,30 +83,6 @@ void asc_socket_core_destroy(void)
 }
 #endif /* _WIN32 */
 
-const char * asc_socket_error(void)
-{
-    static char buffer[1024];
-
-#ifdef _WIN32
-    const int err = WSAGetLastError();
-    char *msg;
-    if(FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER
-                      | FORMAT_MESSAGE_FROM_SYSTEM
-                      | FORMAT_MESSAGE_MAX_WIDTH_MASK
-                      , NULL, err, 0, (LPSTR)&msg, sizeof(buffer), NULL))
-    {
-        snprintf(buffer, sizeof(buffer), "%d: %s", err, msg);
-        LocalFree(msg);
-    }
-    else
-        snprintf(buffer, sizeof(buffer), "%d: unknown error", err);
-#else
-    snprintf(buffer, sizeof(buffer), "%d: %s", errno, strerror(errno));
-#endif
-
-    return buffer;
-}
-
 __asc_inline
 bool asc_socket_would_block(void)
 {
@@ -134,8 +110,8 @@ bool asc_socket_would_block(void)
 static asc_socket_t *sock_init(int family, int type, int protocol, void *arg)
 {
     const int fd = socket(family, type, protocol);
-    asc_assert(fd != -1, "[core/socket] failed to open socket [%s]"
-               , asc_socket_error());
+    asc_assert(fd != -1, "[core/socket] failed to open socket: %s"
+               , asc_error_msg());
 
     asc_socket_t *sock = (asc_socket_t *)calloc(1, sizeof(asc_socket_t));
     sock->fd = fd;
@@ -359,7 +335,7 @@ bool asc_socket_bind(asc_socket_t *sock, const char *addr, int port)
 
     if(bind(sock->fd, (struct sockaddr *)&sock->addr, sizeof(sock->addr)) == -1)
     {
-        asc_log_error(MSG("bind() to %s:%d failed [%s]"), addr, port, asc_socket_error());
+        asc_log_error(MSG("bind() to %s:%d failed: %s"), addr, port, asc_error_msg());
         return false;
     }
     return true;
@@ -380,7 +356,7 @@ void asc_socket_listen(  asc_socket_t *sock
     asc_assert(on_accept && on_error, MSG("listen() - on_ok/on_err not specified"));
     if(listen(sock->fd, SOMAXCONN) == -1)
     {
-        asc_log_error(MSG("listen() on socket failed [%s]"), asc_socket_error());
+        asc_log_error(MSG("listen() on socket failed: %s"), asc_error_msg());
 
         close(sock->fd);
         sock->fd = 0;
@@ -455,7 +431,7 @@ bool asc_socket_accept(asc_socket_t *sock, asc_socket_t **client_ptr
     const int fd = __accept(sock->fd, (struct sockaddr *)&addr, &addrlen);
     if(fd == -1)
     {
-        asc_log_error(MSG("accept() failed [%s]"), asc_socket_error());
+        asc_log_error(MSG("accept() failed: %s"), asc_error_msg());
         *client_ptr = NULL;
 
         return false;
@@ -536,7 +512,7 @@ void asc_socket_connect(  asc_socket_t *sock, const char *addr, int port
 
             default:
                 asc_log_error(MSG("connect(): %s:%d: %s")
-                              , addr, port, asc_socket_error());
+                              , addr, port, asc_error_msg());
 
                 close(sock->fd);
                 sock->fd = 0;
@@ -666,7 +642,8 @@ void asc_socket_set_nonblock(asc_socket_t *sock, bool is_nonblock)
     const int ret = fcntl(sock->fd, F_SETFL, flags);
 #endif
 
-    asc_assert(ret == 0, MSG("failed to set NONBLOCK [%s]"), asc_socket_error());
+    asc_assert(ret == 0, MSG("failed to set non-blocking mode: %s")
+               , asc_error_msg());
 }
 
 void asc_socket_set_sockaddr(asc_socket_t *sock, const char *addr, int port)
@@ -774,12 +751,14 @@ void asc_socket_set_buffer(asc_socket_t *sock, int rcvbuf, int sndbuf)
 #if defined(SO_RCVBUF) && defined(SO_SNDBUF)
     if(rcvbuf > 0 && !_socket_set_buffer(sock->fd, SO_RCVBUF, rcvbuf))
     {
-        asc_log_error(MSG("failed to set rcvbuf %d (%s)"), rcvbuf, asc_socket_error());
+        asc_log_error(MSG("failed to set rcvbuf = %d: %s"), rcvbuf
+                      , asc_error_msg());
     }
 
     if(sndbuf > 0 && !_socket_set_buffer(sock->fd, SO_SNDBUF, sndbuf))
     {
-        asc_log_error(MSG("failed to set sndbuf %d (%s)"), sndbuf, asc_socket_error());
+        asc_log_error(MSG("failed to set sndbuf = %d: %s"), sndbuf
+                      , asc_error_msg());
     }
 #else
 #   warning "RCVBUF/SNDBUF is not defined"
@@ -885,8 +864,8 @@ void asc_socket_set_multicast_if(asc_socket_t *sock, const char *addr)
     if(setsockopt(sock->fd, IPPROTO_IP, IP_MULTICAST_IF
                   , (const char *)&a, sizeof(a)) == -1)
     {
-        asc_log_error(MSG("failed to set if \"%s\" (%s)")
-                      , addr, asc_socket_error());
+        asc_log_error(MSG("failed to set if \"%s\": %s"), addr
+                      , asc_error_msg());
     }
 }
 
@@ -898,8 +877,8 @@ void asc_socket_set_multicast_ttl(asc_socket_t *sock, int ttl)
     if(setsockopt(sock->fd, IPPROTO_IP, IP_MULTICAST_TTL
                   , (const char *)&ttl, sizeof(ttl)) == -1)
     {
-        asc_log_error(MSG("failed to set ttl \"%d\" (%s)")
-                      , ttl, asc_socket_error());
+        asc_log_error(MSG("failed to set ttl \"%d\": %s"), ttl
+                      , asc_error_msg());
     }
 }
 
@@ -954,8 +933,8 @@ void asc_socket_multicast_join(asc_socket_t *sock, const char *addr, const char 
     sock->mreq.imr_multiaddr.s_addr = inet_addr(addr);
     if(sock->mreq.imr_multiaddr.s_addr == INADDR_NONE)
     {
-        asc_log_error(MSG("failed to join multicast \"%s\" (%s)")
-                      , addr, asc_socket_error());
+        asc_log_error(MSG("failed to join multicast \"%s\": %s"), addr
+                      , asc_error_msg());
         return;
     }
     if(!IN_MULTICAST(ntohl(sock->mreq.imr_multiaddr.s_addr)))
@@ -972,9 +951,9 @@ void asc_socket_multicast_join(asc_socket_t *sock, const char *addr, const char 
 
     if(__asc_socket_multicast_cmd(sock, IP_ADD_MEMBERSHIP) == -1)
     {
-        asc_log_error(MSG("failed to join multicast \"%s\" (%s)")
+        asc_log_error(MSG("failed to join multicast \"%s\": %s")
                       , inet_ntoa(sock->mreq.imr_multiaddr)
-                      , asc_socket_error());
+                      , asc_error_msg());
 
         sock->mreq.imr_multiaddr.s_addr = INADDR_NONE;
     }
@@ -987,9 +966,9 @@ void asc_socket_multicast_leave(asc_socket_t *sock)
 
     if(__asc_socket_multicast_cmd(sock, IP_DROP_MEMBERSHIP) == -1)
     {
-        asc_log_error(MSG("failed to leave multicast \"%s\" (%s)")
+        asc_log_error(MSG("failed to leave multicast \"%s\": %s")
                       , inet_ntoa(sock->mreq.imr_multiaddr)
-                      , asc_socket_error());
+                      , asc_error_msg());
     }
 }
 
@@ -1009,7 +988,7 @@ void asc_socket_multicast_renew(asc_socket_t *sock)
         return;
     }
 
-    asc_log_error(MSG("failed to renew multicast \"%s\" (%s)")
+    asc_log_error(MSG("failed to renew multicast \"%s\": %s")
                   , inet_ntoa(sock->mreq.imr_multiaddr)
-                  , asc_socket_error());
+                  , asc_error_msg());
 }
