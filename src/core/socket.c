@@ -344,16 +344,18 @@ bool asc_socket_bind(asc_socket_t *sock, const char *addr, int port)
     if(addr) // INADDR_ANY by default
         sock->addr.sin_addr.s_addr = inet_addr(addr);
 
-#if defined(__APPLE__) || defined(__FreeBSD__)
+#ifdef HAVE_STRUCT_SOCKADDR_IN_SIN_LEN
     sock->addr.sin_len = sizeof(struct sockaddr_in);
+#endif
 
+#ifdef SO_REUSEPORT
     if(sock->type == SOCK_DGRAM)
     {
         const int optval = 1;
         socklen_t optlen = sizeof(optval);
         setsockopt(sock->fd, SOL_SOCKET, SO_REUSEPORT, &optval, optlen);
     }
-#endif
+#endif /* SO_REUSEPORT */
 
     if(bind(sock->fd, (struct sockaddr *)&sock->addr, sizeof(sock->addr)) == -1)
     {

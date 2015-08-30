@@ -153,6 +153,10 @@ case "${host_os}" in
         AX_CHECK_FUNCS_REQ([getpid signal syslog closelog mkstemp link fchmod access unlink gethostname getnameinfo inet_ntoa socket setsockopt bind listen accept getaddrinfo freeaddrinfo connect recv recvfrom send sendto getsockname htons shutdown fcntl ioctl localtime_r])
 
         AC_CHECK_DECLS([environ])
+        AC_CHECK_MEMBERS([struct sockaddr_in.sin_len], [], [], [[
+            #include <sys/types.h>
+            #include <netinet/in.h>
+        ]])
 
         # pthread
         AX_PTHREAD([
