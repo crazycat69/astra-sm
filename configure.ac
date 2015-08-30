@@ -628,8 +628,7 @@ AX_STREAM_MODULE(file, [file I/O module])
 AX_STREAM_MODULE(http, [HTTP server and client])
 
 # pipe
-AX_STREAM_MODULE(pipe, [external process module],
-    [test "x${SYS}" = "xposix"], [not available on Windows])
+AX_STREAM_MODULE(pipe, [external process module])
 
 # remux
 AX_STREAM_MODULE(remux, [remultiplexer module])
