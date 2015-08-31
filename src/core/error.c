@@ -20,6 +20,8 @@
 
 #include <astra.h>
 
+static __thread char msg_buf[1024];
+
 char *asc_strerror(int errnum, char *buf, size_t buflen)
 {
     char *msg = NULL;
@@ -68,13 +70,10 @@ char *asc_strerror(int errnum, char *buf, size_t buflen)
 
 const char *asc_error_msg(void)
 {
-    static char buf[1024];
-    /* TODO: thread local storage for error string buffer */
 #ifdef _WIN32
     const int errnum = GetLastError();
 #else
     const int errnum = errno;
 #endif /* _WIN32 */
-
-    return asc_strerror(errnum, buf, sizeof(buf));
+    return asc_strerror(errnum, msg_buf, sizeof(msg_buf));
 }
