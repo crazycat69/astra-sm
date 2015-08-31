@@ -28,7 +28,7 @@ void asc_event_core_init(void);
 void asc_event_core_loop(void);
 void asc_event_core_destroy(void);
 
-asc_event_t * asc_event_init(int fd, void *arg) __wur;
+asc_event_t *asc_event_init(int fd, void *arg) __wur;
 void asc_event_set_on_read(asc_event_t *event, event_callback_t on_read);
 void asc_event_set_on_write(asc_event_t *event, event_callback_t on_write);
 void asc_event_set_on_error(asc_event_t *event, event_callback_t on_error);

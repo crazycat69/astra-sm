@@ -26,10 +26,18 @@
 
 #if defined(WITH_POLL)
 #   define EV_TYPE_POLL
+#   ifdef HAVE_POLL_H
+#       include <poll.h>
+#   endif
+#   if !defined(HAVE_POLL) && defined(HAVE_WSAPOLL)
+#       define poll(_a, _b, _c) WSAPoll(_a, _b, _c)
+#   endif
 #   define MSG(_msg) "[core/event poll] " _msg
-#   include <poll.h>
 #elif defined(WITH_SELECT)
 #   define EV_TYPE_SELECT
+#   ifdef HAVE_SYS_SELECT_H
+#       include <sys/select.h>
+#   endif
 #   define MSG(_msg) "[core/event select] " _msg
 #elif defined(WITH_KQUEUE)
 #   define EV_TYPE_KQUEUE
@@ -371,11 +379,16 @@ void asc_event_core_loop(void)
     if(!event_observer.fd_count)
         return;
 
-    int ret = poll(event_observer.fd_list, event_observer.fd_count, 10);
+    int ret = poll(event_observer.fd_list, event_observer.fd_count, 0);
     if(ret == -1)
     {
-        asc_assert(errno == EINTR, MSG("event observer critical error [%s]"), strerror(errno));
-        return;
+#ifndef _WIN32
+        if (errno == EINTR)
+            return;
+#endif /* !_WIN32 */
+
+        asc_log_error(MSG("poll() failed: %s"), asc_error_msg());
+        astra_abort();
     }
 
     event_observer.is_changed = false;
@@ -386,7 +399,7 @@ void asc_event_core_loop(void)
             continue;
 
         --ret;
-        asc_event_t *event = event_observer.event_list[i];
+        asc_event_t *const event = event_observer.event_list[i];
         if(event->on_read && (revents & POLLIN))
         {
             asc_main_loop_busy();
@@ -435,7 +448,7 @@ asc_event_t *asc_event_init(int fd, void *arg)
     memset(&event_observer.fd_list[i], 0, sizeof(struct pollfd));
     event_observer.fd_list[i].fd = fd;
 
-    asc_event_t *event = (asc_event_t *)calloc(1, sizeof(*event));
+    asc_event_t *const event = (asc_event_t *)calloc(1, sizeof(*event));
     asc_assert(event != NULL, MSG("calloc() failed"));
 
     event_observer.event_list[i] = event;
@@ -459,7 +472,8 @@ void asc_event_close(asc_event_t *event)
         if(event_observer.event_list[i]->fd == event->fd)
             break;
     }
-    asc_assert(i < event_observer.fd_count, MSG("filed to detach fd=%d"), event->fd);
+    asc_assert(i < event_observer.fd_count
+               , MSG("failed to detach fd=%d"), event->fd);
 
     for(; i < event_observer.fd_count; ++i)
     {
@@ -546,13 +560,13 @@ void asc_event_core_loop(void)
 
     if(ret == -1)
     {
-#ifdef _WIN32
-        int err = WSAGetLastError();
-        asc_assert(false, MSG("event observer critical error [WSALastErr: %d]"), err);
-#else
-        asc_assert(errno == EINTR, MSG("event observer critical error [%s]"), strerror(errno));
-#endif
-        return;
+#ifndef _WIN32
+        if (errno == EINTR)
+            return;
+#endif /* !_WIN32 */
+
+        asc_log_error(MSG("select() failed: %s"), asc_error_msg());
+        astra_abort();
     }
     else if(ret > 0)
     {

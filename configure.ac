@@ -133,6 +133,8 @@ case "${host_os}" in
             [1], [Define to use C99-compatible printf() with MinGW])
         AC_DEFINE([__printf__],
             [__gnu_printf__], [Don't use MS-style printf() format checks])
+        # TODO: add option to set winver
+        #    WSAPoll() needs at least 0x0600
         AC_DEFINE([_WIN32_WINNT],
             [0x0501], [Require at least Windows XP])
         AC_DEFINE([FD_SETSIZE],
@@ -215,11 +217,17 @@ AS_IF([test "x${event_mechanism}" = "x"], [
 # poll
 AS_IF([test "x${event_mechanism}" = "x"], [
     poll_failed="no"
-    AC_CHECK_HEADER([poll.h], [
-        AC_CHECK_FUNCS([poll], [],
-            [ poll_failed="yes" ])
-    ], [
-        poll_failed="yes"
+    AC_CHECK_HEADERS([poll.h])
+    AC_CHECK_FUNCS([poll], [], [
+        # Windows Vista introduced its own poll() version
+        AC_CHECK_DECL([WSAPoll], [
+            AC_DEFINE([HAVE_WSAPOLL],
+                [1], [Define to 1 if you have the `WSAPoll' function.])
+        ], [
+            poll_failed="yes"
+        ], [[
+            #include <winsock2.h>
+        ]])
     ])
     AS_IF([test "x${poll_failed}" = "xno"], [
         event_mechanism="poll"
@@ -230,7 +238,8 @@ AS_IF([test "x${event_mechanism}" = "x"], [
 
 # select
 AS_IF([test "x${event_mechanism}" = "x"], [
-    # no need to check, it's present on every system
+    # no need to check the function, it's present on every system
+    AC_CHECK_HEADERS([sys/select.h])
     event_mechanism="select"
     AC_DEFINE([WITH_SELECT],
         [1], [Define to use select() for event notification])
