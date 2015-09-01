@@ -125,34 +125,27 @@ AC_SYS_LARGEFILE
 case "${host_os}" in
     mingw*)
         SYS=win32
-        AX_CHECK_HEADERS_REQ([windows.h winsock2.h ws2tcpip.h])
 
-        AC_DEFINE([WIN32_LEAN_AND_MEAN],
-            [], [Define to limit the scope of <windows.h>.])
-        AC_DEFINE([__USE_MINGW_ANSI_STDIO],
-            [1], [Define to use C99-compatible printf() with MinGW])
-        AC_DEFINE([__printf__],
-            [__gnu_printf__], [Don't use MS-style printf() format checks])
-        # TODO: add option to set winver
-        #    WSAPoll() needs at least 0x0600
         AC_DEFINE([_WIN32_WINNT],
             [0x0501], [Require at least Windows XP])
-        AC_DEFINE([FD_SETSIZE],
-            [1024], [Increase maximum set size for select()])
+        # TODO: add option to set winver
+        #    WSAPoll() needs at least 0x0600
+
+        # TODO: add -lwinmm for timeBeginPeriod
 
         # check winsock
-        AC_CHECK_LIB(ws2_32, main,
+        AC_CHECK_LIB([ws2_32], [main],
             [], AC_MSG_ERROR([cannot link with ws2_32.dll]) )
 
-        # sanity checks, just in case
-        AX_CHECK_WINFUNC(WSAGetLastError, [ WSAGetLastError() ])
-        AX_CHECK_WINFUNC(WSACleanup, [ WSACleanup() ])
+        AC_CHECK_DECL([WSAStartup], [], [
+            AC_MSG_ERROR([missing required library function])
+        ], [[
+            #include <winsock2.h>
+        ]])
     ;;
 
     *)
         SYS=posix
-        AX_CHECK_HEADERS_REQ([syslog.h sys/socket.h arpa/inet.h netinet/in.h netinet/tcp.h netdb.h ifaddrs.h fcntl.h sys/ioctl.h])
-        AX_CHECK_FUNCS_REQ([getpid signal syslog closelog mkstemp link fchmod access unlink gethostname getnameinfo inet_ntoa socket setsockopt bind listen accept getaddrinfo freeaddrinfo connect recv recvfrom send sendto getsockname htons shutdown fcntl ioctl localtime_r])
 
         AC_CHECK_DECLS([environ])
         AC_CHECK_MEMBERS([struct sockaddr_in.sin_len], [], [], [[
@@ -160,7 +153,6 @@ case "${host_os}" in
             #include <netinet/in.h>
         ]])
 
-        # pthread
         AX_PTHREAD([
             LIBS="$PTHREAD_LIBS $LIBS"
             CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
@@ -250,9 +242,6 @@ AC_MSG_NOTICE([using ${event_mechanism} for event notification])
 #
 # Checks for headers and functions common to all platforms
 #
-AX_CHECK_HEADERS_REQ([dirent.h inttypes.h stdarg.h stddef.h stdint.h stdbool.h stdio.h stdlib.h sys/types.h sys/stat.h sys/time.h time.h string.h unistd.h errno.h])
-AX_CHECK_FUNCS_REQ([clock lseek localtime malloc realloc memchr memset memcpy srand strcasecmp strchr strdup strerror strftime strncasecmp strpbrk strrchr strspn strstr strtoul time snprintf vsnprintf memmove gettimeofday])
-
 # optional headers
 AC_CHECK_HEADERS([netinet/sctp.h])
 
@@ -262,6 +251,7 @@ AC_CHECK_HEADERS([netinet/sctp.h])
 #   accept4(): used by core/socket
 #   mkostemp(): used for creating pidfiles
 AC_CHECK_FUNCS([pread strndup strnlen posix_memalign accept4 mkostemp])
+# TODO: check for pthread_mutex_timedlock
 
 # getifaddrs(): used by utils.c
 AC_CHECK_FUNCS([getifaddrs],

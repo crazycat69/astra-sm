@@ -29,6 +29,21 @@
  * system headers
  */
 #ifdef _WIN32
+    /* reduce header size */
+#   define WIN32_LEAN_AND_MEAN
+
+    /* enable C99-compliant printf (e.g. %zu) */
+#   define __USE_MINGW_ANSI_STDIO 1
+#   define __printf__ __gnu_printf__
+
+    /* maximum set size for select() */
+#   define FD_SETSIZE 1024
+
+    /* target XP by default */
+#   ifndef _WIN32_WINNT
+#       define _WIN32_WINNT 0x0501
+#   endif /* !_WIN32_WINNT */
+
 #   include <winsock2.h>
 #   include <windows.h>
 #endif /* _WIN32 */
