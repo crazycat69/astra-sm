@@ -20,8 +20,9 @@
 #include <astra.h>
 
 #ifndef _WIN32
-#   include <sys/socket.h>
 #   include <signal.h>
+#   include <sys/socket.h>
+#   include <sys/wait.h>
 #endif /* !_WIN32 */
 
 #define PIPE_RD 0
@@ -83,7 +84,11 @@ int create_redirected(const char *command
     char *const buf = strdup(command);
     const bool ret = CreateProcess(NULL, buf, NULL, NULL, true
                                    , (CREATE_NEW_PROCESS_GROUP
-                                      | CREATE_NO_WINDOW
+                                      /*
+                                       * | CREATE_NO_WINDOW
+                                       *
+                                       * FIXME: sending ctrl+break doesn't work
+                                       */
                                       | CREATE_SUSPENDED
                                       | CREATE_BREAKAWAY_FROM_JOB)
                                    , NULL, NULL, &si, pi);
@@ -216,6 +221,92 @@ int fork_and_exec(const char *command, pid_t *out_pid
     }
 
     return -1;
+}
+
+#endif /* _WIN32 */
+
+/*
+ * process helper functions
+ */
+
+#ifdef _WIN32
+
+void asc_process_free(asc_process_t *proc)
+{
+    ASC_FREE(proc->pi.hProcess, CloseHandle);
+    ASC_FREE(proc->pi.hThread, CloseHandle);
+    ASC_FREE(proc->job, CloseHandle);
+}
+
+pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block)
+{
+    if (block)
+    {
+        const DWORD ret = WaitForSingleObject(proc->pi.hProcess, INFINITE);
+        if (ret != WAIT_OBJECT_0)
+            return -1;
+    }
+
+    DWORD code = STILL_ACTIVE;
+    if (!GetExitCodeProcess(proc->pi.hProcess, &code))
+        return -1;
+    else if (code == STILL_ACTIVE)
+        return 0;
+
+    if (status != NULL)
+        *status = code;
+
+    return proc->pi.dwProcessId;
+}
+
+static BOOL CALLBACK enum_proc(HWND hwnd, LPARAM lparam)
+{
+    asc_process_t *const proc = (asc_process_t *)lparam;
+
+    DWORD pid = 0;
+    if (GetWindowThreadProcessId(hwnd, &pid) != 0)
+    {
+        if (pid == proc->pi.dwProcessId)
+            SendMessage(hwnd, WM_CLOSE, 0, 0);
+    }
+
+    return true;
+}
+
+int asc_process_kill(const asc_process_t *proc, bool forced)
+{
+    if (forced)
+    {
+        if (!TerminateProcess(proc->pi.hProcess, EXIT_FAILURE))
+            return -1;
+    }
+    else
+    {
+        if (!GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, proc->pi.dwProcessId))
+            return -1;
+
+        if (!EnumWindows(enum_proc, (LPARAM)proc))
+            return -1;
+    }
+
+    return 0;
+}
+
+#else /* _WIN32 */
+
+void asc_process_free(asc_process_t *proc)
+{
+    *proc = -1;
+}
+
+pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block)
+{
+    return waitpid(*proc, status, (block ? WNOHANG : 0));
+}
+
+int asc_process_kill(const asc_process_t *proc, bool forced)
+{
+    return kill(*proc, (forced ? SIGKILL : SIGTERM));
 }
 
 #endif /* _WIN32 */
@@ -450,8 +541,8 @@ int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
 }
 
 /* create a child process with redirected stdio */
-int asc_child_spawn(const char *command, asc_process_t *proc
-                    , int *parent_sin, int *parent_sout, int *parent_serr)
+int asc_process_spawn(const char *command, asc_process_t *proc
+                      , int *parent_sin, int *parent_sout, int *parent_serr)
 {
     /* make stdio pipes */
     int pipes[6] = { -1, -1, -1, -1, -1, -1 };
