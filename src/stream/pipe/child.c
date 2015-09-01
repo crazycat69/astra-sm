@@ -20,20 +20,20 @@
 #include <astra.h>
 
 #ifndef _WIN32
-#   include <sys/wait.h>
+#   include <signal.h>
+#   include <sys/socket.h>
 #endif /* !_WIN32 */
 
 #ifndef _REMOVE_ME_
     /*
-     * TODO: move `spawn' and `child' to core
+     * TODO: move `child' to core
      */
-#   include "spawn.h"
 #   include "child.h"
 #endif /* _REMOVE_ME_ */
 
 #define MSG(_msg) "[child/%s] " _msg, child->name
 
-#define IO_BUFFER_SIZE 8192
+#define IO_BUFFER_SIZE (16 * 1024) /* 16 KiB */
 
 #define KILL_TICK_MSEC 100
 #define KILL_MAX_TICKS 15
@@ -57,7 +57,7 @@ typedef struct
 struct asc_child_t
 {
     const char *name;
-    asc_pid_t pid;
+    asc_process_t proc;
 
     asc_timer_t *kill_timer;
     unsigned kill_ticks;
@@ -69,13 +69,6 @@ struct asc_child_t
     child_close_callback_t on_close;
     void *arg;
 };
-
-/*
- * NOTE: parent end of the child's stdin is normally
- *       write-only. therefore, assume all read events are
- *       disconnect notifications.
- */
-#define EVENT_sin_read EVENT_sin_close
 
 #define CHILD_IO_SETUP(__io) \
     do { \
@@ -106,6 +99,12 @@ struct asc_child_t
         on_stdio_##__event(child, &child->__io); \
     }
 
+#define asc_child_close_tick \
+    (timer_callback_t)asc_child_close
+
+/*
+ * helper functions
+ */
 static inline
 child_io_t *get_child_io(asc_child_t *child, int fd)
 {
@@ -123,17 +122,11 @@ static inline
 const char *get_io_name(const asc_child_t *child, const child_io_t *io)
 {
     if (io == &child->sin)
-    {
-        return "input";
-    }
+        return "stdin";
     else if (io == &child->sout)
-    {
-        return "output";
-    }
+        return "stdout";
     else if (io == &child->serr)
-    {
-        return "error";
-    }
+        return "stderr";
     else
         return NULL;
 }
@@ -141,78 +134,73 @@ const char *get_io_name(const asc_child_t *child, const child_io_t *io)
 /*
  * redirected IO callbacks
  */
-static void on_stdio_close(asc_child_t *child, child_io_t *io)
+static inline
+void on_stdio_close(asc_child_t *child, child_io_t *io)
 {
-    asc_log_debug(MSG("child closed standard %s, cleaning up")
+    asc_log_debug(MSG("%s pipe got closed on far side")
                   , get_io_name(child, io));
 
     asc_child_close(child);
 }
 
-static void on_stdio_read(asc_child_t *child, child_io_t *io)
+static
+void on_stdio_read(asc_child_t *child, child_io_t *io)
 {
-#ifndef _REMOVE_ME_
-    /* placeholder code */
-    asc_log_info("got read from standard %s", get_io_name(child, io));
+    uint8_t *const ptr = &io->buffer[io->pos_write];
+    const size_t space = sizeof(io->buffer) - io->pos_write - 1;
+    const ssize_t ret = recv(io->fd, (char *)ptr, space, 0);
 
-    char buf[4096];
-    const ssize_t ret = read(io->fd, buf, sizeof(buf));
-    if (ret <= 0)
+    asc_log_debug(MSG("read from %s: %zd bytes")
+                  , get_io_name(child, io), ret);
+
+    switch (ret)
     {
-        if (errno != EAGAIN)
-            on_stdio_close(child, io);
+        case -1:
+            if (asc_socket_would_block())
+                return;
 
-        return;
+            asc_log_debug(MSG("recv(): %s"), asc_error_msg());
+
+        case 0:
+            on_stdio_close(child, io);
+            return;
+
+        default:
+            break;
     }
-#endif /* _REMOVE_ME_ */
 }
 
 EVENT_CALLBACK(sin, close)
 EVENT_CALLBACK(sout, close)
 EVENT_CALLBACK(serr, close)
 
+EVENT_CALLBACK(sin, read)
 EVENT_CALLBACK(sout, read)
 EVENT_CALLBACK(serr, read)
 
-// XXX: writing
-
 /*
- * setters
- */
-void asc_child_set_on_close(asc_child_t *child
-                            , child_close_callback_t on_close)
-{
-    child->on_close = on_close;
-}
-
-// XXX: set on ready
-
-void asc_child_toggle_input(asc_child_t *child, int fd, bool enable)
-{
-    const child_io_t *const io = get_child_io(child, fd);
-    asc_event_set_on_read(io->ev, (enable ? io->on_read : NULL));
-}
-
-/*
- * create and destroy
+ * public interface
  */
 asc_child_t *asc_child_init(const asc_child_cfg_t *cfg)
 {
     asc_child_t *const child = (asc_child_t *)calloc(1, sizeof(*child));
     asc_assert(child != NULL, "[child] calloc() failed");
 
-    /* start a child process */
-    child->pid = asc_child_spawn(cfg->command
-                                 , &child->sin.fd, &child->sout.fd
-                                 , &child->serr.fd);
+    child->name = cfg->name;
 
-    if (child->pid == -1)
+    /* start the process */
+    asc_log_debug(MSG("attempting to execute `%s'"), cfg->command);
+    const int ret = asc_process_spawn(cfg->command, &child->proc
+                                      , &child->sin.fd, &child->sout.fd
+                                      , &child->serr.fd);
+
+    if (ret != 0)
     {
+        asc_log_debug(MSG("couldn't spawn process: %s"), asc_error_msg());
+
         free(child);
         return NULL;
     }
-
-    child->name = cfg->name;
 
     /* register event callbacks */
     CHILD_IO_SETUP(sin);
@@ -225,25 +213,6 @@ asc_child_t *asc_child_init(const asc_child_cfg_t *cfg)
     return child;
 }
 
-static bool kill_process(const asc_child_t *child, bool force)
-{
-#ifndef _WIN32
-    asc_log_debug(MSG("sending %s signal to pid %d")
-                  , (force ? "KILL" : "TERM"), child->pid);
-
-    const int sig = (force ? SIGKILL : SIGTERM);
-    if (kill(child->pid, sig) != 0 && errno != ESRCH)
-    {
-        asc_log_error(MSG("kill() failed: %s"), strerror(errno));
-        return false;
-    }
-#else /* !_WIN32 */
-#   error "FIXME: add Win32 support"
-#endif /* !_WIN32 */
-
-    return true;
-}
-
 void asc_child_close(asc_child_t *child)
 {
     /* shutdown stdio pipes */
@@ -251,74 +220,162 @@ void asc_child_close(asc_child_t *child)
     CHILD_IO_CLEANUP(sout);
     CHILD_IO_CLEANUP(serr);
 
-    /* check process state */
-#ifndef _WIN32
-    int exit_code = EXIT_ABORT;
+    /*
+     * NOTE: there's a (harmless) race condition here:
+     *       the process may quit before we can query its state
+     *       because its standard input just got closed.
+     */
 
-    int status;
-    const pid_t ret = waitpid(child->pid, &status, WNOHANG);
+    /* check process state */
+    int status = -1;
+    const pid_t ret = asc_process_wait(&child->proc, &status, false);
+
     switch (ret)
     {
         case -1:
-            /* error; shouldn't happen */
-            asc_log_error(MSG("waitpid() failed: %s"), strerror(errno));
+            /* query fail; clean up and hope it dies on its own */
+            asc_log_error(MSG("couldn't get status: %s"), asc_error_msg());
             break;
 
         case 0:
-            /* process is still around */
-            if (child->kill_ticks == 0)
+            /* still active; give it some time to exit */
+            if (child->kill_ticks++ == 0)
             {
-                /* try `kill -TERM' first */
-                if (!kill_process(child, false))
+                /* ask nicely on first tick */
+                asc_log_debug(MSG("sending termination signal"));
+                if (asc_process_kill(&child->proc, false) != 0)
+                {
+                    asc_log_error(MSG("couldn't terminate child: %s")
+                                  , asc_error_msg());
                     break;
+                }
             }
 
-            if (++child->kill_ticks <= KILL_MAX_TICKS)
+            if (child->kill_ticks <= KILL_MAX_TICKS)
             {
-                /* schedule next status check */
                 child->kill_timer = asc_timer_one_shot(KILL_TICK_MSEC
-                                                       , (timer_callback_t)asc_child_close
+                                                       , asc_child_close_tick
                                                        , child);
-
                 return;
             }
 
-            /* last resort: `kill -KILL', block until it dies */
-            if (!kill_process(child, true))
+            /* euthanize the bastard, wait until it dies */
+            asc_log_warning(MSG("sending kill signal"));
+            if (asc_process_kill(&child->proc, true) != 0)
+            {
+                asc_log_error(MSG("couldn't kill child: %s"), asc_error_msg());
                 break;
+            }
 
-            if (waitpid(child->pid, &status, 0) != 0)
+            if (asc_process_wait(&child->proc, &status, true) == -1)
+            {
+                asc_log_error(MSG("couldn't get status: %s"), asc_error_msg());
                 break;
+            }
 
         default:
-            /* process reaped */
-            exit_code = WEXITSTATUS(status);
-    }
-#else /* !_WIN32 */
-#   error "FIXME: add Win32 support"
+            /* process exited or killed */
+#ifndef _WIN32
+            if (WIFSIGNALED(status))
+            {
+                const int signum = WTERMSIG(status);
+                asc_log_debug(MSG("caught signal %d (%s)")
+                              , signum, sys_siglist[signum]);
+
+                status = 128 + signum;
+            }
+            else if (WIFEXITED(status))
+                status = WEXITSTATUS(status);
 #endif /* !_WIN32 */
+            break;
+    }
 
     /* shutdown complete */
     if (child->on_close != NULL)
-        child->on_close(child->arg, (int)exit_code);
+        child->on_close(child->arg, status);
 
+    asc_process_free(&child->proc);
     free(child);
 }
 
 void asc_child_destroy(asc_child_t *child)
 {
+    /* `destroy' is similar to `close', except it blocks */
     ASC_FREE(child->kill_timer, asc_timer_destroy);
-    child->kill_ticks = KILL_MAX_TICKS;
-    child->on_close = NULL;
 
-    asc_child_close(child);
+    CHILD_IO_CLEANUP(sin);
+    CHILD_IO_CLEANUP(sout);
+    CHILD_IO_CLEANUP(serr);
+
+    /* if close is in progress, don't resend termination signal */
+    bool waitquit = true;
+    if (child->kill_ticks == 0)
+    {
+        asc_log_debug(MSG("sending termination signal"));
+        if (asc_process_kill(&child->proc, false) != 0)
+        {
+            asc_log_error(MSG("couldn't terminate child: %s"), asc_error_msg());
+            waitquit = false;
+        }
+    }
+
+    if (waitquit)
+    {
+        /* wait up to 1.5s */
+        pid_t status;
+        for (size_t i = 0; i < 150; i++)
+        {
+            status = asc_process_wait(&child->proc, NULL, false);
+            if (status != 0)
+                break;
+
+            asc_usleep(10 * 1000);
+        }
+
+        if (status == 0)
+        {
+            /* process is still around; force it to quit */
+            asc_log_warning(MSG("sending kill signal"));
+            if (asc_process_kill(&child->proc, true) == 0)
+                status = asc_process_wait(&child->proc, NULL, true);
+            else
+                asc_log_error(MSG("couldn't kill child: %s"), asc_error_msg());
+        }
+
+        /* report final status */
+        if (status > 0)
+            asc_log_debug(MSG("child exited (pid = %lld)"), (long long)status);
+        else if (status == -1)
+            asc_log_error(MSG("couldn't get status: %s"), asc_error_msg());
+    }
+
+    asc_process_free(&child->proc);
+    free(child);
 }
 
-asc_pid_t asc_child_pid(const asc_child_t *child)
+//
+// XXX: writing
+//
+
+__asc_inline
+void asc_child_set_on_close(asc_child_t *child
+                            , child_close_callback_t on_close)
 {
-#ifndef _WIN32
-    return child->pid;
-#else
-#   error "FIXME"
-#endif
+    child->on_close = on_close;
+}
+
+//
+// XXX: set on ready
+//
+
+void asc_child_toggle_input(asc_child_t *child, int fd, bool enable)
+{
+    const child_io_t *const io = get_child_io(child, fd);
+    asc_event_set_on_read(io->ev, (enable ? io->on_read : NULL));
+}
+
+__asc_inline
+pid_t asc_child_pid(const asc_child_t *child)
+{
+    return asc_process_id(&child->proc);
 }

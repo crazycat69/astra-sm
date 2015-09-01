@@ -65,6 +65,6 @@ void asc_child_set_on_ready(asc_child_t *child
 void asc_child_toggle_input(asc_child_t *child
                             , int child_fd, bool enable);
 
-asc_pid_t asc_child_pid(const asc_child_t *child);
+pid_t asc_child_pid(const asc_child_t *child) __func_pure;
 
 #endif /* _ASC_CHILD_H_ */
