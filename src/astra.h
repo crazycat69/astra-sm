@@ -33,8 +33,12 @@
 #   define WIN32_LEAN_AND_MEAN
 
     /* enable C99-compliant printf (e.g. %zu) */
+#   ifdef __GNUC__
+#       if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ > 3)
+#           define __printf__ __gnu_printf__
+#       endif /* __GNUC__ >= 4.3 */
+#   endif /* __GNUC__ */
 #   define __USE_MINGW_ANSI_STDIO 1
-#   define __printf__ __gnu_printf__
 
     /* maximum set size for select() */
 #   define FD_SETSIZE 1024
