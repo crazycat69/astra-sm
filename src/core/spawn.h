@@ -26,7 +26,7 @@ typedef struct
     PROCESS_INFORMATION pi;
     HANDLE job;
 } asc_process_t;
-#define asc_process_id(__proc) (*(__proc).pi.dwProcessId)
+#define asc_process_id(__proc) ((__proc)->pi.dwProcessId)
 #else
 typedef pid_t asc_process_t;
 #define asc_process_id(__proc) (*(__proc))
