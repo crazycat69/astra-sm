@@ -231,13 +231,6 @@ int fork_and_exec(const char *command, pid_t *out_pid
 
 #ifdef _WIN32
 
-void asc_process_free(asc_process_t *proc)
-{
-    ASC_FREE(proc->pi.hProcess, CloseHandle);
-    ASC_FREE(proc->pi.hThread, CloseHandle);
-    ASC_FREE(proc->job, CloseHandle);
-}
-
 pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block)
 {
     if (block)
@@ -290,23 +283,6 @@ int asc_process_kill(const asc_process_t *proc, bool forced)
     }
 
     return 0;
-}
-
-#else /* _WIN32 */
-
-void asc_process_free(asc_process_t *proc)
-{
-    *proc = -1;
-}
-
-pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block)
-{
-    return waitpid(*proc, status, (block ? WNOHANG : 0));
-}
-
-int asc_process_kill(const asc_process_t *proc, bool forced)
-{
-    return kill(*proc, (forced ? SIGKILL : SIGTERM));
 }
 
 #endif /* _WIN32 */
