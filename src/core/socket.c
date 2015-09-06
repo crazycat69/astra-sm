@@ -754,38 +754,59 @@ void asc_socket_set_timeout(asc_socket_t *sock, int rcvmsec, int sndmsec)
 #endif /* _WIN32 */
 }
 
-static int _socket_set_buffer(int fd, int type, int size)
+static int sock_set_buffer(int fd, int type, int size)
 {
-    int val;
+    int val = size;
     socklen_t slen = sizeof(val);
 #ifdef __linux__
-    val = size / 2;
-#else
-    val = size;
-#endif
-    setsockopt(fd, SOL_SOCKET, type, (const char *)&val, slen);
+    val /= 2;
+#endif /* __linux__ */
+
+    if (setsockopt(fd, SOL_SOCKET, type, (const char *)&val, slen) != 0)
+        return -1;
+
     val = 0;
-    getsockopt(fd, SOL_SOCKET, type, (char *)&val, &slen);
-    return (slen && val == size);
+    if (getsockopt(fd, SOL_SOCKET, type, (char *)&val, &slen) != 0)
+        return -1;
+
+    return val;
 }
 
 void asc_socket_set_buffer(asc_socket_t *sock, int rcvbuf, int sndbuf)
 {
-#if defined(SO_RCVBUF) && defined(SO_SNDBUF)
-    if(rcvbuf > 0 && !_socket_set_buffer(sock->fd, SO_RCVBUF, rcvbuf))
+    int got;
+
+    /* receive buffer */
+    if(rcvbuf > 0)
     {
-        asc_log_error(MSG("failed to set rcvbuf = `%d': %s"), rcvbuf
-                      , asc_error_msg());
+        got = sock_set_buffer(sock->fd, SO_RCVBUF, rcvbuf);
+        if(got == -1)
+        {
+            asc_log_error(MSG("failed to set rcvbuf = `%d': %s")
+                          , rcvbuf, asc_error_msg());
+        }
+        else if(got != rcvbuf)
+        {
+            asc_log_warning(MSG("requested rcvbuf = `%d', got `%d' instead")
+                            , rcvbuf, got);
+        }
     }
 
-    if(sndbuf > 0 && !_socket_set_buffer(sock->fd, SO_SNDBUF, sndbuf))
+    /* send buffer */
+    if(sndbuf > 0)
     {
-        asc_log_error(MSG("failed to set sndbuf = `%d': %s"), sndbuf
-                      , asc_error_msg());
+        got = sock_set_buffer(sock->fd, SO_SNDBUF, sndbuf);
+        if(got == -1)
+        {
+            asc_log_error(MSG("failed to set sndbuf = `%d': %s")
+                          , sndbuf, asc_error_msg());
+        }
+        else if(got != sndbuf)
+        {
+            asc_log_warning(MSG("requested sndbuf = `%d', got `%d' instead")
+                            , sndbuf, got);
+        }
     }
-#else
-#   warning "RCVBUF/SNDBUF is not defined"
-#endif
 }
 
 /*
