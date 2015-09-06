@@ -156,6 +156,18 @@ asc_socket_t *asc_socket_open_sctp4(void *arg)
  *
  */
 
+static inline int sock_close(asc_socket_t *sock)
+{
+#ifdef _WIN32
+    const int ret = closesocket(sock->fd);
+#else
+    const int ret = close(sock->fd);
+#endif /* _WIN32 */
+
+    sock->fd = -1;
+    return ret;
+}
+
 void asc_socket_shutdown_recv(asc_socket_t *sock)
 {
     shutdown(sock->fd, SHUT_RD);
@@ -173,21 +185,22 @@ void asc_socket_shutdown_both(asc_socket_t *sock)
 
 void asc_socket_close(asc_socket_t *sock)
 {
-    if(!sock)
+    if(sock == NULL)
         return;
 
-    if(sock->event)
+    if(sock->event != NULL)
         asc_event_close(sock->event);
 
-    if(sock->fd > 0)
+    if(sock->fd != -1)
     {
-#ifdef _WIN32
-        shutdown(sock->fd, SHUT_RDWR);
-#else
-        close(sock->fd);
-#endif
+        asc_socket_shutdown_both(sock);
+        if (sock_close(sock) != 0)
+        {
+            asc_log_error("[core/socket] failed to close socket: %s"
+                          , asc_error_msg());
+        }
     }
-    sock->fd = 0;
+
     free(sock);
 }
 
@@ -359,9 +372,8 @@ void asc_socket_listen(  asc_socket_t *sock
     if(listen(sock->fd, SOMAXCONN) == -1)
     {
         asc_log_error(MSG("listen() on socket failed: %s"), asc_error_msg());
+        sock_close(sock);
 
-        close(sock->fd);
-        sock->fd = 0;
         return;
     }
 
@@ -484,9 +496,8 @@ void asc_socket_connect(  asc_socket_t *sock, const char *addr, int port
     else
     {
         asc_log_error(MSG("getaddrinfo() failed '%s' [%s])"), addr, gai_strerror(gai_err));
+        sock_close(sock);
 
-        close(sock->fd);
-        sock->fd = 0;
         return;
     }
 
@@ -515,11 +526,10 @@ void asc_socket_connect(  asc_socket_t *sock, const char *addr, int port
 #endif /* _WIN32 */
 
             default:
-                asc_log_error(MSG("connect(): %s:%d: %s")
-                              , addr, port, asc_error_msg());
+                asc_log_error(MSG("connect(): %s:%d: %s"), addr, port
+                              , asc_error_msg());
+                sock_close(sock);
 
-                close(sock->fd);
-                sock->fd = 0;
                 return;
         }
     }
