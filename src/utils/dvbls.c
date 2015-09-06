@@ -229,9 +229,9 @@ static void check_device(const char *item)
     device = get_last_int(&item[(sizeof("/dev/dvb/adapter") - 1) + (sizeof("/net") - 1)]);
 
     lua_newtable(lua);
-    lua_pushnumber(lua, adapter);
+    lua_pushinteger(lua, adapter);
     lua_setfield(lua, -2, __adapter);
-    lua_pushnumber(lua, device);
+    lua_pushinteger(lua, device);
     lua_setfield(lua, -2, __device);
     check_device_fe();
 

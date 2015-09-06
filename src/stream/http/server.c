@@ -271,7 +271,7 @@ static void on_client_read(void *arg)
 
         lua_pushstring(lua, asc_socket_addr(client->sock));
         lua_setfield(lua, request, "addr");
-        lua_pushnumber(lua, asc_socket_port(client->sock));
+        lua_pushinteger(lua, asc_socket_port(client->sock));
         lua_setfield(lua, request, "port");
 
         lua_pushlstring(lua, &client->buffer[m[1].so], m[1].eo - m[1].so);

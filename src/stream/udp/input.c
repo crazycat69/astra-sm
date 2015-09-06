@@ -132,7 +132,7 @@ static void timer_renew_callback(void *arg)
 static int method_port(module_data_t *mod)
 {
     const int port = asc_socket_port(mod->sock);
-    lua_pushnumber(lua, port);
+    lua_pushinteger(lua, port);
     return 1;
 }
 

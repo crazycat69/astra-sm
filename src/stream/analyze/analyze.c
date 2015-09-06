@@ -146,7 +146,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
 
     lua_newtable(lua);
 
-    lua_pushnumber(lua, psi->pid);
+    lua_pushinteger(lua, psi->pid);
     lua_setfield(lua, -2, __pid);
 
     // check crc
@@ -164,10 +164,10 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
     lua_pushstring(lua, "pat");
     lua_setfield(lua, -2, __psi);
 
-    lua_pushnumber(lua, psi->crc32);
+    lua_pushinteger(lua, psi->crc32);
     lua_setfield(lua, -2, __crc32);
 
-    lua_pushnumber(lua, mod->tsid);
+    lua_pushinteger(lua, mod->tsid);
     lua_setfield(lua, -2, __tsid);
 
     mod->pmt_ready = 0;
@@ -184,11 +184,11 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
             continue;
 
         const int item_count = luaL_len(lua, -1) + 1;
-        lua_pushnumber(lua, item_count);
+        lua_pushinteger(lua, item_count);
         lua_newtable(lua);
-        lua_pushnumber(lua, pnr);
+        lua_pushinteger(lua, pnr);
         lua_setfield(lua, -2, __pnr);
-        lua_pushnumber(lua, pid);
+        lua_pushinteger(lua, pid);
         lua_setfield(lua, -2, __pid);
         lua_settable(lua, -3); // append to the "programs" table
 
@@ -246,7 +246,7 @@ static void on_cat(void *arg, mpegts_psi_t *psi)
 
     lua_newtable(lua);
 
-    lua_pushnumber(lua, psi->pid);
+    lua_pushinteger(lua, psi->pid);
     lua_setfield(lua, -2, __pid);
 
     // check crc
@@ -262,7 +262,7 @@ static void on_cat(void *arg, mpegts_psi_t *psi)
     lua_pushstring(lua, "cat");
     lua_setfield(lua, -2, __psi);
 
-    lua_pushnumber(lua, psi->crc32);
+    lua_pushinteger(lua, psi->crc32);
     lua_setfield(lua, -2, __crc32);
 
     int descriptors_count = 1;
@@ -270,7 +270,7 @@ static void on_cat(void *arg, mpegts_psi_t *psi)
     const uint8_t *desc_pointer = CAT_DESC_FIRST(psi);
     while(!CAT_DESC_EOL(psi, desc_pointer))
     {
-        lua_pushnumber(lua, descriptors_count++);
+        lua_pushinteger(lua, descriptors_count++);
         mpegts_desc_to_lua(desc_pointer);
         lua_settable(lua, -3); // append to the "descriptors" table
 
@@ -304,7 +304,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     {
         lua_newtable(lua);
 
-        lua_pushnumber(lua, psi->pid);
+        lua_pushinteger(lua, psi->pid);
         lua_setfield(lua, -2, __pid);
 
         lua_pushstring(lua, "PMT checksum error");
@@ -344,16 +344,16 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
 
     lua_newtable(lua);
 
-    lua_pushnumber(lua, psi->pid);
+    lua_pushinteger(lua, psi->pid);
     lua_setfield(lua, -2, __pid);
 
     lua_pushstring(lua, "pmt");
     lua_setfield(lua, -2, __psi);
 
-    lua_pushnumber(lua, crc32);
+    lua_pushinteger(lua, crc32);
     lua_setfield(lua, -2, __crc32);
 
-    lua_pushnumber(lua, pnr);
+    lua_pushinteger(lua, pnr);
     lua_setfield(lua, -2, __pnr);
 
     int descriptors_count = 1;
@@ -361,7 +361,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     const uint8_t *desc_pointer = PMT_DESC_FIRST(psi);
     while(!PMT_DESC_EOL(psi, desc_pointer))
     {
-        lua_pushnumber(lua, descriptors_count++);
+        lua_pushinteger(lua, descriptors_count++);
         mpegts_desc_to_lua(desc_pointer);
         lua_settable(lua, -3); // append to the "descriptors" table
 
@@ -369,7 +369,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     }
     lua_setfield(lua, -2, __descriptors);
 
-    lua_pushnumber(lua, PMT_GET_PCR(psi));
+    lua_pushinteger(lua, PMT_GET_PCR(psi));
     lua_setfield(lua, -2, "pcr");
 
     int streams_count = 1;
@@ -383,7 +383,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
         if(!pid || pid >= NULL_TS_PID)
             continue;
 
-        lua_pushnumber(lua, streams_count++);
+        lua_pushinteger(lua, streams_count++);
         lua_newtable(lua);
 
         if(!mod->stream[pid])
@@ -392,14 +392,14 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
         const stream_type_t *const st = mpegts_stream_type(type);
         mod->stream[pid]->type = st->pkt_type;
 
-        lua_pushnumber(lua, pid);
+        lua_pushinteger(lua, pid);
         lua_setfield(lua, -2, __pid);
 
         descriptors_count = 1;
         lua_newtable(lua);
         PMT_ITEM_DESC_FOREACH(pointer, desc_pointer)
         {
-            lua_pushnumber(lua, descriptors_count++);
+            lua_pushinteger(lua, descriptors_count++);
             mpegts_desc_to_lua(desc_pointer);
             lua_settable(lua, -3); // append to the "streams[X].descriptors" table
 
@@ -411,7 +411,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
         lua_pushstring(lua, mpegts_type_name(mod->stream[pid]->type));
         lua_setfield(lua, -2, "type_name");
 
-        lua_pushnumber(lua, type);
+        lua_pushinteger(lua, type);
         lua_setfield(lua, -2, "type_id");
 
         lua_pushstring(lua, st->description);
@@ -453,7 +453,7 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
     {
         lua_newtable(lua);
 
-        lua_pushnumber(lua, psi->pid);
+        lua_pushinteger(lua, psi->pid);
         lua_setfield(lua, -2, __pid);
 
         lua_pushstring(lua, "SDT checksum error");
@@ -490,16 +490,16 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
 
     lua_newtable(lua);
 
-    lua_pushnumber(lua, psi->pid);
+    lua_pushinteger(lua, psi->pid);
     lua_setfield(lua, -2, __pid);
 
     lua_pushstring(lua, "sdt");
     lua_setfield(lua, -2, __psi);
 
-    lua_pushnumber(lua, crc32);
+    lua_pushinteger(lua, crc32);
     lua_setfield(lua, -2, __crc32);
 
-    lua_pushnumber(lua, mod->tsid);
+    lua_pushinteger(lua, mod->tsid);
     lua_setfield(lua, -2, __tsid);
 
     int descriptors_count;
@@ -510,10 +510,10 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
     {
         const uint16_t sid = SDT_ITEM_GET_SID(psi, pointer);
 
-        lua_pushnumber(lua, services_count++);
+        lua_pushinteger(lua, services_count++);
 
         lua_newtable(lua);
-        lua_pushnumber(lua, sid);
+        lua_pushinteger(lua, sid);
         lua_setfield(lua, -2, "sid");
 
         descriptors_count = 1;
@@ -521,7 +521,7 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
         const uint8_t *desc_pointer;
         SDT_ITEM_DESC_FOREACH(pointer, desc_pointer)
         {
-            lua_pushnumber(lua, descriptors_count++);
+            lua_pushinteger(lua, descriptors_count++);
             mpegts_desc_to_lua(desc_pointer);
             lua_settable(lua, -3);
         }
@@ -553,8 +553,8 @@ static void append_rate(module_data_t *mod, int rate)
         lua_newtable(lua);
         for(int i = 0; i < mod->rate_count; ++i)
         {
-            lua_pushnumber(lua, i + 1);
-            lua_pushnumber(lua, mod->rate[i]);
+            lua_pushinteger(lua, i + 1);
+            lua_pushinteger(lua, mod->rate[i]);
             lua_settable(lua, -3);
         }
         lua_setfield(lua, -2, "rate");
@@ -692,23 +692,23 @@ static void on_check_stat(void *arg)
         if(!mod->cc_check)
             item->cc_error = 0;
 
-        lua_pushnumber(lua, items_count++);
+        lua_pushinteger(lua, items_count++);
         lua_newtable(lua);
 
-        lua_pushnumber(lua, i);
+        lua_pushinteger(lua, i);
         lua_setfield(lua, -2, __pid);
 
         const uint32_t item_bitrate = (item->packets * TS_PACKET_SIZE * 8) / 1000;
         bitrate += item_bitrate;
 
-        lua_pushnumber(lua, item_bitrate);
+        lua_pushinteger(lua, item_bitrate);
         lua_setfield(lua, -2, "bitrate");
 
-        lua_pushnumber(lua, item->cc_error);
+        lua_pushinteger(lua, item->cc_error);
         lua_setfield(lua, -2, "cc_error");
-        lua_pushnumber(lua, item->sc_error);
+        lua_pushinteger(lua, item->sc_error);
         lua_setfield(lua, -2, "sc_error");
-        lua_pushnumber(lua, item->pes_error);
+        lua_pushinteger(lua, item->pes_error);
         lua_setfield(lua, -2, "pes_error");
 
         cc_errors += item->cc_error;
@@ -736,11 +736,11 @@ static void on_check_stat(void *arg)
 
     lua_newtable(lua);
     {
-        lua_pushnumber(lua, bitrate);
+        lua_pushinteger(lua, bitrate);
         lua_setfield(lua, -2, "bitrate");
-        lua_pushnumber(lua, cc_errors);
+        lua_pushinteger(lua, cc_errors);
         lua_setfield(lua, -2, "cc_errors");
-        lua_pushnumber(lua, pes_errors);
+        lua_pushinteger(lua, pes_errors);
         lua_setfield(lua, -2, "pes_errors");
         lua_pushboolean(lua, scrambled);
         lua_setfield(lua, -2, "scrambled");

@@ -225,7 +225,7 @@ static int method_status(module_data_t *mod)
 {
     lua_newtable(lua);
 
-    lua_pushnumber(lua, mod->file_size);
+    lua_pushinteger(lua, mod->file_size);
     lua_setfield(lua, -2, "size");
 
     return 1;

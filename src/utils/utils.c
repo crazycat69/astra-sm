@@ -128,7 +128,7 @@ static int utils_ifaddrs(lua_State *L)
                 else
                     count = luaL_len(L, -1);
 
-                lua_pushnumber(L, count + 1);
+                lua_pushinteger(L, count + 1);
                 lua_pushstring(L, host);
                 lua_settable(L, -3);
                 lua_pop(L, 1);
@@ -173,13 +173,13 @@ static int utils_stat(lua_State *L)
     }
     lua_setfield(L, -2, "type");
 
-    lua_pushnumber(L, sb.st_uid);
+    lua_pushinteger(L, sb.st_uid);
     lua_setfield(L, -2, "uid");
 
-    lua_pushnumber(L, sb.st_gid);
+    lua_pushinteger(L, sb.st_gid);
     lua_setfield(L, -2, "gid");
 
-    lua_pushnumber(L, sb.st_size);
+    lua_pushinteger(L, sb.st_size);
     lua_setfield(L, -2, "size");
 
     return 1;

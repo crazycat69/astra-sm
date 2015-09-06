@@ -170,7 +170,7 @@ static void callback(module_data_t *mod)
 static void call_error(module_data_t *mod, const char *msg)
 {
     lua_newtable(lua);
-    lua_pushnumber(lua, 0);
+    lua_pushinteger(lua, 0);
     lua_setfield(lua, -2, __code);
     lua_pushstring(lua, msg);
     lua_setfield(lua, -2, __message);
@@ -764,7 +764,7 @@ static void on_read(void *arg)
         lua_setfield(lua, response, __version);
 
         mod->status_code = atoi(&mod->buffer[m[2].so]);
-        lua_pushnumber(lua, mod->status_code);
+        lua_pushinteger(lua, mod->status_code);
         lua_setfield(lua, response, __code);
 
         lua_pushlstring(lua, &mod->buffer[m[3].so], m[3].eo - m[3].so);

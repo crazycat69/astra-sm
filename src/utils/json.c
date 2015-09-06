@@ -385,7 +385,7 @@ static int scan_array(lua_State *L, const char *str, int pos)
             }
         }
 
-        lua_pushnumber(L, key);
+        lua_pushinteger(L, key);
 
         pos = scan_json(L, str, pos);
         if(pos == -1)
