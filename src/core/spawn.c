@@ -205,9 +205,6 @@ int fork_and_exec(const char *command, pid_t *out_pid
         /* detach from terminal */
         setsid();
 
-        /* go to root directory */
-        chdir("/");
-
         /* try to run command */
         execle("/bin/sh", "sh", "-c", command, NULL, environ);
         perror_s("execl()");
