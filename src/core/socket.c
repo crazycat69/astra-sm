@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
+ *                    2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,8 +74,16 @@ struct asc_socket_t
 void asc_socket_core_init(void)
 {
     WSADATA wsaData;
-    int err = WSAStartup(MAKEWORD(2, 2), &wsaData);
-    asc_assert(err == 0, "[core/socket] WSAStartup failed %d", err);
+
+    const int err = WSAStartup(MAKEWORD(2, 2), &wsaData);
+    if (err != 0)
+    {
+        char buf[1024];
+        asc_log_error("[core/socket] WSAStartup() failed: %s"
+                      , asc_strerror(err, buf, sizeof(buf)));
+
+        astra_abort();
+    }
 }
 
 void asc_socket_core_destroy(void)
