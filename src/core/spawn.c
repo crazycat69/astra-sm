@@ -415,9 +415,6 @@ int socketpipe(int fds[2])
         if (server == INVALID_SOCKET)
             goto client_fail;
 
-        if (prepare_socket(server) != 0)
-            goto server_fail;
-
         if (sa_req.in.sin_port == sa_client.in.sin_port
             && sa_req.in.sin_addr.s_addr == sa_client.in.sin_addr.s_addr)
         {
@@ -435,8 +432,6 @@ int socketpipe(int fds[2])
 
     return 0;
 
-server_fail:
-    closesocket_s(server);
 client_fail:
     closesocket_s(client);
 listen_fail:
