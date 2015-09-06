@@ -28,6 +28,7 @@
  */
 
 #include <astra.h>
+#include <core/timer.h>
 
 struct module_data_t
 {

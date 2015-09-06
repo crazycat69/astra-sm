@@ -22,6 +22,7 @@
 #define ASC_COMPAT_NOWRAP
 
 #include <astra.h>
+#include <core/compat.h>
 
 #ifdef _WIN32
 #   include <ws2tcpip.h>

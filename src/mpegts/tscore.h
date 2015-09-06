@@ -22,14 +22,9 @@
 #ifndef _TS_CORE_
 #define _TS_CORE_ 1
 
-/*
- * ooooooooooo  oooooooo8
- * 88  888  88 888
- *     888      888oooooo
- *     888             888
- *    o888o    o88oooo888
- *
- */
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
 
 #define TS_PACKET_SIZE 188
 #define TS_HEADER_SIZE 4

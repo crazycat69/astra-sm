@@ -22,6 +22,8 @@
 #define _DVB_H_ 1
 
 #include <astra.h>
+#include <core/stream.h>
+#include <mpegts/psi.h>
 
 #include <poll.h>
 #include <sys/ioctl.h>

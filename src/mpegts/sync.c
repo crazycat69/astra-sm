@@ -19,6 +19,8 @@
  */
 
 #include <astra.h>
+#include <mpegts/sync.h>
+#include <mpegts/pcr.h>
 
 #define MSG(_msg) "[%s] " _msg, sx->name
 

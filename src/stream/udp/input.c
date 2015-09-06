@@ -35,6 +35,9 @@
  */
 
 #include <astra.h>
+#include <core/stream.h>
+#include <core/socket.h>
+#include <core/timer.h>
 
 #define UDP_BUFFER_SIZE 1460
 #define RTP_HEADER_SIZE 12

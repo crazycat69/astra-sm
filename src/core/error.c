@@ -19,6 +19,7 @@
  */
 
 #include <astra.h>
+#include <core/error.h>
 
 static __thread char msg_buf[1024];
 

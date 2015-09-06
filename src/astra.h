@@ -68,14 +68,6 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#ifndef __cplusplus
-#   include <lua.h>
-#   include <lualib.h>
-#   include <lauxlib.h>
-#else
-#   include <lua.hpp>
-#endif /* !__cplusplus */
-
 /*
  * common macros
  */
@@ -134,8 +126,6 @@ extern "C" {
 #include "core/core.h"
 #include "mpegts/mpegts.h"
 #include "utils/utils.h"
-
-#include "bindings.h"
 
 #ifdef __cplusplus
 }

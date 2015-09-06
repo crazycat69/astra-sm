@@ -19,6 +19,7 @@
  */
 
 #include <astra.h>
+#include <core/log.h>
 
 #ifndef _WIN32
 #   include <syslog.h>
@@ -72,7 +73,7 @@ static int _get_type_syslog(int type)
 }
 #endif /* !_WIN32 */
 
-static const char * _get_type_str(int type)
+static const char *_get_type_str(int type)
 {
     switch(type & 0x000000FF)
     {

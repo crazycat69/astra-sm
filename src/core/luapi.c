@@ -20,6 +20,7 @@
  */
 
 #include <astra.h>
+#include <core/luapi.h>
 
 #define MSG(_msg) "[core/lua] " _msg
 

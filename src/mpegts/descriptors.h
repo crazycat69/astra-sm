@@ -22,6 +22,10 @@
 #ifndef _TS_DESCRIPTORS_
 #define _TS_DESCRIPTORS_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 void mpegts_desc_to_lua(const uint8_t *desc);
 
 #endif /* _TS_DESCRIPTORS_ */

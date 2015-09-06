@@ -20,6 +20,7 @@
  */
 
 #include <astra.h>
+#include <core/strbuffer.h>
 
 #define MAX_BUFFER_SIZE 4096
 
@@ -32,7 +33,7 @@ struct string_buffer_t
     string_buffer_t *next;
 };
 
-string_buffer_t * string_buffer_alloc(void)
+string_buffer_t *string_buffer_alloc(void)
 {
     string_buffer_t *buffer = (string_buffer_t *)malloc(sizeof(string_buffer_t));
     buffer->size = 0;
@@ -42,7 +43,7 @@ string_buffer_t * string_buffer_alloc(void)
 }
 
 /* only for single char operations */
-static __wur string_buffer_t * __string_buffer_last(string_buffer_t *buffer)
+static __wur string_buffer_t *__string_buffer_last(string_buffer_t *buffer)
 {
     string_buffer_t *last = buffer->last;
     if(last->size >= MAX_BUFFER_SIZE)
@@ -340,7 +341,7 @@ void string_buffer_addfstring(string_buffer_t *buffer, const char *str, ...)
     va_end(ap);
 }
 
-char * string_buffer_release(string_buffer_t *buffer, size_t *size)
+char *string_buffer_release(string_buffer_t *buffer, size_t *size)
 {
     size_t skip;
     string_buffer_t *next, *next_next;

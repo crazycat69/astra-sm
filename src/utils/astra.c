@@ -42,6 +42,7 @@
  */
 
 #include <astra.h>
+#include <core/mainloop.h>
 
 __noreturn
 static int lua_astra_exit(lua_State *L)

@@ -21,6 +21,10 @@
 #ifndef _ASC_LOG_H_
 #define _ASC_LOG_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 void asc_log_set_stdout(bool);
 void asc_log_set_debug(bool);
 void asc_log_set_color(bool);

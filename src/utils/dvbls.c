@@ -20,10 +20,6 @@
 
 #include <astra.h>
 
-#ifndef HAVE_DVBAPI
-#   error "OS does not provide DVB API"
-#endif
-
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 #include <net/if.h>

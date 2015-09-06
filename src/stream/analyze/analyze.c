@@ -36,6 +36,11 @@
  */
 
 #include <astra.h>
+#include <core/stream.h>
+#include <core/timer.h>
+#include <mpegts/descriptors.h>
+#include <mpegts/pes.h>
+#include <mpegts/psi.h>
 
 typedef struct
 {

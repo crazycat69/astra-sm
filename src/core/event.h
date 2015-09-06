@@ -21,6 +21,10 @@
 #ifndef _ASC_EVENT_H_
 #define _ASC_EVENT_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 typedef struct asc_event_t asc_event_t;
 typedef void (*event_callback_t)(void *);
 

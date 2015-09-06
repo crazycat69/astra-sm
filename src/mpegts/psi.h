@@ -22,20 +22,18 @@
 #ifndef _TS_PSI_
 #define _TS_PSI_
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 /*
- * oooooooooo   oooooooo8 ooooo
- *  888    888 888         888
- *  888oooo88   888oooooo  888
- *  888                888 888
- * o888o       o88oooo888 o888o
- *
+ * common definitions
  */
 
 #define PSI_MAX_SIZE 0x00000FFF
-
 #define PSI_HEADER_SIZE 3
-
-#define PSI_BUFFER_GET_SIZE(_b) (PSI_HEADER_SIZE + (((_b[1] & 0x0f) << 8) | _b[2]))
+#define PSI_BUFFER_GET_SIZE(_b) \
+    (PSI_HEADER_SIZE + (((_b[1] & 0x0f) << 8) | _b[2]))
 
 typedef struct
 {
@@ -56,7 +54,7 @@ typedef struct
 
 typedef void (*psi_callback_t)(void *, mpegts_psi_t *);
 
-mpegts_psi_t * mpegts_psi_init(mpegts_packet_type_t type, uint16_t pid) __wur;
+mpegts_psi_t *mpegts_psi_init(mpegts_packet_type_t type, uint16_t pid) __wur;
 void mpegts_psi_destroy(mpegts_psi_t *psi);
 
 void mpegts_psi_mux(mpegts_psi_t *psi, const uint8_t *ts, psi_callback_t callback, void *arg);
@@ -89,24 +87,14 @@ void mpegts_psi_demux(mpegts_psi_t *psi, ts_callback_t callback, void *arg);
     } while (0)
 
 /*
- * ooooooooo  ooooooooooo  oooooooo8    oooooooo8
- *  888    88o 888    88  888         o888     88
- *  888    888 888ooo8     888oooooo  888
- *  888    888 888    oo          888 888o     oo
- * o888ooo88  o888ooo8888 o88oooo888   888oooo88
- *
+ * CA descriptors
  */
 
 #define DESC_CA_CAID(_desc) ((_desc[2] << 8) | _desc[3])
 #define DESC_CA_PID(_desc) (((_desc[4] & 0x1F) << 8) | _desc[5])
 
 /*
- * oooooooooo   o   ooooooooooo
- *  888    888 888  88  888  88
- *  888oooo88 8  88     888
- *  888      8oooo88    888
- * o888o   o88o  o888o o888o
- *
+ * PAT (Program Association Table)
  */
 
 #define PAT_INIT(_psi, _tsid, _version) \
@@ -175,12 +163,7 @@ void mpegts_psi_demux(mpegts_psi_t *psi, ts_callback_t callback, void *arg);
     } while (0)
 
 /*
- *   oooooooo8     o   ooooooooooo
- * o888     88    888  88  888  88
- * 888           8  88     888
- * 888o     oo  8oooo88    888
- *  888oooo88 o88o  o888o o888o
- *
+ * CAT (Conditional Access Table)
  */
 
 #define CAT_GET_VERSION(_psi) PAT_GET_VERSION(_psi)
@@ -196,12 +179,7 @@ void mpegts_psi_demux(mpegts_psi_t *psi, ts_callback_t callback, void *arg);
         ; CAT_DESC_NEXT(_psi, _ptr))
 
 /*
- * oooooooooo oooo     oooo ooooooooooo
- *  888    888 8888o   888  88  888  88
- *  888oooo88  88 888o8 88      888
- *  888        88  888  88      888
- * o888o      o88o  8  o88o    o888o
- *
+ * PMT (Program Map Table)
  */
 
 #define PMT_INIT(_psi, _pnr, _version, _pcr, _desc, _desc_size) \
@@ -308,12 +286,7 @@ void mpegts_psi_demux(mpegts_psi_t *psi, ts_callback_t callback, void *arg);
     } while (0)
 
 /*
- *  oooooooo8 ooooooooo   ooooooooooo
- * 888         888    88o 88  888  88
- *  888oooooo  888    888     888
- *         888 888    888     888
- * o88oooo888 o888ooo88      o888o
- *
+ * SDT (Service Description Table)
  */
 
 #define SDT_GET_TSID(_psi) ((_psi->buffer[3] << 8) | _psi->buffer[4])
@@ -361,12 +334,7 @@ void mpegts_psi_demux(mpegts_psi_t *psi, ts_callback_t callback, void *arg);
         ; SDT_ITEM_DESC_NEXT(_ptr, _desc_ptr))
 
 /*
- * ooooooooooo ooooo ooooooooooo
- *  888    88   888  88  888  88
- *  888ooo8     888      888
- *  888    oo   888      888
- * o888ooo8888 o888o    o888o
- *
+ * EIT (Event Information Table)
  */
 
 #define EIT_GET_PNR(_psi) ((_psi->buffer[3] << 8) | _psi->buffer[4])

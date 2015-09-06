@@ -20,6 +20,7 @@
  */
 
 #include <astra.h>
+#include <core/clock.h>
 
 __asc_inline
 uint64_t asc_utime(void)

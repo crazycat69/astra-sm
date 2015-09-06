@@ -18,24 +18,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _ASC_H_
-#define _ASC_H_ 1
+#ifndef _ASTRA_CORE_H_
+#define _ASTRA_CORE_H_ 1
+
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
 
 #include "assert.h"
 #include "compat.h"
 #include "init.h"
-#include "event.h"
-#include "list.h"
 #include "log.h"
-#include "mainloop.h"
-#include "socket.h"
-#include "thread.h"
-#include "timer.h"
 #include "clock.h"
-#include "strbuffer.h"
-#include "stream.h"
 #include "luapi.h"
-#include "spawn.h"
 #include "error.h"
 
-#endif /* _ASC_H_ */
+#endif /* _ASTRA_CORE_H_ */

@@ -21,6 +21,10 @@
 #ifndef _ASC_COMPAT_H_
 #define _ASC_COMPAT_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 /*
  * replacement defines
  */

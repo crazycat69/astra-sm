@@ -21,6 +21,10 @@
 #ifndef _ASC_ERROR_H_
 #define _ASC_ERROR_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 char *asc_strerror(int errnum, char *buf, size_t buflen);
 const char *asc_error_msg(void);
 

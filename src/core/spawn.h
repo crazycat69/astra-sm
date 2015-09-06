@@ -20,6 +20,10 @@
 #ifndef _ASC_SPAWN_H_
 #define _ASC_SPAWN_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 #ifdef _WIN32
 
 typedef struct
@@ -42,6 +46,10 @@ pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block);
 int asc_process_kill(const asc_process_t *proc, bool forced);
 
 #else /* _WIN32 */
+
+#include <signal.h>
+#include <sys/socket.h>
+#include <sys/wait.h>
 
 typedef pid_t asc_process_t;
 

@@ -18,18 +18,10 @@
  */
 
 #include <astra.h>
-
-#ifndef _WIN32
-#   include <signal.h>
-#   include <sys/socket.h>
-#endif /* !_WIN32 */
-
-#ifndef _REMOVE_ME_
-    /*
-     * TODO: move `child' to core
-     */
-#   include "child.h"
-#endif /* _REMOVE_ME_ */
+#include "child.h" // TODO: move to core/child.h
+#include <core/spawn.h>
+#include <core/socket.h>
+#include <core/timer.h>
 
 #define MSG(_msg) "[child/%s] " _msg, child->name
 

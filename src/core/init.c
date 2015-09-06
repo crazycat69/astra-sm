@@ -19,6 +19,12 @@
  */
 
 #include <astra.h>
+#include <core/init.h>
+#include <core/mainloop.h>
+#include <core/event.h>
+#include <core/thread.h>
+#include <core/timer.h>
+#include <core/socket.h>
 
 #define MSG(_msg) "[core] " _msg
 

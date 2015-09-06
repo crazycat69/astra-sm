@@ -20,6 +20,8 @@
  */
 
 #include <astra.h>
+#include <mpegts/descriptors.h>
+#include <mpegts/psi.h>
 
 #define HEX_BUFSIZE 128
 

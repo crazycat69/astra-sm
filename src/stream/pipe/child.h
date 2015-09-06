@@ -20,6 +20,12 @@
 #ifndef _ASC_CHILD_H_
 #define _ASC_CHILD_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
+#include <core/event.h>
+
 typedef struct asc_child_t asc_child_t;
 
 typedef void (*child_close_callback_t)(void *, int);

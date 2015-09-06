@@ -38,6 +38,12 @@
  *      upstream    - object, stream instance returned by module_instance:stream()
  */
 
+#include <astra.h>
+#include <core/stream.h>
+#include <core/timer.h>
+#include <core/thread.h>
+#include <mpegts/pcr.h>
+
 #include "http.h"
 
 #define MSG(_msg)                                       \

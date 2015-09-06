@@ -19,6 +19,7 @@
  */
 
 #include <astra.h>
+#include <core/strbuffer.h>
 
 #define MSG(_msg) "[json] " _msg
 

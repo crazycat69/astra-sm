@@ -20,6 +20,8 @@
  */
 
 #include <astra.h>
+#include <core/mainloop.h>
+
 #include "sighandler.h"
 
 static void asc_srand(void)

@@ -21,6 +21,12 @@
 #ifndef _TS_T2MI_
 #define _TS_T2MI_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
+#include <core/stream.h>
+
 #define T2MI_PLP_AUTO 0x100
 
 typedef struct mpegts_t2mi_t mpegts_t2mi_t;

@@ -19,6 +19,8 @@
  */
 
 #include "dvb.h"
+#include <core/list.h>
+#include <mpegts/psi.h>
 
 #include <netinet/in.h>
 

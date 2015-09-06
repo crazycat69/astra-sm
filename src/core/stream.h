@@ -21,7 +21,13 @@
 #ifndef _ASC_STREAM_H_
 #define _ASC_STREAM_H_ 1
 
-typedef struct module_data_t module_data_t;
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
+#include <core/list.h>
+#include <core/luapi.h>
+
 typedef struct module_stream_t module_stream_t;
 
 typedef void (*stream_callback_t)(module_data_t *, const uint8_t *);

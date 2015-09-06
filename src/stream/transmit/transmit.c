@@ -27,6 +27,7 @@
  */
 
 #include <astra.h>
+#include <core/stream.h>
 
 struct module_data_t
 {

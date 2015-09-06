@@ -19,6 +19,8 @@
  */
 
 #include <astra.h>
+#include <core/mainloop.h>
+
 #include "sighandler.h"
 
 #define LOCK_WAIT 5000 /* ms */

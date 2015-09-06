@@ -22,13 +22,11 @@
 #ifndef _MPEGTS_H_
 #define _MPEGTS_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 #include "tscore.h"
 #include "types.h"
-#include "descriptors.h"
-#include "psi.h"
-#include "pes.h"
-#include "pcr.h"
-#include "sync.h"
-#include "t2mi.h"
 
 #endif /* _MPEGTS_H_ */

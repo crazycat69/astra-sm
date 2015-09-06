@@ -21,6 +21,10 @@
 #ifndef _TS_SYNC_
 #define _TS_SYNC_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 typedef struct mpegts_sync_t mpegts_sync_t;
 typedef void (*sync_callback_t)(void *);
 

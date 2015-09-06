@@ -19,8 +19,9 @@
  */
 
 #include <astra.h>
+#include <mpegts/psi.h>
 
-mpegts_psi_t * mpegts_psi_init(mpegts_packet_type_t type, uint16_t pid)
+mpegts_psi_t *mpegts_psi_init(mpegts_packet_type_t type, uint16_t pid)
 {
     mpegts_psi_t *psi = (mpegts_psi_t *)malloc(sizeof(mpegts_psi_t));
     psi->type = type;

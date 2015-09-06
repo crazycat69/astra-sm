@@ -18,9 +18,22 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _ASC_LUAGLUE_H_
-#define _ASC_LUAGLUE_H_ 1
+#ifndef _ASC_LUAPI_H_
+#define _ASC_LUAPI_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
+#ifndef __cplusplus
+#   include <lua.h>
+#   include <lualib.h>
+#   include <lauxlib.h>
+#else
+#   include <lua.hpp>
+#endif /* !__cplusplus */
+
+typedef struct module_data_t module_data_t;
 typedef int (*module_callback_t)(module_data_t *);
 
 typedef struct
@@ -124,4 +137,6 @@ bool module_option_boolean(const char *name, bool *boolean);
         return 1; \
     }
 
-#endif /* _ASC_LUAGLUE_H_ */
+#include <bindings.h>
+
+#endif /* _ASC_LUAPI_H_ */

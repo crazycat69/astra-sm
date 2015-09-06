@@ -20,6 +20,8 @@
  */
 
 #include <astra.h>
+#include <mpegts/pes.h>
+#include <mpegts/pcr.h>
 
 #define MSG(_msg) "[pes] %s(): " _msg, __func__
 

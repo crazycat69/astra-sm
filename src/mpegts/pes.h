@@ -22,6 +22,10 @@
 #ifndef _TS_PES_
 #define _TS_PES_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 /* header sizes */
 #define PES_HDR_BASIC   6U
 #define PES_HDR_EXT     3U

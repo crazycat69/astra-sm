@@ -45,6 +45,10 @@
  *                  - return table, client data
  */
 
+#include <astra.h>
+#include <core/stream.h>
+#include <core/timer.h>
+
 #include "http.h"
 
 #define MSG(_msg) "[http_server %s:%d] " _msg, mod->addr, mod->port

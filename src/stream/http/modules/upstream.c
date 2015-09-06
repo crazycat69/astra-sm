@@ -19,6 +19,8 @@
  */
 
 #include <astra.h>
+#include <core/stream.h>
+
 #include "../http.h"
 
 #define DEFAULT_BUFFER_SIZE (1024 * 1024)
@@ -310,5 +312,4 @@ MODULE_LUA_METHODS()
 {
     { NULL, NULL }
 };
-
 MODULE_LUA_REGISTER(http_upstream)

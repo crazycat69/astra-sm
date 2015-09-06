@@ -17,12 +17,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <astra.h>
-
-struct module_data_t
-{
-    MODULE_STREAM_DATA();
-};
+#include "pipe.h"
 
 static void module_init(module_data_t *mod)
 {

@@ -19,6 +19,8 @@
  */
 
 #include <astra.h>
+#include <core/stream.h>
+
 #include "../http.h"
 
 struct module_data_t

@@ -19,6 +19,7 @@
  */
 
 #include <astra.h>
+#include <core/stream.h>
 
 static void __module_stream_detach(module_stream_t *stream, module_stream_t *child)
 {

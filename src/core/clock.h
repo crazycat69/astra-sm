@@ -22,6 +22,10 @@
 #ifndef _ASC_CLOCK_H_
 #define _ASC_CLOCK_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 uint64_t asc_utime(void) __wur;
 void asc_usleep(uint64_t usec);
 

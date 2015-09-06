@@ -18,12 +18,7 @@
  */
 
 #include <astra.h>
-
-#ifndef _WIN32
-#   include <signal.h>
-#   include <sys/socket.h>
-#   include <sys/wait.h>
-#endif /* !_WIN32 */
+#include <core/spawn.h>
 
 #define PIPE_RD 0
 #define PIPE_WR 1

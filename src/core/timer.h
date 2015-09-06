@@ -21,6 +21,10 @@
 #ifndef _ASC_TIMER_H_
 #define _ASC_TIMER_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 typedef struct asc_timer_t asc_timer_t;
 typedef void (*timer_callback_t)(void *);
 
@@ -28,8 +32,12 @@ void asc_timer_core_init(void);
 void asc_timer_core_loop(void);
 void asc_timer_core_destroy(void);
 
-asc_timer_t *asc_timer_init(unsigned int ms, timer_callback_t callback, void *arg) __wur;
-asc_timer_t *asc_timer_one_shot(unsigned int ms, timer_callback_t callback, void *arg) __wur;
+asc_timer_t *asc_timer_init(unsigned int ms
+                            , timer_callback_t callback
+                            , void *arg) __wur;
+asc_timer_t *asc_timer_one_shot(unsigned int ms
+                                , timer_callback_t callback
+                                , void *arg) __wur;
 void asc_timer_destroy(asc_timer_t *timer);
 
 #endif /* _ASC_TIMER_H_ */

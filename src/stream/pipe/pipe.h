@@ -21,6 +21,8 @@
 #define _PIPE_H_ 1
 
 #include <astra.h>
+#include <core/stream.h>
+#include <core/timer.h>
 
 #ifndef _REMOVE_ME_
     /*

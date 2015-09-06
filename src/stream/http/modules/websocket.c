@@ -19,6 +19,9 @@
  */
 
 #include <astra.h>
+#include <core/list.h>
+#include <utils/utils.h>
+
 #include "../http.h"
 
 /* WebSocket Frame */

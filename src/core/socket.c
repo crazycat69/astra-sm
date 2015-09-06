@@ -20,6 +20,7 @@
  */
 
 #include <astra.h>
+#include <core/socket.h>
 
 #ifdef _WIN32
 #   include <ws2tcpip.h>
@@ -297,7 +298,7 @@ void asc_socket_set_on_read(asc_socket_t *sock, event_callback_t on_read)
     }
 }
 
-void asc_socket_set_on_ready(asc_socket_t * sock, event_callback_t on_ready)
+void asc_socket_set_on_ready(asc_socket_t *sock, event_callback_t on_ready)
 {
     if(sock->on_ready == on_ready)
         return;
@@ -446,7 +447,7 @@ int __accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 #endif /* !_WIN32 */
 
 bool asc_socket_accept(asc_socket_t *sock, asc_socket_t **client_ptr
-                       , void * arg)
+                       , void *arg)
 {
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
@@ -617,7 +618,7 @@ int asc_socket_fd(asc_socket_t *sock)
     return sock->fd;
 }
 
-const char * asc_socket_addr(asc_socket_t *sock)
+const char *asc_socket_addr(asc_socket_t *sock)
 {
     return inet_ntoa(sock->addr.sin_addr);
 }

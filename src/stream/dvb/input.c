@@ -19,6 +19,10 @@
  */
 
 #include "dvb.h"
+#include <core/event.h>
+#include <core/thread.h>
+#include <core/timer.h>
+#include <mpegts/t2mi.h>
 
 #define MSG(_msg) "[dvb_input %d:%d] " _msg, mod->adapter, mod->device
 
