@@ -774,13 +774,13 @@ void asc_socket_set_buffer(asc_socket_t *sock, int rcvbuf, int sndbuf)
 #if defined(SO_RCVBUF) && defined(SO_SNDBUF)
     if(rcvbuf > 0 && !_socket_set_buffer(sock->fd, SO_RCVBUF, rcvbuf))
     {
-        asc_log_error(MSG("failed to set rcvbuf = %d: %s"), rcvbuf
+        asc_log_error(MSG("failed to set rcvbuf = `%d': %s"), rcvbuf
                       , asc_error_msg());
     }
 
     if(sndbuf > 0 && !_socket_set_buffer(sock->fd, SO_SNDBUF, sndbuf))
     {
-        asc_log_error(MSG("failed to set sndbuf = %d: %s"), sndbuf
+        asc_log_error(MSG("failed to set sndbuf = `%d': %s"), sndbuf
                       , asc_error_msg());
     }
 #else
@@ -887,7 +887,7 @@ void asc_socket_set_multicast_if(asc_socket_t *sock, const char *addr)
     if(setsockopt(sock->fd, IPPROTO_IP, IP_MULTICAST_IF
                   , (const char *)&a, sizeof(a)) == -1)
     {
-        asc_log_error(MSG("failed to set if \"%s\": %s"), addr
+        asc_log_error(MSG("failed to set if = `%s': %s"), addr
                       , asc_error_msg());
     }
 }
@@ -900,7 +900,7 @@ void asc_socket_set_multicast_ttl(asc_socket_t *sock, int ttl)
     if(setsockopt(sock->fd, IPPROTO_IP, IP_MULTICAST_TTL
                   , (const char *)&ttl, sizeof(ttl)) == -1)
     {
-        asc_log_error(MSG("failed to set ttl \"%d\": %s"), ttl
+        asc_log_error(MSG("failed to set ttl = `%d': %s"), ttl
                       , asc_error_msg());
     }
 }
@@ -950,13 +950,14 @@ static int __asc_socket_multicast_cmd(asc_socket_t *sock, int cmd)
     return 0;
 }
 
-void asc_socket_multicast_join(asc_socket_t *sock, const char *addr, const char *localaddr)
+void asc_socket_multicast_join(asc_socket_t *sock, const char *addr
+                               , const char *localaddr)
 {
     memset(&sock->mreq, 0, sizeof(sock->mreq));
     sock->mreq.imr_multiaddr.s_addr = inet_addr(addr);
     if(sock->mreq.imr_multiaddr.s_addr == INADDR_NONE)
     {
-        asc_log_error(MSG("failed to join multicast \"%s\": %s"), addr
+        asc_log_error(MSG("failed to join multicast group `%s': %s"), addr
                       , asc_error_msg());
         return;
     }
@@ -965,18 +966,21 @@ void asc_socket_multicast_join(asc_socket_t *sock, const char *addr, const char 
         sock->mreq.imr_multiaddr.s_addr = INADDR_NONE;
         return;
     }
-    if(localaddr)
+    if(localaddr != NULL)
     {
         sock->mreq.imr_interface.s_addr = inet_addr(localaddr);
         if(sock->mreq.imr_interface.s_addr == INADDR_NONE)
+        {
+            asc_log_error(MSG("failed to set local address `%s'"), localaddr);
             sock->mreq.imr_interface.s_addr = INADDR_ANY;
+        }
     }
 
     if(__asc_socket_multicast_cmd(sock, IP_ADD_MEMBERSHIP) == -1)
     {
-        asc_log_error(MSG("failed to join multicast \"%s\": %s")
-                      , inet_ntoa(sock->mreq.imr_multiaddr)
-                      , asc_error_msg());
+        const char *err = asc_error_msg();
+        asc_log_error(MSG("failed to join multicast group `%s': %s")
+                      , inet_ntoa(sock->mreq.imr_multiaddr), err);
 
         sock->mreq.imr_multiaddr.s_addr = INADDR_NONE;
     }
@@ -989,9 +993,9 @@ void asc_socket_multicast_leave(asc_socket_t *sock)
 
     if(__asc_socket_multicast_cmd(sock, IP_DROP_MEMBERSHIP) == -1)
     {
-        asc_log_error(MSG("failed to leave multicast \"%s\": %s")
-                      , inet_ntoa(sock->mreq.imr_multiaddr)
-                      , asc_error_msg());
+        const char *err = asc_error_msg();
+        asc_log_error(MSG("failed to leave multicast group `%s': %s")
+                      , inet_ntoa(sock->mreq.imr_multiaddr), err);
     }
 }
 
@@ -1011,7 +1015,7 @@ void asc_socket_multicast_renew(asc_socket_t *sock)
         return;
     }
 
-    asc_log_error(MSG("failed to renew multicast \"%s\": %s")
-                  , inet_ntoa(sock->mreq.imr_multiaddr)
-                  , asc_error_msg());
+    const char *err = asc_error_msg();
+    asc_log_error(MSG("failed to renew multicast group `%s': %s")
+                  , inet_ntoa(sock->mreq.imr_multiaddr), err);
 }
