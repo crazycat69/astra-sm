@@ -164,7 +164,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
     lua_pushstring(lua, "pat");
     lua_setfield(lua, -2, __psi);
 
-    lua_pushinteger(lua, psi->crc32);
+    lua_pushnumber(lua, psi->crc32);
     lua_setfield(lua, -2, __crc32);
 
     lua_pushinteger(lua, mod->tsid);
@@ -262,7 +262,7 @@ static void on_cat(void *arg, mpegts_psi_t *psi)
     lua_pushstring(lua, "cat");
     lua_setfield(lua, -2, __psi);
 
-    lua_pushinteger(lua, psi->crc32);
+    lua_pushnumber(lua, psi->crc32);
     lua_setfield(lua, -2, __crc32);
 
     int descriptors_count = 1;
@@ -350,7 +350,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     lua_pushstring(lua, "pmt");
     lua_setfield(lua, -2, __psi);
 
-    lua_pushinteger(lua, crc32);
+    lua_pushnumber(lua, crc32);
     lua_setfield(lua, -2, __crc32);
 
     lua_pushinteger(lua, pnr);
@@ -496,7 +496,7 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
     lua_pushstring(lua, "sdt");
     lua_setfield(lua, -2, __psi);
 
-    lua_pushinteger(lua, crc32);
+    lua_pushnumber(lua, crc32);
     lua_setfield(lua, -2, __crc32);
 
     lua_pushinteger(lua, mod->tsid);

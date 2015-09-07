@@ -179,7 +179,7 @@ static int utils_stat(lua_State *L)
     lua_pushinteger(L, sb.st_gid);
     lua_setfield(L, -2, "gid");
 
-    lua_pushinteger(L, sb.st_size);
+    lua_pushnumber(L, sb.st_size);
     lua_setfield(L, -2, "size");
 
     return 1;
