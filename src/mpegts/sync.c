@@ -449,8 +449,8 @@ void mpegts_sync_loop(void *arg)
     {
         if (downtime >= MIN_IDLE_TIME)
         {
-            asc_log_info(MSG("buffer underflow; output suspended for %.2fms")
-                         , downtime / 1000.0);
+            asc_log_debug(MSG("buffer underflow; output suspended for %.2fms")
+                          , downtime / 1000.0);
         }
         sx->last_error = 0;
     }
