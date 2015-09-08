@@ -49,6 +49,12 @@ static void asc_srand(void)
 
 int main(int argc, const char **argv)
 {
+#ifdef _WIN32
+    /* line buffering is not supported on win32 */
+    setvbuf(stdout, NULL, _IONBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+#endif /* _WIN32 */
+
     signal_setup();
 
 astra_reload_entry:

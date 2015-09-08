@@ -27,9 +27,7 @@
 
 static void lock_timeout(void)
 {
-    char msg[] = "sighandler: wait timeout for mutex\n";
-    write(STDERR_FILENO, msg, sizeof(msg));
-
+    fprintf(stderr, "sighandler: wait timeout for mutex\n");
     _exit(EXIT_SIGHANDLER);
 }
 
@@ -43,6 +41,7 @@ static void perror_exit(int errnum, const char *str)
 }
 
 #ifndef _WIN32
+
 #include <signal.h>
 #include <pthread.h>
 
@@ -294,11 +293,8 @@ static void redirect_stdio(void)
 
     if (reopen(STDERR_FILENO, buf) == -1)
         perror_exit(errno, "reopen()");
-
-    setvbuf(stdout, NULL, _IONBF, 0);
-    setvbuf(stderr, NULL, _IONBF, 0);
 }
-#endif
+#endif /* DEBUG */
 
 static inline void service_set_state(DWORD state)
 {
@@ -532,6 +528,7 @@ void signal_setup(void)
 
     atexit(signal_cleanup);
 }
+
 #endif /* !_WIN32 */
 
 void signal_enable(bool running)
