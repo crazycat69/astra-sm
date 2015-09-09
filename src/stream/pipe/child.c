@@ -25,7 +25,7 @@
 
 #define MSG(_msg) "[child/%s] " _msg, child->name
 
-#define IO_BUFFER_SIZE (16 * 1024) /* 16 KiB */
+#define IO_BUFFER_SIZE (32 * 1024) /* 32 KiB */
 
 #define KILL_TICK_MSEC 100
 #define KILL_MAX_TICKS 15
@@ -41,7 +41,7 @@ typedef struct
     child_io_mode_t mode;
     child_io_callback_t on_flush;
 
-    uint8_t buffer[IO_BUFFER_SIZE * 2];
+    uint8_t data[IO_BUFFER_SIZE];
     size_t pos_read;
     size_t pos_write;
 } child_io_t;
@@ -122,9 +122,10 @@ const char *get_io_name(const asc_child_t *child, const child_io_t *io)
     else
         return NULL;
 }
+// XXX: these are only used once!
 
 /*
- * redirected IO callbacks
+ * reading from child
  */
 static inline
 void on_stdio_close(asc_child_t *child, child_io_t *io)
@@ -138,13 +139,10 @@ void on_stdio_close(asc_child_t *child, child_io_t *io)
 static
 void on_stdio_read(asc_child_t *child, child_io_t *io)
 {
-    uint8_t *const ptr = &io->buffer[io->pos_write];
-    const size_t space = sizeof(io->buffer) - io->pos_write - 1;
-    const ssize_t ret = recv(io->fd, (char *)ptr, space, 0);
+    uint8_t *const dst = &io->data[io->pos_write];
+    size_t space = sizeof(io->data) - io->pos_write - 1;
 
-    asc_log_debug(MSG("read from %s: %zd bytes")
-                  , get_io_name(child, io), ret);
-
+    const ssize_t ret = recv(io->fd, (char *)dst, space, 0);
     switch (ret)
     {
         case -1:
@@ -160,6 +158,89 @@ void on_stdio_read(asc_child_t *child, child_io_t *io)
         default:
             break;
     }
+
+    if (io->on_flush == NULL)
+        return;
+
+    /* buffer incoming data */
+    asc_assert(ret > 0 && ret <= (ssize_t)space, MSG("recv() went haywire!"));
+
+    space -= ret;
+    io->pos_write += ret;
+
+    switch (io->mode)
+    {
+        case CHILD_IO_MPEGTS:
+            /* 188-byte TS packets */
+            for (; io->pos_write >= io->pos_read + (TS_PACKET_SIZE * 2)
+                 ; io->pos_read += TS_PACKET_SIZE)
+            {
+                /* look for sync byte */
+                for (size_t i = 0; i < TS_PACKET_SIZE; i++)
+                {
+                    const uint8_t *const ts = &io->data[io->pos_read + i];
+                    if (TS_IS_SYNC(ts))
+                    {
+                        io->pos_read += i;
+                        io->on_flush(child->arg, ts, TS_PACKET_SIZE);
+                        break;
+                    }
+                }
+            }
+
+            break;
+
+        case CHILD_IO_TEXT:
+            /* line-buffered input */
+            for (size_t i = io->pos_read; i < io->pos_write; i++)
+            {
+                uint8_t *const c = &io->data[i];
+                if (*c == '\n' || *c == '\r' || *c == '\0')
+                {
+                    /* terminate line and feed it to callback */
+                    *c = '\0';
+
+                    const uint8_t *const str = &io->data[io->pos_read];
+                    const size_t max = sizeof(io->data) - io->pos_read;
+                    const size_t len = strnlen((char *)str, max);
+                    if (len > 0)
+                        io->on_flush(child->arg, str, len);
+
+                    io->pos_read = i + 1;
+                }
+            }
+
+            if (space == 0 && io->pos_read == 0)
+            {
+                /* buffered line is too long; dump what we got */
+                const size_t len = strnlen((char *)io->data, sizeof(io->data));
+                if (len > 0)
+                    io->on_flush(child->arg, io->data, len);
+
+                io->pos_write = 0;
+            }
+
+            break;
+
+        case CHILD_IO_RAW:
+            /* pass every read to callback */
+            io->on_flush(child->arg, dst, ret);
+
+        default:
+            io->pos_write = 0;
+            return;
+    }
+
+    if (io->pos_read > 0)
+    {
+        /* move remaining fragment to beginning of the buffer */
+        const size_t frag = io->pos_write - io->pos_read;
+        if (frag > 0)
+            memmove(io->data, &io->data[io->pos_read], frag);
+
+        io->pos_write = frag;
+        io->pos_read = 0;
+    }
 }
 
 EVENT_CALLBACK(sin, close)
@@ -171,7 +252,11 @@ EVENT_CALLBACK(sout, read)
 EVENT_CALLBACK(serr, read)
 
 /*
- * public interface
+ * TODO: writing to child
+ */
+
+/*
+ * create and destroy
  */
 asc_child_t *asc_child_init(const asc_child_cfg_t *cfg)
 {
@@ -211,12 +296,6 @@ void asc_child_close(asc_child_t *child)
     CHILD_IO_CLEANUP(sin);
     CHILD_IO_CLEANUP(sout);
     CHILD_IO_CLEANUP(serr);
-
-    /*
-     * NOTE: there's a (harmless) race condition here:
-     *       the process may quit before we can query its state
-     *       because its standard input just got closed.
-     */
 
     /* check process state */
     int status = -1;
@@ -323,6 +402,7 @@ void asc_child_destroy(asc_child_t *child)
 
             asc_usleep(10 * 1000);
         }
+        /* XXX: check asc_utime */
 
         if (status == 0)
         {
@@ -345,10 +425,9 @@ void asc_child_destroy(asc_child_t *child)
     free(child);
 }
 
-//
-// XXX: writing
-//
-
+/*
+ * setters and getters
+ */
 __asc_inline
 void asc_child_set_on_close(asc_child_t *child
                             , child_close_callback_t on_close)
@@ -356,10 +435,15 @@ void asc_child_set_on_close(asc_child_t *child
     child->on_close = on_close;
 }
 
-//
-// XXX: set on ready
-//
+/*
+__asc_inline
+void asc_child_set_on_ready(asc_child_t *child, event_callback_t on_ready)
+{
+    TODO
+}
+*/
 
+// XXX: put __asc_inline back in
 void asc_child_toggle_input(asc_child_t *child, int fd, bool enable)
 {
     const child_io_t *const io = get_child_io(child, fd);
