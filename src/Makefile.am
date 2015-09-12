@@ -20,6 +20,7 @@ endif
 
 # core/
 libastra_la_SOURCES += \
+    core/child.c \
     core/clock.c \
     core/compat.c \
     core/error.c \
@@ -140,7 +141,6 @@ endif
 ### pipe ###
 if HAVE_STREAM_PIPE
 libstream_la_SOURCES += \
-    stream/pipe/child.c \
     stream/pipe/input.c \
     stream/pipe/output.c \
     stream/pipe/transcode.c \

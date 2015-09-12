@@ -18,8 +18,9 @@
  */
 
 #include <astra.h>
-#include "child.h" // TODO: move to core/child.h
+#include <core/child.h>
 #include <core/spawn.h>
+#include <core/event.h>
 #include <core/socket.h>
 #include <core/timer.h>
 
@@ -95,44 +96,20 @@ struct asc_child_t
     (timer_callback_t)asc_child_close
 
 /*
- * helper functions
- */
-static inline
-child_io_t *get_child_io(asc_child_t *child, int fd)
-{
-    switch (fd)
-    {
-        case STDIN_FILENO:  return &child->sin;
-        case STDOUT_FILENO: return &child->sout;
-        case STDERR_FILENO: return &child->serr;
-        default:
-            return NULL;
-    }
-}
-
-static inline
-const char *get_io_name(const asc_child_t *child, const child_io_t *io)
-{
-    if (io == &child->sin)
-        return "stdin";
-    else if (io == &child->sout)
-        return "stdout";
-    else if (io == &child->serr)
-        return "stderr";
-    else
-        return NULL;
-}
-// XXX: these are only used once!
-
-/*
  * reading from child
  */
 static inline
 void on_stdio_close(asc_child_t *child, child_io_t *io)
 {
-    asc_log_debug(MSG("%s pipe got closed on far side")
-                  , get_io_name(child, io));
+    const char *name = NULL;
+    if (io == &child->sin)
+        name = "stdin";
+    else if (io == &child->sout)
+        name = "stdout";
+    else if (io == &child->serr)
+        name = "stderr";
 
+    asc_log_debug(MSG("%s pipe got closed on far side"), name);
     asc_child_close(child);
 }
 
@@ -231,7 +208,7 @@ void on_stdio_read(asc_child_t *child, child_io_t *io)
             return;
     }
 
-    if (io->pos_read > 0)
+    if (io->pos_read > 0) // TODO: add (space == 0) check
     {
         /* move remaining fragment to beginning of the buffer */
         const size_t frag = io->pos_write - io->pos_read;
@@ -252,8 +229,9 @@ EVENT_CALLBACK(sout, read)
 EVENT_CALLBACK(serr, read)
 
 /*
- * TODO: writing to child
+ * writing to child
  */
+/* TODO */
 
 /*
  * create and destroy
@@ -402,7 +380,7 @@ void asc_child_destroy(asc_child_t *child)
 
             asc_usleep(10 * 1000);
         }
-        /* XXX: check asc_utime */
+        // TODO: check asc_utime
 
         if (status == 0)
         {
@@ -435,18 +413,25 @@ void asc_child_set_on_close(asc_child_t *child
     child->on_close = on_close;
 }
 
-/*
 __asc_inline
 void asc_child_set_on_ready(asc_child_t *child, event_callback_t on_ready)
 {
-    TODO
+    asc_event_set_on_write(child->sin.ev, on_ready);
 }
-*/
 
-// XXX: put __asc_inline back in
 void asc_child_toggle_input(asc_child_t *child, int fd, bool enable)
 {
-    const child_io_t *const io = get_child_io(child, fd);
+    const child_io_t *io;
+    switch (fd)
+    {
+        case STDIN_FILENO:  io = &child->sin;  break; // TODO: remove this?
+        case STDOUT_FILENO: io = &child->sout; break;
+        case STDERR_FILENO: io = &child->serr; break;
+        default:
+            asc_log_error(MSG("can't switch input: unknown fd (%d)"), fd);
+            return;
+    }
+
     asc_event_set_on_read(io->ev, (enable ? io->on_read : NULL));
 }
 

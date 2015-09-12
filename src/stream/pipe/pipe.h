@@ -22,14 +22,8 @@
 
 #include <astra.h>
 #include <core/stream.h>
+#include <core/child.h>
 #include <core/timer.h>
-
-#ifndef _REMOVE_ME_
-    /*
-     * TODO: move `child' to core
-     */
-#   include "child.h"
-#endif /* _REMOVE_ME_ */
 
 struct module_data_t
 {
