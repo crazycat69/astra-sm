@@ -574,10 +574,12 @@ end
 
 init_output_module.pipe = function(channel_data, output_id)
     local output_data = channel_data.output[output_id]
+    local name = channel_data.config.name .. " #" .. output_id
+
     output_data.output = pipe_output({
+        name = name,
         upstream = channel_data.tail:stream(),
         command = output_data.config.command,
-        -- TODO: add sync/no_sync
     })
 end
 

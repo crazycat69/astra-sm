@@ -21,12 +21,26 @@
 
 static void module_init(module_data_t *mod)
 {
-    module_stream_init(mod, NULL);
+    mod->prefix = "pipe_input";
+
+    /* receive TS from child's stdout */
+    mod->config.sout.mode = CHILD_IO_MPEGTS;
+    mod->config.sout.on_flush = pipe_child_ts;
+
+    /* and text lines from its stderr */
+    mod->config.serr.mode = CHILD_IO_TEXT;
+    mod->config.serr.on_flush = pipe_child_text;
+
+    /* buffer incoming TS by default */
+    module_option_boolean("no_sync", &mod->enable_sync);
+    mod->enable_sync ^= true;
+
+    pipe_init(mod);
 }
 
 static void module_destroy(module_data_t *mod)
 {
-    module_stream_destroy(mod);
+    pipe_destroy(mod);
 }
 
 MODULE_STREAM_METHODS()

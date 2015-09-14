@@ -19,20 +19,25 @@
 
 #include "pipe.h"
 
-static void on_ts(module_data_t *mod, const uint8_t *ts)
-{
-    __uarg(mod);
-    __uarg(ts);
-}
-
 static void module_init(module_data_t *mod)
 {
-    module_stream_init(mod, on_ts);
+    mod->prefix = "pipe_output";
+
+    /* send TS to child's stdin */
+    mod->config.sin.mode = CHILD_IO_MPEGTS;
+
+    /* receive text from its stdout and stderr */
+    mod->config.serr.mode = CHILD_IO_TEXT;
+    mod->config.sout.mode = CHILD_IO_TEXT;
+    mod->config.serr.on_flush = pipe_child_text;
+    mod->config.sout.on_flush = pipe_child_text;
+
+    pipe_init(mod);
 }
 
 static void module_destroy(module_data_t *mod)
 {
-    module_stream_destroy(mod);
+    pipe_destroy(mod);
 }
 
 MODULE_STREAM_METHODS()

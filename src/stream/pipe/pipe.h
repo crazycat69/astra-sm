@@ -24,17 +24,40 @@
 #include <core/stream.h>
 #include <core/child.h>
 #include <core/timer.h>
+#include <mpegts/sync.h>
+
+#define MSG(_msg) "[%s] " _msg, mod->name
 
 struct module_data_t
 {
     MODULE_STREAM_DATA();
 
+    const char *prefix;
     char name[128];
-    asc_timer_t *restart;
     unsigned delay;
+    bool enable_sync;
+
+    mpegts_sync_t *sync;
+    asc_timer_t *sync_loop;
+
+    bool can_send;
+    size_t dropped;
 
     asc_child_cfg_t config;
     asc_child_t *child;
+
+    asc_timer_t *restart;
 };
+
+void pipe_init(module_data_t *mod);
+void pipe_destroy(module_data_t *mod);
+
+void pipe_upstream_ts(module_data_t *mod, const uint8_t *ts);
+void pipe_child_ts(void *arg, const uint8_t *ts, size_t len);
+void pipe_child_text(void *arg, const uint8_t *text, size_t len);
+
+void pipe_on_close(void *arg, int exit_code);
+void pipe_on_retry(void *arg);
+void pipe_on_ready(void *arg);
 
 #endif /* _PIPE_H_ */
