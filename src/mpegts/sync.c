@@ -78,7 +78,7 @@ struct mpegts_sync_t
     ts_callback_t on_write;
 #ifdef SYNC_DEBUG
     uint64_t last_report;
-#endif
+#endif /* SYNC_DEBUG */
 
     bool buffered;
 };
@@ -86,7 +86,6 @@ struct mpegts_sync_t
 /*
  * create and destroy
  */
-__asc_inline
 mpegts_sync_t *mpegts_sync_init(void)
 {
     mpegts_sync_t *const sx = (mpegts_sync_t *)calloc(1, sizeof(*sx));
@@ -105,7 +104,6 @@ mpegts_sync_t *mpegts_sync_init(void)
     return sx;
 }
 
-__asc_inline
 void mpegts_sync_destroy(mpegts_sync_t *sx)
 {
     free(sx->buf);
@@ -115,7 +113,7 @@ void mpegts_sync_destroy(mpegts_sync_t *sx)
 /*
  * setters and getters
  */
-void mpegts_sync_reset(mpegts_sync_t *sx, sync_reset_t type)
+void mpegts_sync_reset(mpegts_sync_t *sx, enum mpegts_sync_reset type)
 {
     switch (type) {
         case SYNC_RESET_ALL:
@@ -181,26 +179,16 @@ void mpegts_sync_set_on_write(mpegts_sync_t *sx, ts_callback_t on_write)
 }
 
 __asc_inline
-size_t mpegts_sync_space(mpegts_sync_t *sx)
+size_t mpegts_sync_get_max_size(const mpegts_sync_t *sx)
 {
-    ssize_t space = sx->pos.send - sx->pos.rcv - 1;
-
-    if (space < 0)
-    {
-        space += sx->size;
-        if (space < 0)
-            /* shouldn't happen */
-            return 0;
-    }
-
-    return space;
+    return sx->max_size;
 }
 
 /*
  * worker functions
  */
-static inline __func_pure
-unsigned int block_count(mpegts_sync_t *sx)
+static __func_pure
+unsigned int block_count(const mpegts_sync_t *sx)
 {
     unsigned int count = 1;
 
@@ -273,7 +261,7 @@ bool seek_pcr(mpegts_sync_t *sx)
 #ifdef SYNC_DEBUG
                 const int ms = delta / (PCR_TIME_BASE / 1000);
                 asc_log_debug(MSG("PCR decreased, assuming wrap around with delta %dms"), ms);
-#endif
+#endif /* SYNC_DEBUG */
             }
 
             if (delta <= 0)
@@ -307,7 +295,7 @@ bool seek_pcr(mpegts_sync_t *sx)
     return false;
 }
 
-static inline
+static
 unsigned int usecs_elapsed(mpegts_sync_t *sx, uint64_t time_now)
 {
     unsigned int elapsed;
@@ -334,6 +322,22 @@ unsigned int usecs_elapsed(mpegts_sync_t *sx, uint64_t time_now)
     return elapsed;
 }
 
+static __func_pure
+size_t buffer_space(const mpegts_sync_t *sx)
+{
+    ssize_t space = sx->pos.send - sx->pos.rcv - 1;
+
+    if (space < 0)
+    {
+        space += sx->size;
+        if (space < 0)
+            /* shouldn't happen */
+            return 0;
+    }
+
+    return space;
+}
+
 void mpegts_sync_loop(void *arg)
 {
     mpegts_sync_t *const sx = (mpegts_sync_t *)arg;
@@ -347,7 +351,7 @@ void mpegts_sync_loop(void *arg)
         return;
 
     /* data request hook */
-    if (sx->on_read && mpegts_sync_space(sx) > sx->size / 2)
+    if (sx->on_read && sx->num_blocks < ENOUGH_BUFFER_BLOCKS)
         sx->on_read(sx->arg);
 
     /* initial buffering */
@@ -371,7 +375,7 @@ void mpegts_sync_loop(void *arg)
                               , (sx->buffered ? ", starting output" : ""));
             }
         }
-        else if (!mpegts_sync_space(sx)
+        else if (!buffer_space(sx)
                  && !mpegts_sync_resize(sx, 0))
         {
             asc_log_error(MSG("PCR absent or invalid; resetting buffer"));
@@ -397,7 +401,7 @@ void mpegts_sync_loop(void *arg)
         sx->num_blocks = block_count(sx);
 
         /* shrink buffer on < 25% fill */
-        const size_t filled = sx->size - mpegts_sync_space(sx);
+        const size_t filled = sx->size - buffer_space(sx);
         const size_t thresh = sx->size / 4;
 
         if (filled < thresh && sx->size > MIN_BUFFER_SIZE)
@@ -415,7 +419,7 @@ void mpegts_sync_loop(void *arg)
 
             sx->last_report = time_now;
         }
-#endif
+#endif /* SYNC_DEBUG */
     }
 
     /* underflow correction */
@@ -477,7 +481,7 @@ void mpegts_sync_loop(void *arg)
 
 bool mpegts_sync_push(mpegts_sync_t *sx, const void *buf, size_t count)
 {
-    while (mpegts_sync_space(sx) < count)
+    while (buffer_space(sx) < count)
     {
         const bool expanded = mpegts_sync_resize(sx, 0);
 
@@ -592,9 +596,11 @@ bool mpegts_sync_resize(mpegts_sync_t *sx, size_t new_size)
     }
 
     /* clean up */
+#ifdef SYNC_DEBUG
     asc_log_debug(MSG("buffer %s to %zu slots (%zu bytes)")
                   , (new_size > sx->size ? "expanded" : "shrunk")
                   , new_size, new_size * TS_PACKET_SIZE);
+#endif /* SYNC_DEBUG */
 
     free(sx->buf);
 
