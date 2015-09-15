@@ -32,15 +32,15 @@ void asc_list_destroy(asc_list_t *list);
 
 void asc_list_first(asc_list_t *list);
 void asc_list_next(asc_list_t *list);
-bool asc_list_eol(asc_list_t *list) __wur;
-void *asc_list_data(asc_list_t *list) __wur;
-size_t asc_list_size(asc_list_t *list) __wur;
+bool asc_list_eol(const asc_list_t *list) __wur;
+void *asc_list_data(const asc_list_t *list) __wur;
+size_t asc_list_size(const asc_list_t *list) __wur;
 
 void asc_list_insert_head(asc_list_t *list, void *data);
 void asc_list_insert_tail(asc_list_t *list, void *data);
 
 void asc_list_remove_current(asc_list_t *list);
-void asc_list_remove_item(asc_list_t *list, void *data);
+void asc_list_remove_item(asc_list_t *list, const void *data);
 
 #define asc_list_for(__list) \
     for(asc_list_first(__list); !asc_list_eol(__list); asc_list_next(__list))

@@ -21,6 +21,8 @@
 #include <astra.h>
 #include <core/list.h>
 
+#define MSG(_msg) "[core/list] " _msg
+
 #define QMD_TRACE_ELEM(elem)
 #define QMD_TRACE_HEAD(head)
 #define TRACEBUF
@@ -184,31 +186,32 @@
             (head2)->tqh_last = &(head2)->tqh_first; \
     } while (0)
 
-typedef struct item_s
+typedef struct asc_item_s
 {
     void *data;
-    TAILQ_ENTRY(item_s) entries;
-} item_t;
+    TAILQ_ENTRY(asc_item_s) entries;
+} asc_item_t;
 
 struct asc_list_t
 {
     size_t size;
-    struct item_s *current;
-    TAILQ_HEAD(list_head_s, item_s) list;
+    struct asc_item_s *current;
+    TAILQ_HEAD(list_head_s, asc_item_s) list;
 };
 
 asc_list_t *asc_list_init(void)
 {
-    asc_list_t *list = (asc_list_t *)malloc(sizeof(asc_list_t));
+    asc_list_t *const list = (asc_list_t *)calloc(1, sizeof(*list));
+    asc_assert(list != NULL, MSG("calloc() failed"));
+
     TAILQ_INIT(&list->list);
-    list->size = 0;
-    list->current = NULL;
+
     return list;
 }
 
 void asc_list_destroy(asc_list_t *list)
 {
-    asc_assert(list->current == NULL, "[core/list] list is not empty");
+    asc_assert(list->current == NULL, MSG("list is not empty"));
     free(list);
 }
 
@@ -226,20 +229,20 @@ void asc_list_next(asc_list_t *list)
 }
 
 __asc_inline
-bool asc_list_eol(asc_list_t *list)
+bool asc_list_eol(const asc_list_t *list)
 {
     return (list->current == NULL);
 }
 
 __asc_inline
-void *asc_list_data(asc_list_t *list)
+void *asc_list_data(const asc_list_t *list)
 {
     asc_assert(list->current != NULL, "[core/list] failed to get data");
     return list->current->data;
 }
 
 __asc_inline
-size_t asc_list_size(asc_list_t *list)
+size_t asc_list_size(const asc_list_t *list)
 {
     return list->size;
 }
@@ -247,36 +250,38 @@ size_t asc_list_size(asc_list_t *list)
 void asc_list_insert_head(asc_list_t *list, void *data)
 {
     ++list->size;
-    item_t *item = (item_t *)malloc(sizeof(item_t));
+
+    asc_item_t *const item = (asc_item_t *)calloc(1, sizeof(*item));
+    asc_assert(item != NULL, MSG("calloc() failed"));
+
     item->data = data;
-    item->entries.tqe_next = NULL;
-    item->entries.tqe_prev = NULL;
     TAILQ_INSERT_HEAD(&list->list, item, entries);
 }
 
 void asc_list_insert_tail(asc_list_t *list, void *data)
 {
     ++list->size;
-    item_t *item = (item_t *)malloc(sizeof(item_t));
+
+    asc_item_t *const item = (asc_item_t *)calloc(1, sizeof(*item));
+    asc_assert(item != NULL, MSG("calloc() failed"));
+
     item->data = data;
-    item->entries.tqe_next = NULL;
-    item->entries.tqe_prev = NULL;
     TAILQ_INSERT_TAIL(&list->list, item, entries);
 }
 
 void asc_list_remove_current(asc_list_t *list)
 {
     --list->size;
-    asc_assert(list->current != NULL, "[core/list] failed to remove item");
-    item_t *next = TAILQ_NEXT(list->current, entries);
+    asc_assert(list->current != NULL, MSG("failed to remove item"));
+    asc_item_t *const next = TAILQ_NEXT(list->current, entries);
     TAILQ_REMOVE(&list->list, list->current, entries);
     free(list->current);
     list->current = next;
 }
 
-void asc_list_remove_item(asc_list_t *list, void *data)
+void asc_list_remove_item(asc_list_t *list, const void *data)
 {
-    for(asc_list_first(list); !asc_list_eol(list); asc_list_next(list))
+    asc_list_for(list)
     {
         if(data == asc_list_data(list))
         {
