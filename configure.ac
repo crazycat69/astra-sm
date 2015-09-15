@@ -243,7 +243,7 @@ AC_MSG_NOTICE([using ${event_mechanism} for event notification])
 # Checks for headers and functions common to all platforms
 #
 # optional headers
-AC_CHECK_HEADERS([netinet/sctp.h])
+AC_CHECK_HEADERS([netinet/sctp.h sys/queue.h])
 
 # optional functions
 #   pread(), strndup(), strnlen(): replaceables
@@ -726,7 +726,6 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wdouble-promotion], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wfloat-equal], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Winit-self], [WARN_CFLAGS])
-    AX_CHECK_CFLAG([-Winline], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wmissing-declarations], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wmissing-include-dirs], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wmissing-prototypes], [WARN_CFLAGS])
