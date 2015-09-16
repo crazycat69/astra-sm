@@ -27,6 +27,8 @@
 
 extern int astra_exit_status;
 
+void asc_srand(void);
+
 void astra_core_init(void);
 void astra_core_destroy(void);
 

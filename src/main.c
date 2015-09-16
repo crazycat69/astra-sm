@@ -24,29 +24,6 @@
 
 #include "sighandler.h"
 
-static void asc_srand(void)
-{
-    unsigned long a = clock();
-    unsigned long b = time(NULL);
-#ifndef _WIN32
-    unsigned long c = getpid();
-#else /* !_WIN32 */
-    unsigned long c = GetCurrentProcessId();
-#endif /* !_WIN32 */
-
-    a = a - b;  a = a - c;  a = a ^ (c >> 13);
-    b = b - c;  b = b - a;  b = b ^ (a << 8);
-    c = c - a;  c = c - b;  c = c ^ (b >> 13);
-    a = a - b;  a = a - c;  a = a ^ (c >> 12);
-    b = b - c;  b = b - a;  b = b ^ (a << 16);
-    c = c - a;  c = c - b;  c = c ^ (b >> 5);
-    a = a - b;  a = a - c;  a = a ^ (c >> 3);
-    b = b - c;  b = b - a;  b = b ^ (a << 10);
-    c = c - a;  c = c - b;  c = c ^ (b >> 15);
-
-    srand(c);
-}
-
 int main(int argc, const char **argv)
 {
 #ifdef _WIN32
