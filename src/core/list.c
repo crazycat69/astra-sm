@@ -36,7 +36,9 @@ asc_list_t *asc_list_init(void)
 
 void asc_list_destroy(asc_list_t *list)
 {
-    asc_assert(list->current == NULL, MSG("list is not empty"));
+    asc_assert(list->size == 0 && list->current == NULL
+               , MSG("list is not empty"));
+
     free(list);
 }
 
