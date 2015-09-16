@@ -732,7 +732,6 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wnested-externs], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wold-style-definition], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wpointer-arith], [WARN_CFLAGS])
-    AX_CHECK_CFLAG([-Wredundant-decls], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstack-protector], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstrict-aliasing], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstrict-prototypes], [WARN_CFLAGS])
@@ -749,6 +748,14 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wdisabled-optimization], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Winvalid-pch], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wshadow], [WARN_CFLAGS])
+
+    # OS-specific
+    case "$host_os" in
+        openbsd*)
+            ;;
+        *)
+            AX_CHECK_CFLAG([-Wredundant-decls], [WARN_CFLAGS])
+    esac
 
     # GCC-specific
     AX_CHECK_CFLAG([-Wjump-misses-init], [WARN_CFLAGS])
