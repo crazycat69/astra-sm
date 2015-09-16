@@ -186,7 +186,7 @@ int fork_and_exec(const char *command, pid_t *out_pid
         fcntl(STDERR_FILENO, F_SETFD, 0);
 
         /* reset signal handlers and masks */
-        for (size_t sig = 1; sig <= NSIG; sig++)
+        for (size_t sig = 1; sig < NSIG; sig++)
         {
             struct sigaction sa;
             if (sigaction(sig, NULL, &sa) == 0 && sa.sa_handler != SIG_DFL)
@@ -215,7 +215,7 @@ int fork_and_exec(const char *command, pid_t *out_pid
     return -1;
 }
 
-#endif /* _WIN32 */
+#endif /* !_WIN32 */
 
 /*
  * process helper functions
@@ -469,7 +469,7 @@ int asc_pipe_close(int fd)
     return close(fd);
 }
 
-#endif /* _WIN32 */
+#endif /* !_WIN32 */
 
 /*
  * public interface
@@ -486,9 +486,9 @@ int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
 #ifdef _WIN32
         unsigned long nonblock = 1;
         const int ret = ioctlsocket(fds[parent_side], FIONBIO, &nonblock);
-#else
+#else /* _WIN32 */
         const int ret = fcntl(fds[parent_side], F_SETFL, O_NONBLOCK);
-#endif /* _WIN32 */
+#endif /* !_WIN32 */
 
         if (ret != 0)
         {
@@ -538,10 +538,10 @@ int asc_process_spawn(const char *command, asc_process_t *proc
                           , ASC_TO_HANDLE(child_sin)
                           , ASC_TO_HANDLE(child_sout)
                           , ASC_TO_HANDLE(child_serr)) != 0)
-#else
+#else /* _WIN32 */
     if (fork_and_exec(command, proc
                       , child_sin, child_sout, child_serr) != 0)
-#endif
+#endif /* !_WIN32 */
     {
         closeall(pipes, 6);
         return -1;
