@@ -841,8 +841,31 @@ end
 -- Input: pipe://
 --
 
+function make_pipe(conf)
+    if not conf.name then
+        error("[make_pipe] option 'name' is required")
+    end
+
+    conf.name = "pipe " .. conf.name
+    conf.stream = true
+
+    return pipe_generic(conf)
+end
+
 init_input_module.pipe = function(conf)
-    return pipe_input(conf)
+    if conf.command then
+        local instance = _G[conf.command]
+        local module_name = tostring(instance)
+
+        if module_name == "pipe_generic" then
+            return instance
+        end
+    end
+
+    conf.name = "pipe_input " .. conf.name
+    conf.stream = true
+
+    return pipe_generic(conf)
 end
 
 kill_input_module.pipe = function(module)

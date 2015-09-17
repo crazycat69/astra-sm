@@ -30,7 +30,7 @@
 #ifdef _WIN32
 
 /* create job object with kill-on-close limit */
-static inline
+static
 HANDLE create_kill_job(void)
 {
     HANDLE jo = CreateJobObject(NULL, NULL);
@@ -139,7 +139,7 @@ extern char **environ;
 #endif /* !NSIG */
 
 /* async-signal-safe functions for child process */
-static inline __func_pure
+static __func_pure
 size_t strlen_s(const char *s)
 {
     size_t n = 0;
@@ -149,7 +149,7 @@ size_t strlen_s(const char *s)
     return n;
 }
 
-static inline
+static
 void perror_s(const char *s)
 {
     const char *msg = "Unknown error";
@@ -246,7 +246,7 @@ pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block)
 
 static BOOL CALLBACK enum_proc(HWND hwnd, LPARAM lparam)
 {
-    asc_process_t *const proc = (asc_process_t *)lparam;
+    const asc_process_t *const proc = (asc_process_t *)lparam;
 
     DWORD pid = 0;
     if (GetWindowThreadProcessId(hwnd, &pid) != 0)

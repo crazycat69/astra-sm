@@ -59,6 +59,7 @@ struct asc_child_t
     child_io_t sout;
     child_io_t serr;
 
+    event_callback_t on_ready;
     child_close_callback_t on_close;
     void *arg;
 };
@@ -159,7 +160,7 @@ void on_stdio_read(asc_child_t *child, child_io_t *io)
                     if (TS_IS_SYNC(ts))
                     {
                         io->pos_read += i;
-                        io->on_flush(child->arg, ts, TS_PACKET_SIZE);
+                        io->on_flush(child->arg, ts, 1);
                         break;
                     }
                 }
@@ -231,7 +232,23 @@ EVENT_CALLBACK(serr, read)
 /*
  * writing to child
  */
-/* TODO */
+ssize_t asc_child_send(asc_child_t *child, const void *buf, size_t len)
+{
+    __uarg(child);
+    __uarg(buf);
+
+    /* TODO */
+    return len;
+}
+
+static
+void on_sin_write(void *arg)
+{
+    asc_child_t *const child = (asc_child_t *)arg;
+
+    if (child->on_ready != NULL)
+        child->on_ready(child->arg);
+}
 
 /*
  * create and destroy
@@ -262,7 +279,8 @@ asc_child_t *asc_child_init(const asc_child_cfg_t *cfg)
     CHILD_IO_SETUP(sout);
     CHILD_IO_SETUP(serr);
 
-    child->on_close = cfg->on_close;
+    asc_child_set_on_close(child, cfg->on_close);
+    asc_child_set_on_ready(child, cfg->on_ready);
     child->arg = cfg->arg;
 
     return child;
@@ -406,17 +424,20 @@ void asc_child_destroy(asc_child_t *child)
 /*
  * setters and getters
  */
-__asc_inline
 void asc_child_set_on_close(asc_child_t *child
                             , child_close_callback_t on_close)
 {
     child->on_close = on_close;
 }
 
-__asc_inline
 void asc_child_set_on_ready(asc_child_t *child, event_callback_t on_ready)
 {
-    asc_event_set_on_write(child->sin.ev, on_ready);
+    event_callback_t cb = NULL;
+    if (on_ready != NULL)
+        cb = on_sin_write;
+
+    asc_event_set_on_write(child->sin.ev, cb);
+    child->on_ready = on_ready;
 }
 
 void asc_child_toggle_input(asc_child_t *child, int fd, bool enable)
@@ -435,7 +456,6 @@ void asc_child_toggle_input(asc_child_t *child, int fd, bool enable)
     asc_event_set_on_read(io->ev, (enable ? io->on_read : NULL));
 }
 
-__asc_inline
 pid_t asc_child_pid(const asc_child_t *child)
 {
     return asc_process_id(&child->proc);

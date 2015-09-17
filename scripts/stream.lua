@@ -574,12 +574,11 @@ end
 
 init_output_module.pipe = function(channel_data, output_id)
     local output_data = channel_data.output[output_id]
-    local name = channel_data.config.name .. " #" .. output_id
-
-    output_data.output = pipe_output({
-        name = name,
+    output_data.output = pipe_generic({
         upstream = channel_data.tail:stream(),
+        name = "pipe_output " .. channel_data.config.name .. " #" .. output_id,
         command = output_data.config.command,
+        restart = output_data.config.restart,
     })
 end
 

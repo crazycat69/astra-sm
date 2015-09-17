@@ -67,7 +67,7 @@ typedef pid_t asc_process_t;
 #define asc_process_kill(__proc, __forced) \
     kill(*(__proc), (__forced ? SIGKILL : SIGTERM))
 
-#endif /* _WIN32 */
+#endif /* !_WIN32 */
 
 int asc_process_spawn(const char *command, asc_process_t *proc
                       , int *parent_sin, int *parent_sout, int *parent_serr);

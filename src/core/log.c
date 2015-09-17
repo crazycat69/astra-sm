@@ -90,7 +90,7 @@ static void _log(int type, const char *msg, va_list ap)
 {
     char buffer[4096];
 
-    size_t len_1 = 0; // to skip time stamp
+    size_t len_1 = 0; /* to skip time stamp */
     time_t ct = time(NULL);
     struct tm *sct = localtime(&ct);
     len_1 = strftime(buffer, sizeof(buffer), "%b %d %X: ", sct);
