@@ -21,7 +21,8 @@
 #include <astra.h>
 #include <core/error.h>
 
-static __thread char msg_buf[1024];
+/* FIXME: use platform-specific TLS routines */
+static /*__thread*/ char msg_buf[1024];
 
 char *asc_strerror(int errnum, char *buf, size_t buflen)
 {
