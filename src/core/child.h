@@ -25,11 +25,12 @@
 #endif /* !_ASTRA_H_ */
 
 #include <core/event.h>
+#include <core/socket.h>
 
 typedef struct asc_child_t asc_child_t;
 
 typedef void (*child_close_callback_t)(void *, int);
-typedef void (*child_io_callback_t)(void *, const uint8_t *, size_t);
+typedef void (*child_io_callback_t)(void *, const void *, size_t);
 
 typedef enum
 {
@@ -61,11 +62,11 @@ typedef struct
     /* NOTE: same argument is used in I/O callbacks */
 } asc_child_cfg_t;
 
-asc_child_t *asc_child_init(const asc_child_cfg_t *cfg);
+asc_child_t *asc_child_init(const asc_child_cfg_t *cfg) __wur;
 void asc_child_close(asc_child_t *child);
 void asc_child_destroy(asc_child_t *child);
 
-ssize_t asc_child_send(asc_child_t *child, const void *buf, size_t len);
+ssize_t asc_child_send(asc_child_t *child, const void *buf, size_t len) __wur;
 
 void asc_child_set_on_close(asc_child_t *child
                             , child_close_callback_t on_close);
@@ -73,6 +74,6 @@ void asc_child_set_on_ready(asc_child_t *child
                             , event_callback_t on_ready);
 void asc_child_toggle_input(asc_child_t *child
                             , int child_fd, bool enable);
-pid_t asc_child_pid(const asc_child_t *child) __func_pure;
+pid_t asc_child_pid(const asc_child_t *child) __func_pure __wur;
 
 #endif /* _ASC_CHILD_H_ */

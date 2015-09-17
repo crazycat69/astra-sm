@@ -20,8 +20,6 @@
 #include <astra.h>
 #include <core/child.h>
 #include <core/spawn.h>
-#include <core/event.h>
-#include <core/socket.h>
 #include <core/timer.h>
 
 #define MSG(_msg) "[child/%s] " _msg, child->name
@@ -209,7 +207,7 @@ void on_stdio_read(asc_child_t *child, child_io_t *io)
             return;
     }
 
-    if (io->pos_read > 0) // TODO: add (space == 0) check
+    if (io->pos_read > 0)
     {
         /* move remaining fragment to beginning of the buffer */
         const size_t frag = io->pos_write - io->pos_read;
@@ -234,11 +232,17 @@ EVENT_CALLBACK(serr, read)
  */
 ssize_t asc_child_send(asc_child_t *child, const void *buf, size_t len)
 {
-    __uarg(child);
-    __uarg(buf);
+    child_io_t *const io = &child->sin;
 
-    /* TODO */
-    return len;
+    if (io->mode == CHILD_IO_MPEGTS)
+    {
+        // FIXME: add write buffering
+        return send(io->fd, (char *)buf, len * TS_PACKET_SIZE, 0);
+    }
+    else if (io->mode == CHILD_IO_RAW)
+        return send(io->fd, (char *)buf, len, 0);
+    else
+        return 0;
 }
 
 static

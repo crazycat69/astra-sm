@@ -141,9 +141,10 @@ void on_sync_read(void *arg)
 }
 
 static
-void on_child_ts_sync(void *arg, const uint8_t *ts, size_t packets)
+void on_child_ts_sync(void *arg, const void *buf, size_t packets)
 {
     module_data_t *const mod = (module_data_t *)arg;
+    const uint8_t *const ts = (uint8_t *)buf;
 
     if (!mpegts_sync_push(mod->sync, ts, packets))
     {
@@ -165,20 +166,23 @@ void on_child_ts_sync(void *arg, const uint8_t *ts, size_t packets)
 }
 
 static
-void on_child_ts(void *arg, const uint8_t *ts, size_t packets)
+void on_child_ts(void *arg, const void *buf, size_t packets)
 {
     module_data_t *const mod = (module_data_t *)arg;
+    const uint8_t *const ts = (uint8_t *)buf;
 
     for (size_t i = 0; i < packets; i++)
         module_stream_send(mod, &ts[i * TS_PACKET_SIZE]);
 }
 
 static
-void on_child_text(void *arg, const uint8_t *text, size_t len)
+void on_child_text(void *arg, const void *buf, size_t len)
 {
     __uarg(len);
 
     module_data_t *const mod = (module_data_t *)arg;
+    const char *const text = (char *)buf;
+
     asc_log_warning(MSG("%s"), text);
 }
 
@@ -213,12 +217,22 @@ void on_upstream_ts(module_data_t *mod, const uint8_t *ts)
         return;
     }
 
-    // TODO: asc_child_send()
-    // on failure:
-    //     can_send = false;
-    //     set_on_ready(on_child_ready);
+    const ssize_t ret = asc_child_send(mod->child, ts, 1);
+    if (ret == -1)
+    {
+        mod->can_send = false;
 
-    __uarg(ts);
+        if (asc_socket_would_block())
+        {
+            asc_child_set_on_ready(mod->child, on_child_ready);
+        }
+        else
+        {
+            asc_log_error(MSG("send(): %s"), asc_error_msg());
+            asc_child_close(mod->child);
+        }
+    }
+    // TODO: test me!
 }
 
 /*
