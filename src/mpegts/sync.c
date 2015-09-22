@@ -217,8 +217,8 @@ bool seek_pcr(mpegts_sync_t *sx)
     while (sx->pos.pcr != sx->pos.rcv)
     {
         const size_t lookahead = sx->pos.pcr;
-        const uint8_t *ts = sx->buf[lookahead];
-        const bool is_pcr = TS_IS_PCR(ts);
+        const uint8_t *const ts = sx->buf[lookahead];
+        const unsigned int pid = TS_GET_PID(ts);
 
         const size_t bytes = sx->offset;
         sx->offset += TS_PACKET_SIZE;
@@ -227,69 +227,72 @@ bool seek_pcr(mpegts_sync_t *sx)
             /* buffer wrap around */
             sx->pos.pcr = 0;
 
-        if (!sx->pcr_pid && is_pcr)
+        if (!TS_IS_PCR(ts))
+            continue;
+
+        if (!sx->pcr_pid && pid != NULL_TS_PID)
         {
             /* latch onto first PCR pid we see */
-            sx->pcr_pid = TS_GET_PID(ts);
+            sx->pcr_pid = pid;
             asc_log_debug(MSG("selected PCR pid %u"), sx->pcr_pid);
         }
 
-        if (is_pcr && TS_GET_PID(ts) == sx->pcr_pid)
+        if (pid != sx->pcr_pid)
+            continue;
+
+        /* check PCR validity */
+        sx->pcr_last = sx->pcr_cur;
+        sx->pcr_cur = TS_GET_PCR(ts);
+        sx->offset = 0;
+
+        if (sx->pcr_last == XTS_NONE)
         {
-            /* check PCR validity */
-            sx->pcr_last = sx->pcr_cur;
-            sx->pcr_cur = TS_GET_PCR(ts);
-            sx->offset = 0;
-
-            if (sx->pcr_last == XTS_NONE)
+            /* beginning of the first block; start output from here */
+            sx->pos.send = lookahead;
+            if (bytes > 0)
             {
-                /* beginning of the first block; start output from here */
-                sx->pos.send = lookahead;
-                if (bytes > 0)
-                {
-                    asc_log_debug(MSG("first PCR packet at %zu bytes; "
-                                      "dropping everything before it"), bytes);
-                }
-                continue;
+                asc_log_debug(MSG("first PCR packet at %zu bytes; "
+                                  "dropping everything before it"), bytes);
             }
-
-            int64_t delta = sx->pcr_cur - sx->pcr_last;
-            if (delta < 0)
-            {
-                /* clock reset or wrap around */
-                delta += PCR_MAX + 1;
-#ifdef SYNC_DEBUG
-                const int ms = delta / (PCR_TIME_BASE / 1000);
-                asc_log_debug(MSG("PCR decreased, assuming wrap around with delta %dms"), ms);
-#endif /* SYNC_DEBUG */
-            }
-
-            if (delta <= 0)
-            {
-                /* shouldn't happen */
-                asc_log_error(MSG("PCR did not increase!"));
-                continue;
-            }
-            else if (delta >= MAX_PCR_DELTA)
-            {
-                const unsigned int ms = delta / (PCR_TIME_BASE / 1000);
-                asc_log_error(MSG("PCR jumped forward by %ums, skipping block"), ms);
-
-                /* in case this happens during initial buffering */
-                sx->pos.send = lookahead;
-                sx->num_blocks = 0;
-
-                continue;
-            }
-
-            /* calculate momentary bitrate */
-            const double inv_usecs = (double)PCR_TIME_BASE / delta;
-            sx->bitrate = (bytes + TS_PACKET_SIZE) * inv_usecs;
-            /* NOTE: inv_usecs = (1000 / PCR_INTERVAL) */
-
-            if (sx->bitrate > 0)
-                return true;
+            continue;
         }
+
+        int64_t delta = sx->pcr_cur - sx->pcr_last;
+        if (delta < 0)
+        {
+            /* clock reset or wrap around */
+            delta += PCR_MAX + 1;
+#ifdef SYNC_DEBUG
+            const int ms = delta / (PCR_TIME_BASE / 1000);
+            asc_log_debug(MSG("PCR decreased, assuming wrap around with delta %dms"), ms);
+#endif /* SYNC_DEBUG */
+        }
+
+        if (delta <= 0)
+        {
+            /* shouldn't happen */
+            asc_log_error(MSG("PCR did not increase!"));
+            continue;
+        }
+        else if (delta >= MAX_PCR_DELTA)
+        {
+            const unsigned int ms = delta / (PCR_TIME_BASE / 1000);
+            asc_log_error(MSG("PCR jumped forward by %ums, skipping block"), ms);
+
+            /* in case this happens during initial buffering */
+            sx->pos.send = lookahead;
+            sx->num_blocks = 0;
+
+            continue;
+        }
+
+        /* calculate momentary bitrate */
+        const double inv_usecs = (double)PCR_TIME_BASE / delta;
+        sx->bitrate = (bytes + TS_PACKET_SIZE) * inv_usecs;
+        /* NOTE: inv_usecs = (1000 / PCR_INTERVAL) */
+
+        if (sx->bitrate > 0)
+            return true;
     }
 
     return false;
