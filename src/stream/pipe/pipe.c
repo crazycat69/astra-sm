@@ -23,11 +23,15 @@
  *
  * Module Options:
  *      upstream    - object, stream module instance
- *      name        - string, instance identifier
+ *      name        - string, instance identifier for logging
  *      command     - string, command line
  *      restart     - number, seconds before auto restart (0 to disable)
  *      stream      - boolean, read TS data from child
  *      sync        - boolean, buffer incoming TS
+ *
+ * Module Methods:
+ *      pid         - return process' pid (-1 if not running)
+ *      send(text)  - send string to child's standard input
  */
 
 #include <astra.h>
@@ -236,6 +240,43 @@ void on_upstream_ts(module_data_t *mod, const uint8_t *ts)
 }
 
 /*
+ * lua methods
+ */
+
+static
+int method_pid(module_data_t *mod)
+{
+    if (mod->child != NULL)
+        lua_pushinteger(lua, asc_child_pid(mod->child));
+    else
+        lua_pushinteger(lua, -1);
+
+    return 1;
+}
+
+static
+int method_send(module_data_t *mod)
+{
+    const char *str = luaL_checkstring(lua, 1);
+
+    if (mod->child == NULL)
+        luaL_error(lua, MSG("process is not running"));
+
+    if (mod->config.sin.mode == CHILD_IO_MPEGTS)
+        luaL_error(lua, MSG("can't send text while in TS mode"));
+
+    const size_t len = strlen(str);
+    if (len > 0)
+    {
+        const ssize_t ret = asc_child_send(mod->child, str, len);
+        if (ret == -1)
+            luaL_error(lua, MSG("send(): %s"), asc_error_msg());
+    }
+
+    return 1;
+}
+
+/*
  * module init/deinit
  */
 
@@ -343,10 +384,7 @@ MODULE_STREAM_METHODS()
 MODULE_LUA_METHODS()
 {
     MODULE_STREAM_METHODS_REF(),
-    /*
-     * TODO
-     * { "send", method_send },
-     * { "close", method_close },
-     */
+    { "pid", method_pid },
+    { "send", method_send },
 };
 MODULE_LUA_REGISTER(pipe_generic)
