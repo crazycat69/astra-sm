@@ -146,7 +146,8 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 static void module_init(module_data_t *mod)
 {
     module_option_string("addr", &mod->addr, NULL);
-    asc_assert(mod->addr != NULL, "[udp_output] option 'addr' is required");
+    if(mod->addr == NULL)
+        luaL_error(lua, "[udp_output] option 'addr' is required");
 
     mod->port = 1234;
     module_option_number("port", &mod->port);
@@ -170,7 +171,7 @@ static void module_init(module_data_t *mod)
     mod->sock = asc_socket_open_udp4(mod);
     asc_socket_set_reuseaddr(mod->sock, 1);
     if(!asc_socket_bind(mod->sock, NULL, 0))
-        astra_abort();
+        luaL_error(lua, MSG("couldn't bind socket"));
 
     int value;
     if(module_option_number("socket_size", &value))

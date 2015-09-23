@@ -147,7 +147,8 @@ static void module_init(module_data_t *mod)
     module_stream_init(mod, NULL);
 
     module_option_string("addr", &mod->config.addr, NULL);
-    asc_assert(mod->config.addr != NULL, "[udp_input] option 'addr' is required");
+    if(mod->config.addr == NULL)
+        luaL_error(lua, "[udp_input] option 'addr' is required");
 
     module_option_number("port", &mod->config.port);
 
