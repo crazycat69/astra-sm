@@ -148,13 +148,11 @@ void mpegts_sync_set_fname(mpegts_sync_t *sx, const char *format, ...)
     va_end(ap);
 }
 
-__asc_inline
 void mpegts_sync_set_arg(mpegts_sync_t *sx, void *arg)
 {
     sx->arg = arg;
 }
 
-__asc_inline
 void mpegts_sync_set_max_size(mpegts_sync_t *sx, size_t max_size)
 {
     if (sx->size > max_size)
@@ -166,19 +164,16 @@ void mpegts_sync_set_max_size(mpegts_sync_t *sx, size_t max_size)
     sx->max_size = max_size;
 }
 
-__asc_inline
 void mpegts_sync_set_on_read(mpegts_sync_t *sx, sync_callback_t on_read)
 {
     sx->on_read = on_read;
 }
 
-__asc_inline
 void mpegts_sync_set_on_write(mpegts_sync_t *sx, ts_callback_t on_write)
 {
     sx->on_write = on_write;
 }
 
-__asc_inline
 size_t mpegts_sync_get_max_size(const mpegts_sync_t *sx)
 {
     return sx->max_size;
