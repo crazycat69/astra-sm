@@ -50,6 +50,7 @@ struct module_data_t
 
     mpegts_sync_t *sync;
     asc_timer_t *sync_loop;
+    size_t sync_ration_size;
     ssize_t sync_feed;
 
     bool can_send;
@@ -128,12 +129,6 @@ void on_child_close(void *arg, int exit_code)
  * reading from pipe
  */
 
-static inline
-size_t get_feed_size(const module_data_t *mod)
-{
-    return mpegts_sync_get_max_size(mod->sync) / 2;
-}
-
 static
 void on_sync_read(void *arg)
 {
@@ -141,7 +136,7 @@ void on_sync_read(void *arg)
 
     mpegts_sync_set_on_read(mod->sync, NULL);
     asc_child_toggle_input(mod->child, STDOUT_FILENO, true);
-    mod->sync_feed = get_feed_size(mod);
+    mod->sync_feed = mod->sync_ration_size;
 }
 
 static
@@ -354,9 +349,10 @@ void module_init(module_data_t *mod)
         mpegts_sync_set_arg(mod->sync, &mod->__stream);
         mpegts_sync_set_fname(mod->sync, "sync/%s", mod->config.name);
 
-        mod->sync_loop = asc_timer_init(1, mpegts_sync_loop, mod->sync);
-        mod->sync_feed = get_feed_size(mod);
+        mod->sync_ration_size = mpegts_sync_get_max_size(mod->sync) / 2;
+        mod->sync_feed = mod->sync_ration_size;
 
+        mod->sync_loop = asc_timer_init(1, mpegts_sync_loop, mod->sync);
         mod->config.sout.on_flush = on_child_ts_sync;
     }
 
