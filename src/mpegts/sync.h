@@ -62,7 +62,7 @@ bool mpegts_sync_set_max_size(mpegts_sync_t *sx, unsigned int mbytes);
 bool mpegts_sync_set_blocks(mpegts_sync_t *sx, unsigned int enough
                             , unsigned int low);
 
-size_t mpegts_sync_get_max_size(const mpegts_sync_t *sx) __wur;
+size_t mpegts_sync_get_max_size(const mpegts_sync_t *sx) __wur __func_pure;
 
 void mpegts_sync_loop(void *arg);
 bool mpegts_sync_push(mpegts_sync_t *sx, const void *buf, size_t count) __wur;

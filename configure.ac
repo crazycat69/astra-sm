@@ -704,6 +704,8 @@ AS_IF([test "x${kill_optflags}" = "xyes"], [
     AX_CHECK_CFLAG([-O0])
 ], [
     AX_CHECK_CFLAG([-fomit-frame-pointer])
+    AX_CHECK_CFLAG([-funsafe-loop-optimizations])
+    AX_CHECK_CFLAG([-ffast-math])
 ])
 
 # Lots of warnings
