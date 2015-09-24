@@ -81,7 +81,7 @@ static void on_ready(void *arg)
     asc_socket_set_on_ready(mod->sock, NULL);
 }
 
-static void on_input(module_data_t *mod, const uint8_t *ts)
+static void on_sync_ts(module_data_t *mod, const uint8_t *ts)
 {
     const bool ret = mpegts_sync_push(mod->sync, ts, 1);
 
@@ -92,7 +92,7 @@ static void on_input(module_data_t *mod, const uint8_t *ts)
     }
 }
 
-static void on_ts(module_data_t *mod, const uint8_t *ts)
+static void on_output_ts(module_data_t *mod, const uint8_t *ts)
 {
     if(!mod->can_send)
     {
@@ -192,9 +192,11 @@ static void module_init(module_data_t *mod)
     mod->can_send = false;
     asc_socket_set_on_ready(mod->sock, on_ready);
 
-    value = 0;
-    module_option_number("sync", &value);
-    if(value > 0)
+    stream_callback_t on_ts = on_output_ts;
+    bool sync_on = false;
+    module_option_boolean("sync", &sync_on);
+
+    if(sync_on)
     {
         mod->sync = mpegts_sync_init();
 
@@ -203,13 +205,16 @@ static void module_init(module_data_t *mod)
         mpegts_sync_set_fname(mod->sync, "udp/sync %s:%d"
                               , mod->addr, mod->port);
 
+        const char *optstr = NULL;
+        module_option_string("sync_opts", &optstr, NULL);
+        if (optstr != NULL && !mpegts_sync_parse_opts(mod->sync, optstr))
+            luaL_error(lua, MSG("invalid value for option 'sync_opts'"));
+
         mod->sync_loop = asc_timer_init(1, mpegts_sync_loop, mod->sync);
-        module_stream_init(mod, on_input);
+        on_ts = on_sync_ts;
     }
-    else
-    {
-        module_stream_init(mod, on_ts);
-    }
+
+    module_stream_init(mod, on_ts);
 }
 
 static void module_destroy(module_data_t *mod)

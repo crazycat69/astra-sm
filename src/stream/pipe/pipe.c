@@ -363,6 +363,11 @@ void module_init(module_data_t *mod)
         mpegts_sync_set_arg(mod->sync, &mod->__stream);
         mpegts_sync_set_fname(mod->sync, "sync/%s", mod->config.name);
 
+        const char *optstr = NULL;
+        module_option_string("sync_opts", &optstr, NULL);
+        if (optstr != NULL && !mpegts_sync_parse_opts(mod->sync, optstr))
+            luaL_error(lua, MSG("invalid value for option 'sync_opts'"));
+
         mod->sync_ration_size = mpegts_sync_get_max_size(mod->sync) / 2;
         mod->sync_feed = mod->sync_ration_size;
 
