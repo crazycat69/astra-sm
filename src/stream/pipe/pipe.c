@@ -66,6 +66,8 @@ struct module_data_t
  * process launch and termination
  */
 
+static void on_sync_read(void *arg);
+
 static
 void on_child_restart(void *arg)
 {
@@ -76,6 +78,15 @@ void on_child_restart(void *arg)
         asc_log_debug(MSG("attempting restart..."));
         mod->restart = NULL;
     }
+
+    if (mod->sync != NULL && mod->sync_feed <= 0)
+    {
+        /* don't read from pipe until sync requests data */
+        mod->config.sout.ignore_read = true;
+        mpegts_sync_set_on_read(mod->sync, on_sync_read);
+    }
+    else
+        mod->config.sout.ignore_read = false;
 
     mod->child = asc_child_init(&mod->config);
     if (mod->child == NULL)
@@ -120,6 +131,9 @@ void on_child_close(void *arg, int exit_code)
         asc_log_info(MSG("process exited successfully; %s"), buf);
     else
         asc_log_error(MSG("process exited with code %d; %s"), exit_code, buf);
+
+    if (mod->sync != NULL)
+        mpegts_sync_set_on_read(mod->sync, NULL);
 
     mod->can_send = false;
     mod->child = NULL;
