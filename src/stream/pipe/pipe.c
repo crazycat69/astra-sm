@@ -267,6 +267,7 @@ static
 int method_send(module_data_t *mod)
 {
     const char *str = luaL_checkstring(lua, 1);
+    const int len = luaL_len(lua, 1);
 
     if (mod->child == NULL)
         luaL_error(lua, MSG("process is not running"));
@@ -274,7 +275,6 @@ int method_send(module_data_t *mod)
     if (mod->config.sin.mode == CHILD_IO_MPEGTS)
         luaL_error(lua, MSG("can't send text while in TS mode"));
 
-    const size_t len = strlen(str);
     if (len > 0)
     {
         const ssize_t ret = asc_child_send(mod->child, str, len);
