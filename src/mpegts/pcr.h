@@ -22,6 +22,10 @@
 #ifndef _TS_PCR_
 #define _TS_PCR_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 /* PCR frequency, Hz */
 #define PCR_TIME_BASE 27000000LL
 

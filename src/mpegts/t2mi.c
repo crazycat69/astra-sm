@@ -19,6 +19,8 @@
  */
 
 #include <astra.h>
+#include <mpegts/t2mi.h>
+#include <mpegts/psi.h>
 
 #define MSG(_msg) "[t2mi/%s] " _msg, mi->name
 

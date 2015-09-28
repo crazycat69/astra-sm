@@ -19,6 +19,8 @@
  */
 
 #include <astra.h>
+#include <core/stream.h>
+
 #include "../http.h"
 
 #define DEFAULT_BUFFER_SIZE (1024 * 1024)
@@ -78,8 +80,8 @@ static void on_upstream_ready(void *arg)
         }
         else if(send_size == -1)
         {
-            http_client_error(  client, "failed to send ts (%zu bytes) [%s]"
-                              , block_size, asc_socket_error());
+            http_client_error(client, "failed to send ts (%zu bytes): %s"
+                              , block_size, asc_error_msg());
             http_client_close(client);
             return;
         }
@@ -310,5 +312,4 @@ MODULE_LUA_METHODS()
 {
     { NULL, NULL }
 };
-
 MODULE_LUA_REGISTER(http_upstream)

@@ -22,6 +22,10 @@
 #ifndef _ASC_LOOPCTL_H_
 #define _ASC_LOOPCTL_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 enum
 {
     MAIN_LOOP_NO_SLEEP = 0x00000001,

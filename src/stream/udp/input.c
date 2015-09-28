@@ -35,6 +35,9 @@
  */
 
 #include <astra.h>
+#include <core/stream.h>
+#include <core/socket.h>
+#include <core/timer.h>
 
 #define UDP_BUFFER_SIZE 1460
 #define RTP_HEADER_SIZE 12
@@ -67,7 +70,7 @@ struct module_data_t
 
 static void on_close(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     if(mod->sock)
     {
@@ -85,19 +88,23 @@ static void on_close(void *arg)
 
 static void on_read(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
-    ssize_t len = asc_socket_recv(mod->sock, mod->buffer, UDP_BUFFER_SIZE);
-    if(len <= 0)
+    /* TODO: read until it fails with EAGAIN */
+    const ssize_t ret = asc_socket_recv(mod->sock, mod->buffer, UDP_BUFFER_SIZE);
+    if(ret <= 0)
     {
-        if(len == 0 || asc_socket_would_block())
+        if(ret == 0 || asc_socket_would_block())
             return;
 
+        asc_log_error(MSG("recv(): %s"), asc_error_msg());
         on_close(mod);
+
         return;
     }
 
-    ssize_t i = 0;
+    const size_t len = ret;
+    size_t i = 0;
 
     if(mod->config.rtp)
     {
@@ -106,30 +113,32 @@ static void on_read(void *arg)
         {
             if(len < RTP_HEADER_SIZE + 4)
                 return;
+
             i += RTP_EXT_SIZE(mod->buffer);
         }
     }
 
-    for(; i <= len - TS_PACKET_SIZE; i += TS_PACKET_SIZE)
+    for(; i + TS_PACKET_SIZE <= len; i += TS_PACKET_SIZE)
         module_stream_send(mod, &mod->buffer[i]);
 
     if(i != len && !mod->is_error_message)
     {
-        asc_log_error(MSG("wrong stream format. drop %zd bytes"), len - i);
+        asc_log_error(MSG("wrong stream format. drop %zu bytes"), len - i);
         mod->is_error_message = true;
     }
 }
 
 static void timer_renew_callback(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
     asc_socket_multicast_renew(mod->sock);
 }
 
 static int method_port(module_data_t *mod)
 {
     const int port = asc_socket_port(mod->sock);
-    lua_pushnumber(lua, port);
+    lua_pushinteger(lua, port);
+
     return 1;
 }
 
@@ -138,7 +147,8 @@ static void module_init(module_data_t *mod)
     module_stream_init(mod, NULL);
 
     module_option_string("addr", &mod->config.addr, NULL);
-    asc_assert(mod->config.addr != NULL, "[udp_input] option 'addr' is required");
+    if(mod->config.addr == NULL)
+        luaL_error(lua, "[udp_input] option 'addr' is required");
 
     module_option_number("port", &mod->config.port);
 
@@ -170,12 +180,10 @@ static void module_init(module_data_t *mod)
 static void module_destroy(module_data_t *mod)
 {
     module_stream_destroy(mod);
-
     on_close(mod);
 }
 
 MODULE_STREAM_METHODS()
-
 MODULE_LUA_METHODS()
 {
     MODULE_STREAM_METHODS_REF(),

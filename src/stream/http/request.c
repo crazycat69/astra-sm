@@ -38,6 +38,12 @@
  *      upstream    - object, stream instance returned by module_instance:stream()
  */
 
+#include <astra.h>
+#include <core/stream.h>
+#include <core/timer.h>
+#include <core/thread.h>
+#include <mpegts/pcr.h>
+
 #include "http.h"
 
 #define MSG(_msg)                                       \
@@ -164,7 +170,7 @@ static void callback(module_data_t *mod)
 static void call_error(module_data_t *mod, const char *msg)
 {
     lua_newtable(lua);
-    lua_pushnumber(lua, 0);
+    lua_pushinteger(lua, 0);
     lua_setfield(lua, -2, __code);
     lua_pushstring(lua, msg);
     lua_setfield(lua, -2, __message);
@@ -758,7 +764,7 @@ static void on_read(void *arg)
         lua_setfield(lua, response, __version);
 
         mod->status_code = atoi(&mod->buffer[m[2].so]);
-        lua_pushnumber(lua, mod->status_code);
+        lua_pushinteger(lua, mod->status_code);
         lua_setfield(lua, response, __code);
 
         lua_pushlstring(lua, &mod->buffer[m[3].so], m[3].eo - m[3].so);
@@ -1040,7 +1046,7 @@ static void on_ready_send_content(void *arg)
                                               , cap);
     if(send_size == -1)
     {
-        asc_log_error(MSG("failed to send content [%s]"), asc_socket_error());
+        asc_log_error(MSG("failed to send content: %s"), asc_error_msg());
         on_close(mod);
         return;
     }
@@ -1073,7 +1079,7 @@ static void on_ready_send_request(void *arg)
                                               , cap);
     if(send_size == -1)
     {
-        asc_log_error(MSG("failed to send response [%s]"), asc_socket_error());
+        asc_log_error(MSG("failed to send response: %s"), asc_error_msg());
         on_close(mod);
         return;
     }
@@ -1211,8 +1217,8 @@ static void on_upstream_ready(void *arg)
         }
         else if(send_size == -1)
         {
-            asc_log_error(  MSG("failed to send ts (%zu bytes) [%s]")
-                          , block_size, asc_socket_error());
+            asc_log_error(MSG("failed to send ts (%zu bytes): %s")
+                          , block_size, asc_error_msg());
             on_close(mod);
             return;
         }

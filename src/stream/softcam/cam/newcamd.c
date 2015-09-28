@@ -19,6 +19,8 @@
  */
 
 #include "../module_cam.h"
+#include <core/socket.h>
+#include <core/timer.h>
 
 #include <openssl/des.h>
 

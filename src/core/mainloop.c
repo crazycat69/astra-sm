@@ -20,6 +20,10 @@
  */
 
 #include <astra.h>
+#include <core/mainloop.h>
+#include <core/event.h>
+#include <core/thread.h>
+#include <core/timer.h>
 
 #define MSG(_msg) "[mainloop] " _msg
 

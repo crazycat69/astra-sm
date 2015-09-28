@@ -21,6 +21,10 @@
 #ifndef _ASC_COMPAT_H_
 #define _ASC_COMPAT_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 /*
  * replacement defines
  */
@@ -81,6 +85,14 @@
 #   ifndef S_IWOTH
 #       define S_IWOTH 0
 #   endif /* !S_IWOTH */
+
+    /* cast int to HANDLE */
+#   define ASC_TO_HANDLE(__x) ((HANDLE)((intptr_t)(__x)))
+    /*
+     * NOTE: casting SOCKET to int to HANDLE is far from best practice,
+     *       however it seems to work on existing WinAPI implementations;
+     *       some future Windows version might break this.
+     */
 #endif /* _WIN32 */
 
 /* not defined on some systems */
@@ -109,12 +121,20 @@ size_t strnlen(const char *str, size_t max) __func_pure;
  */
 
 int cx_open(const char *path, int flags, ...);
+int cx_socket(int family, int type, int protocol);
 
 #ifndef ASC_COMPAT_NOWRAP
+    /* open() */
 #   ifdef open
 #       undef open
 #   endif
 #   define open(...) cx_open(__VA_ARGS__)
+
+    /* socket() */
+#   ifdef socket
+#       undef socket
+#   endif
+#   define socket(...) cx_socket(__VA_ARGS__)
 #endif /* !ASC_COMPAT_NOWRAP */
 
 #endif /* _ASC_COMPAT_H_ */

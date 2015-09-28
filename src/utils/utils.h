@@ -21,10 +21,14 @@
 #ifndef _ASTRA_UTILS_H_
 #define _ASTRA_UTILS_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 /* utils */
 
-char * hex_to_str(char *str, const uint8_t *hex, int len);
-uint8_t * str_to_hex(const char *str, uint8_t *hex, int len);
+char *hex_to_str(char *str, const uint8_t *hex, int len);
+uint8_t *str_to_hex(const char *str, uint8_t *hex, int len);
 
 /* crc8.c */
 

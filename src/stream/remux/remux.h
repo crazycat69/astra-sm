@@ -21,6 +21,10 @@
 #define _REMUX_H_ 1
 
 #include <astra.h>
+#include <core/stream.h>
+#include <mpegts/pcr.h>
+#include <mpegts/pes.h>
+#include <mpegts/psi.h>
 
 #define MSG(_msg) "[remux %s] " _msg, mod->name
 #define MSGF(_msg) "[remux] %s(): " _msg, __func__

@@ -19,6 +19,9 @@
  */
 
 #include <astra.h>
+#include <core/thread.h>
+#include <core/mainloop.h>
+#include <core/list.h>
 
 #ifndef _WIN32
 #   include <pthread.h>
@@ -138,7 +141,7 @@ void asc_thread_core_loop(void)
     }
 }
 
-asc_thread_t * asc_thread_init(void *arg)
+asc_thread_t *asc_thread_init(void *arg)
 {
     asc_thread_t *thread = (asc_thread_t *)calloc(1, sizeof(asc_thread_t));
 
@@ -222,7 +225,7 @@ void asc_thread_destroy(asc_thread_t *thread)
     free(thread);
 }
 
-asc_thread_buffer_t * asc_thread_buffer_init(size_t size)
+asc_thread_buffer_t *asc_thread_buffer_init(size_t size)
 {
     asc_thread_buffer_t *buffer = (asc_thread_buffer_t *)calloc(1, sizeof(asc_thread_buffer_t));
     buffer->size = size;

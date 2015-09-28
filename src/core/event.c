@@ -19,6 +19,9 @@
  */
 
 #include <astra.h>
+#include <core/event.h>
+#include <core/mainloop.h>
+#include <core/list.h>
 
 #ifndef EV_LIST_SIZE
 #   define EV_LIST_SIZE 1024
@@ -26,10 +29,18 @@
 
 #if defined(WITH_POLL)
 #   define EV_TYPE_POLL
+#   ifdef HAVE_POLL_H
+#       include <poll.h>
+#   endif
+#   if !defined(HAVE_POLL) && defined(HAVE_WSAPOLL)
+#       define poll(_a, _b, _c) WSAPoll(_a, _b, _c)
+#   endif
 #   define MSG(_msg) "[core/event poll] " _msg
-#   include <poll.h>
 #elif defined(WITH_SELECT)
 #   define EV_TYPE_SELECT
+#   ifdef HAVE_SYS_SELECT_H
+#       include <sys/select.h>
+#   endif
 #   define MSG(_msg) "[core/event select] " _msg
 #elif defined(WITH_KQUEUE)
 #   define EV_TYPE_KQUEUE
@@ -40,11 +51,10 @@
 #   define EV_TYPE_EPOLL
 #   include <sys/epoll.h>
 #   define EV_OTYPE struct epoll_event
-#   ifdef EPOLLRDHUP
-#       define EPOLLCLOSE (EPOLLERR | EPOLLRDHUP)
-#   else
-#       define EPOLLCLOSE (EPOLLERR | EPOLLHUP)
+#   ifndef EPOLLRDHUP
+#       define EPOLLRDHUP 0
 #   endif
+#   define EPOLLCLOSE (EPOLLERR | EPOLLHUP | EPOLLRDHUP)
 #   define MSG(_msg) "[core/event epoll] " _msg
 #else
 #   error "Event notification interface not set"
@@ -262,12 +272,15 @@ static void asc_event_subscribe(asc_event_t *event)
     ret = epoll_ctl(event_observer.fd, EPOLL_CTL_MOD, event->fd, &ed);
 #endif
 
-    asc_assert(ret != -1, MSG("failed to set fd=%d [%s]"), event->fd, strerror(errno));
+    asc_assert(ret != -1, MSG("failed to set fd=%d [%s]")
+               , event->fd, strerror(errno));
 }
 
-asc_event_t * asc_event_init(int fd, void *arg)
+asc_event_t *asc_event_init(int fd, void *arg)
 {
-    asc_event_t *event = (asc_event_t *)calloc(1, sizeof(asc_event_t));
+    asc_event_t *event = (asc_event_t *)calloc(1, sizeof(*event));
+    asc_assert(event != NULL, MSG("calloc() failed"));
+
     event->fd = fd;
     event->arg = arg;
 
@@ -275,8 +288,12 @@ asc_event_t * asc_event_init(int fd, void *arg)
     EV_OTYPE ed;
     ed.data.ptr = event;
     ed.events = EPOLLCLOSE;
-    const int ret = epoll_ctl(event_observer.fd, EPOLL_CTL_ADD, event->fd, &ed);
-    asc_assert(ret != -1, MSG("failed to attach fd=%d [%s]"), event->fd, strerror(errno));
+
+    const int ret = epoll_ctl(event_observer.fd
+                              , EPOLL_CTL_ADD, event->fd, &ed);
+
+    asc_assert(ret != -1, MSG("failed to attach fd=%d [%s]")
+               , event->fd, strerror(errno));
 #endif
 
     asc_list_insert_tail(event_observer.event_list, event);
@@ -365,11 +382,16 @@ void asc_event_core_loop(void)
     if(!event_observer.fd_count)
         return;
 
-    int ret = poll(event_observer.fd_list, event_observer.fd_count, 10);
+    int ret = poll(event_observer.fd_list, event_observer.fd_count, 0);
     if(ret == -1)
     {
-        asc_assert(errno == EINTR, MSG("event observer critical error [%s]"), strerror(errno));
-        return;
+#ifndef _WIN32
+        if (errno == EINTR)
+            return;
+#endif /* !_WIN32 */
+
+        asc_log_error(MSG("poll() failed: %s"), asc_error_msg());
+        astra_abort();
     }
 
     event_observer.is_changed = false;
@@ -380,7 +402,7 @@ void asc_event_core_loop(void)
             continue;
 
         --ret;
-        asc_event_t *event = event_observer.event_list[i];
+        asc_event_t *const event = event_observer.event_list[i];
         if(event->on_read && (revents & POLLIN))
         {
             asc_main_loop_busy();
@@ -413,7 +435,8 @@ static void asc_event_subscribe(asc_event_t *event)
         if(event_observer.event_list[i]->fd == event->fd)
             break;
     }
-    asc_assert(i < event_observer.fd_count, MSG("filed to set fd=%d"), event->fd);
+    asc_assert(i < event_observer.fd_count
+               , MSG("failed to set fd=%d"), event->fd);
 
     event_observer.fd_list[i].events = 0;
     if(event->on_read)
@@ -422,13 +445,15 @@ static void asc_event_subscribe(asc_event_t *event)
         event_observer.fd_list[i].events |= POLLOUT;
 }
 
-asc_event_t * asc_event_init(int fd, void *arg)
+asc_event_t *asc_event_init(int fd, void *arg)
 {
     const int i = event_observer.fd_count;
     memset(&event_observer.fd_list[i], 0, sizeof(struct pollfd));
     event_observer.fd_list[i].fd = fd;
 
-    asc_event_t *event = (asc_event_t *)calloc(1, sizeof(asc_event_t));
+    asc_event_t *const event = (asc_event_t *)calloc(1, sizeof(*event));
+    asc_assert(event != NULL, MSG("calloc() failed"));
+
     event_observer.event_list[i] = event;
     event->fd = fd;
     event->arg = arg;
@@ -450,7 +475,8 @@ void asc_event_close(asc_event_t *event)
         if(event_observer.event_list[i]->fd == event->fd)
             break;
     }
-    asc_assert(i < event_observer.fd_count, MSG("filed to detach fd=%d"), event->fd);
+    asc_assert(i < event_observer.fd_count
+               , MSG("failed to detach fd=%d"), event->fd);
 
     for(; i < event_observer.fd_count; ++i)
     {
@@ -537,13 +563,13 @@ void asc_event_core_loop(void)
 
     if(ret == -1)
     {
-#ifdef _WIN32
-        int err = WSAGetLastError();
-        asc_assert(false, MSG("event observer critical error [WSALastErr: %d]"), err);
-#else
-        asc_assert(errno == EINTR, MSG("event observer critical error [%s]"), strerror(errno));
-#endif
-        return;
+#ifndef _WIN32
+        if (errno == EINTR)
+            return;
+#endif /* !_WIN32 */
+
+        asc_log_error(MSG("select() failed: %s"), asc_error_msg());
+        astra_abort();
     }
     else if(ret > 0)
     {
@@ -594,9 +620,11 @@ static void asc_event_subscribe(asc_event_t *event)
         FD_CLR(event->fd, &event_observer.emaster);
 }
 
-asc_event_t * asc_event_init(int fd, void *arg)
+asc_event_t *asc_event_init(int fd, void *arg)
 {
-    asc_event_t *event = (asc_event_t *)calloc(1, sizeof(asc_event_t));
+    asc_event_t *event = (asc_event_t *)calloc(1, sizeof(*event));
+    asc_assert(event != NULL, MSG("calloc() failed"));
+
     event->fd = fd;
     event->arg = arg;
 

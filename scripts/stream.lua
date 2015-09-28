@@ -292,6 +292,7 @@ init_output_module.udp = function(channel_data, output_id)
         socket_size = output_data.config.socket_size,
         rtp = (output_data.config.format == "rtp"),
         sync = output_data.config.sync,
+        sync_opts = output_data.config.sync_opts,
     })
 end
 
@@ -566,6 +567,25 @@ kill_output_module.np = function(channel_data, output_id)
         output_data.request:close()
         output_data.request = nil
     end
+end
+
+--
+-- Output: pipe://
+--
+
+init_output_module.pipe = function(channel_data, output_id)
+    local output_data = channel_data.output[output_id]
+    output_data.output = pipe_generic({
+        upstream = channel_data.tail:stream(),
+        name = "pipe_output " .. channel_data.config.name .. " #" .. output_id,
+        command = output_data.config.command,
+        restart = output_data.config.restart,
+    })
+end
+
+kill_output_module.pipe = function(channel_data, output_id)
+    local output_data = channel_data.output[output_id]
+    output_data.output = nil
 end
 
 --   oooooooo8 ooooo ooooo      o      oooo   oooo oooo   oooo ooooooooooo ooooo

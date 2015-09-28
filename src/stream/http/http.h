@@ -3,6 +3,10 @@
 #define _HTTP_H_ 1
 
 #include <astra.h>
+#include <core/event.h>
+#include <core/socket.h>
+#include <core/strbuffer.h>
+
 #include "parser.h"
 
 #define HTTP_BUFFER_SIZE (16 * 1024)

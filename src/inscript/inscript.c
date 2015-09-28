@@ -123,7 +123,7 @@ static int fn_inscript_callback(lua_State *L)
 
     lua_getglobal(lua, "astra_parse_options");
     luaL_checktype(lua, -1, LUA_TFUNCTION);
-    lua_pushnumber(lua, argv_idx);
+    lua_pushinteger(lua, argv_idx);
     lua_call(lua, 1, 0);
 
     lua_getglobal(lua, "main");

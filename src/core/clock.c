@@ -20,14 +20,20 @@
  */
 
 #include <astra.h>
+#include <core/clock.h>
 
 __asc_inline
 uint64_t asc_utime(void)
 {
 #ifdef _WIN32
-    uint64_t systime;
-    GetSystemTimeAsFileTime((LPFILETIME)&systime);
-    return systime / 10;
+    FILETIME systime;
+    GetSystemTimeAsFileTime(&systime);
+
+    ULARGE_INTEGER large;
+    large.LowPart = systime.dwLowDateTime;
+    large.HighPart = systime.dwHighDateTime;
+
+    return large.QuadPart / 10;
 #elif defined(HAVE_CLOCK_GETTIME)
     struct timespec ts;
 

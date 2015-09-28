@@ -29,6 +29,25 @@
  * system headers
  */
 #ifdef _WIN32
+    /* reduce header size */
+#   define WIN32_LEAN_AND_MEAN
+
+    /* enable C99-compliant printf (e.g. %zu) */
+#   ifdef __GNUC__
+#       if (__GNUC__ > 4) || (__GNUC__ == 4 && __GNUC_MINOR__ > 3)
+#           define __printf__ __gnu_printf__
+#       endif /* __GNUC__ >= 4.3 */
+#   endif /* __GNUC__ */
+#   define __USE_MINGW_ANSI_STDIO 1
+
+    /* maximum set size for select() */
+#   define FD_SETSIZE 1024
+
+    /* target XP by default */
+#   ifndef _WIN32_WINNT
+#       define _WIN32_WINNT 0x0501
+#   endif /* !_WIN32_WINNT */
+
 #   include <winsock2.h>
 #   include <windows.h>
 #endif /* _WIN32 */
@@ -48,14 +67,6 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
-
-#ifndef __cplusplus
-#   include <lua.h>
-#   include <lualib.h>
-#   include <lauxlib.h>
-#else
-#   include <lua.hpp>
-#endif /* !__cplusplus */
 
 /*
  * common macros
@@ -115,8 +126,6 @@ extern "C" {
 #include "core/core.h"
 #include "mpegts/mpegts.h"
 #include "utils/utils.h"
-
-#include "bindings.h"
 
 #ifdef __cplusplus
 }

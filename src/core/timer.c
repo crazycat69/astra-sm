@@ -19,6 +19,9 @@
  */
 
 #include <astra.h>
+#include <core/timer.h>
+#include <core/mainloop.h>
+#include <core/list.h>
 
 struct asc_timer_t
 {

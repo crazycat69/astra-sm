@@ -437,7 +437,7 @@ char *iso8859_decode(const uint8_t *data, size_t size)
 
 static int lua_iso8859_encode(lua_State *L)
 {
-    const int part = luaL_checknumber(L, 1);
+    const int part = luaL_checkinteger(L, 1);
     const uint8_t *data = (const uint8_t *)luaL_checkstring(L, 2);
     const size_t data_size = luaL_len(L, 2);
 

@@ -19,6 +19,8 @@
  */
 
 #include "dvb.h"
+#include <core/list.h>
+#include <mpegts/psi.h>
 
 #include <netinet/in.h>
 
@@ -1699,7 +1701,7 @@ void ca_remove_pnr(dvb_ca_t *ca, uint16_t pnr)
     }
 
     pthread_mutex_lock(&ca->ca_mutex);
-    asc_list_insert_tail(ca->ca_pmt_list_del, ((void*)(intptr_t)(pnr)));
+    asc_list_insert_tail(ca->ca_pmt_list_del, (void*)((intptr_t)(pnr)));
     pthread_mutex_unlock(&ca->ca_mutex);
 }
 
@@ -1835,7 +1837,6 @@ void ca_close(dvb_ca_t *ca)
             ; !asc_list_eol(ca->ca_pmt_list_del)
             ; asc_list_first(ca->ca_pmt_list_del))
         {
-            free(asc_list_data(ca->ca_pmt_list_del));
             asc_list_remove_current(ca->ca_pmt_list_del);
         }
 

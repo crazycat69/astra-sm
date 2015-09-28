@@ -18,6 +18,7 @@
  */
 
 #include <astra.h>
+#include <mpegts/t2mi.h>
 
 #define MSG(_msg) "[main] " _msg
 

@@ -19,6 +19,8 @@
  */
 
 #include "unit_tests.h"
+#include <core/mainloop.h>
+#include <core/timer.h>
 
 /*
  * test fixture

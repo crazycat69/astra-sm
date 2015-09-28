@@ -20,8 +20,10 @@ endif
 
 # core/
 libastra_la_SOURCES += \
+    core/child.c \
     core/clock.c \
     core/compat.c \
+    core/error.c \
     core/event.c \
     core/init.c \
     core/list.c \
@@ -29,6 +31,7 @@ libastra_la_SOURCES += \
     core/mainloop.c \
     core/luapi.c \
     core/socket.c \
+    core/spawn.c \
     core/strbuffer.c \
     core/stream.c \
     core/thread.c \
@@ -133,6 +136,12 @@ libstream_la_SOURCES += \
     stream/http/request.c \
     stream/http/server.c \
     stream/http/utils.c
+endif
+
+### pipe ###
+if HAVE_STREAM_PIPE
+libstream_la_SOURCES += \
+    stream/pipe/pipe.c
 endif
 
 ### remux ###

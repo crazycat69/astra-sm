@@ -19,6 +19,9 @@
  */
 
 #include <astra.h>
+#include <core/stream.h>
+#include <mpegts/psi.h>
+
 #include <dvbcsa/dvbcsa.h>
 
 struct module_data_t

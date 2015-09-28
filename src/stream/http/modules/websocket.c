@@ -19,6 +19,9 @@
  */
 
 #include <astra.h>
+#include <core/list.h>
+#include <utils/utils.h>
+
 #include "../http.h"
 
 /* WebSocket Frame */
@@ -73,7 +76,7 @@ static void on_websocket_ready(void *arg)
                                    , frame->size - frame->skip);
     if(size <= 0)
     {
-        http_client_error(client, "failed to send data [%s]", asc_socket_error());
+        http_client_error(client, "failed to send data: %s", asc_error_msg());
         http_client_close(client);
         return;
     }

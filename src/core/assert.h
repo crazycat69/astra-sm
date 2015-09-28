@@ -21,6 +21,13 @@
 #ifndef _ASC_ASSERT_H_
 #define _ASC_ASSERT_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
+#include <core/init.h>
+#include <core/log.h>
+
 #define __asc_assert(_cond, _file, _line, ...) \
     ( \
         asc_log_error("%s:%u: failed assertion `%s'", _file, _line, _cond) \

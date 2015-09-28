@@ -4,14 +4,6 @@
 AC_DEFUN([AX_HELP_SECTION], [m4_divert_once([HELP_ENABLE], [
 $1])])
 
-AC_DEFUN([AX_CHECK_HEADERS_REQ], [
-    AC_CHECK_HEADERS([$1], [], [ AC_MSG_ERROR([missing required header file]) ])
-])
-
-AC_DEFUN([AX_CHECK_FUNCS_REQ], [
-    AC_CHECK_FUNCS([$1], [], [ AC_MSG_ERROR([missing required library function]) ])
-])
-
 AC_DEFUN([AX_SAVE_FLAGS], [
     SAVED_CFLAGS="$CFLAGS"
     SAVED_LIBS="$LIBS"
@@ -20,31 +12,6 @@ AC_DEFUN([AX_SAVE_FLAGS], [
 AC_DEFUN([AX_RESTORE_FLAGS], [
     CFLAGS="$SAVED_CFLAGS"
     LIBS="$SAVED_LIBS"
-])
-
-AC_DEFUN([AX_CHECK_WINFUNC], [
-    AX_SAVE_FLAGS
-    AC_MSG_CHECKING([for $1])
-    AC_LINK_IFELSE([
-        AC_LANG_PROGRAM([[
-            #include <windows.h>
-            #include <winsock2.h>
-            #include <ws2tcpip.h>
-        ]], [[
-            struct in_addr in;
-            struct sockaddr sa;
-            struct addrinfo ai;
-            struct addrinfo *pai = &ai;
-            socklen_t sl;
-            $2;
-        ]])
-    ], [
-        AC_MSG_RESULT([yes])
-    ], [
-        AC_MSG_RESULT([no])
-        AC_MSG_ERROR([missing required library function])
-    ])
-    AX_RESTORE_FLAGS
 ])
 
 AC_DEFUN([AX_EXTLIB_VARS], [

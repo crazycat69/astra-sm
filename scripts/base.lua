@@ -293,6 +293,11 @@ parse_url_format.file = function(url, data)
     return true
 end
 
+parse_url_format.pipe = function(url, data)
+    data.command = url
+    return true
+end
+
 function parse_url(url)
     if not url then return nil end
 
@@ -830,6 +835,41 @@ kill_input_module.dvb = function(module, conf)
             dvb_input_instance_list[instance_id] = nil
         end
     end
+end
+
+--
+-- Input: pipe://
+--
+
+function make_pipe(conf)
+    if not conf.name then
+        error("[make_pipe] option 'name' is required")
+    end
+
+    conf.name = "pipe " .. conf.name
+    conf.stream = true
+
+    return pipe_generic(conf)
+end
+
+init_input_module.pipe = function(conf)
+    if conf.command then
+        local instance = _G[conf.command]
+        local module_name = tostring(instance)
+
+        if module_name == "pipe_generic" then
+            return instance
+        end
+    end
+
+    conf.name = "pipe_input " .. conf.name
+    conf.stream = true
+
+    return pipe_generic(conf)
+end
+
+kill_input_module.pipe = function(module)
+    --
 end
 
 -- ooooo         oooooooooo  ooooooooooo ooooo         ooooooo      o      ooooooooo

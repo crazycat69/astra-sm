@@ -125,32 +125,34 @@ AC_SYS_LARGEFILE
 case "${host_os}" in
     mingw*)
         SYS=win32
-        AX_CHECK_HEADERS_REQ([windows.h winsock2.h ws2tcpip.h])
 
-        AC_DEFINE([WIN32_LEAN_AND_MEAN],
-            [], [Define to limit the scope of <windows.h>.])
-        AC_DEFINE([__USE_MINGW_ANSI_STDIO],
-            [1], [Define to use C99-compatible printf() with MinGW])
-        AC_DEFINE([__printf__],
-            [__gnu_printf__], [Don't use MS-style printf() format checks])
         AC_DEFINE([_WIN32_WINNT],
             [0x0501], [Require at least Windows XP])
+        # TODO: add option to set winver
+        #    WSAPoll() needs at least 0x0600
+
+        # TODO: add -lwinmm for timeBeginPeriod
 
         # check winsock
-        AC_CHECK_LIB(ws2_32, main,
+        AC_CHECK_LIB([ws2_32], [main],
             [], AC_MSG_ERROR([cannot link with ws2_32.dll]) )
 
-        # sanity checks, just in case
-        AX_CHECK_WINFUNC(WSAGetLastError, [ WSAGetLastError() ])
-        AX_CHECK_WINFUNC(WSACleanup, [ WSACleanup() ])
+        AC_CHECK_DECL([WSAStartup], [], [
+            AC_MSG_ERROR([missing required library function])
+        ], [[
+            #include <winsock2.h>
+        ]])
     ;;
 
     *)
         SYS=posix
-        AX_CHECK_HEADERS_REQ([syslog.h sys/socket.h arpa/inet.h netinet/in.h netinet/tcp.h netdb.h ifaddrs.h fcntl.h sys/ioctl.h])
-        AX_CHECK_FUNCS_REQ([getpid signal syslog closelog mkstemp link fchmod access unlink gethostname getnameinfo inet_ntoa socket setsockopt bind listen accept getaddrinfo freeaddrinfo connect recv recvfrom send sendto getsockname htons shutdown fcntl ioctl localtime_r])
 
-        # pthread
+        AC_CHECK_DECLS([environ])
+        AC_CHECK_MEMBERS([struct sockaddr_in.sin_len], [], [], [[
+            #include <sys/types.h>
+            #include <netinet/in.h>
+        ]])
+
         AX_PTHREAD([
             LIBS="$PTHREAD_LIBS $LIBS"
             CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
@@ -207,11 +209,17 @@ AS_IF([test "x${event_mechanism}" = "x"], [
 # poll
 AS_IF([test "x${event_mechanism}" = "x"], [
     poll_failed="no"
-    AC_CHECK_HEADER([poll.h], [
-        AC_CHECK_FUNCS([poll], [],
-            [ poll_failed="yes" ])
-    ], [
-        poll_failed="yes"
+    AC_CHECK_HEADERS([poll.h])
+    AC_CHECK_FUNCS([poll], [], [
+        # Windows Vista introduced its own poll() version
+        AC_CHECK_DECL([WSAPoll], [
+            AC_DEFINE([HAVE_WSAPOLL],
+                [1], [Define to 1 if you have the `WSAPoll' function.])
+        ], [
+            poll_failed="yes"
+        ], [[
+            #include <winsock2.h>
+        ]])
     ])
     AS_IF([test "x${poll_failed}" = "xno"], [
         event_mechanism="poll"
@@ -222,7 +230,8 @@ AS_IF([test "x${event_mechanism}" = "x"], [
 
 # select
 AS_IF([test "x${event_mechanism}" = "x"], [
-    # no need to check, it's present on every system
+    # no need to check the function, it's present on every system
+    AC_CHECK_HEADERS([sys/select.h])
     event_mechanism="select"
     AC_DEFINE([WITH_SELECT],
         [1], [Define to use select() for event notification])
@@ -233,19 +242,16 @@ AC_MSG_NOTICE([using ${event_mechanism} for event notification])
 #
 # Checks for headers and functions common to all platforms
 #
-AX_CHECK_HEADERS_REQ([dirent.h inttypes.h stdarg.h stddef.h stdint.h stdbool.h stdio.h stdlib.h sys/types.h sys/stat.h sys/time.h time.h string.h unistd.h errno.h])
-AX_CHECK_FUNCS_REQ([clock lseek localtime malloc realloc memchr memset memcpy srand strcasecmp strchr strdup strerror strftime strncasecmp strpbrk strrchr strspn strstr strtoul time snprintf vsnprintf memmove gettimeofday])
-
 # optional headers
-AC_CHECK_HEADERS([netinet/sctp.h])
+AC_CHECK_HEADERS([netinet/sctp.h sys/queue.h])
 
 # optional functions
 #   pread(), strndup(), strnlen(): replaceables
 #   posix_memalign(): used by stream/file
 #   accept4(): used by core/socket
-#   pipe2(): used for spawning child processes
 #   mkostemp(): used for creating pidfiles
-AC_CHECK_FUNCS([pread strndup strnlen posix_memalign accept4 pipe2 mkostemp])
+AC_CHECK_FUNCS([pread strndup strnlen posix_memalign accept4 mkostemp])
+# TODO: check for pthread_mutex_timedlock
 
 # getifaddrs(): used by utils.c
 AC_CHECK_FUNCS([getifaddrs],
@@ -624,6 +630,9 @@ AX_STREAM_MODULE(file, [file I/O module])
 # http
 AX_STREAM_MODULE(http, [HTTP server and client])
 
+# pipe
+AX_STREAM_MODULE(pipe, [external process module])
+
 # remux
 AX_STREAM_MODULE(remux, [remultiplexer module])
 
@@ -695,6 +704,8 @@ AS_IF([test "x${kill_optflags}" = "xyes"], [
     AX_CHECK_CFLAG([-O0])
 ], [
     AX_CHECK_CFLAG([-fomit-frame-pointer])
+    AX_CHECK_CFLAG([-funsafe-loop-optimizations])
+    AX_CHECK_CFLAG([-ffast-math])
 ])
 
 # Lots of warnings
@@ -717,14 +728,12 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wdouble-promotion], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wfloat-equal], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Winit-self], [WARN_CFLAGS])
-    AX_CHECK_CFLAG([-Winline], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wmissing-declarations], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wmissing-include-dirs], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wmissing-prototypes], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wnested-externs], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wold-style-definition], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wpointer-arith], [WARN_CFLAGS])
-    AX_CHECK_CFLAG([-Wredundant-decls], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstack-protector], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstrict-aliasing], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstrict-prototypes], [WARN_CFLAGS])
@@ -741,6 +750,14 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wdisabled-optimization], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Winvalid-pch], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wshadow], [WARN_CFLAGS])
+
+    # OS-specific
+    case "$host_os" in
+        openbsd*)
+            ;;
+        *)
+            AX_CHECK_CFLAG([-Wredundant-decls], [WARN_CFLAGS])
+    esac
 
     # GCC-specific
     AX_CHECK_CFLAG([-Wjump-misses-init], [WARN_CFLAGS])

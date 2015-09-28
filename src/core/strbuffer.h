@@ -22,9 +22,15 @@
 #ifndef _ASC_STRBUFFER_H_
 #define _ASC_STRBUFFER_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
+#include <core/luapi.h>
+
 typedef struct string_buffer_t string_buffer_t;
 
-string_buffer_t * string_buffer_alloc(void) __wur;
+string_buffer_t *string_buffer_alloc(void) __wur;
 void string_buffer_free(string_buffer_t *buffer);
 
 void string_buffer_addchar(string_buffer_t *buffer, char c);
@@ -34,7 +40,7 @@ void strung_buffer_addvastring(string_buffer_t *buffer, const char *str, va_list
 void string_buffer_addfstring(string_buffer_t *buffer, const char *str, ...)
     __fmt_printf(2, 3);
 
-char * string_buffer_release(string_buffer_t *buffer, size_t *size) __wur;
+char *string_buffer_release(string_buffer_t *buffer, size_t *size) __wur;
 void string_buffer_push(lua_State *L, string_buffer_t *buffer);
 
 #endif /* _ASC_STRBUFFER_H_ */

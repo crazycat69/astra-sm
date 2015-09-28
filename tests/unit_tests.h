@@ -28,6 +28,7 @@ extern enum fork_status can_fork;
 
 /* core */
 Suite *core_clock(void);
+Suite *core_list(void);
 Suite *core_mainloop(void);
 Suite *core_timer(void);
 
@@ -37,6 +38,7 @@ typedef Suite (*(*const suite_func_t)(void));
 static suite_func_t suite_list[] = {
     /* core */
     core_clock,
+    core_list,
     core_mainloop,
     core_timer,
 

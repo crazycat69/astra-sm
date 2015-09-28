@@ -1,6 +1,7 @@
 # binaries
 /src/astra
 /lua/luac
+/tests/spammer
 /tests/t2mi_decap
 /tests/unit_tests
 /tools/mkscript

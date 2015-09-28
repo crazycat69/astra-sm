@@ -19,6 +19,10 @@
  */
 
 #include "dvb.h"
+#include <core/event.h>
+#include <core/thread.h>
+#include <core/timer.h>
+#include <mpegts/t2mi.h>
 
 #define MSG(_msg) "[dvb_input %d:%d] " _msg, mod->adapter, mod->device
 
@@ -1022,15 +1026,15 @@ static void on_status_timer(void *arg)
 
     lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_callback);
     lua_newtable(lua);
-    lua_pushnumber(lua, mod->fe->status);
+    lua_pushinteger(lua, mod->fe->status);
     lua_setfield(lua, -2, "status");
-    lua_pushnumber(lua, mod->fe->signal);
+    lua_pushinteger(lua, mod->fe->signal);
     lua_setfield(lua, -2, "signal");
-    lua_pushnumber(lua, mod->fe->snr);
+    lua_pushinteger(lua, mod->fe->snr);
     lua_setfield(lua, -2, "snr");
-    lua_pushnumber(lua, mod->fe->ber);
+    lua_pushinteger(lua, mod->fe->ber);
     lua_setfield(lua, -2, "ber");
-    lua_pushnumber(lua, mod->fe->unc);
+    lua_pushinteger(lua, mod->fe->unc);
     lua_setfield(lua, -2, "unc");
     lua_call(lua, 1, 0);
 }

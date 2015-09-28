@@ -21,7 +21,13 @@
 #ifndef _ASC_INIT_H_
 #define _ASC_INIT_H_ 1
 
+#ifndef _ASTRA_H_
+#   error "Please include <astra.h> first"
+#endif /* !_ASTRA_H_ */
+
 extern int astra_exit_status;
+
+void asc_srand(void);
 
 void astra_core_init(void);
 void astra_core_destroy(void);

@@ -30,6 +30,10 @@
  */
 
 #include <astra.h>
+#include <core/stream.h>
+#include <core/thread.h>
+#include <core/timer.h>
+#include <mpegts/pcr.h>
 
 #define MSG(_msg) "[file_input %s] " _msg, mod->filename
 

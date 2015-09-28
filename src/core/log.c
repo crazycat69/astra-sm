@@ -19,6 +19,7 @@
  */
 
 #include <astra.h>
+#include <core/log.h>
 
 #ifndef _WIN32
 #   include <syslog.h>
@@ -72,7 +73,7 @@ static int _get_type_syslog(int type)
 }
 #endif /* !_WIN32 */
 
-static const char * _get_type_str(int type)
+static const char *_get_type_str(int type)
 {
     switch(type & 0x000000FF)
     {
@@ -89,7 +90,7 @@ static void _log(int type, const char *msg, va_list ap)
 {
     char buffer[4096];
 
-    size_t len_1 = 0; // to skip time stamp
+    size_t len_1 = 0; /* to skip time stamp */
     time_t ct = time(NULL);
     struct tm *sct = localtime(&ct);
     len_1 = strftime(buffer, sizeof(buffer), "%b %d %X: ", sct);

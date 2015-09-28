@@ -20,6 +20,7 @@
  */
 
 #include <astra.h>
+#include <mpegts/types.h>
 
 const uint8_t null_ts[TS_PACKET_SIZE] = {
     /*

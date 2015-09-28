@@ -45,6 +45,10 @@
  *                  - return table, client data
  */
 
+#include <astra.h>
+#include <core/stream.h>
+#include <core/timer.h>
+
 #include "http.h"
 
 #define MSG(_msg) "[http_server %s:%d] " _msg, mod->addr, mod->port
@@ -267,7 +271,7 @@ static void on_client_read(void *arg)
 
         lua_pushstring(lua, asc_socket_addr(client->sock));
         lua_setfield(lua, request, "addr");
-        lua_pushnumber(lua, asc_socket_port(client->sock));
+        lua_pushinteger(lua, asc_socket_port(client->sock));
         lua_setfield(lua, request, "port");
 
         lua_pushlstring(lua, &client->buffer[m[1].so], m[1].eo - m[1].so);
@@ -498,7 +502,7 @@ static void on_ready_send_content(void *arg)
                                               , content_send);
     if(send_size == -1)
     {
-        asc_log_error(MSG("failed to send content [%s]"), asc_socket_error());
+        asc_log_error(MSG("failed to send content: %s"), asc_error_msg());
         on_client_close(client);
         return;
     }
@@ -595,7 +599,7 @@ static void on_ready_send_response(void *arg)
                                               , content_send);
     if(send_size == -1)
     {
-        asc_log_error(MSG("failed to send response [%s]"), asc_socket_error());
+        asc_log_error(MSG("failed to send response: %s"), asc_error_msg());
         on_client_close(client);
         return;
     }
