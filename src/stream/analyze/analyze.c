@@ -777,9 +777,9 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_option_string("name", &mod->name, NULL);
     asc_assert(mod->name != NULL, "[analyze] option 'name' is required");
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, __callback);
-    asc_assert(lua_isfunction(lua, -1), MSG("option 'callback' is required"));
-    mod->idx_callback = luaL_ref(lua, LUA_REGISTRYINDEX);
+    lua_getfield(L, MODULE_OPTIONS_IDX, __callback);
+    asc_assert(lua_isfunction(L, -1), MSG("option 'callback' is required"));
+    mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     module_option_boolean("rate_stat", &mod->rate_stat);
     module_option_number("cc_limit", &mod->cc_limit);
@@ -826,7 +826,7 @@ static void module_destroy(lua_State *L, module_data_t *mod)
 
     if(mod->idx_callback)
     {
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 

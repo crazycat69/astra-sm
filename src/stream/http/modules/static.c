@@ -242,23 +242,23 @@ static int __module_call(lua_State *L)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    lua_getfield(lua, MODULE_OPTIONS_IDX, __path);
-    asc_assert(lua_isstring(lua, -1), "[http_static] option 'path' is required");
-    mod->path = lua_tostring(lua, -1);
-    int path_size = luaL_len(lua, -1);
-    lua_pop(lua, 1);
+    lua_getfield(L, MODULE_OPTIONS_IDX, __path);
+    asc_assert(lua_isstring(L, -1), "[http_static] option 'path' is required");
+    mod->path = lua_tostring(L, -1);
+    int path_size = luaL_len(L, -1);
+    lua_pop(L, 1);
     // remove trailing slash
     if(mod->path[path_size - 1] == '/')
     {
-        lua_pushlstring(lua, mod->path, path_size - 1);
-        mod->path = lua_tostring(lua, -1);
-        lua_setfield(lua, MODULE_OPTIONS_IDX, __path);
+        lua_pushlstring(L, mod->path, path_size - 1);
+        mod->path = lua_tostring(L, -1);
+        lua_setfield(L, MODULE_OPTIONS_IDX, __path);
     }
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "skip");
-    if(lua_isstring(lua, -1))
-        mod->path_skip = luaL_len(lua, -1);
-    lua_pop(lua, 1);
+    lua_getfield(L, MODULE_OPTIONS_IDX, "skip");
+    if(lua_isstring(L, -1))
+        mod->path_skip = luaL_len(L, -1);
+    lua_pop(L, 1);
 
 #ifdef ASC_SENDFILE
     int block_size = 0;
@@ -274,11 +274,11 @@ static void module_init(lua_State *L, module_data_t *mod)
     asc_assert(S_ISDIR(s.st_mode), "[http_static] path is not directory");
 
     // Set callback for http route
-    lua_getmetatable(lua, 3);
-    lua_pushlightuserdata(lua, (void *)mod);
-    lua_pushcclosure(lua, __module_call, 1);
-    lua_setfield(lua, -2, "__call");
-    lua_pop(lua, 1);
+    lua_getmetatable(L, 3);
+    lua_pushlightuserdata(L, (void *)mod);
+    lua_pushcclosure(L, __module_call, 1);
+    lua_setfield(L, -2, "__call");
+    lua_pop(L, 1);
 }
 
 static void module_destroy(lua_State *L, module_data_t *mod)

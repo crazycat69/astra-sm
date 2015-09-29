@@ -223,10 +223,10 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 
 static int method_status(lua_State *L, module_data_t *mod)
 {
-    lua_newtable(lua);
+    lua_newtable(L);
 
-    lua_pushnumber(lua, mod->file_size);
-    lua_setfield(lua, -2, "size");
+    lua_pushnumber(L, mod->file_size);
+    lua_setfield(L, -2, "size");
 
     return 1;
 }

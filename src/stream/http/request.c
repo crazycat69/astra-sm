@@ -1289,15 +1289,15 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 
 static int method_set_receiver(lua_State *L, module_data_t *mod)
 {
-    if(lua_isnil(lua, -1))
+    if(lua_isnil(L, -1))
     {
         mod->receiver.arg = NULL;
         mod->receiver.callback.ptr = NULL;
     }
     else
     {
-        mod->receiver.arg = lua_touserdata(lua, -2);
-        mod->receiver.callback.ptr = lua_touserdata(lua, -1);
+        mod->receiver.arg = lua_touserdata(L, -2);
+        mod->receiver.callback.ptr = lua_touserdata(L, -1);
     }
     return 0;
 }
@@ -1310,10 +1310,10 @@ static int method_send(lua_State *L, module_data_t *mod)
         asc_timer_destroy(mod->timeout);
     mod->timeout = asc_timer_init(mod->timeout_ms, timeout_callback, mod);
 
-    asc_assert(lua_istable(lua, 2), MSG(":send() table required"));
-    lua_pushvalue(lua, 2);
+    asc_assert(lua_istable(L, 2), MSG(":send() table required"));
+    lua_pushvalue(L, 2);
     lua_make_request(mod);
-    lua_pop(lua, 2); // :send() options
+    lua_pop(L, 2); // :send() options
 
     asc_socket_set_on_read(mod->sock, on_read);
     asc_socket_set_on_ready(mod->sock, on_ready_send_request);
@@ -1341,13 +1341,13 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->config.path = __default_path;
     module_option_string(__path, &mod->config.path, NULL);
 
-    lua_getfield(lua, 2, __callback);
-    asc_assert(lua_isfunction(lua, -1), MSG("option 'callback' is required"));
-    lua_pop(lua, 1); // callback
+    lua_getfield(L, 2, __callback);
+    asc_assert(lua_isfunction(L, -1), MSG("option 'callback' is required"));
+    lua_pop(L, 1); // callback
 
     // store self in registry
-    lua_pushvalue(lua, 3);
-    mod->idx_self = luaL_ref(lua, LUA_REGISTRYINDEX);
+    lua_pushvalue(L, 3);
+    mod->idx_self = luaL_ref(L, LUA_REGISTRYINDEX);
 
     module_option_boolean(__stream, &mod->is_stream);
     if(mod->is_stream)
@@ -1364,8 +1364,8 @@ static void module_init(lua_State *L, module_data_t *mod)
         mod->sync.buffer_size = value * 1024 * 1024;
     }
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "upstream");
-    if(lua_type(lua, -1) == LUA_TLIGHTUSERDATA)
+    lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
+    if(lua_type(L, -1) == LUA_TLIGHTUSERDATA)
     {
         asc_assert(mod->is_stream != true, MSG("option 'upstream' is not allowed in stream mode"));
 
@@ -1380,7 +1380,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         module_option_number("buffer_fill", &value);
         mod->sync.buffer_fill = value * 1024;
     }
-    lua_pop(lua, 1);
+    lua_pop(L, 1);
 
     mod->timeout_ms = 10;
     module_option_number("timeout", &mod->timeout_ms);

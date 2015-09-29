@@ -963,12 +963,12 @@ static void module_init(lua_State *L, module_data_t *mod)
         ca_stream_set_keys(biss, key, key);
     }
 
-    lua_getfield(lua, 2, "cam");
-    if(!lua_isnil(lua, -1))
+    lua_getfield(L, 2, "cam");
+    if(!lua_isnil(L, -1))
     {
-        asc_assert(  lua_type(lua, -1) == LUA_TLIGHTUSERDATA
+        asc_assert(  lua_type(L, -1) == LUA_TLIGHTUSERDATA
                    , "option 'cam' required cam-module instance");
-        mod->__decrypt.cam = (module_cam_t *)lua_touserdata(lua, -1);
+        mod->__decrypt.cam = (module_cam_t *)lua_touserdata(L, -1);
 
         int cas_pnr = 0;
         module_option_number("cas_pnr", &cas_pnr);
@@ -988,7 +988,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 
         module_cam_attach_decrypt(mod->__decrypt.cam, &mod->__decrypt);
     }
-    lua_pop(lua, 1);
+    lua_pop(L, 1);
 
     int shift = 0;
     module_option_number("shift", &shift);

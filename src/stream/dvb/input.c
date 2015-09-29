@@ -1044,8 +1044,8 @@ static int method_ca_set_pnr(lua_State *L, module_data_t *mod)
     if(!mod->ca || !mod->ca->ca_fd)
         return 0;
 
-    const uint16_t pnr = lua_tointeger(lua, 2);
-    const bool is_set = lua_toboolean(lua, 3);
+    const uint16_t pnr = lua_tointeger(L, 2);
+    const bool is_set = lua_toboolean(L, 3);
     ((is_set) ? ca_append_pnr : ca_remove_pnr)(mod->ca, pnr);
     return 0;
 }
@@ -1069,7 +1069,7 @@ static int method_close(lua_State *L, module_data_t *mod)
 
     if(mod->idx_callback)
     {
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 
@@ -1129,14 +1129,14 @@ static void module_init(lua_State *L, module_data_t *mod)
         mod->send_arg = &mod->__stream;
     }
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "callback");
-    if(lua_isfunction(lua, -1))
+    lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
+    if(lua_isfunction(L, -1))
     {
-        mod->idx_callback = luaL_ref(lua, LUA_REGISTRYINDEX);
+        mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
         mod->status_timer = asc_timer_init(1000, on_status_timer, mod);
     }
     else
-        lua_pop(lua, 1);
+        lua_pop(L, 1);
 
     mod->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
 

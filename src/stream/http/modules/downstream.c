@@ -191,23 +191,23 @@ static int __module_call(lua_State *L)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "callback");
-    asc_assert(lua_isfunction(lua, -1), "[http_downstream] option 'callback' is required");
-    mod->idx_callback = luaL_ref(lua, LUA_REGISTRYINDEX);
+    lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
+    asc_assert(lua_isfunction(L, -1), "[http_downstream] option 'callback' is required");
+    mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     // Set callback for http route
-    lua_getmetatable(lua, 3);
-    lua_pushlightuserdata(lua, (void *)mod);
-    lua_pushcclosure(lua, __module_call, 1);
-    lua_setfield(lua, -2, "__call");
-    lua_pop(lua, 1);
+    lua_getmetatable(L, 3);
+    lua_pushlightuserdata(L, (void *)mod);
+    lua_pushcclosure(L, __module_call, 1);
+    lua_setfield(L, -2, "__call");
+    lua_pop(L, 1);
 }
 
 static void module_destroy(lua_State *L, module_data_t *mod)
 {
     if(mod->idx_callback)
     {
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 }

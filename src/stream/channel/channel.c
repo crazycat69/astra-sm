@@ -861,37 +861,37 @@ static void module_init(lua_State *L, module_data_t *mod)
     }
     else
     {
-        lua_getfield(lua, MODULE_OPTIONS_IDX, "pid");
-        if(lua_istable(lua, -1))
+        lua_getfield(L, MODULE_OPTIONS_IDX, "pid");
+        if(lua_istable(L, -1))
         {
-            lua_foreach(lua, -2)
+            lua_foreach(L, -2)
             {
-                const int pid = lua_tointeger(lua, -1);
+                const int pid = lua_tointeger(L, -1);
                 mod->stream[pid] = MPEGTS_PACKET_PES;
                 module_stream_demux_join_pid(mod, pid);
             }
         }
-        lua_pop(lua, 1); // pid
+        lua_pop(L, 1); // pid
     }
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "map");
-    if(lua_istable(lua, -1))
+    lua_getfield(L, MODULE_OPTIONS_IDX, "map");
+    if(lua_istable(L, -1))
     {
         mod->map = asc_list_init();
-        lua_foreach(lua, -2)
+        lua_foreach(L, -2)
         {
-            asc_assert((lua_type(lua, -1) == LUA_TTABLE), "option 'map': wrong type");
-            asc_assert((luaL_len(lua, -1) == 2), "option 'map': wrong format");
+            asc_assert((lua_type(L, -1) == LUA_TTABLE), "option 'map': wrong type");
+            asc_assert((luaL_len(L, -1) == 2), "option 'map': wrong format");
 
-            lua_rawgeti(lua, -1, 1);
-            const char *key = lua_tostring(lua, -1);
-            asc_assert((luaL_len(lua, -1) <= 5), "option 'map': key is too large");
-            lua_pop(lua, 1);
+            lua_rawgeti(L, -1, 1);
+            const char *key = lua_tostring(L, -1);
+            asc_assert((luaL_len(L, -1) <= 5), "option 'map': key is too large");
+            lua_pop(L, 1);
 
-            lua_rawgeti(lua, -1, 2);
-            int val = lua_tointeger(lua, -1);
+            lua_rawgeti(L, -1, 2);
+            int val = lua_tointeger(L, -1);
             asc_assert((val > 0 && val < NULL_TS_PID), "option 'map': value is out of range");
-            lua_pop(lua, 1);
+            lua_pop(L, 1);
 
             map_item_t *map_item = (map_item_t *)calloc(1, sizeof(map_item_t));
             strncpy(map_item->type, key, sizeof(map_item->type));
@@ -902,32 +902,32 @@ static void module_init(lua_State *L, module_data_t *mod)
             asc_list_insert_tail(mod->map, map_item);
         }
     }
-    lua_pop(lua, 1); // map
+    lua_pop(L, 1); // map
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "filter");
-    if(lua_istable(lua, -1))
+    lua_getfield(L, MODULE_OPTIONS_IDX, "filter");
+    if(lua_istable(L, -1))
     {
-        lua_foreach(lua, -2)
+        lua_foreach(L, -2)
         {
-            const int pid = lua_tointeger(lua, -1);
+            const int pid = lua_tointeger(L, -1);
             mod->pid_map[pid] = MAX_PID;
         }
     }
-    lua_pop(lua, 1); // filter
+    lua_pop(L, 1); // filter
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "filter~");
-    if(lua_istable(lua, -1))
+    lua_getfield(L, MODULE_OPTIONS_IDX, "filter~");
+    if(lua_istable(L, -1))
     {
         for(uint32_t i = 0; i < ASC_ARRAY_SIZE(mod->pid_map); ++i)
             mod->pid_map[i] = MAX_PID;
 
-        lua_foreach(lua, -2)
+        lua_foreach(L, -2)
         {
-            const int pid = lua_tointeger(lua, -1);
+            const int pid = lua_tointeger(L, -1);
             mod->pid_map[pid] = 0;
         }
     }
-    lua_pop(lua, 1); // filter~
+    lua_pop(L, 1); // filter~
 }
 
 static void module_destroy(lua_State *L, module_data_t *mod)

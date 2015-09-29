@@ -373,7 +373,7 @@ static void timer_skip_set(void *arg)
 
 static int method_length(lua_State *L, module_data_t *mod)
 {
-    lua_pushnumber(lua, mod->length);
+    lua_pushnumber(L, mod->length);
     return 1;
 }
 
@@ -405,11 +405,11 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_option_boolean("loop", &mod->loop);
 
     // store callback in registry
-    lua_getfield(lua, 2, "callback");
-    if(lua_type(lua, -1) == LUA_TFUNCTION)
-        mod->idx_callback = luaL_ref(lua, LUA_REGISTRYINDEX);
+    lua_getfield(L, 2, "callback");
+    if(lua_type(L, -1) == LUA_TFUNCTION)
+        mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
     else
-        lua_pop(lua, 1);
+        lua_pop(L, 1);
 
     module_stream_init(mod, NULL);
 
@@ -448,7 +448,7 @@ static void module_destroy(lua_State *L, module_data_t *mod)
 
     if(mod->idx_callback)
     {
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 

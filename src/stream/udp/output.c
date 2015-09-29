@@ -148,7 +148,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 {
     module_option_string("addr", &mod->addr, NULL);
     if(mod->addr == NULL)
-        luaL_error(lua, "[udp_output] option 'addr' is required");
+        luaL_error(L, "[udp_output] option 'addr' is required");
 
     mod->port = 1234;
     module_option_number("port", &mod->port);
@@ -172,7 +172,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->sock = asc_socket_open_udp4(mod);
     asc_socket_set_reuseaddr(mod->sock, 1);
     if(!asc_socket_bind(mod->sock, NULL, 0))
-        luaL_error(lua, MSG("couldn't bind socket"));
+        luaL_error(L, MSG("couldn't bind socket"));
 
     int value;
     if(module_option_number("socket_size", &value))
@@ -209,7 +209,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         const char *optstr = NULL;
         module_option_string("sync_opts", &optstr, NULL);
         if (optstr != NULL && !mpegts_sync_parse_opts(mod->sync, optstr))
-            luaL_error(lua, MSG("invalid value for option 'sync_opts'"));
+            luaL_error(L, MSG("invalid value for option 'sync_opts'"));
 
         mod->sync_loop = asc_timer_init(1, mpegts_sync_loop, mod->sync);
         on_ts = on_sync_ts;

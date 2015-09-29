@@ -137,7 +137,7 @@ static void timer_renew_callback(void *arg)
 static int method_port(lua_State *L, module_data_t *mod)
 {
     const int port = asc_socket_port(mod->sock);
-    lua_pushinteger(lua, port);
+    lua_pushinteger(L, port);
 
     return 1;
 }
@@ -148,7 +148,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 
     module_option_string("addr", &mod->config.addr, NULL);
     if(mod->config.addr == NULL)
-        luaL_error(lua, "[udp_input] option 'addr' is required");
+        luaL_error(L, "[udp_input] option 'addr' is required");
 
     module_option_number("port", &mod->config.port);
 

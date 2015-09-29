@@ -272,40 +272,40 @@ static int __module_call(lua_State *L)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "callback");
-    asc_assert(lua_isfunction(lua, -1), "[http_upstream] option 'callback' is required");
-    mod->idx_callback = luaL_ref(lua, LUA_REGISTRYINDEX);
+    lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
+    asc_assert(lua_isfunction(L, -1), "[http_upstream] option 'callback' is required");
+    mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     // Deprecated
     bool is_deprecated = false;
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "buffer_size");
-    if(!lua_isnil(lua, -1))
+    lua_getfield(L, MODULE_OPTIONS_IDX, "buffer_size");
+    if(!lua_isnil(L, -1))
         is_deprecated = true;
-    lua_pop(lua, 1);
+    lua_pop(L, 1);
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "buffer_fill");
-    if(!lua_isnil(lua, -1))
+    lua_getfield(L, MODULE_OPTIONS_IDX, "buffer_fill");
+    if(!lua_isnil(L, -1))
         is_deprecated = true;
-    lua_pop(lua, 1);
+    lua_pop(L, 1);
 
     if(is_deprecated)
         asc_log_error("[http_upstream] deprecated usage of the buffer_size/buffer_fill options");
     //
 
     // Set callback for http route
-    lua_getmetatable(lua, 3);
-    lua_pushlightuserdata(lua, (void *)mod);
-    lua_pushcclosure(lua, __module_call, 1);
-    lua_setfield(lua, -2, "__call");
-    lua_pop(lua, 1);
+    lua_getmetatable(L, 3);
+    lua_pushlightuserdata(L, (void *)mod);
+    lua_pushcclosure(L, __module_call, 1);
+    lua_setfield(L, -2, "__call");
+    lua_pop(L, 1);
 }
 
 static void module_destroy(lua_State *L, module_data_t *mod)
 {
     if(mod->idx_callback)
     {
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 }

@@ -57,11 +57,11 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_option_number("code", &mod->code);
 
     // Set callback for http route
-    lua_getmetatable(lua, 3);
-    lua_pushlightuserdata(lua, (void *)mod);
-    lua_pushcclosure(lua, __module_call, 1);
-    lua_setfield(lua, -2, "__call");
-    lua_pop(lua, 1);
+    lua_getmetatable(L, 3);
+    lua_pushlightuserdata(L, (void *)mod);
+    lua_pushcclosure(L, __module_call, 1);
+    lua_setfield(L, -2, "__call");
+    lua_pop(L, 1);
 }
 
 static void module_destroy(lua_State *L, module_data_t *mod)

@@ -40,9 +40,9 @@ struct module_data_t
 
 static int method_set_upstream(lua_State *L, module_data_t *mod)
 {
-    if(lua_type(lua, 2) == LUA_TLIGHTUSERDATA)
+    if(lua_type(L, 2) == LUA_TLIGHTUSERDATA)
     {
-        module_stream_t *const st = (module_stream_t *)lua_touserdata(lua, 2);
+        module_stream_t *const st = (module_stream_t *)lua_touserdata(L, 2);
         __module_stream_attach(st, &mod->__stream);
     }
 

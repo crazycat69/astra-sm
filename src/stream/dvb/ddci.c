@@ -254,8 +254,8 @@ static int method_ca_set_pnr(lua_State *L, module_data_t *mod)
     if(!mod->ca || !mod->ca->ca_fd)
         return 0;
 
-    const uint16_t pnr = lua_tointeger(lua, 2);
-    const bool is_set = lua_toboolean(lua, 3);
+    const uint16_t pnr = lua_tointeger(L, 2);
+    const bool is_set = lua_toboolean(L, 3);
     ((is_set) ? ca_append_pnr : ca_remove_pnr)(mod->ca, pnr);
     return 0;
 }

@@ -53,21 +53,17 @@ static int method_close(lua_State *L, module_data_t *mod)
 {
     if(mod->idx_callback)
     {
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 
     if(mod->idx_self)
     {
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->idx_self);
+        luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_self);
         mod->idx_self = 0;
     }
 
-    if(mod->timer)
-    {
-        asc_timer_destroy(mod->timer);
-        mod->timer = NULL;
-    }
+    ASC_FREE(mod->timer, asc_timer_destroy);
 
     return 0;
 }

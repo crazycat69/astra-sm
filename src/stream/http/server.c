@@ -518,8 +518,8 @@ static void on_ready_send_content(void *arg)
 /* Stack: 1 - server, 2 - client, 3 - response */
 static int method_send(lua_State *L, module_data_t *mod)
 {
-    asc_assert(lua_islightuserdata(lua, 2), MSG(":send() client instance required"));
-    http_client_t *client = (http_client_t *)lua_touserdata(lua, 2);
+    asc_assert(lua_islightuserdata(L, 2), MSG(":send() client instance required"));
+    http_client_t *client = (http_client_t *)lua_touserdata(L, 2);
 
     if(client->on_send)
     {
@@ -535,43 +535,43 @@ static int method_send(lua_State *L, module_data_t *mod)
 
     const int idx_response = 3;
 
-    lua_getfield(lua, idx_response, __code);
-    const int code = lua_tointeger(lua, -1);
-    lua_pop(lua, 1); // code
+    lua_getfield(L, idx_response, __code);
+    const int code = lua_tointeger(L, -1);
+    lua_pop(L, 1); // code
 
-    lua_getfield(lua, idx_response, __message);
-    const char *message = lua_isstring(lua, -1) ? lua_tostring(lua, -1) : NULL;
-    lua_pop(lua, 1); // message
+    lua_getfield(L, idx_response, __message);
+    const char *message = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
+    lua_pop(L, 1); // message
 
     http_response_code(client, code, message);
 
-    lua_getfield(lua, idx_response, __content);
-    if(lua_isstring(lua, -1))
+    lua_getfield(L, idx_response, __content);
+    if(lua_isstring(L, -1))
     {
-        const int content_length = luaL_len(lua, -1);
+        const int content_length = luaL_len(L, -1);
         http_response_header(client, "%s%d", __content_length, content_length);
 
         if(client->idx_content)
-            luaL_unref(lua, LUA_REGISTRYINDEX, client->idx_content);
-        client->idx_content = luaL_ref(lua, LUA_REGISTRYINDEX);
+            luaL_unref(L, LUA_REGISTRYINDEX, client->idx_content);
+        client->idx_content = luaL_ref(L, LUA_REGISTRYINDEX);
 
         client->on_send = NULL;
         client->on_read = NULL;
         client->on_ready = on_ready_send_content;
     }
     else
-        lua_pop(lua, 1); // content
+        lua_pop(L, 1); // content
 
-    lua_getfield(lua, idx_response, __headers);
-    if(lua_istable(lua, -1))
+    lua_getfield(L, idx_response, __headers);
+    if(lua_istable(L, -1))
     {
-        lua_foreach(lua, -2)
+        lua_foreach(L, -2)
         {
-            const char *header = lua_tostring(lua, -1);
+            const char *header = lua_tostring(L, -1);
             http_response_header(client, "%s", header);
         }
     }
-    lua_pop(lua, 1); // headers
+    lua_pop(L, 1); // headers
 
     http_response_send(client);
 
@@ -883,28 +883,28 @@ static void on_server_accept(void *arg)
 
 static int method_data(lua_State *L, module_data_t *mod)
 {
-    asc_assert(lua_islightuserdata(lua, 2), MSG(":data() client instance required"));
-    http_client_t *client = (http_client_t *)lua_touserdata(lua, 2);
+    asc_assert(lua_islightuserdata(L, 2), MSG(":data() client instance required"));
+    http_client_t *client = (http_client_t *)lua_touserdata(L, 2);
 
     if(!client->idx_data)
     {
-        lua_newtable(lua);
-        client->idx_data = luaL_ref(lua, LUA_REGISTRYINDEX);
+        lua_newtable(L);
+        client->idx_data = luaL_ref(L, LUA_REGISTRYINDEX);
     }
-    lua_rawgeti(lua, LUA_REGISTRYINDEX, client->idx_data);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_data);
     return 1;
 }
 
 static int method_close(lua_State *L, module_data_t *mod)
 {
-    if(lua_gettop(lua) == 1)
+    if(lua_gettop(L) == 1)
     {
         on_server_close(mod);
     }
     else
     {
-        asc_assert(lua_islightuserdata(lua, 2), MSG(":close() client instance required"));
-        http_client_t *client = (http_client_t *)lua_touserdata(lua, 2);
+        asc_assert(lua_islightuserdata(L, 2), MSG(":close() client instance required"));
+        http_client_t *client = (http_client_t *)lua_touserdata(L, 2);
         on_client_close(client);
     }
 
@@ -913,21 +913,21 @@ static int method_close(lua_State *L, module_data_t *mod)
 
 static int method_redirect(lua_State *L, module_data_t *mod)
 {
-    asc_assert(lua_islightuserdata(lua, 2), MSG(":redirect() client instance required"));
-    asc_assert(lua_isstring(lua, 3), MSG(":redirect() location required"));
-    http_client_t *client = (http_client_t *)lua_touserdata(lua, 2);
-    const char *location = lua_tostring(lua, 3);
+    asc_assert(lua_islightuserdata(L, 2), MSG(":redirect() client instance required"));
+    asc_assert(lua_isstring(L, 3), MSG(":redirect() location required"));
+    http_client_t *client = (http_client_t *)lua_touserdata(L, 2);
+    const char *location = lua_tostring(L, 3);
     http_client_redirect(client, 302, location);
     return 0;
 }
 
 static int method_abort(lua_State *L, module_data_t *mod)
 {
-    asc_assert(lua_islightuserdata(lua, 2), MSG(":abort() client instance required"));
-    asc_assert(lua_isnumber(lua, 3), MSG(":abort() code required"));
-    http_client_t *client = (http_client_t *)lua_touserdata(lua, 2);
-    const int code = lua_tointeger(lua, 3);
-    const char *text = lua_isstring(lua, 4) ? lua_tostring(lua, 4) : NULL;
+    asc_assert(lua_islightuserdata(L, 2), MSG(":abort() client instance required"));
+    asc_assert(lua_isnumber(L, 3), MSG(":abort() code required"));
+    http_client_t *client = (http_client_t *)lua_touserdata(L, 2);
+    const int code = lua_tointeger(L, 3);
+    const char *text = lua_isstring(L, 4) ? lua_tostring(L, 4) : NULL;
     http_client_abort(client, code, text);
     return 0;
 }
@@ -966,22 +966,22 @@ static void module_init(lua_State *L, module_data_t *mod)
 
     // store routes in registry
     mod->routes = asc_list_init();
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "route");
-    asc_assert(lua_istable(lua, -1), MSG("option 'route' is required"));
-    for(lua_pushnil(lua); lua_next(lua, -2); lua_pop(lua, 1))
+    lua_getfield(L, MODULE_OPTIONS_IDX, "route");
+    asc_assert(lua_istable(L, -1), MSG("option 'route' is required"));
+    for(lua_pushnil(L); lua_next(L, -2); lua_pop(L, 1))
     {
         bool is_ok = false;
         do
         {
-            const int item = lua_gettop(lua);
-            if(!lua_istable(lua, item))
+            const int item = lua_gettop(L);
+            if(!lua_istable(L, item))
                 break;
 
-            lua_rawgeti(lua, item, 1); // path
-            if(!lua_isstring(lua, -1))
+            lua_rawgeti(L, item, 1); // path
+            if(!lua_isstring(L, -1))
                 break;
 
-            lua_rawgeti(lua, item, 2); // callback
+            lua_rawgeti(L, item, 2); // callback
             if(!lua_is_call(-1))
                 break;
 
@@ -990,17 +990,17 @@ static void module_init(lua_State *L, module_data_t *mod)
         asc_assert(is_ok, MSG("route format: { { \"/path\", callback }, ... }"));
 
         route_t *route = (route_t *)malloc(sizeof(route_t));
-        route->idx_callback = luaL_ref(lua, LUA_REGISTRYINDEX);
-        route->path = lua_tostring(lua, -1);
-        lua_pop(lua, 1); // path
+        route->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
+        route->path = lua_tostring(L, -1);
+        lua_pop(L, 1); // path
 
         asc_list_insert_tail(mod->routes, route);
     }
-    lua_pop(lua, 1); // route
+    lua_pop(L, 1); // route
 
     // store self in registry
-    lua_pushvalue(lua, 3);
-    mod->idx_self = luaL_ref(lua, LUA_REGISTRYINDEX);
+    lua_pushvalue(L, 3);
+    mod->idx_self = luaL_ref(L, LUA_REGISTRYINDEX);
 
     mod->clients = asc_list_init();
 
