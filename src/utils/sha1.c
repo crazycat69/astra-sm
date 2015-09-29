@@ -155,7 +155,7 @@ void sha1_final(sha1_ctx_t *context, uint8_t digest[SHA1_DIGEST_SIZE])
 #endif
 }
 
-static int lua_sha1(lua_State *L)
+static int method_sha1(lua_State *L)
 {
     const char *data = luaL_checkstring(L, 1);
     const int data_size = luaL_len(L, 1);
@@ -175,7 +175,7 @@ MODULE_LUA_BINDING(sha1)
 {
     lua_getglobal(L, "string");
 
-    lua_pushcfunction(L, lua_sha1);
+    lua_pushcfunction(L, method_sha1);
     lua_setfield(L, -2, "sha1");
 
     lua_pop(L, 1); // string

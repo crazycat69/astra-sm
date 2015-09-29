@@ -47,7 +47,7 @@
 
 /* hostname */
 
-static int utils_hostname(lua_State *L)
+static int method_hostname(lua_State *L)
 {
     char hostname[64];
     if(gethostname(hostname, sizeof(hostname)) != 0)
@@ -57,7 +57,7 @@ static int utils_hostname(lua_State *L)
 }
 
 #ifdef HAVE_GETIFADDRS
-static int utils_ifaddrs(lua_State *L)
+static int method_ifaddrs(lua_State *L)
 {
     struct ifaddrs *ifaddr;
     char host[NI_MAXHOST];
@@ -143,7 +143,7 @@ static int utils_ifaddrs(lua_State *L)
 }
 #endif
 
-static int utils_stat(lua_State *L)
+static int method_stat(lua_State *L)
 {
     const char *path = luaL_checkstring(L, 1);
 
@@ -239,11 +239,11 @@ MODULE_LUA_BINDING(utils)
 {
     static const luaL_Reg api[] =
     {
-        { "hostname", utils_hostname },
+        { "hostname", method_hostname },
 #ifdef HAVE_GETIFADDRS
-        { "ifaddrs", utils_ifaddrs },
+        { "ifaddrs", method_ifaddrs },
 #endif
-        { "stat", utils_stat },
+        { "stat", method_stat },
         { NULL, NULL },
     };
 
