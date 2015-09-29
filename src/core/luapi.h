@@ -51,9 +51,6 @@ bool module_option_number(const char *name, int *number);
 bool module_option_string(const char *name, const char **string, size_t *length);
 bool module_option_boolean(const char *name, bool *boolean);
 
-#define lua_stack_debug(_lua) \
-    printf("%s:%d %s(): stack:%d\n", __FILE__, __LINE__, __FUNCTION__, lua_gettop(_lua))
-
 #define lua_foreach(_lua, _idx) \
     for(lua_pushnil(_lua); lua_next(_lua, _idx); lua_pop(_lua, 1))
 
