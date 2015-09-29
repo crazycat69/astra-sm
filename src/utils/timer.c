@@ -85,10 +85,10 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->timer = asc_timer_init(interval * 1000, timer_callback, mod);
 }
 
-static void module_destroy(lua_State *L, module_data_t *mod)
+static void module_destroy(module_data_t *mod)
 {
     if(mod->idx_self)
-        method_close(L, mod);
+        method_close(MODULE_L(mod), mod);
 }
 
 MODULE_LUA_METHODS()

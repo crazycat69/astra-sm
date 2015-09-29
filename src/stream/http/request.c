@@ -1323,6 +1323,8 @@ static int method_send(lua_State *L, module_data_t *mod)
 
 static int method_close(lua_State *L, module_data_t *mod)
 {
+    __uarg(L);
+
     mod->status = -1;
     mod->request.status = -1;
     on_close(mod);
@@ -1397,7 +1399,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     asc_socket_connect(mod->sock, mod->config.host, mod->config.port, on_connect, on_close);
 }
 
-static void module_destroy(lua_State *L, module_data_t *mod)
+static void module_destroy(module_data_t *mod)
 {
     mod->status = -1;
     mod->request.status = -1;

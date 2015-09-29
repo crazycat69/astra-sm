@@ -61,6 +61,9 @@ bool module_option_boolean(lua_State *L, const char *name, bool *boolean);
 #define MODULE_LUA_DATA() \
     lua_State *__lua
 
+#define MODULE_L(_mod) \
+    ((_mod)->__lua)
+
 #define MODULE_LUA_BINDING(_name) \
     LUA_API int luaopen_##_name(lua_State *L)
 
@@ -76,14 +79,17 @@ bool module_option_boolean(lua_State *L, const char *name, bool *boolean);
     } \
     static int __module_thunk(lua_State *L) \
     { \
-        module_data_t *mod = (module_data_t *)lua_touserdata(L, lua_upvalueindex(1)); \
-        module_method_t *m = (module_method_t *)lua_touserdata(L, lua_upvalueindex(2)); \
+        module_data_t *const mod = \
+            (module_data_t *)lua_touserdata(L, lua_upvalueindex(1)); \
+        module_method_t *const m = \
+            (module_method_t *)lua_touserdata(L, lua_upvalueindex(2)); \
         return m->method(L, mod); \
     } \
     static int __module_delete(lua_State *L) \
     { \
-        module_data_t *mod = (module_data_t *)lua_touserdata(L, lua_upvalueindex(1)); \
-        module_destroy(L, mod); \
+        module_data_t *const mod = \
+            (module_data_t *)lua_touserdata(L, lua_upvalueindex(1)); \
+        module_destroy(mod); \
         free(mod); \
         return 0; \
     } \
@@ -95,13 +101,13 @@ bool module_option_boolean(lua_State *L, const char *name, bool *boolean);
             { "__gc", __module_delete }, \
             { "__tostring", __module_tostring }, \
         }; \
-        module_data_t *mod = (module_data_t *)calloc(1, sizeof(*mod)); \
+        module_data_t *const mod = (module_data_t *)calloc(1, sizeof(*mod)); \
         asc_assert(mod != NULL, "[luapi] calloc() failed"); \
         lua_newtable(L); \
         lua_newtable(L); \
         for(i = 0; i < ASC_ARRAY_SIZE(__meta_methods); ++i) \
         { \
-            const luaL_Reg *m = &__meta_methods[i]; \
+            const luaL_Reg *const m = &__meta_methods[i]; \
             lua_pushlightuserdata(L, (void *)mod); \
             lua_pushcclosure(L, m->func, 1); \
             lua_setfield(L, -2, m->name); \
@@ -109,7 +115,7 @@ bool module_option_boolean(lua_State *L, const char *name, bool *boolean);
         lua_setmetatable(L, -2); \
         for(i = 0; i < ASC_ARRAY_SIZE(__module_methods); ++i) \
         { \
-            const module_method_t *m = &__module_methods[i]; \
+            const module_method_t *const m = &__module_methods[i]; \
             if(!m->name) break; \
             lua_pushlightuserdata(L, (void *)mod); \
             lua_pushlightuserdata(L, (void *)m); \

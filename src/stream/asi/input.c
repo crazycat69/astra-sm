@@ -151,7 +151,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     asc_event_set_on_error(mod->event, asi_on_error);
 }
 
-static void module_destroy(lua_State *L, module_data_t *mod)
+static void module_destroy(module_data_t *mod)
 {
     module_stream_destroy(mod);
 

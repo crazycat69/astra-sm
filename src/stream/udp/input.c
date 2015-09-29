@@ -177,7 +177,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         mod->timer_renew = asc_timer_init(value * 1000, timer_renew_callback, mod);
 }
 
-static void module_destroy(lua_State *L, module_data_t *mod)
+static void module_destroy(module_data_t *mod)
 {
     module_stream_destroy(mod);
     on_close(mod);

@@ -1143,9 +1143,9 @@ static void module_init(lua_State *L, module_data_t *mod)
     dvr_on_retry(mod);
 }
 
-static void module_destroy(lua_State *L, module_data_t *mod)
+static void module_destroy(module_data_t *mod)
 {
-    method_close(L, mod);
+    method_close(MODULE_L(mod), mod);
 }
 
 MODULE_STREAM_METHODS()

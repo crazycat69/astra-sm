@@ -708,7 +708,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_cam_init(mod, newcamd_connect, newcamd_disconnect, newcamd_send_em);
 }
 
-static void module_destroy(lua_State *L, module_data_t *mod)
+static void module_destroy(module_data_t *mod)
 {
     mod->status = -1;
     on_newcamd_close(mod);

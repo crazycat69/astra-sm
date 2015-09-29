@@ -203,11 +203,11 @@ static void module_init(lua_State *L, module_data_t *mod)
     lua_pop(L, 1);
 }
 
-static void module_destroy(lua_State *L, module_data_t *mod)
+static void module_destroy(module_data_t *mod)
 {
     if(mod->idx_callback)
     {
-        luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 }

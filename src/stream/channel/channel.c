@@ -930,7 +930,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     lua_pop(L, 1); // filter~
 }
 
-static void module_destroy(lua_State *L, module_data_t *mod)
+static void module_destroy(module_data_t *mod)
 {
     module_stream_destroy(mod);
 

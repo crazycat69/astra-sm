@@ -184,7 +184,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, 0);
 }
 
-static void module_destroy(lua_State *L, module_data_t *mod)
+static void module_destroy(module_data_t *mod)
 {
     module_stream_destroy(mod);
 

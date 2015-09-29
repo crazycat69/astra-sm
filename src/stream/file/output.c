@@ -94,7 +94,7 @@ struct module_data_t
 
 /* stream_ts callbacks */
 
-static void module_destroy(lua_State *L, module_data_t *mod);
+static void module_destroy(module_data_t *mod);
 
 static void on_ts(module_data_t *mod, const uint8_t *ts)
 {
@@ -132,7 +132,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
                 {
                     asc_log_error(MSG("Error at io_submit"));
                     mod->error = true;
-                    module_destroy(lua, mod);
+                    module_destroy(mod);
                     return;
                 }
             }
@@ -154,7 +154,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
                 {
                     asc_log_error(MSG("Error at aio_write: %s"), strerror(errno));
                     mod->error = true;
-                    module_destroy(lua, mod);
+                    module_destroy(mod);
                     return;
                 }
 
@@ -187,7 +187,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
                 {
                     asc_log_error(MSG("write error: %s"), strerror(errno));
                     mod->error = true;
-                    module_destroy(lua, mod);
+                    module_destroy(mod);
                 }
                 return;
             }
@@ -340,7 +340,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_stream_init(mod, on_ts);
 }
 
-static void module_destroy(lua_State *L, module_data_t *mod)
+static void module_destroy(module_data_t *mod)
 {
     module_stream_destroy(mod);
 

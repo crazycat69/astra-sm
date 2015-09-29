@@ -1020,7 +1020,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     asc_socket_listen(mod->sock, on_server_accept, on_server_close);
 }
 
-static void module_destroy(lua_State *L, module_data_t *mod)
+static void module_destroy(module_data_t *mod)
 {
     if(mod->idx_self == 0)
         return;
