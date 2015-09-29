@@ -149,13 +149,13 @@ void __module_stream_send(void *arg, const uint8_t *ts);
 // base
 
 #define MODULE_STREAM_METHODS() \
-    static int module_stream_stream(module_data_t *mod) \
+    static int method_stream(module_data_t *mod) \
     { \
         lua_pushlightuserdata(lua, &mod->__stream); \
         return 1; \
     }
 
 #define MODULE_STREAM_METHODS_REF() \
-    { "stream", module_stream_stream }
+    { "stream", method_stream }
 
 #endif /* _ASC_STREAM_H_ */
