@@ -166,9 +166,9 @@ void __module_stream_send(void *arg, const uint8_t *ts);
     MODULE_LUA_DATA(); module_stream_t __stream
 
 #define MODULE_STREAM_METHODS() \
-    static int method_stream(module_data_t *mod) \
+    static int method_stream(lua_State *L, module_data_t *mod) \
     { \
-        lua_pushlightuserdata(lua, &mod->__stream); \
+        lua_pushlightuserdata(L, &mod->__stream); \
         return 1; \
     }
 

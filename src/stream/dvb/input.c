@@ -1039,7 +1039,7 @@ static void on_status_timer(void *arg)
     lua_call(lua, 1, 0);
 }
 
-static int method_ca_set_pnr(module_data_t *mod)
+static int method_ca_set_pnr(lua_State *L, module_data_t *mod)
 {
     if(!mod->ca || !mod->ca->ca_fd)
         return 0;
@@ -1050,7 +1050,7 @@ static int method_ca_set_pnr(module_data_t *mod)
     return 0;
 }
 
-static int method_close(module_data_t *mod)
+static int method_close(lua_State *L, module_data_t *mod)
 {
     if (mod->t2mi.ctx)
     {
@@ -1145,7 +1145,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 
 static void module_destroy(lua_State *L, module_data_t *mod)
 {
-    method_close(mod);
+    method_close(L, mod);
 }
 
 MODULE_STREAM_METHODS()

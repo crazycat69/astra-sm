@@ -371,7 +371,7 @@ static void timer_skip_set(void *arg)
 
 /* methods */
 
-static int method_length(module_data_t *mod)
+static int method_length(lua_State *L, module_data_t *mod)
 {
     lua_pushnumber(lua, mod->length);
     return 1;

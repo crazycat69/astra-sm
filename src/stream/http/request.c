@@ -1287,7 +1287,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
  *
  */
 
-static int method_set_receiver(module_data_t *mod)
+static int method_set_receiver(lua_State *L, module_data_t *mod)
 {
     if(lua_isnil(lua, -1))
     {
@@ -1302,7 +1302,7 @@ static int method_set_receiver(module_data_t *mod)
     return 0;
 }
 
-static int method_send(module_data_t *mod)
+static int method_send(lua_State *L, module_data_t *mod)
 {
     mod->status = 0;
 
@@ -1321,7 +1321,7 @@ static int method_send(module_data_t *mod)
     return 0;
 }
 
-static int method_close(module_data_t *mod)
+static int method_close(lua_State *L, module_data_t *mod)
 {
     mod->status = -1;
     mod->request.status = -1;

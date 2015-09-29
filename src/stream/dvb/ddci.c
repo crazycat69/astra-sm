@@ -249,7 +249,7 @@ static void leave_pid(void *arg, uint16_t pid)
     module_stream_demux_leave_pid(mod, pid);
 }
 
-static int method_ca_set_pnr(module_data_t *mod)
+static int method_ca_set_pnr(lua_State *L, module_data_t *mod)
 {
     if(!mod->ca || !mod->ca->ca_fd)
         return 0;

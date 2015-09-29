@@ -254,7 +254,7 @@ void on_upstream_ts(module_data_t *mod, const uint8_t *ts)
  */
 
 static
-int method_pid(module_data_t *mod)
+int method_pid(lua_State *L, module_data_t *mod)
 {
     if (mod->child != NULL)
         lua_pushinteger(lua, asc_child_pid(mod->child));
@@ -265,7 +265,7 @@ int method_pid(module_data_t *mod)
 }
 
 static
-int method_send(module_data_t *mod)
+int method_send(lua_State *L, module_data_t *mod)
 {
     const char *str = luaL_checkstring(lua, 1);
     const int len = luaL_len(lua, 1);

@@ -134,7 +134,7 @@ static void timer_renew_callback(void *arg)
     asc_socket_multicast_renew(mod->sock);
 }
 
-static int method_port(module_data_t *mod)
+static int method_port(lua_State *L, module_data_t *mod)
 {
     const int port = asc_socket_port(mod->sock);
     lua_pushinteger(lua, port);

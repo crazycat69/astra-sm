@@ -38,7 +38,7 @@ struct module_data_t
     MODULE_STREAM_DATA();
 };
 
-static int method_set_upstream(module_data_t *mod)
+static int method_set_upstream(lua_State *L, module_data_t *mod)
 {
     if(lua_type(lua, 2) == LUA_TLIGHTUSERDATA)
     {

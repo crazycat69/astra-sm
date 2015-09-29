@@ -34,7 +34,7 @@
 #endif /* !__cplusplus */
 
 typedef struct module_data_t module_data_t;
-typedef int (*module_callback_t)(module_data_t *);
+typedef int (*module_callback_t)(lua_State *L, module_data_t *);
 
 typedef struct
 {
@@ -76,7 +76,7 @@ bool module_option_boolean(const char *name, bool *boolean);
     { \
         module_data_t *mod = (module_data_t *)lua_touserdata(L, lua_upvalueindex(1)); \
         module_method_t *m = (module_method_t *)lua_touserdata(L, lua_upvalueindex(2)); \
-        return m->method(mod); \
+        return m->method(L, mod); \
     } \
     static int __module_delete(lua_State *L) \
     { \

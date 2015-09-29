@@ -221,7 +221,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 
 /* methods */
 
-static int method_status(module_data_t *mod)
+static int method_status(lua_State *L, module_data_t *mod)
 {
     lua_newtable(lua);
 

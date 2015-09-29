@@ -49,7 +49,7 @@ static void timer_callback(void *arg)
     lua_call(lua, 1, 0);
 }
 
-static int method_close(module_data_t *mod)
+static int method_close(lua_State *L, module_data_t *mod)
 {
     if(mod->idx_callback)
     {
@@ -92,7 +92,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 static void module_destroy(lua_State *L, module_data_t *mod)
 {
     if(mod->idx_self)
-        method_close(mod);
+        method_close(L, mod);
 }
 
 MODULE_LUA_METHODS()

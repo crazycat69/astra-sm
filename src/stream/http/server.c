@@ -516,7 +516,7 @@ static void on_ready_send_content(void *arg)
 }
 
 /* Stack: 1 - server, 2 - client, 3 - response */
-static int method_send(module_data_t *mod)
+static int method_send(lua_State *L, module_data_t *mod)
 {
     asc_assert(lua_islightuserdata(lua, 2), MSG(":send() client instance required"));
     http_client_t *client = (http_client_t *)lua_touserdata(lua, 2);
@@ -881,7 +881,7 @@ static void on_server_accept(void *arg)
  *
  */
 
-static int method_data(module_data_t *mod)
+static int method_data(lua_State *L, module_data_t *mod)
 {
     asc_assert(lua_islightuserdata(lua, 2), MSG(":data() client instance required"));
     http_client_t *client = (http_client_t *)lua_touserdata(lua, 2);
@@ -895,7 +895,7 @@ static int method_data(module_data_t *mod)
     return 1;
 }
 
-static int method_close(module_data_t *mod)
+static int method_close(lua_State *L, module_data_t *mod)
 {
     if(lua_gettop(lua) == 1)
     {
@@ -911,7 +911,7 @@ static int method_close(module_data_t *mod)
     return 0;
 }
 
-static int method_redirect(module_data_t *mod)
+static int method_redirect(lua_State *L, module_data_t *mod)
 {
     asc_assert(lua_islightuserdata(lua, 2), MSG(":redirect() client instance required"));
     asc_assert(lua_isstring(lua, 3), MSG(":redirect() location required"));
@@ -921,7 +921,7 @@ static int method_redirect(module_data_t *mod)
     return 0;
 }
 
-static int method_abort(module_data_t *mod)
+static int method_abort(lua_State *L, module_data_t *mod)
 {
     asc_assert(lua_islightuserdata(lua, 2), MSG(":abort() client instance required"));
     asc_assert(lua_isnumber(lua, 3), MSG(":abort() code required"));
