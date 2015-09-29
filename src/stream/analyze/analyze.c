@@ -271,7 +271,7 @@ static void on_cat(void *arg, mpegts_psi_t *psi)
     while(!CAT_DESC_EOL(psi, desc_pointer))
     {
         lua_pushinteger(lua, descriptors_count++);
-        mpegts_desc_to_lua(desc_pointer);
+        mpegts_desc_to_lua(lua, desc_pointer);
         lua_settable(lua, -3); // append to the "descriptors" table
 
         CAT_DESC_NEXT(psi, desc_pointer);
@@ -362,7 +362,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     while(!PMT_DESC_EOL(psi, desc_pointer))
     {
         lua_pushinteger(lua, descriptors_count++);
-        mpegts_desc_to_lua(desc_pointer);
+        mpegts_desc_to_lua(lua, desc_pointer);
         lua_settable(lua, -3); // append to the "descriptors" table
 
         PMT_DESC_NEXT(psi, desc_pointer);
@@ -400,7 +400,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
         PMT_ITEM_DESC_FOREACH(pointer, desc_pointer)
         {
             lua_pushinteger(lua, descriptors_count++);
-            mpegts_desc_to_lua(desc_pointer);
+            mpegts_desc_to_lua(lua, desc_pointer);
             lua_settable(lua, -3); // append to the "streams[X].descriptors" table
 
             if(type == 0x06 && mod->stream[pid]->type == MPEGTS_PACKET_DATA)
@@ -522,7 +522,7 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
         SDT_ITEM_DESC_FOREACH(pointer, desc_pointer)
         {
             lua_pushinteger(lua, descriptors_count++);
-            mpegts_desc_to_lua(desc_pointer);
+            mpegts_desc_to_lua(lua, desc_pointer);
             lua_settable(lua, -3);
         }
         lua_setfield(lua, -2, __descriptors);
