@@ -54,12 +54,12 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
     module_stream_send(mod, ts);
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, on_ts);
 }
 
-static void module_destroy(module_data_t *mod)
+static void module_destroy(lua_State *L, module_data_t *mod)
 {
     module_stream_destroy(mod);
 }

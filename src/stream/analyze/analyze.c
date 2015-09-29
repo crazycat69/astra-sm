@@ -772,7 +772,7 @@ static void on_check_stat(void *arg)
  *
  */
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_option_string("name", &mod->name, NULL);
     asc_assert(mod->name != NULL, "[analyze] option 'name' is required");
@@ -820,7 +820,7 @@ static void module_init(module_data_t *mod)
     mod->check_stat = asc_timer_init(1000, on_check_stat, mod);
 }
 
-static void module_destroy(module_data_t *mod)
+static void module_destroy(lua_State *L, module_data_t *mod)
 {
     module_stream_destroy(mod);
 

@@ -1092,7 +1092,7 @@ static void leave_pid(void *arg, uint16_t pid)
     --mod->__stream.pid_list[pid];
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, NULL);
 
@@ -1143,7 +1143,7 @@ static void module_init(module_data_t *mod)
     dvr_on_retry(mod);
 }
 
-static void module_destroy(module_data_t *mod)
+static void module_destroy(lua_State *L, module_data_t *mod)
 {
     method_close(mod);
 }

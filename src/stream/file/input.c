@@ -379,7 +379,7 @@ static int method_length(module_data_t *mod)
 
 /* required */
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_option_string("filename", &mod->filename, NULL);
 
@@ -437,7 +437,7 @@ static void module_init(module_data_t *mod)
                      , on_thread_close);
 }
 
-static void module_destroy(module_data_t *mod)
+static void module_destroy(lua_State *L, module_data_t *mod)
 {
     asc_timer_destroy(mod->timer_skip);
 

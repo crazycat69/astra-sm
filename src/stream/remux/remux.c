@@ -316,7 +316,7 @@ void remux_ts_in(module_data_t *mod, const uint8_t *orig_ts)
 /*
  * module init/deinit
  */
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     /* channel name */
     module_option_string("name", &mod->name, NULL);
@@ -373,7 +373,7 @@ static void module_init(module_data_t *mod)
     module_stream_init(mod, remux_ts_in);
 }
 
-static void module_destroy(module_data_t *mod)
+static void module_destroy(lua_State *L, module_data_t *mod)
 {
     module_stream_destroy(mod);
 

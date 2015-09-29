@@ -106,7 +106,7 @@ static void leave_pid(void *arg, uint16_t pid)
     set_pid(mod, pid, 0);
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, NULL);
     module_stream_demux_set(mod, join_pid, leave_pid);
@@ -151,7 +151,7 @@ static void module_init(module_data_t *mod)
     asc_event_set_on_error(mod->event, asi_on_error);
 }
 
-static void module_destroy(module_data_t *mod)
+static void module_destroy(lua_State *L, module_data_t *mod)
 {
     module_stream_destroy(mod);
 

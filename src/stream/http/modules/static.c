@@ -238,7 +238,7 @@ static int __module_call(lua_State *L)
     return module_call(mod);
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     lua_getfield(lua, MODULE_OPTIONS_IDX, __path);
     asc_assert(lua_isstring(lua, -1), "[http_static] option 'path' is required");
@@ -279,7 +279,7 @@ static void module_init(module_data_t *mod)
     lua_pop(lua, 1);
 }
 
-static void module_destroy(module_data_t *mod)
+static void module_destroy(lua_State *L, module_data_t *mod)
 {
     __uarg(mod);
 }

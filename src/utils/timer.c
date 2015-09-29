@@ -70,7 +70,7 @@ static int method_close(module_data_t *mod)
     return 0;
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     int interval = 0;
     module_option_number("interval", &interval);
@@ -87,7 +87,7 @@ static void module_init(module_data_t *mod)
     mod->timer = asc_timer_init(interval * 1000, timer_callback, mod);
 }
 
-static void module_destroy(module_data_t *mod)
+static void module_destroy(lua_State *L, module_data_t *mod)
 {
     if(mod->idx_self)
         method_close(mod);

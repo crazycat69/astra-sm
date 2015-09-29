@@ -260,7 +260,7 @@ static int method_ca_set_pnr(module_data_t *mod)
     return 0;
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, on_ts);
     module_stream_demux_set(mod, join_pid, leave_pid);
@@ -303,7 +303,7 @@ static void module_init(module_data_t *mod)
         asc_usleep(500);
 }
 
-static void module_destroy(module_data_t *mod)
+static void module_destroy(lua_State *L, module_data_t *mod)
 {
     module_stream_destroy(mod);
 

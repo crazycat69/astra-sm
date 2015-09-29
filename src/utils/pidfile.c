@@ -56,7 +56,7 @@ static inline int __mkstemp(char *tpl)
 #   define __mkstemp(__tpl) mkostemp(__tpl, O_CLOEXEC)
 #endif /* !HAVE_MKOSTEMP */
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     __uarg(mod);
 
@@ -104,7 +104,7 @@ static void module_init(module_data_t *mod)
     mod->idx_self = luaL_ref(lua, LUA_REGISTRYINDEX);
 }
 
-static void module_destroy(module_data_t *mod)
+static void module_destroy(lua_State *L, module_data_t *mod)
 {
     __uarg(mod);
 

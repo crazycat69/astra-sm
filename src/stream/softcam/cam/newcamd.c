@@ -674,7 +674,7 @@ static void newcamd_send_em(  module_data_t *mod
     asc_socket_set_on_ready(mod->sock, on_newcamd_ready);
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_option_string("name", &mod->config.name, NULL);
     asc_assert(mod->config.name != NULL, "[newcamd] option 'name' is required");
@@ -708,7 +708,7 @@ static void module_init(module_data_t *mod)
     module_cam_init(mod, newcamd_connect, newcamd_disconnect, newcamd_send_em);
 }
 
-static void module_destroy(module_data_t *mod)
+static void module_destroy(lua_State *L, module_data_t *mod)
 {
     mod->status = -1;
     on_newcamd_close(mod);

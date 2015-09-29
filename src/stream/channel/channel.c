@@ -803,7 +803,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
  *
  */
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, on_ts);
     module_stream_demux_set(mod, NULL, NULL);
@@ -930,7 +930,7 @@ static void module_init(module_data_t *mod)
     lua_pop(lua, 1); // filter~
 }
 
-static void module_destroy(module_data_t *mod)
+static void module_destroy(lua_State *L, module_data_t *mod)
 {
     module_stream_destroy(mod);
 

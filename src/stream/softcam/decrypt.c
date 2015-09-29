@@ -924,7 +924,7 @@ void on_cam_response(module_data_t *mod, void *arg, const uint8_t *data)
  *
  */
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, on_ts);
 
@@ -1001,7 +1001,7 @@ static void module_init(module_data_t *mod)
     stream_reload(mod);
 }
 
-static void module_destroy(module_data_t *mod)
+static void module_destroy(lua_State *L, module_data_t *mod)
 {
     module_stream_destroy(mod);
 

@@ -1330,7 +1330,7 @@ static int method_close(module_data_t *mod)
     return 0;
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_option_string("host", &mod->config.host, NULL);
     asc_assert(mod->config.host != NULL, MSG("option 'host' is required"));
@@ -1397,7 +1397,7 @@ static void module_init(module_data_t *mod)
     asc_socket_connect(mod->sock, mod->config.host, mod->config.port, on_connect, on_close);
 }
 
-static void module_destroy(module_data_t *mod)
+static void module_destroy(lua_State *L, module_data_t *mod)
 {
     mod->status = -1;
     mod->request.status = -1;

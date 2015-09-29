@@ -81,7 +81,7 @@ bool module_option_boolean(const char *name, bool *boolean);
     static int __module_delete(lua_State *L) \
     { \
         module_data_t *mod = (module_data_t *)lua_touserdata(L, lua_upvalueindex(1)); \
-        module_destroy(mod); \
+        module_destroy(L, mod); \
         free(mod); \
         return 0; \
     } \
@@ -118,7 +118,7 @@ bool module_option_boolean(const char *name, bool *boolean);
             lua_pushvalue(L, MODULE_OPTIONS_IDX); \
             lua_setfield(L, 3, "__options"); \
         } \
-        module_init(mod); \
+        module_init(L, mod); \
         return 1; \
     } \
     MODULE_LUA_BINDING(_name) \
