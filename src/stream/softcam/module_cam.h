@@ -120,14 +120,14 @@ void module_cam_queue_flush(module_cam_t *cam, module_decrypt_t *decrypt);
     } while (0)
 
 #define MODULE_CAM_METHODS() \
-    static int module_cam_cam(module_data_t *mod) \
+    static int method_cam(module_data_t *mod) \
     { \
         lua_pushlightuserdata(lua, &mod->__cam); \
         return 1; \
     }
 
 #define MODULE_CAM_METHODS_REF() \
-    { "cam", module_cam_cam }
+    { "cam", method_cam }
 
 /*
  *   oooooooo8     o       oooooooo8
