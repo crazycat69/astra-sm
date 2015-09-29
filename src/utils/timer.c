@@ -78,13 +78,13 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_option_number("interval", &interval);
     asc_assert(interval > 0, "[timer] option 'interval' must be greater than 0");
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "callback");
-    asc_assert(lua_isfunction(lua, -1), "[timer] option 'callback' is required");
-    mod->idx_callback = luaL_ref(lua, LUA_REGISTRYINDEX);
+    lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
+    asc_assert(lua_isfunction(L, -1), "[timer] option 'callback' is required");
+    mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     // store self in registry
-    lua_pushvalue(lua, 3);
-    mod->idx_self = luaL_ref(lua, LUA_REGISTRYINDEX);
+    lua_pushvalue(L, 3);
+    mod->idx_self = luaL_ref(L, LUA_REGISTRYINDEX);
 
     mod->timer = asc_timer_init(interval * 1000, timer_callback, mod);
 }
