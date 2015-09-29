@@ -75,6 +75,7 @@ void __module_stream_send(void *arg, const uint8_t *ts);
 #define module_stream_demux_set(_mod, _join_pid, _leave_pid) \
     do { \
         _mod->__stream.pid_list = (uint8_t *)calloc(MAX_PID, sizeof(uint8_t)); \
+        asc_assert(_mod->__stream.pid_list != NULL, "[stream] calloc() failed"); \
         _mod->__stream.join_pid = _join_pid; \
         _mod->__stream.leave_pid = _leave_pid; \
     } while (0)

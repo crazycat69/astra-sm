@@ -93,7 +93,8 @@ bool module_option_boolean(const char *name, bool *boolean);
             { "__gc", __module_delete }, \
             { "__tostring", __module_tostring }, \
         }; \
-        module_data_t *mod = (module_data_t *)calloc(1, sizeof(module_data_t)); \
+        module_data_t *mod = (module_data_t *)calloc(1, sizeof(*mod)); \
+        asc_assert(mod != NULL, "[luapi] calloc() failed"); \
         lua_newtable(L); \
         lua_newtable(L); \
         for(i = 0; i < ASC_ARRAY_SIZE(__meta_methods); ++i) \
