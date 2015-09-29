@@ -310,6 +310,6 @@ static void module_destroy(module_data_t *mod)
 
 MODULE_LUA_METHODS()
 {
-    { NULL, NULL }
+    { NULL, NULL },
 };
 MODULE_LUA_REGISTER(http_upstream)

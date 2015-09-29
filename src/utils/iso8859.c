@@ -475,7 +475,7 @@ MODULE_LUA_BINDING(iso8859)
     static const luaL_Reg api[] =
     {
         { "encode", lua_iso8859_encode },
-        { NULL, NULL }
+        { NULL, NULL },
     };
 
     luaL_newlib(L, api);

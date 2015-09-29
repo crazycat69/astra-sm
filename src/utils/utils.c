@@ -244,7 +244,7 @@ MODULE_LUA_BINDING(utils)
         { "ifaddrs", utils_ifaddrs },
 #endif
         { "stat", utils_stat },
-        { NULL, NULL }
+        { NULL, NULL },
     };
 
     luaL_newlib(L, api);

@@ -1151,8 +1151,8 @@ static void module_destroy(module_data_t *mod)
 MODULE_STREAM_METHODS()
 MODULE_LUA_METHODS()
 {
+    MODULE_STREAM_METHODS_REF(),
     { "ca_set_pnr", method_ca_set_pnr },
     { "close", method_close },
-    MODULE_STREAM_METHODS_REF()
 };
 MODULE_LUA_REGISTER(dvb_input)

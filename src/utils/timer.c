@@ -40,7 +40,8 @@ struct module_data_t
 
 static void timer_callback(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
+
     lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_callback);
     lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_self);
     lua_call(lua, 1, 0);
@@ -94,6 +95,6 @@ static void module_destroy(module_data_t *mod)
 
 MODULE_LUA_METHODS()
 {
-    { "close", method_close }
+    { "close", method_close },
 };
 MODULE_LUA_REGISTER(timer)

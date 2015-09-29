@@ -162,7 +162,7 @@ MODULE_LUA_BINDING(base64)
     {
         { "encode", lua_base64_encode },
         { "decode", lua_base64_decode },
-        { NULL, NULL }
+        { NULL, NULL },
     };
 
     luaL_newlib(L, api);

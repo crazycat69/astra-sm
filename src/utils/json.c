@@ -577,7 +577,7 @@ MODULE_LUA_BINDING(json)
         { "decode", json_decode },
         { "load", json_load },
         { "save", json_save },
-        { NULL, NULL }
+        { NULL, NULL },
     };
 
     luaL_newlib(L, api);

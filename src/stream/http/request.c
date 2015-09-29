@@ -1413,5 +1413,4 @@ MODULE_LUA_METHODS()
     { "close", method_close },
     { "set_receiver", method_set_receiver },
 };
-
 MODULE_LUA_REGISTER(http_request)

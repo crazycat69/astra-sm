@@ -24,6 +24,10 @@
  *
  * Module Options:
  *      upstream    - object, stream instance returned by module_instance:stream()
+ *
+ * Module Methods:
+ *      set_upstream(object)
+ *                  - set upstream module instance
  */
 
 #include <astra.h>
@@ -63,8 +67,7 @@ static void module_destroy(module_data_t *mod)
 MODULE_STREAM_METHODS()
 MODULE_LUA_METHODS()
 {
+    MODULE_STREAM_METHODS_REF(),
     { "set_upstream", method_set_upstream },
-    MODULE_STREAM_METHODS_REF()
 };
-
 MODULE_LUA_REGISTER(transmit)

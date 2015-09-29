@@ -850,6 +850,6 @@ static void module_destroy(module_data_t *mod)
 MODULE_STREAM_METHODS()
 MODULE_LUA_METHODS()
 {
-    MODULE_STREAM_METHODS_REF()
+    MODULE_STREAM_METHODS_REF(),
 };
 MODULE_LUA_REGISTER(analyze)

@@ -28,6 +28,7 @@
  *      restart     - number, seconds before auto restart (0 to disable)
  *      stream      - boolean, read TS data from child
  *      sync        - boolean, buffer incoming TS
+ *      sync_opts   - string, sync buffer options
  *
  * Module Methods:
  *      pid         - return process' pid (-1 if not running)

@@ -129,7 +129,7 @@ MODULE_LUA_BINDING(log)
         { "warning", lua_log_warning },
         { "info", lua_log_info },
         { "debug", lua_log_debug },
-        { NULL, NULL }
+        { NULL, NULL },
     };
 
     luaL_newlib(L, api);

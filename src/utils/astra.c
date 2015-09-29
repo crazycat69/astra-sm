@@ -28,7 +28,7 @@
  *                  - string, astra version string
  *      astra.fullname
  *                  - string, package plus version
- *      astra.debug - boolean, is a debug version
+ *      astra.debug - boolean, whether this is a debug build
  *
  * Methods:
  *      astra.abort()
@@ -80,7 +80,7 @@ MODULE_LUA_BINDING(astra)
         { "abort", lua_astra_abort },
         { "reload", lua_astra_reload },
         { "shutdown", lua_astra_shutdown },
-        { NULL, NULL }
+        { NULL, NULL },
     };
 
     luaL_newlib(L, astra_api);

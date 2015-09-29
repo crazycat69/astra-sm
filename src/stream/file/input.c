@@ -459,7 +459,6 @@ MODULE_STREAM_METHODS()
 MODULE_LUA_METHODS()
 {
     MODULE_STREAM_METHODS_REF(),
-    { "length", method_length }
+    { "length", method_length },
 };
-
 MODULE_LUA_REGISTER(file_input)

@@ -31,6 +31,7 @@
  *      socket_size - number, socket buffer size
  *      rtp         - boolean, use RTP instead of RAW UDP
  *      sync        - boolean, use MPEG-TS syncing
+ *      sync_opts   - string, sync buffer options
  */
 
 #include <astra.h>
@@ -229,6 +230,6 @@ static void module_destroy(module_data_t *mod)
 MODULE_STREAM_METHODS()
 MODULE_LUA_METHODS()
 {
-    MODULE_STREAM_METHODS_REF()
+    MODULE_STREAM_METHODS_REF(),
 };
 MODULE_LUA_REGISTER(udp_output)
