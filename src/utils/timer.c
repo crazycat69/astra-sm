@@ -71,7 +71,7 @@ static int method_close(lua_State *L, module_data_t *mod)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     int interval = 0;
-    module_option_number("interval", &interval);
+    module_option_integer(L, "interval", &interval);
     asc_assert(interval > 0, "[timer] option 'interval' must be greater than 0");
 
     lua_getfield(L, MODULE_OPTIONS_IDX, "callback");

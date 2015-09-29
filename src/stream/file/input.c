@@ -381,16 +381,16 @@ static int method_length(lua_State *L, module_data_t *mod)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_option_string("filename", &mod->filename, NULL);
+    module_option_string(L, "filename", &mod->filename, NULL);
 
     int buffer_size = 0;
-    if(!module_option_number("buffer_size", &buffer_size) || buffer_size <= 0)
+    if(!module_option_integer(L, "buffer_size", &buffer_size) || buffer_size <= 0)
         buffer_size = INPUT_BUFFER_SIZE;
     mod->buffer_size = buffer_size * 1024 * 1024;
     mod->buffer = (uint8_t *)malloc(mod->buffer_size);
 
     bool check_length;
-    if(module_option_boolean("check_length", &check_length) && check_length)
+    if(module_option_boolean(L, "check_length", &check_length) && check_length)
     {
         open_file(mod);
         if(mod->fd > 0)
@@ -401,8 +401,8 @@ static void module_init(lua_State *L, module_data_t *mod)
         return;
     }
 
-    module_option_string("lock", &mod->lock, NULL);
-    module_option_boolean("loop", &mod->loop);
+    module_option_string(L, "lock", &mod->lock, NULL);
+    module_option_boolean(L, "loop", &mod->loop);
 
     // store callback in registry
     lua_getfield(L, 2, "callback");

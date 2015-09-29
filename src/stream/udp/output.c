@@ -146,14 +146,14 @@ static void on_output_ts(module_data_t *mod, const uint8_t *ts)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_option_string("addr", &mod->addr, NULL);
+    module_option_string(L, "addr", &mod->addr, NULL);
     if(mod->addr == NULL)
         luaL_error(L, "[udp_output] option 'addr' is required");
 
     mod->port = 1234;
-    module_option_number("port", &mod->port);
+    module_option_integer(L, "port", &mod->port);
 
-    module_option_boolean("rtp", &mod->is_rtp);
+    module_option_boolean(L, "rtp", &mod->is_rtp);
     if(mod->is_rtp)
     {
         const uint32_t rtpssrc = (uint32_t)rand();
@@ -175,16 +175,16 @@ static void module_init(lua_State *L, module_data_t *mod)
         luaL_error(L, MSG("couldn't bind socket"));
 
     int value;
-    if(module_option_number("socket_size", &value))
+    if(module_option_integer(L, "socket_size", &value))
         asc_socket_set_buffer(mod->sock, 0, value);
 
     const char *localaddr = NULL;
-    module_option_string("localaddr", &localaddr, NULL);
+    module_option_string(L, "localaddr", &localaddr, NULL);
     if(localaddr)
         asc_socket_set_multicast_if(mod->sock, localaddr);
 
     value = 32;
-    module_option_number("ttl", &value);
+    module_option_integer(L, "ttl", &value);
     asc_socket_set_multicast_ttl(mod->sock, value);
 
     asc_socket_multicast_join(mod->sock, mod->addr, NULL);
@@ -195,7 +195,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 
     stream_callback_t on_ts = on_output_ts;
     bool sync_on = false;
-    module_option_boolean("sync", &sync_on);
+    module_option_boolean(L, "sync", &sync_on);
 
     if(sync_on)
     {
@@ -207,7 +207,7 @@ static void module_init(lua_State *L, module_data_t *mod)
                               , mod->addr, mod->port);
 
         const char *optstr = NULL;
-        module_option_string("sync_opts", &optstr, NULL);
+        module_option_string(L, "sync_opts", &optstr, NULL);
         if (optstr != NULL && !mpegts_sync_parse_opts(mod->sync, optstr))
             luaL_error(L, MSG("invalid value for option 'sync_opts'"));
 

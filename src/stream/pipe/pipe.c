@@ -295,7 +295,7 @@ void module_init(lua_State *L, module_data_t *mod)
 {
     /* identifier */
     const char *name = NULL;
-    module_option_string("name", &name, NULL);
+    module_option_string(L, "name", &name, NULL);
     if (name == NULL || !strlen(name))
         luaL_error(L, "[pipe] name is required");
 
@@ -303,7 +303,7 @@ void module_init(lua_State *L, module_data_t *mod)
 
     /* command line */
     const char *command = NULL;
-    module_option_string("command", &command, NULL);
+    module_option_string(L, "command", &command, NULL);
     if (command == NULL || !strlen(command))
         luaL_error(L, MSG("command line is required"));
 
@@ -311,7 +311,7 @@ void module_init(lua_State *L, module_data_t *mod)
 
     /* restart delay */
     int delay = 5;
-    module_option_number("restart", &delay);
+    module_option_integer(L, "restart", &delay);
     if (delay < 0 || delay > 86400)
         luaL_error(L, MSG("restart delay out of range"));
 
@@ -332,7 +332,7 @@ void module_init(lua_State *L, module_data_t *mod)
 
     /* read mode */
     bool is_stream = false;
-    module_option_boolean("stream", &is_stream);
+    module_option_boolean(L, "stream", &is_stream);
     if (is_stream)
     {
         /* input or transcode; expect TS data */
@@ -351,7 +351,7 @@ void module_init(lua_State *L, module_data_t *mod)
 
     /* optional input buffering */
     bool sync_on = false;
-    module_option_boolean("sync", &sync_on);
+    module_option_boolean(L, "sync", &sync_on);
 
     if (sync_on)
     {
@@ -365,7 +365,7 @@ void module_init(lua_State *L, module_data_t *mod)
         mpegts_sync_set_fname(mod->sync, "sync/%s", mod->config.name);
 
         const char *optstr = NULL;
-        module_option_string("sync_opts", &optstr, NULL);
+        module_option_string(L, "sync_opts", &optstr, NULL);
         if (optstr != NULL && !mpegts_sync_parse_opts(mod->sync, optstr))
             luaL_error(L, MSG("invalid value for option 'sync_opts'"));
 

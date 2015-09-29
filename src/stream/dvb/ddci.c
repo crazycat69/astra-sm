@@ -268,12 +268,12 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->ca = (dvb_ca_t *)calloc(1, sizeof(*mod->ca));
 
     static const char __adapter[] = "adapter";
-    if(!module_option_number(__adapter, &mod->adapter))
+    if(!module_option_integer(L, __adapter, &mod->adapter))
     {
         asc_log_error(MSG("option '%s' is required"), __adapter);
         astra_abort();
     }
-    module_option_number("device", &mod->device);
+    module_option_integer(L, "device", &mod->device);
     mod->ca->adapter = mod->adapter;
     mod->ca->device = mod->device;
     const size_t path_size = sprintf(mod->dev_name, "/dev/dvb/adapter%d/", mod->adapter);

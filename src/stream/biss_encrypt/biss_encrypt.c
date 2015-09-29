@@ -162,7 +162,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 
     size_t biss_length = 0;
     const char *key_value = NULL;
-    module_option_string("key", &key_value, &biss_length);
+    module_option_string(L, "key", &key_value, &biss_length);
     asc_assert(key_value != NULL, "[biss_encrypt] option 'key' is required");
     asc_assert(biss_length == 16, "[biss_encrypt] key must be 16 char length");
 

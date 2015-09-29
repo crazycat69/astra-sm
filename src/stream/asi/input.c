@@ -111,12 +111,12 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_stream_init(mod, NULL);
     module_stream_demux_set(mod, join_pid, leave_pid);
 
-    if(!module_option_number("adapter", &mod->adapter))
+    if(!module_option_integer(L, "adapter", &mod->adapter))
     {
         asc_log_error("[asi_input] option 'adapter' is required");
         astra_abort();
     }
-    module_option_boolean("budget", &mod->budget);
+    module_option_boolean(L, "budget", &mod->budget);
 
     char dev_name[32];
     snprintf(dev_name, sizeof(dev_name), "/dev/asirx%d", mod->adapter);

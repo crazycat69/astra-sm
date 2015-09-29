@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
+ *                    2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,9 +48,10 @@ extern lua_State *lua;
 void asc_lua_core_init(void);
 void asc_lua_core_destroy(void);
 
-bool module_option_number(const char *name, int *number);
-bool module_option_string(const char *name, const char **string, size_t *length);
-bool module_option_boolean(const char *name, bool *boolean);
+bool module_option_integer(lua_State *L, const char *name, int *integer);
+bool module_option_string(lua_State *L, const char *name, const char **string
+                          , size_t *length);
+bool module_option_boolean(lua_State *L, const char *name, bool *boolean);
 
 #define lua_foreach(_lua, _idx) \
     for(lua_pushnil(_lua); lua_next(_lua, _idx); lua_pop(_lua, 1))

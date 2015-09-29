@@ -951,18 +951,18 @@ static bool lua_is_call(int idx)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_option_string("addr", &mod->addr, NULL);
+    module_option_string(L, "addr", &mod->addr, NULL);
     if(!mod->addr || !mod->addr[0])
         mod->addr = "0.0.0.0";
 
     mod->port = 80;
-    module_option_number("port", &mod->port);
+    module_option_integer(L, "port", &mod->port);
 
     mod->server_name = PACKAGE_NAME;
-    module_option_string("server_name", &mod->server_name, NULL);
+    module_option_string(L, "server_name", &mod->server_name, NULL);
 
     mod->http_version = "HTTP/1.1";
-    module_option_string("http_version", &mod->http_version, NULL);
+    module_option_string(L, "http_version", &mod->http_version, NULL);
 
     // store routes in registry
     mod->routes = asc_list_init();
@@ -1005,7 +1005,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->clients = asc_list_init();
 
     bool sctp = false;
-    module_option_boolean("sctp", &sctp);
+    module_option_boolean(L, "sctp", &sctp);
     if(sctp == true)
         mod->sock = asc_socket_open_sctp4(mod);
     else

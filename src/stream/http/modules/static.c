@@ -262,12 +262,12 @@ static void module_init(lua_State *L, module_data_t *mod)
 
 #ifdef ASC_SENDFILE
     int block_size = 0;
-    module_option_number("block_size", &block_size);
+    module_option_integer(L, "block_size", &block_size);
     mod->block_size = (block_size > 0) ? (block_size * 1024) : ASC_SENDFILE;
 #endif
 
     mod->default_mime = "application/octet-stream";
-    module_option_string("default_mime", &mod->default_mime, NULL);
+    module_option_string(L, "default_mime", &mod->default_mime, NULL);
 
     struct stat s;
     asc_assert(stat(mod->path, &s) != -1, "[http_static] path is not found");

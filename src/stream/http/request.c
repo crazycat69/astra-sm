@@ -1332,14 +1332,14 @@ static int method_close(lua_State *L, module_data_t *mod)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_option_string("host", &mod->config.host, NULL);
+    module_option_string(L, "host", &mod->config.host, NULL);
     asc_assert(mod->config.host != NULL, MSG("option 'host' is required"));
 
     mod->config.port = 80;
-    module_option_number("port", &mod->config.port);
+    module_option_integer(L, "port", &mod->config.port);
 
     mod->config.path = __default_path;
-    module_option_string(__path, &mod->config.path, NULL);
+    module_option_string(L, __path, &mod->config.path, NULL);
 
     lua_getfield(L, 2, __callback);
     asc_assert(lua_isfunction(L, -1), MSG("option 'callback' is required"));
@@ -1349,13 +1349,13 @@ static void module_init(lua_State *L, module_data_t *mod)
     lua_pushvalue(L, 3);
     mod->idx_self = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    module_option_boolean(__stream, &mod->is_stream);
+    module_option_boolean(L, __stream, &mod->is_stream);
     if(mod->is_stream)
     {
         module_stream_init(mod, NULL);
 
         int value = 0;
-        module_option_number("sync", &value);
+        module_option_integer(L, "sync", &value);
         if(value > 0)
             mod->config.sync = true;
         else
@@ -1372,23 +1372,23 @@ static void module_init(lua_State *L, module_data_t *mod)
         module_stream_init(mod, on_ts);
 
         int value = 1024;
-        module_option_number("buffer_size", &value);
+        module_option_integer(L, "buffer_size", &value);
         mod->sync.buffer_size = value * 1024;
         mod->sync.buffer = (uint8_t *)malloc(mod->sync.buffer_size);
 
         value = 128;
-        module_option_number("buffer_fill", &value);
+        module_option_integer(L, "buffer_fill", &value);
         mod->sync.buffer_fill = value * 1024;
     }
     lua_pop(L, 1);
 
     mod->timeout_ms = 10;
-    module_option_number("timeout", &mod->timeout_ms);
+    module_option_integer(L, "timeout", &mod->timeout_ms);
     mod->timeout_ms *= 1000;
     mod->timeout = asc_timer_init(mod->timeout_ms, timeout_callback, mod);
 
     bool sctp = false;
-    module_option_boolean("sctp", &sctp);
+    module_option_boolean(L, "sctp", &sctp);
     if(sctp == true)
         mod->sock = asc_socket_open_sctp4(mod);
     else

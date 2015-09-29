@@ -146,11 +146,11 @@ static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, NULL);
 
-    module_option_string("addr", &mod->config.addr, NULL);
+    module_option_string(L, "addr", &mod->config.addr, NULL);
     if(mod->config.addr == NULL)
         luaL_error(L, "[udp_input] option 'addr' is required");
 
-    module_option_number("port", &mod->config.port);
+    module_option_integer(L, "port", &mod->config.port);
 
     mod->sock = asc_socket_open_udp4(mod);
     asc_socket_set_reuseaddr(mod->sock, 1);
@@ -162,18 +162,18 @@ static void module_init(lua_State *L, module_data_t *mod)
         return;
 
     int value;
-    if(module_option_number("socket_size", &value))
+    if(module_option_integer(L, "socket_size", &value))
         asc_socket_set_buffer(mod->sock, value, 0);
 
-    module_option_boolean("rtp", &mod->config.rtp);
+    module_option_boolean(L, "rtp", &mod->config.rtp);
 
     asc_socket_set_on_read(mod->sock, on_read);
     asc_socket_set_on_close(mod->sock, on_close);
 
-    module_option_string("localaddr", &mod->config.localaddr, NULL);
+    module_option_string(L, "localaddr", &mod->config.localaddr, NULL);
     asc_socket_multicast_join(mod->sock, mod->config.addr, mod->config.localaddr);
 
-    if(module_option_number("renew", &value))
+    if(module_option_integer(L, "renew", &value))
         mod->timer_renew = asc_timer_init(value * 1000, timer_renew_callback, mod);
 }
 

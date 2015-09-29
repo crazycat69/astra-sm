@@ -50,11 +50,11 @@ static int __module_call(lua_State *L)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_option_string("location", &mod->location, NULL);
+    module_option_string(L, "location", &mod->location, NULL);
     asc_assert(mod->location != NULL, "[http_redirect] option 'location' is required");
 
     mod->code = 302;
-    module_option_number("code", &mod->code);
+    module_option_integer(L, "code", &mod->code);
 
     // Set callback for http route
     lua_getmetatable(L, 3);

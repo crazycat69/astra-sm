@@ -68,90 +68,91 @@ void asc_lua_core_init(void)
     lua_pop(lua, 1);
 }
 
-__asc_inline
 void asc_lua_core_destroy(void)
 {
     ASC_FREE(lua, lua_close);
 }
 
-bool module_option_number(const char *name, int *number)
+bool module_option_integer(lua_State *L, const char *name, int *integer)
 {
-    if(lua_type(lua, MODULE_OPTIONS_IDX) != LUA_TTABLE)
+    if(lua_type(L, MODULE_OPTIONS_IDX) != LUA_TTABLE)
         return false;
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, name);
-    const int type = lua_type(lua, -1);
+    lua_getfield(L, MODULE_OPTIONS_IDX, name);
+    const int type = lua_type(L, -1);
     bool result = false;
 
     if(type == LUA_TNUMBER)
     {
-        *number = lua_tointeger(lua, -1);
+        *integer = lua_tointeger(L, -1);
         result = true;
     }
     else if(type == LUA_TSTRING)
     {
-        const char *str = lua_tostring(lua, -1);
-        *number = atoi(str);
+        const char *str = lua_tostring(L, -1);
+        *integer = atoi(str);
         result = true;
     }
     else if(type == LUA_TBOOLEAN)
     {
-        *number = lua_toboolean(lua, -1);
+        *integer = lua_toboolean(L, -1);
         result = true;
     }
 
-    lua_pop(lua, 1);
+    lua_pop(L, 1);
     return result;
 }
 
-bool module_option_string(const char *name, const char **string, size_t *length)
+bool module_option_string(lua_State *L, const char *name, const char **string
+                          , size_t *length)
 {
-    if(lua_type(lua, MODULE_OPTIONS_IDX) != LUA_TTABLE)
+    if(lua_type(L, MODULE_OPTIONS_IDX) != LUA_TTABLE)
         return false;
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, name);
-    const int type = lua_type(lua, -1);
+    lua_getfield(L, MODULE_OPTIONS_IDX, name);
+    const int type = lua_type(L, -1);
     bool result = false;
 
     if(type == LUA_TSTRING)
     {
         if(length)
-            *length = luaL_len(lua, -1);
-        *string = lua_tostring(lua, -1);
+            *length = luaL_len(L, -1);
+        *string = lua_tostring(L, -1);
         result = true;
     }
 
-
-    lua_pop(lua, 1);
+    lua_pop(L, 1);
     return result;
 }
 
-bool module_option_boolean(const char *name, bool *boolean)
+bool module_option_boolean(lua_State *L, const char *name, bool *boolean)
 {
-    if(lua_type(lua, MODULE_OPTIONS_IDX) != LUA_TTABLE)
+    if(lua_type(L, MODULE_OPTIONS_IDX) != LUA_TTABLE)
         return false;
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, name);
-    const int type = lua_type(lua, -1);
+    lua_getfield(L, MODULE_OPTIONS_IDX, name);
+    const int type = lua_type(L, -1);
     bool result = false;
 
     if(type == LUA_TNUMBER)
     {
-        *boolean = (lua_tointeger(lua, -1) != 0) ? true : false;
+        *boolean = (lua_tointeger(L, -1) != 0) ? true : false;
         result = true;
     }
     else if(type == LUA_TSTRING)
     {
-        const char *str = lua_tostring(lua, -1);
-        *boolean = (!strcmp(str, "true") || !strcmp(str, "on") || !strcmp(str, "1"));
+        const char *str = lua_tostring(L, -1);
+        *boolean = (!strcmp(str, "true")
+                    || !strcmp(str, "on")
+                    || !strcmp(str, "1"));
         result = true;
     }
     else if(type == LUA_TBOOLEAN)
     {
-        *boolean = lua_toboolean(lua, -1);
+        *boolean = lua_toboolean(L, -1);
         result = true;
     }
 
-    lua_pop(lua, 1);
+    lua_pop(L, 1);
     return result;
 }

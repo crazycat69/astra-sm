@@ -808,14 +808,14 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_stream_init(mod, on_ts);
     module_stream_demux_set(mod, NULL, NULL);
 
-    module_option_string("name", &mod->config.name, NULL);
+    module_option_string(L, "name", &mod->config.name, NULL);
     asc_assert(mod->config.name != NULL, "[channel] option 'name' is required");
 
-    if(module_option_number("pnr", &mod->config.pnr))
+    if(module_option_integer(L, "pnr", &mod->config.pnr))
     {
-        module_option_number("set_pnr", &mod->config.set_pnr);
+        module_option_integer(L, "set_pnr", &mod->config.set_pnr);
 
-        module_option_boolean("cas", &mod->config.cas);
+        module_option_boolean(L, "cas", &mod->config.cas);
 
         mod->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
         mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, MAX_PID);
@@ -831,7 +831,7 @@ static void module_init(lua_State *L, module_data_t *mod)
             module_stream_demux_join_pid(mod, 1);
         }
 
-        module_option_boolean("no_sdt", &mod->config.no_sdt);
+        module_option_boolean(L, "no_sdt", &mod->config.no_sdt);
         if(mod->config.no_sdt == false)
         {
             mod->sdt = mpegts_psi_init(MPEGTS_PACKET_SDT, 0x11);
@@ -839,10 +839,10 @@ static void module_init(lua_State *L, module_data_t *mod)
             mod->stream[0x11] = MPEGTS_PACKET_SDT;
             module_stream_demux_join_pid(mod, 0x11);
 
-            module_option_boolean("pass_sdt", &mod->config.pass_sdt);
+            module_option_boolean(L, "pass_sdt", &mod->config.pass_sdt);
         }
 
-        module_option_boolean("no_eit", &mod->config.no_eit);
+        module_option_boolean(L, "no_eit", &mod->config.no_eit);
         if(mod->config.no_eit == false)
         {
             mod->eit = mpegts_psi_init(MPEGTS_PACKET_EIT, 0x12);
@@ -852,10 +852,10 @@ static void module_init(lua_State *L, module_data_t *mod)
             mod->stream[0x14] = MPEGTS_PACKET_TDT;
             module_stream_demux_join_pid(mod, 0x14);
 
-            module_option_boolean("pass_eit", &mod->config.pass_eit);
+            module_option_boolean(L, "pass_eit", &mod->config.pass_eit);
         }
 
-        module_option_boolean("no_reload", &mod->config.no_reload);
+        module_option_boolean(L, "no_reload", &mod->config.no_reload);
         if(mod->config.no_reload)
             mod->si_timer = asc_timer_init(500, on_si_timer, mod);
     }
