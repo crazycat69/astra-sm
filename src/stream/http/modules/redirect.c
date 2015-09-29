@@ -23,6 +23,8 @@
 
 struct module_data_t
 {
+    MODULE_LUA_DATA();
+
     const char *location;
     int code;
 };

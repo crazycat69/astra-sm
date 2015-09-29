@@ -49,7 +49,8 @@ struct module_stream_t
     uint8_t *pid_list;
 };
 
-#define MODULE_STREAM_DATA() module_stream_t __stream
+#define MODULE_STREAM_DATA() \
+    MODULE_LUA_DATA(); module_stream_t __stream
 
 // stream
 

@@ -82,7 +82,8 @@ struct module_cam_t
                     , const uint8_t *buffer, uint16_t size);
 };
 
-#define MODULE_CAM_DATA() module_cam_t __cam
+#define MODULE_CAM_DATA() \
+    MODULE_LUA_DATA(); module_cam_t __cam
 
 void module_cam_attach_decrypt(module_cam_t *cam, module_decrypt_t *decrypt);
 void module_cam_detach_decrypt(module_cam_t *cam, module_decrypt_t *decrypt);

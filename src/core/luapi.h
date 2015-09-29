@@ -56,6 +56,9 @@ bool module_option_boolean(const char *name, bool *boolean);
 
 #define MODULE_OPTIONS_IDX 2
 
+#define MODULE_LUA_DATA() \
+    lua_State *__lua
+
 #define MODULE_LUA_BINDING(_name) \
     LUA_API int luaopen_##_name(lua_State *L)
 
@@ -116,6 +119,7 @@ bool module_option_boolean(const char *name, bool *boolean);
             lua_pushvalue(L, MODULE_OPTIONS_IDX); \
             lua_setfield(L, 3, "__options"); \
         } \
+        mod->__lua = L; \
         module_init(L, mod); \
         return 1; \
     } \

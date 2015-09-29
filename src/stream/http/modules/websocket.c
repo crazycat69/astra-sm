@@ -33,6 +33,8 @@
 
 struct module_data_t
 {
+    MODULE_LUA_DATA();
+
     int idx_callback;
 };
 

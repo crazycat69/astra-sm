@@ -35,6 +35,8 @@
 
 struct module_data_t
 {
+    MODULE_LUA_DATA();
+
     const char *path;
     int path_skip;
 
