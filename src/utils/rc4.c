@@ -9,6 +9,7 @@
  */
 
 #include <astra.h>
+#include <luaapi/luaapi.h>
 
 typedef struct
 {
@@ -60,7 +61,7 @@ static void rc4_crypt(rc4_ctx_t *state, uint8_t *dst, const uint8_t *buf, int bu
     }
 }
 
-static int lua_rc4(lua_State *L)
+static int method_rc4(lua_State *L)
 {
     const uint8_t *data = (const uint8_t *)luaL_checkstring(L, 1);
     const int data_size = luaL_len(L, 1);
@@ -86,7 +87,7 @@ MODULE_LUA_BINDING(rc4)
 {
     lua_getglobal(L, "string");
 
-    lua_pushcfunction(L, lua_rc4);
+    lua_pushcfunction(L, method_rc4);
     lua_setfield(L, -2, "rc4");
 
     lua_pop(L, 1); // string

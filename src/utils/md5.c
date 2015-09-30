@@ -32,6 +32,7 @@
  */
 
 #include <astra.h>
+#include <luaapi/luaapi.h>
 
 /*
  * The digest algorithm interprets the input message as a sequence of 32-bit
@@ -433,7 +434,7 @@ void md5_crypt(const char *pw, const char *salt, char passwd[36])
     memset(final, 0, sizeof(final));
 } /* md5_crypt */
 
-static int lua_md5(lua_State *L)
+static int method_md5(lua_State *L)
 {
     const char *data = luaL_checkstring(L, 1);
     const int data_size = luaL_len(L, 1);
@@ -445,7 +446,7 @@ static int lua_md5(lua_State *L)
     uint8_t digest[MD5_DIGEST_SIZE];
     md5_final(&ctx, digest);
 
-    lua_pushlstring(lua, (char *)digest, sizeof(digest));
+    lua_pushlstring(L, (char *)digest, sizeof(digest));
     return 1;
 }
 
@@ -453,7 +454,7 @@ MODULE_LUA_BINDING(md5)
 {
     lua_getglobal(L, "string");
 
-    lua_pushcfunction(L, lua_md5);
+    lua_pushcfunction(L, method_md5);
     lua_setfield(L, -2, "md5");
 
     lua_pop(L, 1); // string

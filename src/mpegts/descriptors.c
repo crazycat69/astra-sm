@@ -26,29 +26,27 @@
 #define HEX_BUFSIZE 128
 
 #define DESC_FUNCTION(__type_name) \
-    static void desc_##__type_name(const uint8_t *desc)
+    static void desc_##__type_name(lua_State *L, const uint8_t *desc)
 
 #define DESC_LIST(__type_id, __type_name) \
     { __type_id, #__type_name, desc_##__type_name }
-
-typedef void (*descriptor_parser_t)(const uint8_t *);
 
 typedef struct
 {
     unsigned type;
     const char *name;
 
-    descriptor_parser_t parser;
+    void (*parser)(lua_State *, const uint8_t *);
 } dvb_descriptor_t;
 
 static const char __data[] = "data";
 static const char __type_name[] = "type_name";
 static const char __strip[] = "... (strip)";
 
-static void push_description_text(const uint8_t *data)
+static void push_description_text(lua_State *L, const uint8_t *data)
 {
     luaL_Buffer b;
-    luaL_buffinit(lua, &b);
+    luaL_buffinit(L, &b);
 
     char *text = iso8859_decode(&data[1], data[0]);
     luaL_addstring(&b, text);
@@ -119,20 +117,20 @@ DESC_FUNCTION(cas)
     const uint16_t ca_pid = DESC_CA_PID(desc);
     const uint16_t caid = desc[2] << 8 | desc[3];
 
-    lua_pushinteger(lua, caid);
-    lua_setfield(lua, -2, "caid");
+    lua_pushinteger(L, caid);
+    lua_setfield(L, -2, "caid");
 
-    lua_pushinteger(lua, ca_pid);
-    lua_setfield(lua, -2, "pid");
+    lua_pushinteger(L, ca_pid);
+    lua_setfield(L, -2, "pid");
 
     const uint8_t ca_info_size = desc[1] - 4; // 4 = caid + ca_pid
     if(ca_info_size > 0)
     {
         char *text = fancy_hex_str(&desc[6], ca_info_size);
-        lua_pushstring(lua, text);
+        lua_pushstring(L, text);
         free(text);
 
-        lua_setfield(lua, -2, __data);
+        lua_setfield(L, -2, __data);
     }
 }
 
@@ -141,8 +139,8 @@ DESC_FUNCTION(lang)
     char lang[4];
     strncpy_print(lang, &desc[2], 3);
 
-    lua_pushstring(lua, lang);
-    lua_setfield(lua, -2, "lang");
+    lua_pushstring(L, lang);
+    lua_setfield(L, -2, "lang");
 }
 
 DESC_FUNCTION(maximum_bitrate)
@@ -150,170 +148,170 @@ DESC_FUNCTION(maximum_bitrate)
     const uint32_t bitrate =
         ((desc[2] & 0x3f) << 16) | (desc[3] << 8) | desc[4];
 
-    lua_pushinteger(lua, bitrate);
-    lua_setfield(lua, -2, "maximum_bitrate");
+    lua_pushinteger(L, bitrate);
+    lua_setfield(L, -2, "maximum_bitrate");
 }
 
 DESC_FUNCTION(service)
 {
-    lua_pushinteger(lua, desc[2]);
-    lua_setfield(lua, -2, "service_type_id");
+    lua_pushinteger(L, desc[2]);
+    lua_setfield(L, -2, "service_type_id");
 
     desc += 3;
     // service provider
     if(desc[0] > 0)
-        push_description_text(desc);
+        push_description_text(L, desc);
     else
-        lua_pushstring(lua, "");
-    lua_setfield(lua, -2, "service_provider");
+        lua_pushstring(L, "");
+    lua_setfield(L, -2, "service_provider");
 
     desc += desc[0] + 1;
     // service name
     if(desc[0] > 0)
-        push_description_text(desc);
+        push_description_text(L, desc);
     else
-        lua_pushstring(lua, "");
-    lua_setfield(lua, -2, "service_name");
+        lua_pushstring(L, "");
+    lua_setfield(L, -2, "service_name");
 }
 
 DESC_FUNCTION(short_event)
 {
     char lang[4];
     strncpy_print(lang, &desc[2], 3);
-    lua_pushstring(lua, lang);
-    lua_setfield(lua, -2, "lang");
+    lua_pushstring(L, lang);
+    lua_setfield(L, -2, "lang");
 
     desc += 5; // skip 1:tag + 1:length + 3:lang
-    push_description_text(desc);
-    lua_setfield(lua, -2, "event_name");
+    push_description_text(L, desc);
+    lua_setfield(L, -2, "event_name");
 
     desc += desc[0] + 1;
-    push_description_text(desc);
-    lua_setfield(lua, -2, "text_char");
+    push_description_text(L, desc);
+    lua_setfield(L, -2, "text_char");
 }
 
 DESC_FUNCTION(extended_event)
 {
-    lua_pushinteger(lua, desc[2] >> 4);
-    lua_setfield(lua, -2, "desc_num");
+    lua_pushinteger(L, desc[2] >> 4);
+    lua_setfield(L, -2, "desc_num");
 
-    lua_pushinteger(lua, desc[2] & 0x0F);
-    lua_setfield(lua, -2, "last_desc_num");
+    lua_pushinteger(L, desc[2] & 0x0F);
+    lua_setfield(L, -2, "last_desc_num");
 
     char lang[4];
     strncpy_print(lang, &desc[3], 3);
-    lua_pushstring(lua, lang);
-    lua_setfield(lua, -2, "lang");
+    lua_pushstring(L, lang);
+    lua_setfield(L, -2, "lang");
 
     desc += 6; // skip 1:tag + 1:length + 1:desc_num:last_desc_num + 3:lang
 
     if(desc[0] > 0)
     {
-        lua_newtable(lua); // items[]
+        lua_newtable(L); // items[]
 
         const uint8_t *_item_ptr = &desc[1];
         const uint8_t *const _item_ptr_end = _item_ptr + desc[0];
 
         while(_item_ptr < _item_ptr_end)
         {
-            const int item_count = luaL_len(lua, -1) + 1;
-            lua_pushinteger(lua, item_count);
+            const int item_count = luaL_len(L, -1) + 1;
+            lua_pushinteger(L, item_count);
 
-            lua_newtable(lua);
+            lua_newtable(L);
 
-            push_description_text(_item_ptr);
-            lua_setfield(lua, -2, "item_desc");
+            push_description_text(L, _item_ptr);
+            lua_setfield(L, -2, "item_desc");
             _item_ptr += _item_ptr[0] + 1;
 
-            push_description_text(_item_ptr);
-            lua_setfield(lua, -2, "item");
+            push_description_text(L, _item_ptr);
+            lua_setfield(L, -2, "item");
             _item_ptr += _item_ptr[0] + 1;
 
-            lua_settable(lua, -3);
+            lua_settable(L, -3);
        }
 
-       lua_setfield(lua, -2, "items");
+       lua_setfield(L, -2, "items");
     }
 
     desc += desc[0] + 1;
     // text
     if(desc[0] > 0)
-         push_description_text(desc);
+         push_description_text(L, desc);
     else
-         lua_pushstring(lua, "");
-    lua_setfield(lua, -2, "text");
+         lua_pushstring(L, "");
+    lua_setfield(L, -2, "text");
 }
 
 DESC_FUNCTION(stream_id)
 {
-    lua_pushinteger(lua, desc[2]);
-    lua_setfield(lua, -2, "stream_id");
+    lua_pushinteger(L, desc[2]);
+    lua_setfield(L, -2, "stream_id");
 }
 
 DESC_FUNCTION(caid)
 {
-    lua_pushinteger(lua, ((desc[2] << 8) | desc[3]));
-    lua_setfield(lua, -2, "caid");
+    lua_pushinteger(L, ((desc[2] << 8) | desc[3]));
+    lua_setfield(L, -2, "caid");
 }
 
 DESC_FUNCTION(content)
 {
-    lua_newtable(lua); // items[]
+    lua_newtable(L); // items[]
 
     const uint8_t *_item_ptr = &desc[2];
     const uint8_t *const _item_ptr_end = _item_ptr + desc[1];
 
     while(_item_ptr < _item_ptr_end)
     {
-        const int item_count = luaL_len(lua, -1) + 1;
-        lua_pushinteger(lua, item_count);
+        const int item_count = luaL_len(L, -1) + 1;
+        lua_pushinteger(L, item_count);
 
-        lua_newtable(lua);
+        lua_newtable(L);
 
-        lua_pushinteger(lua, _item_ptr[0] >> 4);
-        lua_setfield(lua, -2, "cn_l1");
-        lua_pushinteger(lua, _item_ptr[0] & 0xF);
-        lua_setfield(lua, -2, "cn_l2");
-        lua_pushinteger(lua, _item_ptr[1] >> 4);
-        lua_setfield(lua, -2, "un_l1");
-        lua_pushinteger(lua, _item_ptr[1] & 0xF);
-        lua_setfield(lua, -2, "un_l2");
+        lua_pushinteger(L, _item_ptr[0] >> 4);
+        lua_setfield(L, -2, "cn_l1");
+        lua_pushinteger(L, _item_ptr[0] & 0xF);
+        lua_setfield(L, -2, "cn_l2");
+        lua_pushinteger(L, _item_ptr[1] >> 4);
+        lua_setfield(L, -2, "un_l1");
+        lua_pushinteger(L, _item_ptr[1] & 0xF);
+        lua_setfield(L, -2, "un_l2");
 
-        lua_settable(lua, -3);
+        lua_settable(L, -3);
         _item_ptr += 2;
     }
-    lua_setfield(lua, -2, "items");
+    lua_setfield(L, -2, "items");
 }
 
 DESC_FUNCTION(parental_rating)
 {
-    lua_newtable(lua); // items[]
+    lua_newtable(L); // items[]
 
     const uint8_t *_item_ptr = &desc[2];
     const uint8_t *const _item_ptr_end = _item_ptr + desc[1];
 
     while(_item_ptr < _item_ptr_end)
     {
-        const int item_count = luaL_len(lua, -1) + 1;
-        lua_pushinteger(lua, item_count);
+        const int item_count = luaL_len(L, -1) + 1;
+        lua_pushinteger(L, item_count);
 
         char country[4];
         strncpy_print(country, &_item_ptr[0], 3);
-        lua_pushstring(lua, country);
-        lua_setfield(lua, -2, "country");
+        lua_pushstring(L, country);
+        lua_setfield(L, -2, "country");
 
-        lua_pushinteger(lua, _item_ptr[3]);
-        lua_setfield(lua, -2, "rating");
+        lua_pushinteger(L, _item_ptr[3]);
+        lua_setfield(L, -2, "rating");
 
-        lua_settable(lua, -3);
+        lua_settable(L, -3);
         _item_ptr += 4;
     }
-    lua_setfield(lua, -2, "items");
+    lua_setfield(L, -2, "items");
 }
 
 DESC_FUNCTION(teletext)
 {
-    lua_newtable(lua);
+    lua_newtable(L);
 
     const size_t desc_size = desc[1];
     desc += 2;
@@ -321,30 +319,30 @@ DESC_FUNCTION(teletext)
     const uint8_t *const end = desc + desc_size;
     while (desc < end)
     {
-        const int item_count = luaL_len(lua, -1) + 1;
-        lua_pushinteger(lua, item_count);
+        const int item_count = luaL_len(L, -1) + 1;
+        lua_pushinteger(L, item_count);
 
-        lua_newtable(lua);
+        lua_newtable(L);
 
         char lang[4];
         strncpy_print(lang, desc, 3);
 
-        lua_pushstring(lua, lang);
-        lua_setfield(lua, -2, "lang");
+        lua_pushstring(L, lang);
+        lua_setfield(L, -2, "lang");
 
         const unsigned type = (desc[3] & 0xF8) >> 3;
-        lua_pushstring(lua, teletext_type_string(type));
-        lua_setfield(lua, -2, "page_type");
+        lua_pushstring(L, teletext_type_string(type));
+        lua_setfield(L, -2, "page_type");
 
         const unsigned page_number = ((desc[3] & 0x7) << 8) | desc[4];
-        lua_pushinteger(lua, page_number);
-        lua_setfield(lua, -2, "page_number");
+        lua_pushinteger(L, page_number);
+        lua_setfield(L, -2, "page_number");
 
-        lua_settable(lua, -3);
+        lua_settable(L, -3);
         desc += 5;
     }
 
-    lua_setfield(lua, -2, "items");
+    lua_setfield(L, -2, "items");
 }
 
 DESC_FUNCTION(ac3)
@@ -357,29 +355,29 @@ DESC_FUNCTION(ac3)
 
     if (component_type_flag)
     {
-        lua_pushinteger(lua, *desc);
-        lua_setfield(lua, -2, "component_type");
+        lua_pushinteger(L, *desc);
+        lua_setfield(L, -2, "component_type");
         desc++;
     }
 
     if (bsid_flag)
     {
-        lua_pushinteger(lua, *desc);
-        lua_setfield(lua, -2, "bsid");
+        lua_pushinteger(L, *desc);
+        lua_setfield(L, -2, "bsid");
         desc++;
     }
 
     if (mainid_flag)
     {
-        lua_pushinteger(lua, *desc);
-        lua_setfield(lua, -2, "mainid");
+        lua_pushinteger(L, *desc);
+        lua_setfield(L, -2, "mainid");
         desc++;
     }
 
     if (asvc_flag)
     {
-        lua_pushinteger(lua, *desc);
-        lua_setfield(lua, -2, "asvc");
+        lua_pushinteger(L, *desc);
+        lua_setfield(L, -2, "asvc");
         desc++;
     }
 }
@@ -389,10 +387,10 @@ DESC_FUNCTION(unknown)
     const int desc_size = 2 + desc[1];
 
     char *text = fancy_hex_str(desc, desc_size);
-    lua_pushstring(lua, text);
+    lua_pushstring(L, text);
     free(text);
 
-    lua_setfield(lua, -2, __data);
+    lua_setfield(L, -2, __data);
 }
 
 /*
@@ -411,33 +409,30 @@ static const dvb_descriptor_t known_descriptors[] = {
     DESC_LIST(0x55, parental_rating),
     DESC_LIST(0x56, teletext),
     DESC_LIST(0x6a, ac3),
+
+    /* last item is the default type */
+    DESC_LIST(0x100, unknown),
 };
 
-void mpegts_desc_to_lua(const uint8_t *desc)
+void mpegts_desc_to_lua(lua_State *L, const uint8_t *desc)
 {
     const unsigned type_id = desc[0];
 
-    lua_newtable(lua);
+    lua_newtable(L);
 
-    lua_pushinteger(lua, type_id);
-    lua_setfield(lua, -2, "type_id");
+    lua_pushinteger(L, type_id);
+    lua_setfield(L, -2, "type_id");
 
+    const dvb_descriptor_t *item = NULL;
     for (size_t i = 0; i < ASC_ARRAY_SIZE(known_descriptors); i++)
     {
-        const dvb_descriptor_t *const item = &known_descriptors[i];
+        item = &known_descriptors[i];
         if (item->type == type_id)
-        {
-            lua_pushstring(lua, item->name);
-            lua_setfield(lua, -2, __type_name);
-
-            item->parser(desc);
-            return;
-        }
+            break;
     }
 
-    /* dump raw descriptor data */
-    lua_pushstring(lua, "unknown");
-    lua_setfield(lua, -2, __type_name);
+    lua_pushstring(L, item->name);
+    lua_setfield(L, -2, __type_name);
 
-    desc_unknown(desc);
+    item->parser(L, desc);
 }

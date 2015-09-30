@@ -1,8 +1,9 @@
 /*
- * Astra Core (Lua API)
+ * Astra Lua API
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
+ *                    2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _ASC_LUAPI_H_
-#define _ASC_LUAPI_H_ 1
+#ifndef _LUA_API_H_
+#define _LUA_API_H_ 1
 
 #ifndef _ASTRA_H_
 #   error "Please include <astra.h> first"
@@ -34,7 +35,7 @@
 #endif /* !__cplusplus */
 
 typedef struct module_data_t module_data_t;
-typedef int (*module_callback_t)(module_data_t *);
+typedef int (*module_callback_t)(lua_State *L, module_data_t *);
 
 typedef struct
 {
@@ -42,22 +43,21 @@ typedef struct
     module_callback_t method;
 } module_method_t;
 
-extern lua_State *lua;
-
-void asc_lua_core_init(void);
-void asc_lua_core_destroy(void);
-
-bool module_option_number(const char *name, int *number);
-bool module_option_string(const char *name, const char **string, size_t *length);
-bool module_option_boolean(const char *name, bool *boolean);
-
-#define lua_stack_debug(_lua) \
-    printf("%s:%d %s(): stack:%d\n", __FILE__, __LINE__, __FUNCTION__, lua_gettop(_lua))
+bool module_option_integer(lua_State *L, const char *name, int *integer);
+bool module_option_string(lua_State *L, const char *name, const char **string
+                          , size_t *length);
+bool module_option_boolean(lua_State *L, const char *name, bool *boolean);
 
 #define lua_foreach(_lua, _idx) \
     for(lua_pushnil(_lua); lua_next(_lua, _idx); lua_pop(_lua, 1))
 
 #define MODULE_OPTIONS_IDX 2
+
+#define MODULE_LUA_DATA() \
+    lua_State *__lua
+
+#define MODULE_L(_mod) \
+    ((_mod)->__lua)
 
 #define MODULE_LUA_BINDING(_name) \
     LUA_API int luaopen_##_name(lua_State *L)
@@ -74,13 +74,16 @@ bool module_option_boolean(const char *name, bool *boolean);
     } \
     static int __module_thunk(lua_State *L) \
     { \
-        module_data_t *mod = (module_data_t *)lua_touserdata(L, lua_upvalueindex(1)); \
-        module_method_t *m = (module_method_t *)lua_touserdata(L, lua_upvalueindex(2)); \
-        return m->method(mod); \
+        module_data_t *const mod = \
+            (module_data_t *)lua_touserdata(L, lua_upvalueindex(1)); \
+        module_method_t *const m = \
+            (module_method_t *)lua_touserdata(L, lua_upvalueindex(2)); \
+        return m->method(L, mod); \
     } \
     static int __module_delete(lua_State *L) \
     { \
-        module_data_t *mod = (module_data_t *)lua_touserdata(L, lua_upvalueindex(1)); \
+        module_data_t *const mod = \
+            (module_data_t *)lua_touserdata(L, lua_upvalueindex(1)); \
         module_destroy(mod); \
         free(mod); \
         return 0; \
@@ -93,12 +96,13 @@ bool module_option_boolean(const char *name, bool *boolean);
             { "__gc", __module_delete }, \
             { "__tostring", __module_tostring }, \
         }; \
-        module_data_t *mod = (module_data_t *)calloc(1, sizeof(module_data_t)); \
+        module_data_t *const mod = (module_data_t *)calloc(1, sizeof(*mod)); \
+        asc_assert(mod != NULL, "[luaapi] calloc() failed"); \
         lua_newtable(L); \
         lua_newtable(L); \
         for(i = 0; i < ASC_ARRAY_SIZE(__meta_methods); ++i) \
         { \
-            const luaL_Reg *m = &__meta_methods[i]; \
+            const luaL_Reg *const m = &__meta_methods[i]; \
             lua_pushlightuserdata(L, (void *)mod); \
             lua_pushcclosure(L, m->func, 1); \
             lua_setfield(L, -2, m->name); \
@@ -106,7 +110,7 @@ bool module_option_boolean(const char *name, bool *boolean);
         lua_setmetatable(L, -2); \
         for(i = 0; i < ASC_ARRAY_SIZE(__module_methods); ++i) \
         { \
-            const module_method_t *m = &__module_methods[i]; \
+            const module_method_t *const m = &__module_methods[i]; \
             if(!m->name) break; \
             lua_pushlightuserdata(L, (void *)mod); \
             lua_pushlightuserdata(L, (void *)m); \
@@ -118,7 +122,8 @@ bool module_option_boolean(const char *name, bool *boolean);
             lua_pushvalue(L, MODULE_OPTIONS_IDX); \
             lua_setfield(L, 3, "__options"); \
         } \
-        module_init(mod); \
+        mod->__lua = L; \
+        module_init(L, mod); \
         return 1; \
     } \
     MODULE_LUA_BINDING(_name) \
@@ -139,4 +144,4 @@ bool module_option_boolean(const char *name, bool *boolean);
 
 #include <bindings.h>
 
-#endif /* _ASC_LUAPI_H_ */
+#endif /* _LUA_API_H_ */

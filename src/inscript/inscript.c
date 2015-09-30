@@ -19,19 +19,22 @@
  */
 
 #include <astra.h>
+#include <luaapi/luaapi.h>
+
 #include "inscript.h"
 
 static const char __module_name[] = "inscript";
 
-static int load_inscript(const char *buffer, size_t size, const char *name)
+static int load_inscript(lua_State *L, const char *buffer, size_t size
+                         , const char *name)
 {
     int load;
 
-    load = luaL_loadbuffer(lua, buffer, size, name);
+    load = luaL_loadbuffer(L, buffer, size, name);
     if(load != 0)
         return -1;
 
-    load = lua_pcall(lua, 0, LUA_MULTRET, 0);
+    load = lua_pcall(L, 0, LUA_MULTRET, 0);
     if(load != 0)
         return -1;
 
@@ -40,42 +43,40 @@ static int load_inscript(const char *buffer, size_t size, const char *name)
 
 static int fn_inscript_callback(lua_State *L)
 {
-    __uarg(L);
-
     int load;
 
-    load = load_inscript((const char *)base, sizeof(base), "=base");
+    load = load_inscript(L, (const char *)base, sizeof(base), "=base");
     if(load != 0)
-        luaL_error(lua, "[main] %s", lua_tostring(lua, -1));
+        luaL_error(L, "[main] %s", lua_tostring(L, -1));
 
     static const char *app = "=app";
 
-    lua_getglobal(lua, "argv");
-    const int argc = luaL_len(lua, -1);
+    lua_getglobal(L, "argv");
+    const int argc = luaL_len(L, -1);
 
     if(argc == 0)
     {
-        lua_pop(lua, 1); // argv
+        lua_pop(L, 1); // argv
 
-        lua_getglobal(lua, "astra_usage");
-        luaL_checktype(lua, -1, LUA_TFUNCTION);
-        lua_call(lua, 0, 0);
+        lua_getglobal(L, "astra_usage");
+        luaL_checktype(L, -1, LUA_TFUNCTION);
+        lua_call(L, 0, 0);
         return 0;
     }
 
     int argv_idx = 1;
 
-    lua_rawgeti(lua, -1, 1);
-    const char *script = luaL_checkstring(lua, -1);
-    lua_pop(lua, 2); // script + argv
+    lua_rawgeti(L, -1, 1);
+    const char *script = luaL_checkstring(L, -1);
+    lua_pop(L, 2); // script + argv
 
-    load = load_inscript((const char *)stream, sizeof(stream), "=stream");
+    load = load_inscript(L, (const char *)stream, sizeof(stream), "=stream");
     if(load != 0)
-        luaL_error(lua, "[main] %s", lua_tostring(lua, -1));
+        luaL_error(L, "[main] %s", lua_tostring(L, -1));
 
     if(!strcmp(script, "-"))
     {
-        load = luaL_dofile(lua, NULL);
+        load = luaL_dofile(L, NULL);
         argv_idx += 1;
     }
     else if(!strcmp(script, "--stream"))
@@ -85,52 +86,52 @@ static int fn_inscript_callback(lua_State *L)
     }
     else if(!strcmp(script, "--analyze"))
     {
-        load = load_inscript((const char *)analyze, sizeof(analyze), app);
+        load = load_inscript(L, (const char *)analyze, sizeof(analyze), app);
         argv_idx += 1;
     }
     else if(!strcmp(script, "--xproxy"))
     {
-        load = load_inscript((const char *)relay, sizeof(relay), app);
+        load = load_inscript(L, (const char *)relay, sizeof(relay), app);
         argv_idx += 1;
     }
     else if(!strcmp(script, "--relay"))
     {
-        load = load_inscript((const char *)relay, sizeof(relay), app);
+        load = load_inscript(L, (const char *)relay, sizeof(relay), app);
         argv_idx += 1;
     }
     else if(!strcmp(script, "--dvbls"))
     {
-        load = load_inscript((const char *)dvbls, sizeof(dvbls), app);
+        load = load_inscript(L, (const char *)dvbls, sizeof(dvbls), app);
         argv_idx += 1;
     }
     else if(!strcmp(script, "--dvbwrite"))
     {
-        load = load_inscript((const char *)dvbwrite, sizeof(dvbwrite), app);
+        load = load_inscript(L, (const char *)dvbwrite, sizeof(dvbwrite), app);
         argv_idx += 1;
     }
     else if(!strcmp(script, "--femon"))
     {
-        load = load_inscript((const char *)femon, sizeof(femon), app);
+        load = load_inscript(L, (const char *)femon, sizeof(femon), app);
         argv_idx += 1;
     }
     else if(!access(script, R_OK))
     {
-        load = luaL_dofile(lua, script);
+        load = luaL_dofile(L, script);
         argv_idx += 1;
     }
     if(load != 0)
-        luaL_error(lua, "[main] %s", lua_tostring(lua, -1));
+        luaL_error(L, "[main] %s", lua_tostring(L, -1));
 
-    lua_getglobal(lua, "astra_parse_options");
-    luaL_checktype(lua, -1, LUA_TFUNCTION);
-    lua_pushinteger(lua, argv_idx);
-    lua_call(lua, 1, 0);
+    lua_getglobal(L, "astra_parse_options");
+    luaL_checktype(L, -1, LUA_TFUNCTION);
+    lua_pushinteger(L, argv_idx);
+    lua_call(L, 1, 0);
 
-    lua_getglobal(lua, "main");
-    if(lua_isfunction(lua, -1))
-        lua_call(lua, 0, 0);
+    lua_getglobal(L, "main");
+    if(lua_isfunction(L, -1))
+        lua_call(L, 0, 0);
     else
-        lua_pop(lua, 1);
+        lua_pop(L, 1);
 
     return 0;
 }

@@ -1,5 +1,6 @@
 
 #include <astra.h>
+#include <luaapi/luaapi.h>
 
 /*
  *      base64.encode(string)
@@ -33,7 +34,7 @@ static const uint8_t base64_index[256] =
     XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
 };
 
-char * base64_encode(const void *in, size_t in_size, size_t *out_size)
+char *base64_encode(const void *in, size_t in_size, size_t *out_size)
 {
     if(!in)
         return NULL;
@@ -74,7 +75,7 @@ char * base64_encode(const void *in, size_t in_size, size_t *out_size)
     return out;
 }
 
-void * base64_decode(const char *in, size_t in_size, size_t *out_size)
+void *base64_decode(const char *in, size_t in_size, size_t *out_size)
 {
     if(in_size == 0)
     {
@@ -121,27 +122,27 @@ void * base64_decode(const char *in, size_t in_size, size_t *out_size)
 }
 
 
-static int lua_base64_encode(lua_State *L)
+static int method_base64_encode(lua_State *L)
 {
     const char *data = luaL_checkstring(L, 1);
     const int data_size = luaL_len(L, 1);
 
     size_t data_enc_size = 0;
     const char *data_enc = base64_encode(data, data_size, &data_enc_size);
-    lua_pushlstring(lua, data_enc, data_enc_size);
+    lua_pushlstring(L, data_enc, data_enc_size);
 
     free((void *)data_enc);
     return 1;
 }
 
-static int lua_base64_decode(lua_State *L)
+static int method_base64_decode(lua_State *L)
 {
     const char *data = luaL_checkstring(L, 1);
-    int data_size = luaL_len(lua, 1);
+    const int data_size = luaL_len(L, 1);
 
     size_t data_dec_size = 0;
     const char *data_dec = (char *)base64_decode(data, data_size, &data_dec_size);
-    lua_pushlstring(lua, data_dec, data_dec_size);
+    lua_pushlstring(L, data_dec, data_dec_size);
 
     free((void *)data_dec);
     return 1;
@@ -151,18 +152,18 @@ MODULE_LUA_BINDING(base64)
 {
     lua_getglobal(L, "string");
 
-    lua_pushcfunction(L, lua_base64_encode);
+    lua_pushcfunction(L, method_base64_encode);
     lua_setfield(L, -2, "b64e");
-    lua_pushcfunction(L, lua_base64_decode);
+    lua_pushcfunction(L, method_base64_decode);
     lua_setfield(L, -2, "b64d");
 
     lua_pop(L, 1); // string
 
     static const luaL_Reg api[] =
     {
-        { "encode", lua_base64_encode },
-        { "decode", lua_base64_decode },
-        { NULL, NULL }
+        { "encode", method_base64_encode },
+        { "decode", method_base64_decode },
+        { NULL, NULL },
     };
 
     luaL_newlib(L, api);

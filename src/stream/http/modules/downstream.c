@@ -19,12 +19,14 @@
  */
 
 #include <astra.h>
-#include <core/stream.h>
+#include <luaapi/stream.h>
 
 #include "../http.h"
 
 struct module_data_t
 {
+    MODULE_LUA_DATA();
+
     int idx_callback;
 };
 
@@ -45,7 +47,7 @@ struct http_response_t
 
 static void on_downstream_read(void *arg)
 {
-    http_client_t *client = (http_client_t *)arg;
+    http_client_t *const client = (http_client_t *)arg;
 
     const ssize_t size = asc_socket_recv(client->sock, client->buffer, HTTP_BUFFER_SIZE);
     if(size <= 0)
@@ -97,9 +99,10 @@ static void on_downstream_read(void *arg)
 
 static void on_downstream_send(void *arg)
 {
-    http_client_t *client = (http_client_t *)arg;
+    http_client_t *const client = (http_client_t *)arg;
+    lua_State *const L = MODULE_L(client->mod);
 
-    if(!lua_islightuserdata(lua, 2))
+    if(!lua_islightuserdata(L, 2))
     {
         http_client_abort(client, 500, ":send() client instance required");
         return;
@@ -111,43 +114,43 @@ static void on_downstream_send(void *arg)
 
     const int idx_response = 3;
 
-    lua_getfield(lua, idx_response, "code");
-    const int code = lua_tointeger(lua, -1);
-    lua_pop(lua, 1); // code
+    lua_getfield(L, idx_response, "code");
+    const int code = lua_tointeger(L, -1);
+    lua_pop(L, 1); // code
 
-    lua_getfield(lua, idx_response, "message");
-    const char *message = lua_isstring(lua, -1) ? lua_tostring(lua, -1) : NULL;
-    lua_pop(lua, 1); // message
+    lua_getfield(L, idx_response, "message");
+    const char *message = lua_isstring(L, -1) ? lua_tostring(L, -1) : NULL;
+    lua_pop(L, 1); // message
 
     http_response_code(client, code, message);
 
-    lua_getfield(lua, idx_response, "headers");
-    if(lua_istable(lua, -1))
+    lua_getfield(L, idx_response, "headers");
+    if(lua_istable(L, -1))
     {
-        lua_foreach(lua, -2)
+        lua_foreach(L, -2)
         {
-            const char *header = lua_tostring(lua, -1);
+            const char *header = lua_tostring(L, -1);
             http_response_header(client, "%s", header);
         }
     }
-    lua_pop(lua, 1); // headers
+    lua_pop(L, 1); // headers
 
     http_response_send(client);
 }
 
-static int module_call(module_data_t *mod)
+static int module_call(lua_State *L, module_data_t *mod)
 {
-    http_client_t *client = (http_client_t *)lua_touserdata(lua, 3);
+    http_client_t *const client = (http_client_t *)lua_touserdata(L, 3);
 
-    if(lua_isnil(lua, 4))
+    if(lua_isnil(L, 4))
     {
         if(client->response)
         {
-            lua_rawgeti(lua, LUA_REGISTRYINDEX, client->response->mod->idx_callback);
-            lua_pushvalue(lua, 2);
-            lua_pushvalue(lua, 3);
-            lua_pushvalue(lua, 4);
-            lua_call(lua, 3, 0);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, client->response->mod->idx_callback);
+            lua_pushvalue(L, 2);
+            lua_pushvalue(L, 3);
+            lua_pushvalue(L, 4);
+            lua_call(L, 3, 0);
 
             module_stream_destroy(client->response);
 
@@ -167,52 +170,53 @@ static int module_call(module_data_t *mod)
     client->response->__stream.on_ts = NULL;
     __module_stream_init(&client->response->__stream);
 
-    lua_rawgeti(lua, LUA_REGISTRYINDEX, client->idx_request);
-    lua_pushlightuserdata(lua, &client->response->__stream);
-    lua_setfield(lua, -2, "stream");
-    lua_pop(lua, 1); // request
+    lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_request);
+    lua_pushlightuserdata(L, &client->response->__stream);
+    lua_setfield(L, -2, "stream");
+    lua_pop(L, 1); // request
 
-    lua_rawgeti(lua, LUA_REGISTRYINDEX, client->response->mod->idx_callback);
-    lua_pushvalue(lua, 2);
-    lua_pushvalue(lua, 3);
-    lua_pushvalue(lua, 4);
-    lua_call(lua, 3, 0);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, client->response->mod->idx_callback);
+    lua_pushvalue(L, 2);
+    lua_pushvalue(L, 3);
+    lua_pushvalue(L, 4);
+    lua_call(L, 3, 0);
 
     return 0;
 }
 
 static int __module_call(lua_State *L)
 {
-    module_data_t *mod = (module_data_t *)lua_touserdata(L, lua_upvalueindex(1));
-    return module_call(mod);
+    module_data_t *const mod =
+        (module_data_t *)lua_touserdata(L, lua_upvalueindex(1));
+
+    return module_call(L, mod);
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "callback");
-    asc_assert(lua_isfunction(lua, -1), "[http_downstream] option 'callback' is required");
-    mod->idx_callback = luaL_ref(lua, LUA_REGISTRYINDEX);
+    lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
+    asc_assert(lua_isfunction(L, -1), "[http_downstream] option 'callback' is required");
+    mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     // Set callback for http route
-    lua_getmetatable(lua, 3);
-    lua_pushlightuserdata(lua, (void *)mod);
-    lua_pushcclosure(lua, __module_call, 1);
-    lua_setfield(lua, -2, "__call");
-    lua_pop(lua, 1);
+    lua_getmetatable(L, 3);
+    lua_pushlightuserdata(L, (void *)mod);
+    lua_pushcclosure(L, __module_call, 1);
+    lua_setfield(L, -2, "__call");
+    lua_pop(L, 1);
 }
 
 static void module_destroy(module_data_t *mod)
 {
     if(mod->idx_callback)
     {
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 }
 
 MODULE_LUA_METHODS()
 {
-    { NULL, NULL }
+    { NULL, NULL },
 };
-
 MODULE_LUA_REGISTER(http_downstream)

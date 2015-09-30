@@ -24,6 +24,8 @@
 #include <core/event.h>
 #include <core/thread.h>
 #include <core/timer.h>
+#include <luaapi/luaapi.h>
+#include <luaapi/state.h>
 
 #define MSG(_msg) "[mainloop] " _msg
 

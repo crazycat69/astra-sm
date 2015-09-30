@@ -24,21 +24,25 @@
  *
  * Module Options:
  *      upstream    - object, stream instance returned by module_instance:stream()
+ *
+ * Module Methods:
+ *      set_upstream(object)
+ *                  - set upstream module instance
  */
 
 #include <astra.h>
-#include <core/stream.h>
+#include <luaapi/stream.h>
 
 struct module_data_t
 {
     MODULE_STREAM_DATA();
 };
 
-static int method_set_upstream(module_data_t *mod)
+static int method_set_upstream(lua_State *L, module_data_t *mod)
 {
-    if(lua_type(lua, 2) == LUA_TLIGHTUSERDATA)
+    if(lua_type(L, 2) == LUA_TLIGHTUSERDATA)
     {
-        module_stream_t *const st = (module_stream_t *)lua_touserdata(lua, 2);
+        module_stream_t *const st = (module_stream_t *)lua_touserdata(L, 2);
         __module_stream_attach(st, &mod->__stream);
     }
 
@@ -50,8 +54,10 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
     module_stream_send(mod, ts);
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
+    __uarg(L);
+
     module_stream_init(mod, on_ts);
 }
 
@@ -63,8 +69,7 @@ static void module_destroy(module_data_t *mod)
 MODULE_STREAM_METHODS()
 MODULE_LUA_METHODS()
 {
+    MODULE_STREAM_METHODS_REF(),
     { "set_upstream", method_set_upstream },
-    MODULE_STREAM_METHODS_REF()
 };
-
 MODULE_LUA_REGISTER(transmit)

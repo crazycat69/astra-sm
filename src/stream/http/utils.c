@@ -20,11 +20,11 @@
 
 #include "http.h"
 
-void lua_string_to_lower(const char *str, size_t size)
+void lua_string_to_lower(lua_State *L, const char *str, size_t size)
 {
     if(size == 0)
     {
-        lua_pushstring(lua, "");
+        lua_pushstring(L, "");
         return;
     }
 
@@ -40,14 +40,14 @@ void lua_string_to_lower(const char *str, size_t size)
 
         skip += 1;
     }
-    string_buffer_push(lua, buffer);
+    string_buffer_push(L, buffer);
 }
 
-void lua_url_decode(const char *str, size_t size)
+void lua_url_decode(lua_State *L, const char *str, size_t size)
 {
     if(size == 0)
     {
-        lua_pushstring(lua, "");
+        lua_pushstring(L, "");
         return;
     }
 
@@ -74,23 +74,23 @@ void lua_url_decode(const char *str, size_t size)
             skip += 1;
         }
     }
-    string_buffer_push(lua, buffer);
+    string_buffer_push(L, buffer);
 }
 
-bool lua_parse_query(const char *str, size_t size)
+bool lua_parse_query(lua_State *L, const char *str, size_t size)
 {
     size_t skip = 0;
     parse_match_t m[3];
 
-    lua_newtable(lua);
+    lua_newtable(L);
     while(skip < size && http_parse_query(&str[skip], size - skip, m))
     {
         if(m[1].eo > m[1].so)
         {
-            lua_url_decode(&str[skip + m[1].so], m[1].eo - m[1].so); // key
-            lua_url_decode(&str[skip + m[2].so], m[2].eo - m[2].so); // value
+            lua_url_decode(L, &str[skip + m[1].so], m[1].eo - m[1].so); // key
+            lua_url_decode(L, &str[skip + m[2].so], m[2].eo - m[2].so); // value
 
-            lua_settable(lua, -3);
+            lua_settable(L, -3);
         }
 
         skip += m[0].eo;
@@ -99,7 +99,7 @@ bool lua_parse_query(const char *str, size_t size)
     return (skip == size);
 }
 
-bool lua_safe_path(const char *str, size_t size)
+bool lua_safe_path(lua_State *L, const char *str, size_t size)
 {
     size_t skip = 0;
 
@@ -133,7 +133,7 @@ bool lua_safe_path(const char *str, size_t size)
         }
     }
 
-    lua_pushlstring(lua, safe, sskip);
+    lua_pushlstring(L, safe, sskip);
     free(safe);
 
     return (skip == sskip);

@@ -1,9 +1,8 @@
 /*
- * Astra Module: MPEG-TS (DVB descriptors)
+ * Astra Lua API (State Initialization)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _TS_DESCRIPTORS_
-#define _TS_DESCRIPTORS_ 1
+#ifndef _LUA_STATE_H_
+#define _LUA_STATE_H_ 1
 
 #ifndef _ASTRA_H_
 #   error "Please include <astra.h> first"
@@ -28,6 +27,9 @@
 
 #include <luaapi/luaapi.h>
 
-void mpegts_desc_to_lua(lua_State *L, const uint8_t *desc);
+extern lua_State *lua;
 
-#endif /* _TS_DESCRIPTORS_ */
+lua_State *lua_api_init(void);
+void lua_api_destroy(lua_State *L);
+
+#endif /* _LUA_STATE_H_ */

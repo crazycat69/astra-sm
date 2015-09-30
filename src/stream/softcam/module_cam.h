@@ -22,7 +22,7 @@
 #define _MODULE_CAM_H_ 1
 
 #include <astra.h>
-#include <core/stream.h>
+#include <luaapi/stream.h>
 #include <mpegts/psi.h>
 
 #define EM_MAX_SIZE 1024
@@ -82,7 +82,8 @@ struct module_cam_t
                     , const uint8_t *buffer, uint16_t size);
 };
 
-#define MODULE_CAM_DATA() module_cam_t __cam
+#define MODULE_CAM_DATA() \
+    MODULE_LUA_DATA(); module_cam_t __cam
 
 void module_cam_attach_decrypt(module_cam_t *cam, module_decrypt_t *decrypt);
 void module_cam_detach_decrypt(module_cam_t *cam, module_decrypt_t *decrypt);
@@ -119,14 +120,14 @@ void module_cam_queue_flush(module_cam_t *cam, module_decrypt_t *decrypt);
     } while (0)
 
 #define MODULE_CAM_METHODS() \
-    static int module_cam_cam(module_data_t *mod) \
+    static int method_cam(lua_State *L, module_data_t *mod) \
     { \
-        lua_pushlightuserdata(lua, &mod->__cam); \
+        lua_pushlightuserdata(L, &mod->__cam); \
         return 1; \
     }
 
 #define MODULE_CAM_METHODS_REF() \
-    { "cam", module_cam_cam }
+    { "cam", method_cam }
 
 /*
  *   oooooooo8     o       oooooooo8

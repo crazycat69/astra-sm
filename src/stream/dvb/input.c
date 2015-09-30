@@ -403,11 +403,11 @@ static void option_unknown_type(module_data_t *mod, const char *name, const char
     astra_abort();
 }
 
-static void module_option_fec(module_data_t *mod)
+static void module_option_fec(lua_State *L, module_data_t *mod)
 {
     const char *string_val;
     static const char __fec[] = "fec";
-    if(module_option_string(__fec, &string_val, NULL))
+    if(module_option_string(L, __fec, &string_val, NULL))
     {
         if(!strcasecmp(string_val, "NONE")) mod->fe->fec = FEC_NONE;
         else if(!strcasecmp(string_val, "AUTO")) mod->fe->fec = FEC_AUTO;
@@ -437,7 +437,7 @@ static void module_option_fec(module_data_t *mod)
  *
  */
 
-static void module_options_s(module_data_t *mod)
+static void module_options_s(lua_State *L, module_data_t *mod)
 {
     const char *string_val;
 
@@ -446,7 +446,7 @@ static void module_options_s(module_data_t *mod)
     mod->fe->voltage = SEC_VOLTAGE_OFF;
 
     static const char __polarization[] = "polarization";
-    if(!module_option_string(__polarization, &string_val, NULL))
+    if(!module_option_string(L, __polarization, &string_val, NULL))
         option_required(mod, __polarization);
 
     const char pol = (string_val[0] > 'Z') ? (string_val[0] - ('z' - 'Z')) : string_val[0];
@@ -458,11 +458,11 @@ static void module_options_s(module_data_t *mod)
     /* LNB options */
     int lof1 = 0, lof2 = 0, slof = 0;
 
-    module_option_number("lof1", &lof1);
+    module_option_integer(L, "lof1", &lof1);
     if(lof1 > 0)
     {
-        module_option_number("lof2", &lof2);
-        module_option_number("slof", &slof);
+        module_option_integer(L, "lof2", &lof2);
+        module_option_integer(L, "slof", &slof);
 
         if(slof > 0 && lof2 > 0 && mod->fe->frequency >= slof)
         {
@@ -504,32 +504,32 @@ static void module_options_s(module_data_t *mod)
     mod->fe->frequency *= 1000;
 
     static const char __symbolrate[] = "symbolrate";
-    if(!module_option_number(__symbolrate, &mod->fe->symbolrate))
+    if(!module_option_integer(L, __symbolrate, &mod->fe->symbolrate))
         option_required(mod, __symbolrate);
     mod->fe->symbolrate *= 1000;
 
     bool force_tone = false;
-    module_option_boolean("tone", &force_tone);
+    module_option_boolean(L, "tone", &force_tone);
     if(force_tone)
     {
         mod->fe->tone = SEC_TONE_ON;
     }
 
     bool lnb_sharing = false;
-    module_option_boolean("lnb_sharing", &lnb_sharing);
+    module_option_boolean(L, "lnb_sharing", &lnb_sharing);
     if(lnb_sharing)
     {
         mod->fe->tone = SEC_TONE_OFF;
         mod->fe->voltage = SEC_VOLTAGE_OFF;
     }
 
-    module_option_number("diseqc", &mod->fe->diseqc);
+    module_option_integer(L, "diseqc", &mod->fe->diseqc);
 
-    module_option_number("uni_frequency", &mod->fe->uni_frequency);
-    module_option_number("uni_scr", &mod->fe->uni_scr);
+    module_option_integer(L, "uni_frequency", &mod->fe->uni_frequency);
+    module_option_integer(L, "uni_scr", &mod->fe->uni_scr);
 
     static const char __rolloff[] = "rolloff";
-    if(module_option_string(__rolloff, &string_val, NULL))
+    if(module_option_string(L, __rolloff, &string_val, NULL))
     {
         if(!strcasecmp(string_val, "AUTO")) mod->fe->rolloff = ROLLOFF_AUTO;
         else if(!strcasecmp(string_val, "35")) mod->fe->rolloff = ROLLOFF_35;
@@ -541,10 +541,10 @@ static void module_options_s(module_data_t *mod)
     else
         mod->fe->rolloff = ROLLOFF_35;
 
-    module_option_fec(mod);
+    module_option_fec(L, mod);
 
     mod->fe->stream_id = -1;
-    module_option_number("stream_id", &mod->fe->stream_id);
+    module_option_integer(L, "stream_id", &mod->fe->stream_id);
 }
 
 /*
@@ -556,7 +556,7 @@ static void module_options_s(module_data_t *mod)
  *
  */
 
-static void module_options_t(module_data_t *mod)
+static void module_options_t(lua_State *L, module_data_t *mod)
 {
     const char *string_val;
 
@@ -564,7 +564,7 @@ static void module_options_t(module_data_t *mod)
         mod->fe->frequency *= 1000000;
 
     static const char __bandwidth[] = "bandwidth";
-    if(module_option_string(__bandwidth, &string_val, NULL))
+    if(module_option_string(L, __bandwidth, &string_val, NULL))
     {
         if(!strcasecmp(string_val, "AUTO")) mod->fe->bandwidth = BANDWIDTH_AUTO;
         else if(!strcasecmp(string_val, "8MHZ")) mod->fe->bandwidth = BANDWIDTH_8_MHZ;
@@ -577,7 +577,7 @@ static void module_options_t(module_data_t *mod)
         mod->fe->bandwidth = BANDWIDTH_AUTO;
 
     static const char __guardinterval[] = "guardinterval";
-    if(module_option_string(__guardinterval, &string_val, NULL))
+    if(module_option_string(L, __guardinterval, &string_val, NULL))
     {
         if(!strcasecmp(string_val, "AUTO")) mod->fe->guardinterval = GUARD_INTERVAL_AUTO;
         else if(!strcasecmp(string_val, "1/32")) mod->fe->guardinterval = GUARD_INTERVAL_1_32;
@@ -591,7 +591,7 @@ static void module_options_t(module_data_t *mod)
         mod->fe->guardinterval = GUARD_INTERVAL_AUTO;
 
     static const char __transmitmode[] = "transmitmode";
-    if(module_option_string(__transmitmode, &string_val, NULL))
+    if(module_option_string(L, __transmitmode, &string_val, NULL))
     {
         if(!strcasecmp(string_val, "AUTO")) mod->fe->transmitmode = TRANSMISSION_MODE_AUTO;
         else if(!strcasecmp(string_val, "2K")) mod->fe->transmitmode = TRANSMISSION_MODE_2K;
@@ -609,7 +609,7 @@ static void module_options_t(module_data_t *mod)
         mod->fe->transmitmode = TRANSMISSION_MODE_AUTO;
 
     static const char __hierarchy[] = "hierarchy";
-    if(module_option_string(__hierarchy, &string_val, NULL))
+    if(module_option_string(L, __hierarchy, &string_val, NULL))
     {
         if(!strcasecmp(string_val, "AUTO")) mod->fe->hierarchy = HIERARCHY_AUTO;
         else if(!strcasecmp(string_val, "NONE")) mod->fe->hierarchy = HIERARCHY_NONE;
@@ -623,7 +623,7 @@ static void module_options_t(module_data_t *mod)
         mod->fe->hierarchy = HIERARCHY_AUTO;
 
     mod->fe->stream_id = -1;
-    module_option_number("stream_id", &mod->fe->stream_id);
+    module_option_integer(L, "stream_id", &mod->fe->stream_id);
 }
 
 /*
@@ -636,17 +636,17 @@ static void module_options_t(module_data_t *mod)
  */
 
 
-static void module_options_c(module_data_t *mod)
+static void module_options_c(lua_State *L, module_data_t *mod)
 {
     if(mod->fe->frequency < 1000)
         mod->fe->frequency *= 1000000;
 
     static const char __symbolrate[] = "symbolrate";
-    if(!module_option_number(__symbolrate, &mod->fe->symbolrate))
+    if(!module_option_integer(L, __symbolrate, &mod->fe->symbolrate))
         option_required(mod, __symbolrate);
     mod->fe->symbolrate *= 1000;
 
-    module_option_fec(mod);
+    module_option_fec(L, mod);
 }
 
 /*
@@ -658,12 +658,12 @@ static void module_options_c(module_data_t *mod)
  *
  */
 
-static void module_options(module_data_t *mod)
+static void module_options(lua_State *L, module_data_t *mod)
 {
     static const char __adapter[] = "adapter";
-    if(!module_option_number(__adapter, &mod->adapter))
+    if(!module_option_integer(L, __adapter, &mod->adapter))
         option_required(mod, __adapter);
-    module_option_number("device", &mod->device);
+    module_option_integer(L, "device", &mod->device);
 
     mod->fe->adapter = mod->adapter;
     mod->ca->adapter = mod->adapter;
@@ -673,7 +673,7 @@ static void module_options(module_data_t *mod)
     const char *string_val = NULL;
 
     static const char __type[] = "type";
-    module_option_string(__type, &string_val, NULL);
+    module_option_string(L, __type, &string_val, NULL);
 
     if(string_val == NULL)
     {
@@ -735,23 +735,23 @@ static void module_options(module_data_t *mod)
         option_unknown_type(mod, __type, string_val);
 
     static const char __frequency[] = "frequency";
-    module_option_number(__frequency, &mod->fe->frequency);
+    module_option_integer(L, __frequency, &mod->fe->frequency);
     if(mod->fe->frequency == 0 && mod->fe->type != DVB_TYPE_UNKNOWN)
         option_required(mod, __frequency);
 
-    module_option_boolean("raw_signal", &mod->fe->raw_signal);
-    module_option_boolean("budget", &mod->dmx_budget);
-    module_option_boolean("log_signal", &mod->fe->log_signal);
+    module_option_boolean(L, "raw_signal", &mod->fe->raw_signal);
+    module_option_boolean(L, "budget", &mod->dmx_budget);
+    module_option_boolean(L, "log_signal", &mod->fe->log_signal);
 
     if(mod->fe->type == DVB_TYPE_UNKNOWN)
-        module_option_boolean("no_dvr", &mod->no_dvr);
+        module_option_boolean(L, "no_dvr", &mod->no_dvr);
 
-    module_option_number("buffer_size", &mod->dvr_buffer_size);
+    module_option_integer(L, "buffer_size", &mod->dvr_buffer_size);
     if(mod->dvr_buffer_size > 200)
         asc_log_warning(MSG("buffer_size value is too large"));
 
     static const char __modulation[] = "modulation";
-    if(module_option_string(__modulation, &string_val, NULL))
+    if(module_option_string(L, __modulation, &string_val, NULL))
     {
         if(!strcasecmp(string_val, "AUTO")) mod->fe->default_modulation = true;
         else if(!strcasecmp(string_val, "QPSK")) mod->fe->modulation = QPSK;
@@ -774,10 +774,10 @@ static void module_options(module_data_t *mod)
         mod->fe->default_modulation = true;
 
     mod->fe->timeout = 5;
-    module_option_number("timeout", &mod->fe->timeout);
+    module_option_integer(L, "timeout", &mod->fe->timeout);
 
     int ca_pmt_delay = 3;
-    module_option_number("ca_pmt_delay", &ca_pmt_delay);
+    module_option_integer(L, "ca_pmt_delay", &ca_pmt_delay);
     if(ca_pmt_delay > 120)
     {
         asc_log_error(MSG("ca_pmt_delay value is too large"));
@@ -785,14 +785,14 @@ static void module_options(module_data_t *mod)
     }
     mod->ca->pmt_delay = ca_pmt_delay * 1000 * 1000;
 
-    module_option_boolean("t2mi", &mod->t2mi.on);
+    module_option_boolean(L, "t2mi", &mod->t2mi.on);
     if (mod->t2mi.on)
     {
         mod->t2mi.plp = T2MI_PLP_AUTO;
 
-        module_option_number("t2mi_plp", (int *)&mod->t2mi.plp);
-        module_option_number("t2mi_pnr", (int *)&mod->t2mi.pnr);
-        module_option_number("t2mi_pid", (int *)&mod->t2mi.pid);
+        module_option_integer(L, "t2mi_plp", (int *)&mod->t2mi.plp);
+        module_option_integer(L, "t2mi_pnr", (int *)&mod->t2mi.pnr);
+        module_option_integer(L, "t2mi_pid", (int *)&mod->t2mi.pid);
     }
 
     switch(mod->fe->type)
@@ -800,13 +800,13 @@ static void module_options(module_data_t *mod)
         case DVB_TYPE_UNKNOWN:
             break;
         case DVB_TYPE_S:
-            module_options_s(mod);
+            module_options_s(L, mod);
             break;
         case DVB_TYPE_T:
-            module_options_t(mod);
+            module_options_t(L, mod);
             break;
         case DVB_TYPE_C:
-            module_options_c(mod);
+            module_options_c(L, mod);
             break;
         case DVB_TYPE_ATSC:
             if(mod->fe->frequency < 1000)
@@ -1022,35 +1022,36 @@ static void thread_loop_slave(void *arg)
 
 static void on_status_timer(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
+    lua_State *const L = MODULE_L(mod);
 
-    lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_callback);
-    lua_newtable(lua);
-    lua_pushinteger(lua, mod->fe->status);
-    lua_setfield(lua, -2, "status");
-    lua_pushinteger(lua, mod->fe->signal);
-    lua_setfield(lua, -2, "signal");
-    lua_pushinteger(lua, mod->fe->snr);
-    lua_setfield(lua, -2, "snr");
-    lua_pushinteger(lua, mod->fe->ber);
-    lua_setfield(lua, -2, "ber");
-    lua_pushinteger(lua, mod->fe->unc);
-    lua_setfield(lua, -2, "unc");
-    lua_call(lua, 1, 0);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
+    lua_newtable(L);
+    lua_pushinteger(L, mod->fe->status);
+    lua_setfield(L, -2, "status");
+    lua_pushinteger(L, mod->fe->signal);
+    lua_setfield(L, -2, "signal");
+    lua_pushinteger(L, mod->fe->snr);
+    lua_setfield(L, -2, "snr");
+    lua_pushinteger(L, mod->fe->ber);
+    lua_setfield(L, -2, "ber");
+    lua_pushinteger(L, mod->fe->unc);
+    lua_setfield(L, -2, "unc");
+    lua_call(L, 1, 0);
 }
 
-static int method_ca_set_pnr(module_data_t *mod)
+static int method_ca_set_pnr(lua_State *L, module_data_t *mod)
 {
     if(!mod->ca || !mod->ca->ca_fd)
         return 0;
 
-    const uint16_t pnr = lua_tointeger(lua, 2);
-    const bool is_set = lua_toboolean(lua, 3);
+    const uint16_t pnr = lua_tointeger(L, 2);
+    const bool is_set = lua_toboolean(L, 3);
     ((is_set) ? ca_append_pnr : ca_remove_pnr)(mod->ca, pnr);
     return 0;
 }
 
-static int method_close(module_data_t *mod)
+static int method_close(lua_State *L, module_data_t *mod)
 {
     if (mod->t2mi.ctx)
     {
@@ -1069,7 +1070,7 @@ static int method_close(module_data_t *mod)
 
     if(mod->idx_callback)
     {
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 
@@ -1092,14 +1093,14 @@ static void leave_pid(void *arg, uint16_t pid)
     --mod->__stream.pid_list[pid];
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, NULL);
 
     mod->fe = (dvb_fe_t *)calloc(1, sizeof(dvb_fe_t));
     mod->ca = (dvb_ca_t *)calloc(1, sizeof(dvb_ca_t));
 
-    module_options(mod);
+    module_options(L, mod);
 
     if (mod->t2mi.on)
     {
@@ -1129,14 +1130,14 @@ static void module_init(module_data_t *mod)
         mod->send_arg = &mod->__stream;
     }
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "callback");
-    if(lua_isfunction(lua, -1))
+    lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
+    if(lua_isfunction(L, -1))
     {
-        mod->idx_callback = luaL_ref(lua, LUA_REGISTRYINDEX);
+        mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
         mod->status_timer = asc_timer_init(1000, on_status_timer, mod);
     }
     else
-        lua_pop(lua, 1);
+        lua_pop(L, 1);
 
     mod->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
 
@@ -1145,14 +1146,14 @@ static void module_init(module_data_t *mod)
 
 static void module_destroy(module_data_t *mod)
 {
-    method_close(mod);
+    method_close(MODULE_L(mod), mod);
 }
 
 MODULE_STREAM_METHODS()
 MODULE_LUA_METHODS()
 {
+    MODULE_STREAM_METHODS_REF(),
     { "ca_set_pnr", method_ca_set_pnr },
     { "close", method_close },
-    MODULE_STREAM_METHODS_REF()
 };
 MODULE_LUA_REGISTER(dvb_input)

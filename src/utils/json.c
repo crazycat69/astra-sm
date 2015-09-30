@@ -20,6 +20,7 @@
 
 #include <astra.h>
 #include <core/strbuffer.h>
+#include <luaapi/luaapi.h>
 
 #define MSG(_msg) "[json] " _msg
 
@@ -111,8 +112,6 @@ static void walk_table(lua_State *L, string_buffer_t *buffer)
     const bool is_array = (luaL_len(L, -1) == pairs_count);
     bool is_first = true;
 
-
-
     if(is_array)
     {
         string_buffer_addchar(buffer, '[');
@@ -149,15 +148,14 @@ static void walk_table(lua_State *L, string_buffer_t *buffer)
     }
 }
 
-static int json_encode(lua_State *L)
+static int method_json_encode(lua_State *L)
 {
     luaL_checktype(L, -1, LUA_TTABLE);
 
-    string_buffer_t *buffer = string_buffer_alloc();
-
+    string_buffer_t *const buffer = string_buffer_alloc();
     walk_table(L, buffer);
-
     string_buffer_push(L, buffer);
+
     return 1;
 }
 
@@ -470,19 +468,22 @@ static int scan_json(lua_State *L, const char *str, int pos)
     return pos;
 }
 
-static int json_decode(lua_State *L)
+static int method_json_decode(lua_State *L)
 {
     luaL_checktype(L, -1, LUA_TSTRING);
+
     const int top = lua_gettop(L);
     scan_json(L, lua_tostring(L, -1), 0);
     if(top == lua_gettop(L))
         lua_pushnil(L);
+
     return 1;
 }
 
-static int json_load(lua_State *L)
+static int method_json_load(lua_State *L)
 {
     luaL_checktype(L, -1, LUA_TSTRING);
+
     const char *filename = lua_tostring(L, -1);
     const int fd = open(filename, O_RDONLY);
     if(fd == -1)
@@ -525,7 +526,7 @@ static int json_load(lua_State *L)
     return 1;
 }
 
-static int json_save(lua_State *L)
+static int method_json_save(lua_State *L)
 {
     luaL_checktype(L, -2, LUA_TSTRING);
     luaL_checktype(L, -1, LUA_TTABLE);
@@ -540,7 +541,7 @@ static int json_save(lua_State *L)
         asc_log_error(MSG("json.save(%s) failed to open [%s]")
                       , filename, strerror(errno));
 
-        lua_pushboolean(lua, false);
+        lua_pushboolean(L, false);
         return 1;
     }
 
@@ -556,14 +557,14 @@ static int json_save(lua_State *L)
 
     if(w == (ssize_t)json_size)
     {
-        lua_pushboolean(lua, true);
+        lua_pushboolean(L, true);
     }
     else
     {
         asc_log_error(MSG("json.save(%s) failed to write [%s]")
                       , filename, strerror(errno));
 
-        lua_pushboolean(lua, false);
+        lua_pushboolean(L, false);
     }
 
     return 1;
@@ -573,11 +574,11 @@ MODULE_LUA_BINDING(json)
 {
     static const luaL_Reg api[] =
     {
-        { "encode", json_encode },
-        { "decode", json_decode },
-        { "load", json_load },
-        { "save", json_save },
-        { NULL, NULL }
+        { "encode", method_json_encode },
+        { "decode", method_json_decode },
+        { "load", method_json_load },
+        { "save", method_json_save },
+        { NULL, NULL },
     };
 
     luaL_newlib(L, api);

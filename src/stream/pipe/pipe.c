@@ -28,6 +28,7 @@
  *      restart     - number, seconds before auto restart (0 to disable)
  *      stream      - boolean, read TS data from child
  *      sync        - boolean, buffer incoming TS
+ *      sync_opts   - string, sync buffer options
  *
  * Module Methods:
  *      pid         - return process' pid (-1 if not running)
@@ -35,9 +36,9 @@
  */
 
 #include <astra.h>
-#include <core/stream.h>
 #include <core/child.h>
 #include <core/timer.h>
+#include <luaapi/stream.h>
 #include <mpegts/sync.h>
 
 #define MSG(_msg) "[%s] " _msg, mod->config.name
@@ -253,33 +254,33 @@ void on_upstream_ts(module_data_t *mod, const uint8_t *ts)
  */
 
 static
-int method_pid(module_data_t *mod)
+int method_pid(lua_State *L, module_data_t *mod)
 {
     if (mod->child != NULL)
-        lua_pushinteger(lua, asc_child_pid(mod->child));
+        lua_pushinteger(L, asc_child_pid(mod->child));
     else
-        lua_pushinteger(lua, -1);
+        lua_pushinteger(L, -1);
 
     return 1;
 }
 
 static
-int method_send(module_data_t *mod)
+int method_send(lua_State *L, module_data_t *mod)
 {
-    const char *str = luaL_checkstring(lua, 1);
-    const int len = luaL_len(lua, 1);
+    const char *str = luaL_checkstring(L, 1);
+    const int len = luaL_len(L, 1);
 
     if (mod->child == NULL)
-        luaL_error(lua, MSG("process is not running"));
+        luaL_error(L, MSG("process is not running"));
 
     if (mod->config.sin.mode == CHILD_IO_MPEGTS)
-        luaL_error(lua, MSG("can't send text while in TS mode"));
+        luaL_error(L, MSG("can't send text while in TS mode"));
 
     if (len > 0)
     {
         const ssize_t ret = asc_child_send(mod->child, str, len);
         if (ret == -1)
-            luaL_error(lua, MSG("send(): %s"), asc_error_msg());
+            luaL_error(L, MSG("send(): %s"), asc_error_msg());
     }
 
     return 1;
@@ -290,29 +291,29 @@ int method_send(module_data_t *mod)
  */
 
 static
-void module_init(module_data_t *mod)
+void module_init(lua_State *L, module_data_t *mod)
 {
     /* identifier */
     const char *name = NULL;
-    module_option_string("name", &name, NULL);
+    module_option_string(L, "name", &name, NULL);
     if (name == NULL || !strlen(name))
-        luaL_error(lua, "[pipe] name is required");
+        luaL_error(L, "[pipe] name is required");
 
     mod->config.name = name;
 
     /* command line */
     const char *command = NULL;
-    module_option_string("command", &command, NULL);
+    module_option_string(L, "command", &command, NULL);
     if (command == NULL || !strlen(command))
-        luaL_error(lua, MSG("command line is required"));
+        luaL_error(L, MSG("command line is required"));
 
     mod->config.command = command;
 
     /* restart delay */
     int delay = 5;
-    module_option_number("restart", &delay);
+    module_option_integer(L, "restart", &delay);
     if (delay < 0 || delay > 86400)
-        luaL_error(lua, MSG("restart delay out of range"));
+        luaL_error(L, MSG("restart delay out of range"));
 
     mod->delay = delay;
 
@@ -320,18 +321,18 @@ void module_init(module_data_t *mod)
     stream_callback_t on_ts = NULL;
     mod->config.sin.mode = CHILD_IO_RAW;
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "upstream");
-    if (lua_islightuserdata(lua, -1))
+    lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
+    if (lua_islightuserdata(L, -1))
     {
         /* output or transcode; relay TS from upstream module */
         mod->config.sin.mode = CHILD_IO_MPEGTS;
         on_ts = on_upstream_ts;
     }
-    lua_pop(lua, 1);
+    lua_pop(L, 1);
 
     /* read mode */
     bool is_stream = false;
-    module_option_boolean("stream", &is_stream);
+    module_option_boolean(L, "stream", &is_stream);
     if (is_stream)
     {
         /* input or transcode; expect TS data */
@@ -350,12 +351,12 @@ void module_init(module_data_t *mod)
 
     /* optional input buffering */
     bool sync_on = false;
-    module_option_boolean("sync", &sync_on);
+    module_option_boolean(L, "sync", &sync_on);
 
     if (sync_on)
     {
         if (!is_stream)
-            luaL_error(lua, MSG("buffering is only supported with TS input"));
+            luaL_error(L, MSG("buffering is only supported with TS input"));
 
         mod->sync = mpegts_sync_init();
 
@@ -364,9 +365,9 @@ void module_init(module_data_t *mod)
         mpegts_sync_set_fname(mod->sync, "sync/%s", mod->config.name);
 
         const char *optstr = NULL;
-        module_option_string("sync_opts", &optstr, NULL);
+        module_option_string(L, "sync_opts", &optstr, NULL);
         if (optstr != NULL && !mpegts_sync_parse_opts(mod->sync, optstr))
-            luaL_error(lua, MSG("invalid value for option 'sync_opts'"));
+            luaL_error(L, MSG("invalid value for option 'sync_opts'"));
 
         mod->sync_ration_size = mpegts_sync_get_max_size(mod->sync) / 2;
         mod->sync_feed = mod->sync_ration_size;

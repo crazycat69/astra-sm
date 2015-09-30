@@ -40,10 +40,11 @@
  */
 
 #include <astra.h>
+#include <luaapi/luaapi.h>
 
 static bool is_debug = false;
 
-static int lua_log_set(lua_State *L)
+static int method_log_set(lua_State *L)
 {
     luaL_checktype(L, 1, LUA_TTABLE);
 
@@ -63,8 +64,8 @@ static int lua_log_set(lua_State *L)
             is_debug = lua_toboolean(L, -1);
             asc_log_set_debug(is_debug);
 
-            lua_pushvalue(lua, -1);
-            lua_setglobal(lua, "debug");
+            lua_pushvalue(L, -1);
+            lua_setglobal(L, "debug");
         }
         else if(!strcmp(var, "filename"))
         {
@@ -93,25 +94,25 @@ static int lua_log_set(lua_State *L)
     return 0;
 }
 
-static int lua_log_error(lua_State *L)
+static int method_log_error(lua_State *L)
 {
     asc_log_error("%s", luaL_checkstring(L, 1));
     return 0;
 }
 
-static int lua_log_warning(lua_State *L)
+static int method_log_warning(lua_State *L)
 {
     asc_log_warning("%s", luaL_checkstring(L, 1));
     return 0;
 }
 
-static int lua_log_info(lua_State *L)
+static int method_log_info(lua_State *L)
 {
     asc_log_info("%s", luaL_checkstring(L, 1));
     return 0;
 }
 
-static int lua_log_debug(lua_State *L)
+static int method_log_debug(lua_State *L)
 {
     if(is_debug)
         asc_log_debug("%s", luaL_checkstring(L, 1));
@@ -124,12 +125,12 @@ MODULE_LUA_BINDING(log)
 
     static const luaL_Reg api[] =
     {
-        { "set", lua_log_set },
-        { "error", lua_log_error },
-        { "warning", lua_log_warning },
-        { "info", lua_log_info },
-        { "debug", lua_log_debug },
-        { NULL, NULL }
+        { "set", method_log_set },
+        { "error", method_log_error },
+        { "warning", method_log_warning },
+        { "info", method_log_info },
+        { "debug", method_log_debug },
+        { NULL, NULL },
     };
 
     luaL_newlib(L, api);

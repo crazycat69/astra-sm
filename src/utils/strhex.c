@@ -24,6 +24,7 @@
  */
 
 #include <astra.h>
+#include <luaapi/luaapi.h>
 
 char *hex_to_str(char *str, const uint8_t *data, int size)
 {
@@ -65,7 +66,7 @@ uint8_t *str_to_hex(const char *str, uint8_t *data, int size)
     return data;
 }
 
-static int lua_hex(lua_State *L)
+static int method_hex(lua_State *L)
 {
     const uint8_t *data = (const uint8_t *)luaL_checkstring(L, 1);
     const int data_size = luaL_len(L, 1);
@@ -79,7 +80,7 @@ static int lua_hex(lua_State *L)
     return 1;
 }
 
-static int lua_bin(lua_State *L)
+static int method_bin(lua_State *L)
 {
     const char *data = luaL_checkstring(L, 1);
     const int data_size = luaL_len(L, 1) / 2;
@@ -97,9 +98,9 @@ MODULE_LUA_BINDING(str2hex)
 {
     lua_getglobal(L, "string");
 
-    lua_pushcfunction(L, lua_hex);
+    lua_pushcfunction(L, method_hex);
     lua_setfield(L, -2, "hex");
-    lua_pushcfunction(L, lua_bin);
+    lua_pushcfunction(L, method_bin);
     lua_setfield(L, -2, "bin");
 
     lua_pop(L, 1); // string

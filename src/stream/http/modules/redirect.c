@@ -23,16 +23,18 @@
 
 struct module_data_t
 {
+    MODULE_LUA_DATA();
+
     const char *location;
     int code;
 };
 
 /* Stack: 1 - instance, 2 - server, 3 - client, 4 - request */
-static int module_call(module_data_t *mod)
+static int module_call(lua_State *L, module_data_t *mod)
 {
-    http_client_t *client = (http_client_t *)lua_touserdata(lua, 3);
+    http_client_t *const client = (http_client_t *)lua_touserdata(L, 3);
 
-    if(lua_isnil(lua, 4))
+    if(lua_isnil(L, 4))
         return 0;
 
     http_client_redirect(client, mod->code, mod->location);
@@ -42,24 +44,26 @@ static int module_call(module_data_t *mod)
 
 static int __module_call(lua_State *L)
 {
-    module_data_t *mod = (module_data_t *)lua_touserdata(L, lua_upvalueindex(1));
-    return module_call(mod);
+    module_data_t *const mod =
+        (module_data_t *)lua_touserdata(L, lua_upvalueindex(1));
+
+    return module_call(L, mod);
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_option_string("location", &mod->location, NULL);
+    module_option_string(L, "location", &mod->location, NULL);
     asc_assert(mod->location != NULL, "[http_redirect] option 'location' is required");
 
     mod->code = 302;
-    module_option_number("code", &mod->code);
+    module_option_integer(L, "code", &mod->code);
 
     // Set callback for http route
-    lua_getmetatable(lua, 3);
-    lua_pushlightuserdata(lua, (void *)mod);
-    lua_pushcclosure(lua, __module_call, 1);
-    lua_setfield(lua, -2, "__call");
-    lua_pop(lua, 1);
+    lua_getmetatable(L, 3);
+    lua_pushlightuserdata(L, (void *)mod);
+    lua_pushcclosure(L, __module_call, 1);
+    lua_setfield(L, -2, "__call");
+    lua_pop(L, 1);
 }
 
 static void module_destroy(module_data_t *mod)
@@ -69,7 +73,6 @@ static void module_destroy(module_data_t *mod)
 
 MODULE_LUA_METHODS()
 {
-    { NULL, NULL }
+    { NULL, NULL },
 };
-
 MODULE_LUA_REGISTER(http_redirect)

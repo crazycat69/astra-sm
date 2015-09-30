@@ -924,13 +924,13 @@ void on_cam_response(module_data_t *mod, void *arg, const uint8_t *data)
  *
  */
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, on_ts);
 
     mod->__decrypt.self = mod;
 
-    module_option_string("name", &mod->name, NULL);
+    module_option_string(L, "name", &mod->name, NULL);
     asc_assert(mod->name != NULL, "[decrypt] option 'name' is required");
 
     mod->stream[0] = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
@@ -946,7 +946,7 @@ static void module_init(module_data_t *mod)
 
     const char *biss_key = NULL;
     size_t biss_length = 0;
-    module_option_string("biss", &biss_key, &biss_length);
+    module_option_string(L, "biss", &biss_key, &biss_length);
     if(biss_key)
     {
         asc_assert(biss_length == 16, MSG("biss key must be 16 char length"));
@@ -963,35 +963,35 @@ static void module_init(module_data_t *mod)
         ca_stream_set_keys(biss, key, key);
     }
 
-    lua_getfield(lua, 2, "cam");
-    if(!lua_isnil(lua, -1))
+    lua_getfield(L, 2, "cam");
+    if(!lua_isnil(L, -1))
     {
-        asc_assert(  lua_type(lua, -1) == LUA_TLIGHTUSERDATA
+        asc_assert(  lua_type(L, -1) == LUA_TLIGHTUSERDATA
                    , "option 'cam' required cam-module instance");
-        mod->__decrypt.cam = (module_cam_t *)lua_touserdata(lua, -1);
+        mod->__decrypt.cam = (module_cam_t *)lua_touserdata(L, -1);
 
         int cas_pnr = 0;
-        module_option_number("cas_pnr", &cas_pnr);
+        module_option_integer(L, "cas_pnr", &cas_pnr);
         if(cas_pnr > 0 && cas_pnr <= 0xFFFF)
             mod->__decrypt.cas_pnr = (uint16_t)cas_pnr;
 
         const char *cas_data = NULL;
-        module_option_string("cas_data", &cas_data, NULL);
+        module_option_string(L, "cas_data", &cas_data, NULL);
         if(cas_data)
         {
             mod->__decrypt.is_cas_data = true;
             str_to_hex(cas_data, mod->__decrypt.cas_data, sizeof(mod->__decrypt.cas_data));
         }
 
-        module_option_boolean("disable_emm", &mod->disable_emm);
-        module_option_number("ecm_pid", &mod->ecm_pid);
+        module_option_boolean(L, "disable_emm", &mod->disable_emm);
+        module_option_integer(L, "ecm_pid", &mod->ecm_pid);
 
         module_cam_attach_decrypt(mod->__decrypt.cam, &mod->__decrypt);
     }
-    lua_pop(lua, 1);
+    lua_pop(L, 1);
 
     int shift = 0;
-    module_option_number("shift", &shift);
+    module_option_integer(L, "shift", &shift);
     if(shift > 0)
     {
         mod->shift.size = (shift * 1000 * 1000) / (TS_PACKET_SIZE * 8) * (TS_PACKET_SIZE);
@@ -1041,6 +1041,6 @@ static void module_destroy(module_data_t *mod)
 MODULE_STREAM_METHODS()
 MODULE_LUA_METHODS()
 {
-    MODULE_STREAM_METHODS_REF()
+    MODULE_STREAM_METHODS_REF(),
 };
 MODULE_LUA_REGISTER(decrypt)

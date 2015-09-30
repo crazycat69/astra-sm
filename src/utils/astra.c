@@ -28,7 +28,7 @@
  *                  - string, astra version string
  *      astra.fullname
  *                  - string, package plus version
- *      astra.debug - boolean, is a debug version
+ *      astra.debug - boolean, whether this is a debug build
  *
  * Methods:
  *      astra.abort()
@@ -43,29 +43,30 @@
 
 #include <astra.h>
 #include <core/mainloop.h>
+#include <luaapi/luaapi.h>
 
 __noreturn
-static int lua_astra_exit(lua_State *L)
+static int method_exit(lua_State *L)
 {
-    int status = luaL_optinteger(L, 1, EXIT_SUCCESS);
+    const int status = luaL_optinteger(L, 1, EXIT_SUCCESS);
     astra_exit(status);
 }
 
 __noreturn
-static int lua_astra_abort(lua_State *L)
+static int method_abort(lua_State *L)
 {
     __uarg(L);
     astra_abort();
 }
 
-static int lua_astra_reload(lua_State *L)
+static int method_reload(lua_State *L)
 {
     __uarg(L);
     astra_reload();
     return 0;
 }
 
-static int lua_astra_shutdown(lua_State *L)
+static int method_shutdown(lua_State *L)
 {
     __uarg(L);
     astra_shutdown();
@@ -74,35 +75,34 @@ static int lua_astra_shutdown(lua_State *L)
 
 MODULE_LUA_BINDING(astra)
 {
-    static luaL_Reg astra_api[] =
+    static const luaL_Reg api[] =
     {
-        { "exit", lua_astra_exit },
-        { "abort", lua_astra_abort },
-        { "reload", lua_astra_reload },
-        { "shutdown", lua_astra_shutdown },
-        { NULL, NULL }
+        { "exit", method_exit },
+        { "abort", method_abort },
+        { "reload", method_reload },
+        { "shutdown", method_shutdown },
+        { NULL, NULL },
     };
 
-    luaL_newlib(L, astra_api);
+    luaL_newlib(L, api);
 
-    lua_pushboolean(lua,
 #ifdef DEBUG
-                    1
+    static const int is_debug = 1;
 #else
-                    0
+    static const int is_debug = 0;
 #endif
-                    );
 
-    lua_setfield(lua, -2, "debug");
+    lua_pushboolean(L, is_debug);
+    lua_setfield(L, -2, "debug");
 
-    lua_pushstring(lua, PACKAGE_STRING);
-    lua_setfield(lua, -2, "fullname");
+    lua_pushstring(L, PACKAGE_STRING);
+    lua_setfield(L, -2, "fullname");
 
-    lua_pushstring(lua, PACKAGE_NAME);
-    lua_setfield(lua, -2, "package");
+    lua_pushstring(L, PACKAGE_NAME);
+    lua_setfield(L, -2, "package");
 
-    lua_pushstring(lua, PACKAGE_VERSION);
-    lua_setfield(lua, -2, "version");
+    lua_pushstring(L, PACKAGE_VERSION);
+    lua_setfield(L, -2, "version");
 
     lua_setglobal(L, "astra");
 

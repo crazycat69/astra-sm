@@ -39,9 +39,9 @@
  */
 
 #include <astra.h>
-#include <core/stream.h>
 #include <core/timer.h>
 #include <core/thread.h>
+#include <luaapi/stream.h>
 #include <mpegts/pcr.h>
 
 #include "http.h"
@@ -155,31 +155,33 @@ static const char __keep_alive[] = "keep-alive";
 
 static void on_close(void *);
 
-static void callback(module_data_t *mod)
+static void callback(lua_State *L, module_data_t *mod)
 {
-    const int response = lua_gettop(lua);
-    lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_self);
-    lua_getfield(lua, -1, "__options");
-    lua_getfield(lua, -1, "callback");
-    lua_pushvalue(lua, -3);
-    lua_pushvalue(lua, response);
-    lua_call(lua, 2, 0);
-    lua_pop(lua, 3); // self + options + response
+    const int response = lua_gettop(L);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_self);
+    lua_getfield(L, -1, "__options");
+    lua_getfield(L, -1, "callback");
+    lua_pushvalue(L, -3);
+    lua_pushvalue(L, response);
+    lua_call(L, 2, 0);
+    lua_pop(L, 3); // self + options + response
 }
 
 static void call_error(module_data_t *mod, const char *msg)
 {
-    lua_newtable(lua);
-    lua_pushinteger(lua, 0);
-    lua_setfield(lua, -2, __code);
-    lua_pushstring(lua, msg);
-    lua_setfield(lua, -2, __message);
-    callback(mod);
+    lua_State *const L = MODULE_L(mod);
+
+    lua_newtable(L);
+    lua_pushinteger(L, 0);
+    lua_setfield(L, -2, __code);
+    lua_pushstring(L, msg);
+    lua_setfield(L, -2, __message);
+    callback(L, mod);
 }
 
 static void timeout_callback(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     asc_timer_destroy(mod->timeout);
     mod->timeout = NULL;
@@ -204,7 +206,8 @@ static void on_thread_close(void *arg);
 
 static void on_close(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
+    lua_State *const L = MODULE_L(mod);
 
     if(mod->thread)
         on_thread_close(mod);
@@ -238,7 +241,7 @@ static void on_close(void *arg)
 
     if(mod->request.idx_body)
     {
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->request.idx_body);
+        luaL_unref(L, LUA_REGISTRYINDEX, mod->request.idx_body);
         mod->request.idx_body = 0;
     }
 
@@ -257,8 +260,8 @@ static void on_close(void *arg)
     {
         mod->status = 3;
 
-        lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_response);
-        callback(mod);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_response);
+        callback(L, mod);
     }
 
     if(mod->__stream.self)
@@ -271,8 +274,8 @@ static void on_close(void *arg)
             mod->status = -1;
             mod->request.status = -1;
 
-            lua_pushnil(lua);
-            callback(mod);
+            lua_pushnil(L);
+            callback(L, mod);
         }
     }
 
@@ -284,19 +287,19 @@ static void on_close(void *arg)
 
     if(mod->idx_response)
     {
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->idx_response);
+        luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_response);
         mod->idx_response = 0;
     }
 
     if(mod->idx_content)
     {
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->idx_content);
+        luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_content);
         mod->idx_content = 0;
     }
 
     if(mod->idx_self)
     {
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->idx_self);
+        luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_self);
         mod->idx_self = 0;
     }
 
@@ -383,7 +386,7 @@ static bool seek_pcr(  module_data_t *mod
 
 static void on_thread_close(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     mod->is_thread_started = false;
 
@@ -404,7 +407,7 @@ static void on_thread_close(void *arg)
 
 static void on_thread_read(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     uint8_t ts[TS_PACKET_SIZE];
     const ssize_t r = asc_thread_buffer_read(mod->thread_output, ts, sizeof(ts));
@@ -414,7 +417,7 @@ static void on_thread_read(void *arg)
 
 static void thread_loop(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     uint8_t *ptr, ts[TS_PACKET_SIZE];
 
@@ -603,7 +606,7 @@ static void thread_loop(void *arg)
 
 static void check_is_active(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     if(mod->is_active)
     {
@@ -617,7 +620,7 @@ static void check_is_active(void *arg)
 
 static void on_ts_read(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     ssize_t size = asc_socket_recv(  mod->sock
                                    , &mod->sync.buffer[mod->sync.buffer_write]
@@ -670,7 +673,8 @@ static void on_ts_read(void *arg)
 
 static void on_read(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
+    lua_State *const L = MODULE_L(mod);
 
     if(mod->timeout)
     {
@@ -752,23 +756,23 @@ static void on_read(void *arg)
             return;
         }
 
-        lua_newtable(lua);
-        const int response = lua_gettop(lua);
+        lua_newtable(L);
+        const int response = lua_gettop(L);
 
-        lua_pushvalue(lua, -1);
+        lua_pushvalue(L, -1);
         if(mod->idx_response)
-            luaL_unref(lua, LUA_REGISTRYINDEX, mod->idx_response);
-        mod->idx_response = luaL_ref(lua, LUA_REGISTRYINDEX);
+            luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_response);
+        mod->idx_response = luaL_ref(L, LUA_REGISTRYINDEX);
 
-        lua_pushlstring(lua, &mod->buffer[m[1].so], m[1].eo - m[1].so);
-        lua_setfield(lua, response, __version);
+        lua_pushlstring(L, &mod->buffer[m[1].so], m[1].eo - m[1].so);
+        lua_setfield(L, response, __version);
 
         mod->status_code = atoi(&mod->buffer[m[2].so]);
-        lua_pushinteger(lua, mod->status_code);
-        lua_setfield(lua, response, __code);
+        lua_pushinteger(L, mod->status_code);
+        lua_setfield(L, response, __code);
 
-        lua_pushlstring(lua, &mod->buffer[m[3].so], m[3].eo - m[3].so);
-        lua_setfield(lua, response, __message);
+        lua_pushlstring(L, &mod->buffer[m[3].so], m[3].eo - m[3].so);
+        lua_setfield(L, response, __message);
 
         skip += m[0].eo;
 
@@ -781,10 +785,10 @@ static void on_read(void *arg)
  *
  */
 
-        lua_newtable(lua);
-        lua_pushvalue(lua, -1);
-        lua_setfield(lua, response, __headers);
-        const int headers = lua_gettop(lua);
+        lua_newtable(L);
+        lua_pushvalue(L, -1);
+        lua_setfield(L, response, __headers);
+        const int headers = lua_gettop(L);
 
         while(skip < eoh)
         {
@@ -802,9 +806,9 @@ static void on_read(void *arg)
                 break;
             }
 
-            lua_string_to_lower(&mod->buffer[skip], m[1].eo);
-            lua_pushlstring(lua, &mod->buffer[skip + m[2].so], m[2].eo - m[2].so);
-            lua_settable(lua, headers);
+            lua_string_to_lower(L, &mod->buffer[skip], m[1].eo);
+            lua_pushlstring(L, &mod->buffer[skip + m[2].so], m[2].eo - m[2].so);
+            lua_settable(L, headers);
 
             skip += m[0].eo;
         }
@@ -818,29 +822,29 @@ static void on_read(void *arg)
             mod->content = NULL;
         }
 
-        lua_getfield(lua, headers, "content-length");
-        if(lua_isnumber(lua, -1))
+        lua_getfield(L, headers, "content-length");
+        if(lua_isnumber(L, -1))
         {
-            mod->chunk_left = lua_tointeger(lua, -1);
+            mod->chunk_left = lua_tointeger(L, -1);
             if(mod->chunk_left > 0)
             {
                 mod->is_content_length = true;
             }
         }
-        lua_pop(lua, 1); // content-length
+        lua_pop(L, 1); // content-length
 
-        lua_getfield(lua, headers, "transfer-encoding");
-        if(lua_isstring(lua, -1))
+        lua_getfield(L, headers, "transfer-encoding");
+        if(lua_isstring(L, -1))
         {
-            const char *encoding = lua_tostring(lua, -1);
+            const char *encoding = lua_tostring(L, -1);
             mod->is_chunked = (strcmp(encoding, "chunked") == 0);
         }
-        lua_pop(lua, 1); // transfer-encoding
+        lua_pop(L, 1); // transfer-encoding
 
         if(mod->is_content_length || mod->is_chunked)
             mod->content = string_buffer_alloc();
 
-        lua_pop(lua, 2); // headers + response
+        lua_pop(L, 2); // headers + response
 
         if(   (mod->is_head)
            || (mod->status_code >= 100 && mod->status_code < 200)
@@ -849,8 +853,8 @@ static void on_read(void *arg)
         {
             mod->status = 3;
 
-            lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_response);
-            callback(mod);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_response);
+            callback(L, mod);
 
             if(mod->is_connection_close)
                 on_close(mod);
@@ -863,10 +867,10 @@ static void on_read(void *arg)
         {
             mod->status = 3;
 
-            lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_response);
-            lua_pushboolean(lua, mod->is_stream);
-            lua_setfield(lua, -2, __stream);
-            callback(mod);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_response);
+            lua_pushboolean(L, mod->is_stream);
+            lua_setfield(L, -2, __stream);
+            callback(L, mod);
 
             mod->sync.buffer = (uint8_t *)malloc(mod->sync.buffer_size);
 
@@ -899,8 +903,8 @@ static void on_read(void *arg)
         {
             mod->status = 3;
 
-            lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_response);
-            callback(mod);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_response);
+            callback(L, mod);
 
             if(mod->is_connection_close)
                 on_close(mod);
@@ -950,12 +954,12 @@ static void on_read(void *arg)
 
                 if(!mod->chunk_left)
                 {
-                    lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_response);
-                    string_buffer_push(lua, mod->content);
+                    lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_response);
+                    string_buffer_push(L, mod->content);
                     mod->content = NULL;
-                    lua_setfield(lua, -2, __content);
+                    lua_setfield(L, -2, __content);
                     mod->status = 3;
-                    callback(mod);
+                    callback(L, mod);
 
                     if(mod->is_connection_close)
                     {
@@ -1004,12 +1008,12 @@ static void on_read(void *arg)
             string_buffer_addlstring(mod->content, &mod->buffer[skip], mod->chunk_left);
             mod->chunk_left = 0;
 
-            lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_response);
-            string_buffer_push(lua, mod->content);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_response);
+            string_buffer_push(L, mod->content);
             mod->content = NULL;
-            lua_setfield(lua, -2, __content);
+            lua_setfield(L, -2, __content);
             mod->status = 3;
-            callback(mod);
+            callback(L, mod);
 
             if(mod->is_connection_close)
             {
@@ -1034,7 +1038,7 @@ static void on_read(void *arg)
 
 static void on_ready_send_content(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     asc_assert(mod->request.size > 0, MSG("invalid content size"));
 
@@ -1056,7 +1060,7 @@ static void on_ready_send_content(void *arg)
     {
         mod->request.buffer = NULL;
 
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->request.idx_body);
+        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->request.idx_body);
         mod->request.idx_body = 0;
 
         mod->request.status = 3;
@@ -1067,7 +1071,7 @@ static void on_ready_send_content(void *arg)
 
 static void on_ready_send_request(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     asc_assert(mod->request.size > 0, MSG("invalid request size"));
 
@@ -1092,11 +1096,13 @@ static void on_ready_send_request(void *arg)
 
         if(mod->request.idx_body)
         {
-            lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->request.idx_body);
-            mod->request.buffer = lua_tostring(lua, -1);
-            mod->request.size = luaL_len(lua, -1);
+            lua_State *const L = MODULE_L(mod);
+
+            lua_rawgeti(L, LUA_REGISTRYINDEX, mod->request.idx_body);
+            mod->request.buffer = lua_tostring(L, -1);
+            mod->request.size = luaL_len(L, -1);
             mod->request.skip = 0;
-            lua_pop(lua, 1);
+            lua_pop(L, 1);
 
             mod->request.status = 2;
 
@@ -1111,35 +1117,35 @@ static void on_ready_send_request(void *arg)
     }
 }
 
-static void lua_make_request(module_data_t *mod)
+static void lua_make_request(lua_State *L, module_data_t *mod)
 {
-    asc_assert(lua_istable(lua, -1),
+    asc_assert(lua_istable(L, -1),
         MSG("%s() requires table on top of the stack"), __func__);
 
-    lua_getfield(lua, -1, __method);
-    const char *method = lua_isstring(lua, -1) ? lua_tostring(lua, -1) : __default_method;
-    lua_pop(lua, 1);
+    lua_getfield(L, -1, __method);
+    const char *method = lua_isstring(L, -1) ? lua_tostring(L, -1) : __default_method;
+    lua_pop(L, 1);
 
     mod->is_head = (strcmp(method, "HEAD") == 0);
 
-    lua_getfield(lua, -1, __path);
-    mod->config.path = lua_isstring(lua, -1) ? lua_tostring(lua, -1) : __default_path;
-    lua_pop(lua, 1);
+    lua_getfield(L, -1, __path);
+    mod->config.path = lua_isstring(L, -1) ? lua_tostring(L, -1) : __default_path;
+    lua_pop(L, 1);
 
-    lua_getfield(lua, -1, __version);
-    const char *version = lua_isstring(lua, -1) ? lua_tostring(lua, -1) : __default_version;
-    lua_pop(lua, 1);
+    lua_getfield(L, -1, __version);
+    const char *version = lua_isstring(L, -1) ? lua_tostring(L, -1) : __default_version;
+    lua_pop(L, 1);
 
     string_buffer_t *buffer = string_buffer_alloc();
 
     string_buffer_addfstring(buffer, "%s %s %s\r\n", method, mod->config.path, version);
 
-    lua_getfield(lua, -1, __headers);
-    if(lua_istable(lua, -1))
+    lua_getfield(L, -1, __headers);
+    if(lua_istable(L, -1))
     {
-        for(lua_pushnil(lua); lua_next(lua, -2); lua_pop(lua, 1))
+        for(lua_pushnil(L); lua_next(L, -2); lua_pop(L, 1))
         {
-            const char *h = lua_tostring(lua, -1);
+            const char *h = lua_tostring(L, -1);
 
             if(!strncasecmp(h, __connection, sizeof(__connection) - 1))
             {
@@ -1153,7 +1159,7 @@ static void lua_make_request(module_data_t *mod)
             string_buffer_addfstring(buffer, "%s\r\n", h);
         }
     }
-    lua_pop(lua, 1); // headers
+    lua_pop(L, 1); // headers
 
     string_buffer_addlstring(buffer, "\r\n", 2);
 
@@ -1162,30 +1168,31 @@ static void lua_make_request(module_data_t *mod)
 
     if(mod->request.idx_body)
     {
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->request.idx_body);
+        luaL_unref(L, LUA_REGISTRYINDEX, mod->request.idx_body);
         mod->request.idx_body = 0;
     }
 
-    lua_getfield(lua, -1, __content);
-    if(lua_isstring(lua, -1))
-        mod->request.idx_body = luaL_ref(lua, LUA_REGISTRYINDEX);
+    lua_getfield(L, -1, __content);
+    if(lua_isstring(L, -1))
+        mod->request.idx_body = luaL_ref(L, LUA_REGISTRYINDEX);
     else
-        lua_pop(lua, 1);
+        lua_pop(L, 1);
 }
 
 static void on_connect(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
+    lua_State *const L = MODULE_L(mod);
 
     mod->request.status = 1;
 
     asc_timer_destroy(mod->timeout);
     mod->timeout = asc_timer_init(mod->timeout_ms, timeout_callback, mod);
 
-    lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_self);
-    lua_getfield(lua, -1, "__options");
-    lua_make_request(mod);
-    lua_pop(lua, 2); // self + __options
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_self);
+    lua_getfield(L, -1, "__options");
+    lua_make_request(L, mod);
+    lua_pop(L, 2); // self + __options
 
     asc_socket_set_on_read(mod->sock, on_read);
     asc_socket_set_on_ready(mod->sock, on_ready_send_request);
@@ -1193,7 +1200,7 @@ static void on_connect(void *arg)
 
 static void on_upstream_ready(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     if(mod->sync.buffer_count > 0)
     {
@@ -1287,22 +1294,22 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
  *
  */
 
-static int method_set_receiver(module_data_t *mod)
+static int method_set_receiver(lua_State *L, module_data_t *mod)
 {
-    if(lua_isnil(lua, -1))
+    if(lua_isnil(L, -1))
     {
         mod->receiver.arg = NULL;
         mod->receiver.callback.ptr = NULL;
     }
     else
     {
-        mod->receiver.arg = lua_touserdata(lua, -2);
-        mod->receiver.callback.ptr = lua_touserdata(lua, -1);
+        mod->receiver.arg = lua_touserdata(L, -2);
+        mod->receiver.callback.ptr = lua_touserdata(L, -1);
     }
     return 0;
 }
 
-static int method_send(module_data_t *mod)
+static int method_send(lua_State *L, module_data_t *mod)
 {
     mod->status = 0;
 
@@ -1310,10 +1317,10 @@ static int method_send(module_data_t *mod)
         asc_timer_destroy(mod->timeout);
     mod->timeout = asc_timer_init(mod->timeout_ms, timeout_callback, mod);
 
-    asc_assert(lua_istable(lua, 2), MSG(":send() table required"));
-    lua_pushvalue(lua, 2);
-    lua_make_request(mod);
-    lua_pop(lua, 2); // :send() options
+    asc_assert(lua_istable(L, 2), MSG(":send() table required"));
+    lua_pushvalue(L, 2);
+    lua_make_request(L, mod);
+    lua_pop(L, 2); // :send() options
 
     asc_socket_set_on_read(mod->sock, on_read);
     asc_socket_set_on_ready(mod->sock, on_ready_send_request);
@@ -1321,8 +1328,10 @@ static int method_send(module_data_t *mod)
     return 0;
 }
 
-static int method_close(module_data_t *mod)
+static int method_close(lua_State *L, module_data_t *mod)
 {
+    __uarg(L);
+
     mod->status = -1;
     mod->request.status = -1;
     on_close(mod);
@@ -1330,32 +1339,32 @@ static int method_close(module_data_t *mod)
     return 0;
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_option_string("host", &mod->config.host, NULL);
+    module_option_string(L, "host", &mod->config.host, NULL);
     asc_assert(mod->config.host != NULL, MSG("option 'host' is required"));
 
     mod->config.port = 80;
-    module_option_number("port", &mod->config.port);
+    module_option_integer(L, "port", &mod->config.port);
 
     mod->config.path = __default_path;
-    module_option_string(__path, &mod->config.path, NULL);
+    module_option_string(L, __path, &mod->config.path, NULL);
 
-    lua_getfield(lua, 2, __callback);
-    asc_assert(lua_isfunction(lua, -1), MSG("option 'callback' is required"));
-    lua_pop(lua, 1); // callback
+    lua_getfield(L, 2, __callback);
+    asc_assert(lua_isfunction(L, -1), MSG("option 'callback' is required"));
+    lua_pop(L, 1); // callback
 
     // store self in registry
-    lua_pushvalue(lua, 3);
-    mod->idx_self = luaL_ref(lua, LUA_REGISTRYINDEX);
+    lua_pushvalue(L, 3);
+    mod->idx_self = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    module_option_boolean(__stream, &mod->is_stream);
+    module_option_boolean(L, __stream, &mod->is_stream);
     if(mod->is_stream)
     {
         module_stream_init(mod, NULL);
 
         int value = 0;
-        module_option_number("sync", &value);
+        module_option_integer(L, "sync", &value);
         if(value > 0)
             mod->config.sync = true;
         else
@@ -1364,31 +1373,31 @@ static void module_init(module_data_t *mod)
         mod->sync.buffer_size = value * 1024 * 1024;
     }
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "upstream");
-    if(lua_type(lua, -1) == LUA_TLIGHTUSERDATA)
+    lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
+    if(lua_type(L, -1) == LUA_TLIGHTUSERDATA)
     {
         asc_assert(mod->is_stream != true, MSG("option 'upstream' is not allowed in stream mode"));
 
         module_stream_init(mod, on_ts);
 
         int value = 1024;
-        module_option_number("buffer_size", &value);
+        module_option_integer(L, "buffer_size", &value);
         mod->sync.buffer_size = value * 1024;
         mod->sync.buffer = (uint8_t *)malloc(mod->sync.buffer_size);
 
         value = 128;
-        module_option_number("buffer_fill", &value);
+        module_option_integer(L, "buffer_fill", &value);
         mod->sync.buffer_fill = value * 1024;
     }
-    lua_pop(lua, 1);
+    lua_pop(L, 1);
 
     mod->timeout_ms = 10;
-    module_option_number("timeout", &mod->timeout_ms);
+    module_option_integer(L, "timeout", &mod->timeout_ms);
     mod->timeout_ms *= 1000;
     mod->timeout = asc_timer_init(mod->timeout_ms, timeout_callback, mod);
 
     bool sctp = false;
-    module_option_boolean("sctp", &sctp);
+    module_option_boolean(L, "sctp", &sctp);
     if(sctp == true)
         mod->sock = asc_socket_open_sctp4(mod);
     else
@@ -1413,5 +1422,4 @@ MODULE_LUA_METHODS()
     { "close", method_close },
     { "set_receiver", method_set_receiver },
 };
-
 MODULE_LUA_REGISTER(http_request)

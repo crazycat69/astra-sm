@@ -29,13 +29,17 @@ libastra_la_SOURCES += \
     core/list.c \
     core/log.c \
     core/mainloop.c \
-    core/luapi.c \
     core/socket.c \
     core/spawn.c \
     core/strbuffer.c \
-    core/stream.c \
     core/thread.c \
     core/timer.c
+
+# luaapi/
+libastra_la_SOURCES += \
+    luaapi/luaapi.c \
+    luaapi/state.c \
+    luaapi/stream.c
 
 # mpegts/
 libastra_la_SOURCES += \

@@ -20,6 +20,7 @@
  */
 
 #include <astra.h>
+#include <luaapi/luaapi.h>
 
 static uint8_t *iso8859_1_decode(const uint8_t *data, size_t size)
 {
@@ -435,7 +436,7 @@ char *iso8859_decode(const uint8_t *data, size_t size)
     return text;
 }
 
-static int lua_iso8859_encode(lua_State *L)
+static int method_iso8859_encode(lua_State *L)
 {
     const int part = luaL_checkinteger(L, 1);
     const uint8_t *data = (const uint8_t *)luaL_checkstring(L, 2);
@@ -474,8 +475,8 @@ MODULE_LUA_BINDING(iso8859)
 {
     static const luaL_Reg api[] =
     {
-        { "encode", lua_iso8859_encode },
-        { NULL, NULL }
+        { "encode", method_iso8859_encode },
+        { NULL, NULL },
     };
 
     luaL_newlib(L, api);

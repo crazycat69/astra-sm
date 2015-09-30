@@ -316,26 +316,26 @@ void remux_ts_in(module_data_t *mod, const uint8_t *orig_ts)
 /*
  * module init/deinit
  */
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     /* channel name */
-    module_option_string("name", &mod->name, NULL);
+    module_option_string(L, "name", &mod->name, NULL);
     asc_assert(mod->name != NULL, "[remux] option 'name' is required");
 
     /* mux rate, bps */
-    module_option_number("rate", (int *)&mod->rate);
+    module_option_integer(L, "rate", (int *)&mod->rate);
     asc_assert(mod->rate >= 1000000 && mod->rate <= 1000000000
                , MSG("rate must be between 1 and 1000 mbps"));
 
     /* PCR interval, ms */
-    if(!module_option_number("pcr_interval", (int *)&mod->pcr_interval))
+    if(!module_option_integer(L, "pcr_interval", (int *)&mod->pcr_interval))
         mod->pcr_interval = PCR_INTERVAL;
 
     asc_assert(mod->pcr_interval >= 20 && mod->pcr_interval <= 100
                , MSG("pcr interval must be between 20 and 100 ms"));
 
     /* PCR delay, ms */
-    if(!module_option_number("pcr_delay", &mod->pcr_delay))
+    if(!module_option_integer(L, "pcr_delay", &mod->pcr_delay))
         mod->pcr_delay = PCR_DELAY;
 
     asc_assert(mod->pcr_delay >= -5000 && mod->pcr_delay <= 5000
@@ -418,6 +418,6 @@ static void module_destroy(module_data_t *mod)
 MODULE_STREAM_METHODS()
 MODULE_LUA_METHODS()
 {
-    MODULE_STREAM_METHODS_REF()
+    MODULE_STREAM_METHODS_REF(),
 };
 MODULE_LUA_REGISTER(remux)

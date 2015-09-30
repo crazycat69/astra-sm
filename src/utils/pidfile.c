@@ -29,9 +29,12 @@
  */
 
 #include <astra.h>
+#include <luaapi/luaapi.h>
 
 struct module_data_t
 {
+    MODULE_LUA_DATA();
+
     int idx_self;
 };
 
@@ -56,17 +59,15 @@ static inline int __mkstemp(char *tpl)
 #   define __mkstemp(__tpl) mkostemp(__tpl, O_CLOEXEC)
 #endif /* !HAVE_MKOSTEMP */
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
-    __uarg(mod);
-
     if(filename)
     {
         asc_log_error("[pidfile] already created in %s", filename);
         astra_abort();
     }
 
-    filename = luaL_checkstring(lua, MODULE_OPTIONS_IDX);
+    filename = luaL_checkstring(L, MODULE_OPTIONS_IDX);
 
     if(!access(filename, W_OK))
         unlink(filename);
@@ -100,24 +101,22 @@ static void module_init(module_data_t *mod)
     }
 
     // store in registry to prevent the instance destroying
-    lua_pushvalue(lua, 3);
-    mod->idx_self = luaL_ref(lua, LUA_REGISTRYINDEX);
+    lua_pushvalue(L, 3);
+    mod->idx_self = luaL_ref(L, LUA_REGISTRYINDEX);
 }
 
 static void module_destroy(module_data_t *mod)
 {
-    __uarg(mod);
-
     if(!access(filename, W_OK))
         unlink(filename);
 
     filename = NULL;
 
-    luaL_unref(lua, LUA_REGISTRYINDEX, mod->idx_self);
+    luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_self);
 }
 
 MODULE_LUA_METHODS()
 {
-    { NULL, NULL }
+    { NULL, NULL },
 };
 MODULE_LUA_REGISTER(pidfile)

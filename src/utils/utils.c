@@ -33,6 +33,7 @@
  */
 
 #include <astra.h>
+#include <luaapi/luaapi.h>
 
 #include <dirent.h>
 
@@ -43,11 +44,11 @@
 #       include <ifaddrs.h>
 #   endif
 #   include <netdb.h>
-#endif
+#endif /* !_WIN32 */
 
 /* hostname */
 
-static int utils_hostname(lua_State *L)
+static int method_hostname(lua_State *L)
 {
     char hostname[64];
     if(gethostname(hostname, sizeof(hostname)) != 0)
@@ -57,7 +58,7 @@ static int utils_hostname(lua_State *L)
 }
 
 #ifdef HAVE_GETIFADDRS
-static int utils_ifaddrs(lua_State *L)
+static int method_ifaddrs(lua_State *L)
 {
     struct ifaddrs *ifaddr;
     char host[NI_MAXHOST];
@@ -69,7 +70,7 @@ static int utils_ifaddrs(lua_State *L)
     static const char __ipv6[] = "ipv6";
 #ifdef AF_LINK
     static const char __link[] = "link";
-#endif
+#endif /* AF_LINK */
 
     lua_newtable(L);
 
@@ -107,7 +108,7 @@ static int utils_ifaddrs(lua_State *L)
                 case AF_LINK:
                     ip_family = __link;
                     break;
-#endif
+#endif /* AF_LINK */
                 default:
                     break;
             }
@@ -141,11 +142,11 @@ static int utils_ifaddrs(lua_State *L)
 
     return 1;
 }
-#endif
+#endif /* HAVE_GETIFADDRS */
 
-static int utils_stat(lua_State *L)
+static int method_stat(lua_State *L)
 {
-    const char *path = luaL_checkstring(L, 1);
+    const char *const path = luaL_checkstring(L, 1);
 
     lua_newtable(L);
 
@@ -155,7 +156,7 @@ static int utils_stat(lua_State *L)
         lua_pushstring(L, strerror(errno));
         lua_setfield(L, -2, "error");
 
-        memset(&sb, 0, sizeof(struct stat));
+        memset(&sb, 0, sizeof(sb));
     }
 
     switch(sb.st_mode & S_IFMT)
@@ -168,7 +169,7 @@ static int utils_stat(lua_State *L)
 #ifndef _WIN32
         case S_IFLNK: lua_pushstring(L, "symlink"); break;
         case S_IFSOCK: lua_pushstring(L, "socket"); break;
-#endif
+#endif /* !_WIN32 */
         default: lua_pushstring(L, "unknown"); break;
     }
     lua_setfield(L, -2, "type");
@@ -239,12 +240,12 @@ MODULE_LUA_BINDING(utils)
 {
     static const luaL_Reg api[] =
     {
-        { "hostname", utils_hostname },
+        { "hostname", method_hostname },
 #ifdef HAVE_GETIFADDRS
-        { "ifaddrs", utils_ifaddrs },
+        { "ifaddrs", method_ifaddrs },
 #endif
-        { "stat", utils_stat },
-        { NULL, NULL }
+        { "stat", method_stat },
+        { NULL, NULL },
     };
 
     luaL_newlib(L, api);

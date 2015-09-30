@@ -38,8 +38,8 @@
  */
 
 #include <astra.h>
-#include <core/stream.h>
 #include <core/timer.h>
+#include <luaapi/stream.h>
 #include <mpegts/psi.h>
 
 typedef struct
@@ -803,19 +803,19 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
  *
  */
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, on_ts);
     module_stream_demux_set(mod, NULL, NULL);
 
-    module_option_string("name", &mod->config.name, NULL);
+    module_option_string(L, "name", &mod->config.name, NULL);
     asc_assert(mod->config.name != NULL, "[channel] option 'name' is required");
 
-    if(module_option_number("pnr", &mod->config.pnr))
+    if(module_option_integer(L, "pnr", &mod->config.pnr))
     {
-        module_option_number("set_pnr", &mod->config.set_pnr);
+        module_option_integer(L, "set_pnr", &mod->config.set_pnr);
 
-        module_option_boolean("cas", &mod->config.cas);
+        module_option_boolean(L, "cas", &mod->config.cas);
 
         mod->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
         mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, MAX_PID);
@@ -831,7 +831,7 @@ static void module_init(module_data_t *mod)
             module_stream_demux_join_pid(mod, 1);
         }
 
-        module_option_boolean("no_sdt", &mod->config.no_sdt);
+        module_option_boolean(L, "no_sdt", &mod->config.no_sdt);
         if(mod->config.no_sdt == false)
         {
             mod->sdt = mpegts_psi_init(MPEGTS_PACKET_SDT, 0x11);
@@ -839,10 +839,10 @@ static void module_init(module_data_t *mod)
             mod->stream[0x11] = MPEGTS_PACKET_SDT;
             module_stream_demux_join_pid(mod, 0x11);
 
-            module_option_boolean("pass_sdt", &mod->config.pass_sdt);
+            module_option_boolean(L, "pass_sdt", &mod->config.pass_sdt);
         }
 
-        module_option_boolean("no_eit", &mod->config.no_eit);
+        module_option_boolean(L, "no_eit", &mod->config.no_eit);
         if(mod->config.no_eit == false)
         {
             mod->eit = mpegts_psi_init(MPEGTS_PACKET_EIT, 0x12);
@@ -852,46 +852,46 @@ static void module_init(module_data_t *mod)
             mod->stream[0x14] = MPEGTS_PACKET_TDT;
             module_stream_demux_join_pid(mod, 0x14);
 
-            module_option_boolean("pass_eit", &mod->config.pass_eit);
+            module_option_boolean(L, "pass_eit", &mod->config.pass_eit);
         }
 
-        module_option_boolean("no_reload", &mod->config.no_reload);
+        module_option_boolean(L, "no_reload", &mod->config.no_reload);
         if(mod->config.no_reload)
             mod->si_timer = asc_timer_init(500, on_si_timer, mod);
     }
     else
     {
-        lua_getfield(lua, MODULE_OPTIONS_IDX, "pid");
-        if(lua_istable(lua, -1))
+        lua_getfield(L, MODULE_OPTIONS_IDX, "pid");
+        if(lua_istable(L, -1))
         {
-            lua_foreach(lua, -2)
+            lua_foreach(L, -2)
             {
-                const int pid = lua_tointeger(lua, -1);
+                const int pid = lua_tointeger(L, -1);
                 mod->stream[pid] = MPEGTS_PACKET_PES;
                 module_stream_demux_join_pid(mod, pid);
             }
         }
-        lua_pop(lua, 1); // pid
+        lua_pop(L, 1); // pid
     }
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "map");
-    if(lua_istable(lua, -1))
+    lua_getfield(L, MODULE_OPTIONS_IDX, "map");
+    if(lua_istable(L, -1))
     {
         mod->map = asc_list_init();
-        lua_foreach(lua, -2)
+        lua_foreach(L, -2)
         {
-            asc_assert((lua_type(lua, -1) == LUA_TTABLE), "option 'map': wrong type");
-            asc_assert((luaL_len(lua, -1) == 2), "option 'map': wrong format");
+            asc_assert((lua_type(L, -1) == LUA_TTABLE), "option 'map': wrong type");
+            asc_assert((luaL_len(L, -1) == 2), "option 'map': wrong format");
 
-            lua_rawgeti(lua, -1, 1);
-            const char *key = lua_tostring(lua, -1);
-            asc_assert((luaL_len(lua, -1) <= 5), "option 'map': key is too large");
-            lua_pop(lua, 1);
+            lua_rawgeti(L, -1, 1);
+            const char *key = lua_tostring(L, -1);
+            asc_assert((luaL_len(L, -1) <= 5), "option 'map': key is too large");
+            lua_pop(L, 1);
 
-            lua_rawgeti(lua, -1, 2);
-            int val = lua_tointeger(lua, -1);
+            lua_rawgeti(L, -1, 2);
+            int val = lua_tointeger(L, -1);
             asc_assert((val > 0 && val < NULL_TS_PID), "option 'map': value is out of range");
-            lua_pop(lua, 1);
+            lua_pop(L, 1);
 
             map_item_t *map_item = (map_item_t *)calloc(1, sizeof(map_item_t));
             strncpy(map_item->type, key, sizeof(map_item->type));
@@ -902,32 +902,32 @@ static void module_init(module_data_t *mod)
             asc_list_insert_tail(mod->map, map_item);
         }
     }
-    lua_pop(lua, 1); // map
+    lua_pop(L, 1); // map
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "filter");
-    if(lua_istable(lua, -1))
+    lua_getfield(L, MODULE_OPTIONS_IDX, "filter");
+    if(lua_istable(L, -1))
     {
-        lua_foreach(lua, -2)
+        lua_foreach(L, -2)
         {
-            const int pid = lua_tointeger(lua, -1);
+            const int pid = lua_tointeger(L, -1);
             mod->pid_map[pid] = MAX_PID;
         }
     }
-    lua_pop(lua, 1); // filter
+    lua_pop(L, 1); // filter
 
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "filter~");
-    if(lua_istable(lua, -1))
+    lua_getfield(L, MODULE_OPTIONS_IDX, "filter~");
+    if(lua_istable(L, -1))
     {
         for(uint32_t i = 0; i < ASC_ARRAY_SIZE(mod->pid_map); ++i)
             mod->pid_map[i] = MAX_PID;
 
-        lua_foreach(lua, -2)
+        lua_foreach(L, -2)
         {
-            const int pid = lua_tointeger(lua, -1);
+            const int pid = lua_tointeger(L, -1);
             mod->pid_map[pid] = 0;
         }
     }
-    lua_pop(lua, 1); // filter~
+    lua_pop(L, 1); // filter~
 }
 
 static void module_destroy(module_data_t *mod)
@@ -972,6 +972,6 @@ static void module_destroy(module_data_t *mod)
 MODULE_STREAM_METHODS()
 MODULE_LUA_METHODS()
 {
-    MODULE_STREAM_METHODS_REF()
+    MODULE_STREAM_METHODS_REF(),
 };
 MODULE_LUA_REGISTER(channel)

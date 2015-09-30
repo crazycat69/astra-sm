@@ -35,7 +35,7 @@
  */
 
 #include <astra.h>
-#include <core/stream.h>
+#include <luaapi/stream.h>
 
 #ifdef HAVE_AIO
 #   include <aio.h>
@@ -221,21 +221,21 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 
 /* methods */
 
-static int method_status(module_data_t *mod)
+static int method_status(lua_State *L, module_data_t *mod)
 {
-    lua_newtable(lua);
+    lua_newtable(L);
 
-    lua_pushnumber(lua, mod->file_size);
-    lua_setfield(lua, -2, "size");
+    lua_pushnumber(L, mod->file_size);
+    lua_setfield(L, -2, "size");
 
     return 1;
 }
 
 /* required */
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_option_string("filename", &mod->config.filename, NULL);
+    module_option_string(L, "filename", &mod->config.filename, NULL);
     if(!mod->config.filename)
     {
         asc_log_error("[file_output] option 'filename' is required");
@@ -243,15 +243,15 @@ static void module_init(module_data_t *mod)
     }
 
     bool m2ts = 0;
-    module_option_boolean("m2ts", &m2ts);
+    module_option_boolean(L, "m2ts", &m2ts);
     mod->packet_size = (m2ts) ? M2TS_PACKET_SIZE : TS_PACKET_SIZE;
 
 #ifdef O_DIRECT
-    module_option_boolean("directio", &mod->config.directio);
+    module_option_boolean(L, "directio", &mod->config.directio);
 #endif
 
 #ifdef HAVE_AIO
-    module_option_boolean("aio", &mod->config.aio);
+    module_option_boolean(L, "aio", &mod->config.aio);
 #endif
 
 #ifdef HAVE_LIBAIO
@@ -259,7 +259,7 @@ static void module_init(module_data_t *mod)
 #endif
 
     int buffer_size = FILE_BUFFER_SIZE;
-    module_option_number("buffer_size", &buffer_size);
+    module_option_integer(L, "buffer_size", &buffer_size);
     mod->buffer_size = buffer_size * 1024;
 
 #if defined(HAVE_POSIX_MEMALIGN) && defined(O_DIRECT)
@@ -382,7 +382,6 @@ static void module_destroy(module_data_t *mod)
 
 MODULE_LUA_METHODS()
 {
-    { "status", method_status }
+    { "status", method_status },
 };
-
 MODULE_LUA_REGISTER(file_output)

@@ -30,7 +30,6 @@
 #include "init.h"
 #include "log.h"
 #include "clock.h"
-#include "luapi.h"
 #include "error.h"
 
 #endif /* _ASTRA_CORE_H_ */

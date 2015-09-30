@@ -19,7 +19,7 @@
  */
 
 #include <astra.h>
-#include <core/stream.h>
+#include <luaapi/stream.h>
 #include <mpegts/psi.h>
 
 #include <dvbcsa/dvbcsa.h>
@@ -156,13 +156,13 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
     process_ts(mod, ts, (payload != NULL) ? (payload - ts) : (0));
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, on_ts);
 
     size_t biss_length = 0;
     const char *key_value = NULL;
-    module_option_string("key", &key_value, &biss_length);
+    module_option_string(L, "key", &key_value, &biss_length);
     asc_assert(key_value != NULL, "[biss_encrypt] option 'key' is required");
     asc_assert(biss_length == 16, "[biss_encrypt] key must be 16 char length");
 
@@ -197,7 +197,6 @@ static void module_destroy(module_data_t *mod)
 MODULE_STREAM_METHODS()
 MODULE_LUA_METHODS()
 {
-    MODULE_STREAM_METHODS_REF()
+    MODULE_STREAM_METHODS_REF(),
 };
-
 MODULE_LUA_REGISTER(biss_encrypt)

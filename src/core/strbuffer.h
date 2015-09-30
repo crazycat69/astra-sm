@@ -26,7 +26,7 @@
 #   error "Please include <astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-#include <core/luapi.h>
+#include <luaapi/luaapi.h>
 
 typedef struct string_buffer_t string_buffer_t;
 

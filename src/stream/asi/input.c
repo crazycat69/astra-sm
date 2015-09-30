@@ -19,8 +19,8 @@
  */
 
 #include <astra.h>
-#include <core/stream.h>
 #include <core/event.h>
+#include <luaapi/stream.h>
 
 #include <sys/ioctl.h>
 
@@ -106,17 +106,17 @@ static void leave_pid(void *arg, uint16_t pid)
     set_pid(mod, pid, 0);
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, NULL);
     module_stream_demux_set(mod, join_pid, leave_pid);
 
-    if(!module_option_number("adapter", &mod->adapter))
+    if(!module_option_integer(L, "adapter", &mod->adapter))
     {
         asc_log_error("[asi_input] option 'adapter' is required");
         astra_abort();
     }
-    module_option_boolean("budget", &mod->budget);
+    module_option_boolean(L, "budget", &mod->budget);
 
     char dev_name[32];
     snprintf(dev_name, sizeof(dev_name), "/dev/asirx%d", mod->adapter);
@@ -160,12 +160,9 @@ static void module_destroy(module_data_t *mod)
         close(mod->fd);
 }
 
-
 MODULE_STREAM_METHODS()
-
 MODULE_LUA_METHODS()
 {
-    MODULE_STREAM_METHODS_REF()
+    MODULE_STREAM_METHODS_REF(),
 };
-
 MODULE_LUA_REGISTER(asi_input)

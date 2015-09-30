@@ -20,6 +20,7 @@
 
 #include <astra.h>
 #include <core/list.h>
+#include <luaapi/luaapi.h>
 #include <utils/utils.h>
 
 #include "../http.h"
@@ -33,6 +34,8 @@
 
 struct module_data_t
 {
+    MODULE_LUA_DATA();
+
     int idx_callback;
 };
 
@@ -65,8 +68,8 @@ static const char __websocket_magic[] = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
 static void on_websocket_ready(void *arg)
 {
-    http_client_t *client = (http_client_t *)arg;
-    http_response_t *response = client->response;
+    http_client_t *const client = (http_client_t *)arg;
+    http_response_t *const response = client->response;
 
     asc_list_first(response->frame_queue);
     frame_t *frame = (frame_t *)asc_list_data(response->frame_queue);
@@ -96,11 +99,12 @@ static void on_websocket_ready(void *arg)
 /* Stack: 1 - server, 2 - client, 3 - response */
 static void on_websocket_send(void *arg)
 {
-    http_client_t *client = (http_client_t *)arg;
-    http_response_t *response = client->response;
+    http_client_t *const client = (http_client_t *)arg;
+    http_response_t *const response = client->response;
+    lua_State *const L = MODULE_L(client->mod);
 
-    const char *str = lua_tostring(lua, 3);
-    const int str_size = luaL_len(lua, 3);
+    const char *str = lua_tostring(L, 3);
+    const int str_size = luaL_len(L, 3);
 
     frame_t *frame = (frame_t *)malloc(sizeof(*frame));
 
@@ -148,8 +152,9 @@ static void on_websocket_send(void *arg)
 
 static void on_websocket_read(void *arg)
 {
-    http_client_t *client = (http_client_t *)arg;
-    http_response_t *response = client->response;
+    http_client_t *const client = (http_client_t *)arg;
+    http_response_t *const response = client->response;
+    lua_State *const L = MODULE_L(client->mod);
 
     ssize_t size;
     uint8_t *data = (uint8_t *)client->buffer;
@@ -259,22 +264,22 @@ static void on_websocket_read(void *arg)
 
     if(response->data_size == (uint32_t)size)
     {
-        lua_rawgeti(lua, LUA_REGISTRYINDEX, response->mod->idx_callback);
-        lua_rawgeti(lua, LUA_REGISTRYINDEX, client->idx_server);
-        lua_pushlightuserdata(lua, client);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, response->mod->idx_callback);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_server);
+        lua_pushlightuserdata(L, client);
 
         if(client->content)
         {
             string_buffer_addlstring(client->content, (const char *)data, response->data_size);
-            string_buffer_push(lua, client->content);
+            string_buffer_push(L, client->content);
             client->content = NULL;
         }
         else
         {
-            lua_pushlstring(lua, (const char *)data, response->data_size);
+            lua_pushlstring(L, (const char *)data, response->data_size);
         }
 
-        lua_call(lua, 3, 0);
+        lua_call(L, 3, 0);
 
         response->header_size = 0;
         response->data_size = 0;
@@ -290,12 +295,12 @@ static void on_websocket_read(void *arg)
 
         if(response->data_size == 0)
         {
-            lua_rawgeti(lua, LUA_REGISTRYINDEX, response->mod->idx_callback);
-            lua_rawgeti(lua, LUA_REGISTRYINDEX, client->idx_server);
-            lua_pushlightuserdata(lua, client);
-            string_buffer_push(lua, client->content);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, response->mod->idx_callback);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_server);
+            lua_pushlightuserdata(L, client);
+            string_buffer_push(L, client->content);
             client->content = NULL;
-            lua_call(lua, 3, 0);
+            lua_call(L, 3, 0);
 
             response->header_size = 0;
             response->data_size = 0;
@@ -303,19 +308,19 @@ static void on_websocket_read(void *arg)
     }
 }
 
-static int module_call(module_data_t *mod)
+static int module_call(lua_State *L, module_data_t *mod)
 {
-    http_client_t *client = (http_client_t *)lua_touserdata(lua, 3);
+    http_client_t *const client = (http_client_t *)lua_touserdata(L, 3);
 
-    if(lua_isnil(lua, 4))
+    if(lua_isnil(L, 4))
     {
         if(client->response)
         {
-            lua_rawgeti(lua, LUA_REGISTRYINDEX, client->response->mod->idx_callback);
-            lua_rawgeti(lua, LUA_REGISTRYINDEX, client->idx_server);
-            lua_pushlightuserdata(lua, client);
-            lua_pushnil(lua);
-            lua_call(lua, 3, 0);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, client->response->mod->idx_callback);
+            lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_server);
+            lua_pushlightuserdata(L, client);
+            lua_pushnil(L);
+            lua_call(L, 3, 0);
 
             if(client->content)
             {
@@ -341,32 +346,32 @@ static int module_call(module_data_t *mod)
         return 0;
     }
 
-    lua_rawgeti(lua, LUA_REGISTRYINDEX, client->idx_request);
-    lua_getfield(lua, -1, "headers");
+    lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_request);
+    lua_getfield(L, -1, "headers");
 
-    lua_getfield(lua, -1, "upgrade");
-    if(lua_isnil(lua, -1))
+    lua_getfield(L, -1, "upgrade");
+    if(lua_isnil(L, -1))
     {
-        lua_pop(lua, 3);
+        lua_pop(L, 3);
         http_client_abort(client, 400, NULL);
         return 0;
     }
-    const char *upgrade = lua_tostring(lua, -1);
+    const char *upgrade = lua_tostring(L, -1);
     if(strcmp(upgrade, "websocket") != 0)
     {
-        lua_pop(lua, 3);
+        lua_pop(L, 3);
         http_client_abort(client, 400, NULL);
         return 0;
     }
-    lua_pop(lua, 1); // upgrade
+    lua_pop(L, 1); // upgrade
 
     char *accept_key = NULL;
 
-    lua_getfield(lua, -1, "sec-websocket-key");
-    if(lua_isstring(lua, -1))
+    lua_getfield(L, -1, "sec-websocket-key");
+    if(lua_isstring(L, -1))
     {
-        const char *key = lua_tostring(lua, -1);
-        const int key_size = luaL_len(lua, -1);
+        const char *key = lua_tostring(L, -1);
+        const int key_size = luaL_len(L, -1);
         sha1_ctx_t ctx;
         memset(&ctx, 0, sizeof(sha1_ctx_t));
         sha1_init(&ctx);
@@ -376,9 +381,9 @@ static int module_call(module_data_t *mod)
         sha1_final(&ctx, digest);
         accept_key = base64_encode(digest, sizeof(digest), NULL);
     }
-    lua_pop(lua, 1); // sec-websocket-key
+    lua_pop(L, 1); // sec-websocket-key
 
-    lua_pop(lua, 2); // request + headers
+    lua_pop(L, 2); // request + headers
 
     client->response = (http_response_t *)calloc(1, sizeof(*client->response));
     client->response->mod = mod;
@@ -402,36 +407,37 @@ static int module_call(module_data_t *mod)
 
 static int __module_call(lua_State *L)
 {
-    module_data_t *mod = (module_data_t *)lua_touserdata(L, lua_upvalueindex(1));
-    return module_call(mod);
+    module_data_t *const mod =
+        (module_data_t *)lua_touserdata(L, lua_upvalueindex(1));
+
+    return module_call(L, mod);
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
-    lua_getfield(lua, MODULE_OPTIONS_IDX, "callback");
-    asc_assert(lua_isfunction(lua, -1), "[http_websocket] option 'callback' is required");
-    mod->idx_callback = luaL_ref(lua, LUA_REGISTRYINDEX);
+    lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
+    asc_assert(lua_isfunction(L, -1), "[http_websocket] option 'callback' is required");
+    mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     // Set callback for http route
-    lua_getmetatable(lua, 3);
-    lua_pushlightuserdata(lua, (void *)mod);
-    lua_pushcclosure(lua, __module_call, 1);
-    lua_setfield(lua, -2, "__call");
-    lua_pop(lua, 1);
+    lua_getmetatable(L, 3);
+    lua_pushlightuserdata(L, (void *)mod);
+    lua_pushcclosure(L, __module_call, 1);
+    lua_setfield(L, -2, "__call");
+    lua_pop(L, 1);
 }
 
 static void module_destroy(module_data_t *mod)
 {
     if(mod->idx_callback)
     {
-        luaL_unref(lua, LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 }
 
 MODULE_LUA_METHODS()
 {
-    { NULL, NULL }
+    { NULL, NULL },
 };
-
 MODULE_LUA_REGISTER(http_websocket)

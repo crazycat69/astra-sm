@@ -249,18 +249,18 @@ static void leave_pid(void *arg, uint16_t pid)
     module_stream_demux_leave_pid(mod, pid);
 }
 
-static int method_ca_set_pnr(module_data_t *mod)
+static int method_ca_set_pnr(lua_State *L, module_data_t *mod)
 {
     if(!mod->ca || !mod->ca->ca_fd)
         return 0;
 
-    const uint16_t pnr = lua_tointeger(lua, 2);
-    const bool is_set = lua_toboolean(lua, 3);
+    const uint16_t pnr = lua_tointeger(L, 2);
+    const bool is_set = lua_toboolean(L, 3);
     ((is_set) ? ca_append_pnr : ca_remove_pnr)(mod->ca, pnr);
     return 0;
 }
 
-static void module_init(module_data_t *mod)
+static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, on_ts);
     module_stream_demux_set(mod, join_pid, leave_pid);
@@ -268,12 +268,12 @@ static void module_init(module_data_t *mod)
     mod->ca = (dvb_ca_t *)calloc(1, sizeof(*mod->ca));
 
     static const char __adapter[] = "adapter";
-    if(!module_option_number(__adapter, &mod->adapter))
+    if(!module_option_integer(L, __adapter, &mod->adapter))
     {
         asc_log_error(MSG("option '%s' is required"), __adapter);
         astra_abort();
     }
-    module_option_number("device", &mod->device);
+    module_option_integer(L, "device", &mod->device);
     mod->ca->adapter = mod->adapter;
     mod->ca->device = mod->device;
     const size_t path_size = sprintf(mod->dev_name, "/dev/dvb/adapter%d/", mod->adapter);
@@ -318,7 +318,7 @@ static void module_destroy(module_data_t *mod)
 MODULE_STREAM_METHODS()
 MODULE_LUA_METHODS()
 {
+    MODULE_STREAM_METHODS_REF(),
     { "ca_set_pnr", method_ca_set_pnr },
-    MODULE_STREAM_METHODS_REF()
 };
 MODULE_LUA_REGISTER(ddci)
