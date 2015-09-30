@@ -43,11 +43,6 @@ typedef struct
     module_callback_t method;
 } module_method_t;
 
-extern lua_State *lua;
-
-void lua_core_init(void);
-void lua_core_destroy(void);
-
 bool module_option_integer(lua_State *L, const char *name, int *integer);
 bool module_option_string(lua_State *L, const char *name, const char **string
                           , size_t *length);

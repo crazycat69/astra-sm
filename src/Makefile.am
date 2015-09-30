@@ -38,6 +38,7 @@ libastra_la_SOURCES += \
 # luaapi/
 libastra_la_SOURCES += \
     luaapi/luaapi.c \
+    luaapi/state.c \
     luaapi/stream.c
 
 # mpegts/

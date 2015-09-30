@@ -22,78 +22,27 @@
 #include <astra.h>
 #include <luaapi/luaapi.h>
 
-#define MSG(_msg) "[luaapi] " _msg
-
-/* search path for Lua */
-#ifdef ASC_SCRIPT_DIR
-#   define __SCRIPT_DIR ";" ASC_SCRIPT_DIR ASC_PATH_SEPARATOR "?.lua"
-#else
-#   define __SCRIPT_DIR
-#endif
-
-#define PACKAGE_PATH \
-    "." ASC_PATH_SEPARATOR "?.lua" __SCRIPT_DIR
-
-/* global Lua state */
-lua_State *lua = NULL;
-
-static int (*const astra_mods[])(lua_State *) = {
-    LUA_CORE_BINDINGS
-    LUA_STREAM_BINDINGS
-    NULL
-};
-
-void lua_core_init(void)
-{
-    asc_assert(lua == NULL, MSG("lua is already initialized"));
-
-    lua = luaL_newstate();
-    asc_assert(lua != NULL, MSG("luaL_newstate() failed"));
-    luaL_openlibs(lua);
-
-    /* load modules */
-    for (size_t i = 0; astra_mods[i] != NULL; i++)
-        astra_mods[i](lua);
-
-    /* change package.path */
-#ifdef LUA_DEBUG
-    asc_log_info(MSG("setting package.path to '%s'"), PACKAGE_PATH);
-#endif
-
-    lua_getglobal(lua, "package");
-    lua_pushstring(lua, PACKAGE_PATH);
-    lua_setfield(lua, -2, "path");
-    lua_pushstring(lua, "");
-    lua_setfield(lua, -2, "cpath");
-    lua_pop(lua, 1);
-}
-
-void lua_core_destroy(void)
-{
-    ASC_FREE(lua, lua_close);
-}
-
 bool module_option_integer(lua_State *L, const char *name, int *integer)
 {
-    if(lua_type(L, MODULE_OPTIONS_IDX) != LUA_TTABLE)
+    if (lua_type(L, MODULE_OPTIONS_IDX) != LUA_TTABLE)
         return false;
 
     lua_getfield(L, MODULE_OPTIONS_IDX, name);
     const int type = lua_type(L, -1);
     bool result = false;
 
-    if(type == LUA_TNUMBER)
+    if (type == LUA_TNUMBER)
     {
         *integer = lua_tointeger(L, -1);
         result = true;
     }
-    else if(type == LUA_TSTRING)
+    else if (type == LUA_TSTRING)
     {
         const char *str = lua_tostring(L, -1);
         *integer = atoi(str);
         result = true;
     }
-    else if(type == LUA_TBOOLEAN)
+    else if (type == LUA_TBOOLEAN)
     {
         *integer = lua_toboolean(L, -1);
         result = true;
@@ -106,16 +55,16 @@ bool module_option_integer(lua_State *L, const char *name, int *integer)
 bool module_option_string(lua_State *L, const char *name, const char **string
                           , size_t *length)
 {
-    if(lua_type(L, MODULE_OPTIONS_IDX) != LUA_TTABLE)
+    if (lua_type(L, MODULE_OPTIONS_IDX) != LUA_TTABLE)
         return false;
 
     lua_getfield(L, MODULE_OPTIONS_IDX, name);
     const int type = lua_type(L, -1);
     bool result = false;
 
-    if(type == LUA_TSTRING)
+    if (type == LUA_TSTRING)
     {
-        if(length)
+        if (length)
             *length = luaL_len(L, -1);
         *string = lua_tostring(L, -1);
         result = true;
@@ -127,19 +76,19 @@ bool module_option_string(lua_State *L, const char *name, const char **string
 
 bool module_option_boolean(lua_State *L, const char *name, bool *boolean)
 {
-    if(lua_type(L, MODULE_OPTIONS_IDX) != LUA_TTABLE)
+    if (lua_type(L, MODULE_OPTIONS_IDX) != LUA_TTABLE)
         return false;
 
     lua_getfield(L, MODULE_OPTIONS_IDX, name);
     const int type = lua_type(L, -1);
     bool result = false;
 
-    if(type == LUA_TNUMBER)
+    if (type == LUA_TNUMBER)
     {
         *boolean = (lua_tointeger(L, -1) != 0) ? true : false;
         result = true;
     }
-    else if(type == LUA_TSTRING)
+    else if (type == LUA_TSTRING)
     {
         const char *str = lua_tostring(L, -1);
         *boolean = (!strcmp(str, "true")
@@ -147,7 +96,7 @@ bool module_option_boolean(lua_State *L, const char *name, bool *boolean)
                     || !strcmp(str, "1"));
         result = true;
     }
-    else if(type == LUA_TBOOLEAN)
+    else if (type == LUA_TBOOLEAN)
     {
         *boolean = lua_toboolean(L, -1);
         result = true;

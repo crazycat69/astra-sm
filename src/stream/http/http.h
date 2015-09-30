@@ -60,9 +60,9 @@ void http_client_abort(http_client_t *client, int code, const char *text);
 
 // Utils
 
-void lua_string_to_lower(const char *str, size_t size);
-void lua_url_decode(const char *str, size_t size);
-bool lua_parse_query(const char *str, size_t size);
-bool lua_safe_path(const char *str, size_t size);
+void lua_string_to_lower(lua_State *L, const char *str, size_t size);
+void lua_url_decode(lua_State *L, const char *str, size_t size);
+bool lua_parse_query(lua_State *L, const char *str, size_t size);
+bool lua_safe_path(lua_State *L, const char *str, size_t size);
 
 #endif /* _HTTP_H_ */

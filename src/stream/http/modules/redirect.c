@@ -30,11 +30,11 @@ struct module_data_t
 };
 
 /* Stack: 1 - instance, 2 - server, 3 - client, 4 - request */
-static int module_call(module_data_t *mod)
+static int module_call(lua_State *L, module_data_t *mod)
 {
-    http_client_t *client = (http_client_t *)lua_touserdata(lua, 3);
+    http_client_t *const client = (http_client_t *)lua_touserdata(L, 3);
 
-    if(lua_isnil(lua, 4))
+    if(lua_isnil(L, 4))
         return 0;
 
     http_client_redirect(client, mod->code, mod->location);
@@ -44,8 +44,10 @@ static int module_call(module_data_t *mod)
 
 static int __module_call(lua_State *L)
 {
-    module_data_t *mod = (module_data_t *)lua_touserdata(L, lua_upvalueindex(1));
-    return module_call(mod);
+    module_data_t *const mod =
+        (module_data_t *)lua_touserdata(L, lua_upvalueindex(1));
+
+    return module_call(L, mod);
 }
 
 static void module_init(lua_State *L, module_data_t *mod)

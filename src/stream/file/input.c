@@ -310,7 +310,7 @@ static void thread_loop(void *arg)
 
 static void on_thread_close(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     mod->thread_run = false;
     if(mod->fd > 0)
@@ -333,8 +333,10 @@ static void on_thread_close(void *arg)
 
     if(mod->is_eof && mod->idx_callback)
     {
-        lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_callback);
-        lua_call(lua, 0, 0);
+        lua_State *const L = MODULE_L(mod);
+
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
+        lua_call(L, 0, 0);
     }
 }
 

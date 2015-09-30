@@ -1022,21 +1022,22 @@ static void thread_loop_slave(void *arg)
 
 static void on_status_timer(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
+    lua_State *const L = MODULE_L(mod);
 
-    lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_callback);
-    lua_newtable(lua);
-    lua_pushinteger(lua, mod->fe->status);
-    lua_setfield(lua, -2, "status");
-    lua_pushinteger(lua, mod->fe->signal);
-    lua_setfield(lua, -2, "signal");
-    lua_pushinteger(lua, mod->fe->snr);
-    lua_setfield(lua, -2, "snr");
-    lua_pushinteger(lua, mod->fe->ber);
-    lua_setfield(lua, -2, "ber");
-    lua_pushinteger(lua, mod->fe->unc);
-    lua_setfield(lua, -2, "unc");
-    lua_call(lua, 1, 0);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
+    lua_newtable(L);
+    lua_pushinteger(L, mod->fe->status);
+    lua_setfield(L, -2, "status");
+    lua_pushinteger(L, mod->fe->signal);
+    lua_setfield(L, -2, "signal");
+    lua_pushinteger(L, mod->fe->snr);
+    lua_setfield(L, -2, "snr");
+    lua_pushinteger(L, mod->fe->ber);
+    lua_setfield(L, -2, "ber");
+    lua_pushinteger(L, mod->fe->unc);
+    lua_setfield(L, -2, "unc");
+    lua_call(L, 1, 0);
 }
 
 static int method_ca_set_pnr(lua_State *L, module_data_t *mod)

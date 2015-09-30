@@ -66,8 +66,8 @@ static const char __path[] = "path";
 
 static void on_ready_send_file(void *arg)
 {
-    http_client_t *client = (http_client_t *)arg;
-    http_response_t *response = client->response;
+    http_client_t *const client = (http_client_t *)arg;
+    http_response_t *const response = client->response;
 
     ssize_t send_size;
 
@@ -136,7 +136,8 @@ static void on_ready_send_file(void *arg)
         http_client_close(client);
 }
 
-static const char * lua_get_mime(http_client_t *client, const char *path)
+static const char *lua_get_mime(lua_State *L, http_client_t *client
+                                , const char *path)
 {
     const char *mime = client->response->mod->default_mime;
     size_t dot = 0;
@@ -155,24 +156,25 @@ static const char * lua_get_mime(http_client_t *client, const char *path)
         return mime;
     const char *extension = &path[dot + 1];
 
-    lua_getglobal(lua, "mime");
-    if(lua_istable(lua, -1))
+    lua_getglobal(L, "mime");
+    if(lua_istable(L, -1))
     {
-        lua_getfield(lua, -1, extension);
-        if(lua_isstring(lua, -1))
-            mime = lua_tostring(lua, -1);
-        lua_pop(lua, 1); // extension
+        lua_getfield(L, -1, extension);
+        if(lua_isstring(L, -1))
+            mime = lua_tostring(L, -1);
+        lua_pop(L, 1); // extension
     }
-    lua_pop(lua, 1); // mime
+    lua_pop(L, 1); // mime
+
     return mime;
 }
 
 /* Stack: 1 - instance, 2 - server, 3 - client, 4 - request */
-static int module_call(module_data_t *mod)
+static int module_call(lua_State *L, module_data_t *mod)
 {
-    http_client_t *client = (http_client_t *)lua_touserdata(lua, 3);
+    http_client_t *const client = (http_client_t *)lua_touserdata(L, 3);
 
-    if(lua_isnil(lua, 4))
+    if(lua_isnil(L, 4))
     {
         if(client->response)
         {
@@ -190,10 +192,10 @@ static int module_call(module_data_t *mod)
     client->on_ready = on_ready_send_file;
     client->response->sock_fd = asc_socket_fd(client->sock);
 
-    lua_rawgeti(lua, LUA_REGISTRYINDEX, client->idx_request);
-    lua_getfield(lua, -1, __path);
-    const char *path = lua_tostring(lua, -1);
-    lua_pop(lua, 2); // request + path
+    lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_request);
+    lua_getfield(L, -1, __path);
+    const char *path = lua_tostring(L, -1);
+    lua_pop(L, 2); // request + path
 
     char *filename = (char *)malloc(PATH_MAX);
     sprintf(filename, "%s%s", mod->path, &path[mod->path_skip]);
@@ -229,7 +231,7 @@ static int module_call(module_data_t *mod)
 
     http_response_code(client, 200, NULL);
     http_response_header(client, "Content-Length: %jd", client->response->file_size);
-    http_response_header(client, "Content-Type: %s", lua_get_mime(client, path));
+    http_response_header(client, "Content-Type: %s", lua_get_mime(L, client, path));
     http_response_send(client);
 
     return 0;
@@ -237,8 +239,10 @@ static int module_call(module_data_t *mod)
 
 static int __module_call(lua_State *L)
 {
-    module_data_t *mod = (module_data_t *)lua_touserdata(L, lua_upvalueindex(1));
-    return module_call(mod);
+    module_data_t *const mod =
+        (module_data_t *)lua_touserdata(L, lua_upvalueindex(1));
+
+    return module_call(L, mod);
 }
 
 static void module_init(lua_State *L, module_data_t *mod)

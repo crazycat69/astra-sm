@@ -25,7 +25,7 @@
 #include <core/thread.h>
 #include <core/timer.h>
 #include <core/socket.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/state.h>
 
 #define MSG(_msg) "[core] " _msg
 
@@ -57,7 +57,7 @@ void asc_srand(void)
 void astra_core_init(void)
 {
     /* call order doesn't really matter here */
-    lua_core_init();
+    lua = lua_api_init();
 
     asc_thread_core_init();
     asc_timer_core_init();
@@ -70,7 +70,7 @@ void astra_core_init(void)
 void astra_core_destroy(void)
 {
     /* this frees streaming modules */
-    lua_core_destroy();
+    lua_api_destroy(lua);
 
     asc_event_core_destroy();
     asc_socket_core_destroy();
