@@ -128,7 +128,7 @@ static int method_base64_encode(lua_State *L)
 
     size_t data_enc_size = 0;
     const char *data_enc = base64_encode(data, data_size, &data_enc_size);
-    lua_pushlstring(lua, data_enc, data_enc_size);
+    lua_pushlstring(L, data_enc, data_enc_size);
 
     free((void *)data_enc);
     return 1;
@@ -137,11 +137,11 @@ static int method_base64_encode(lua_State *L)
 static int method_base64_decode(lua_State *L)
 {
     const char *data = luaL_checkstring(L, 1);
-    int data_size = luaL_len(lua, 1);
+    const int data_size = luaL_len(L, 1);
 
     size_t data_dec_size = 0;
     const char *data_dec = (char *)base64_decode(data, data_size, &data_dec_size);
-    lua_pushlstring(lua, data_dec, data_dec_size);
+    lua_pushlstring(L, data_dec, data_dec_size);
 
     free((void *)data_dec);
     return 1;

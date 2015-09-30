@@ -85,7 +85,7 @@ MODULE_LUA_BINDING(astra)
 
     luaL_newlib(L, astra_api);
 
-    lua_pushboolean(lua,
+    lua_pushboolean(L,
 #ifdef DEBUG
                     1
 #else
@@ -93,16 +93,16 @@ MODULE_LUA_BINDING(astra)
 #endif
                     );
 
-    lua_setfield(lua, -2, "debug");
+    lua_setfield(L, -2, "debug");
 
-    lua_pushstring(lua, PACKAGE_STRING);
-    lua_setfield(lua, -2, "fullname");
+    lua_pushstring(L, PACKAGE_STRING);
+    lua_setfield(L, -2, "fullname");
 
-    lua_pushstring(lua, PACKAGE_NAME);
-    lua_setfield(lua, -2, "package");
+    lua_pushstring(L, PACKAGE_NAME);
+    lua_setfield(L, -2, "package");
 
-    lua_pushstring(lua, PACKAGE_VERSION);
-    lua_setfield(lua, -2, "version");
+    lua_pushstring(L, PACKAGE_VERSION);
+    lua_setfield(L, -2, "version");
 
     lua_setglobal(L, "astra");
 

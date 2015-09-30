@@ -167,7 +167,7 @@ static int method_sha1(lua_State *L)
     uint8_t digest[SHA1_DIGEST_SIZE];
     sha1_final(&ctx, digest);
 
-    lua_pushlstring(lua, (char *)digest, sizeof(digest));
+    lua_pushlstring(L, (char *)digest, sizeof(digest));
     return 1;
 }
 

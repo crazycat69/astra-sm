@@ -43,10 +43,11 @@ struct module_data_t
 static void timer_callback(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
+    lua_State *const L = MODULE_L(mod);
 
-    lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_callback);
-    lua_rawgeti(lua, LUA_REGISTRYINDEX, mod->idx_self);
-    lua_call(lua, 1, 0);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
+    lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_self);
+    lua_call(L, 1, 0);
 }
 
 static int method_close(lua_State *L, module_data_t *mod)

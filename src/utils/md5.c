@@ -445,7 +445,7 @@ static int method_md5(lua_State *L)
     uint8_t digest[MD5_DIGEST_SIZE];
     md5_final(&ctx, digest);
 
-    lua_pushlstring(lua, (char *)digest, sizeof(digest));
+    lua_pushlstring(L, (char *)digest, sizeof(digest));
     return 1;
 }
 

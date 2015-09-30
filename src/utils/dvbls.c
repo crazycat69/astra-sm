@@ -41,7 +41,8 @@ static int device;
 static const char __adapter[] = "adapter";
 static const char __device[] = "device";
 
-static void iterate_dir(const char *dir, const char *filter, void (*callback)(const char *))
+static void iterate_dir(lua_State *L, const char *dir, const char *filter
+                        , void (*callback)(lua_State *, const char *))
 {
     DIR *dirp = opendir(dir);
     if(!dirp)
@@ -65,7 +66,7 @@ static void iterate_dir(const char *dir, const char *filter, void (*callback)(co
         if(strncmp(entry->d_name, filter, filter_len) != 0)
             continue;
         sprintf(&item[item_len], "%s", entry->d_name);
-        callback(item);
+        callback(L, item);
     } while(1);
 
     closedir(dirp);
@@ -93,7 +94,7 @@ static int get_last_int(const char *str)
     return atoi(&str[i_pos]);
 }
 
-static void check_device_net(void)
+static void check_device_net(lua_State *L)
 {
 #ifdef HAVE_LINUX_DVB_NET_H
     sprintf(dev_name, "/dev/dvb/adapter%d/net%d", adapter, device);
@@ -105,7 +106,7 @@ static void check_device_net(void)
     {
         if(fd == -1)
         {
-            lua_pushfstring(lua, "failed to open [%s]", strerror(errno));
+            lua_pushfstring(L, "failed to open [%s]", strerror(errno));
             break;
         }
 
@@ -113,7 +114,7 @@ static void check_device_net(void)
         memset(&net, 0, sizeof(net));
         if(ioctl(fd, NET_ADD_IF, &net) != 0)
         {
-            lua_pushfstring(lua, "NET_ADD_IF failed [%s]", strerror(errno));
+            lua_pushfstring(L, "NET_ADD_IF failed [%s]", strerror(errno));
             break;
         }
 
@@ -123,7 +124,7 @@ static void check_device_net(void)
 
         int sock = socket(PF_INET, SOCK_DGRAM, 0);
         if(ioctl(sock, SIOCGIFHWADDR, &ifr) != 0)
-            lua_pushfstring(lua, "SIOCGIFHWADDR failed [%s]", strerror(errno));
+            lua_pushfstring(L, "SIOCGIFHWADDR failed [%s]", strerror(errno));
         else
         {
             const uint8_t *const p = (uint8_t *)ifr.ifr_hwaddr.sa_data;
@@ -132,14 +133,14 @@ static void check_device_net(void)
             snprintf(mac, sizeof(mac), "%02X:%02X:%02X:%02X:%02X:%02X"
                      , p[0], p[1], p[2], p[3], p[4], p[5]);
 
-            lua_pushstring(lua, mac);
+            lua_pushstring(L, mac);
         }
         close(sock);
 
         if(ioctl(fd, NET_REMOVE_IF, net.if_num) != 0)
         {
-            lua_pop(lua, 1);
-            lua_pushfstring(lua, "NET_REMOVE_IF failed [%s]", strerror(errno));
+            lua_pop(L, 1);
+            lua_pushfstring(L, "NET_REMOVE_IF failed [%s]", strerror(errno));
             break;
         }
 
@@ -151,18 +152,18 @@ static void check_device_net(void)
 
     if (!success)
     {
-        lua_setfield(lua, -2, "net_error");
-        lua_pushstring(lua, "ERROR");
+        lua_setfield(L, -2, "net_error");
+        lua_pushstring(L, "ERROR");
     }
 #else
     static const char dummy_mac[] = "DE:AD:00:00:BE:EF";
-    lua_pushstring(lua, dummy_mac);
+    lua_pushstring(L, dummy_mac);
 #endif /* HAVE_LINUX_DVB_NET_H */
 
-    lua_setfield(lua, -2, "mac");
+    lua_setfield(L, -2, "mac");
 }
 
-static void check_device_fe(void)
+static void check_device_fe(lua_State *L)
 {
     sprintf(dev_name, "/dev/dvb/adapter%d/frontend%d", adapter, device);
 
@@ -179,19 +180,19 @@ static void check_device_fe(void)
 
     if(fd == -1)
     {
-        lua_pushfstring(lua, "failed to open [%s]", strerror(errno));
-        lua_setfield(lua, -2, _error);
+        lua_pushfstring(L, "failed to open [%s]", strerror(errno));
+        lua_setfield(L, -2, _error);
         return;
     }
 
-    lua_pushboolean(lua, is_busy);
-    lua_setfield(lua, -2, "busy");
+    lua_pushboolean(L, is_busy);
+    lua_setfield(L, -2, "busy");
 
     struct dvb_frontend_info feinfo;
     if(ioctl(fd, FE_GET_INFO, &feinfo) != 0)
     {
-        lua_pushstring(lua, "failed to get frontend type");
-        lua_setfield(lua, -2, _error);
+        lua_pushstring(L, "failed to get frontend type");
+        lua_setfield(L, -2, _error);
         close(fd);
         return;
     }
@@ -200,49 +201,49 @@ static void check_device_fe(void)
     switch(feinfo.type)
     {
         case FE_QPSK:
-            lua_pushstring(lua, "S");
+            lua_pushstring(L, "S");
             break;
         case FE_OFDM:
-            lua_pushstring(lua, "T");
+            lua_pushstring(L, "T");
             break;
         case FE_QAM:
-            lua_pushstring(lua, "C");
+            lua_pushstring(L, "C");
             break;
         case FE_ATSC:
-            lua_pushstring(lua, "ATSC");
+            lua_pushstring(L, "ATSC");
             break;
         default:
-            lua_pushfstring(lua, "unknown frontend type [%d]", feinfo.type);
-            lua_setfield(lua, -2, _error);
+            lua_pushfstring(L, "unknown frontend type [%d]", feinfo.type);
+            lua_setfield(L, -2, _error);
             return;
     }
-    lua_setfield(lua, -2, "type");
+    lua_setfield(L, -2, "type");
 
-    lua_pushstring(lua, feinfo.name);
-    lua_setfield(lua, -2, "frontend");
+    lua_pushstring(L, feinfo.name);
+    lua_setfield(L, -2, "frontend");
 
-    check_device_net();
+    check_device_net(L);
 }
 
-static void check_device(const char *item)
+static void check_device(lua_State *L, const char *item)
 {
     device = get_last_int(&item[(sizeof("/dev/dvb/adapter") - 1) + (sizeof("/net") - 1)]);
 
-    lua_newtable(lua);
-    lua_pushinteger(lua, adapter);
-    lua_setfield(lua, -2, __adapter);
-    lua_pushinteger(lua, device);
-    lua_setfield(lua, -2, __device);
-    check_device_fe();
+    lua_newtable(L);
+    lua_pushinteger(L, adapter);
+    lua_setfield(L, -2, __adapter);
+    lua_pushinteger(L, device);
+    lua_setfield(L, -2, __device);
+    check_device_fe(L);
 
     ++count;
-    lua_rawseti(lua, -2, count);
+    lua_rawseti(L, -2, count);
 }
 
-static void check_adapter(const char *item)
+static void check_adapter(lua_State *L, const char *item)
 {
     adapter = get_last_int(&item[sizeof("/dev/dvb/adapter") - 1]);
-    iterate_dir(item, "net", check_device);
+    iterate_dir(L, item, "net", check_device);
 }
 
 static int dvbls_scan(lua_State *L)
@@ -250,8 +251,8 @@ static int dvbls_scan(lua_State *L)
     __uarg(L);
 
     count = 0;
-    lua_newtable(lua);
-    iterate_dir("/dev/dvb", __adapter, check_adapter);
+    lua_newtable(L);
+    iterate_dir(L, "/dev/dvb", __adapter, check_adapter);
 
     if(count == 0)
         asc_log_debug(MSG("no DVB adapters found"));

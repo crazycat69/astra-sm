@@ -540,7 +540,7 @@ static int method_json_save(lua_State *L)
         asc_log_error(MSG("json.save(%s) failed to open [%s]")
                       , filename, strerror(errno));
 
-        lua_pushboolean(lua, false);
+        lua_pushboolean(L, false);
         return 1;
     }
 
@@ -556,14 +556,14 @@ static int method_json_save(lua_State *L)
 
     if(w == (ssize_t)json_size)
     {
-        lua_pushboolean(lua, true);
+        lua_pushboolean(L, true);
     }
     else
     {
         asc_log_error(MSG("json.save(%s) failed to write [%s]")
                       , filename, strerror(errno));
 
-        lua_pushboolean(lua, false);
+        lua_pushboolean(L, false);
     }
 
     return 1;

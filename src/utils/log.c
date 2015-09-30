@@ -63,8 +63,8 @@ static int method_log_set(lua_State *L)
             is_debug = lua_toboolean(L, -1);
             asc_log_set_debug(is_debug);
 
-            lua_pushvalue(lua, -1);
-            lua_setglobal(lua, "debug");
+            lua_pushvalue(L, -1);
+            lua_setglobal(L, "debug");
         }
         else if(!strcmp(var, "filename"))
         {
