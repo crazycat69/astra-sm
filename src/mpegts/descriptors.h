@@ -26,6 +26,8 @@
 #   error "Please include <astra.h> first"
 #endif /* !_ASTRA_H_ */
 
+#include <luaapi/luaapi.h>
+
 void mpegts_desc_to_lua(lua_State *L, const uint8_t *desc);
 
 #endif /* _TS_DESCRIPTORS_ */

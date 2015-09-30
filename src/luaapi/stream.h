@@ -1,5 +1,5 @@
 /*
- * Astra Core (Stream API)
+ * Astra Lua API (Stream Module)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
@@ -18,15 +18,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _ASC_STREAM_H_
-#define _ASC_STREAM_H_ 1
+#ifndef _LUA_STREAM_H_
+#define _LUA_STREAM_H_ 1
 
 #ifndef _ASTRA_H_
 #   error "Please include <astra.h> first"
 #endif /* !_ASTRA_H_ */
 
 #include <core/list.h>
-#include <core/luapi.h>
+#include <luaapi/luaapi.h>
 
 typedef struct module_stream_t module_stream_t;
 
@@ -175,4 +175,4 @@ void __module_stream_send(void *arg, const uint8_t *ts);
 #define MODULE_STREAM_METHODS_REF() \
     { "stream", method_stream }
 
-#endif /* _ASC_STREAM_H_ */
+#endif /* _LUA_STREAM_H_ */

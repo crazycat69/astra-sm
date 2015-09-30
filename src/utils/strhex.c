@@ -24,6 +24,7 @@
  */
 
 #include <astra.h>
+#include <luaapi/luaapi.h>
 
 char *hex_to_str(char *str, const uint8_t *data, int size)
 {

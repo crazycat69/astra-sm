@@ -21,6 +21,7 @@
 
 #include <astra.h>
 #include <core/mainloop.h>
+#include <luaapi/luaapi.h>
 
 #include "sighandler.h"
 

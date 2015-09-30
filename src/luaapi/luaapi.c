@@ -1,5 +1,5 @@
 /*
- * Astra Core (Lua API)
+ * Astra Lua API
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
@@ -20,9 +20,9 @@
  */
 
 #include <astra.h>
-#include <core/luapi.h>
+#include <luaapi/luaapi.h>
 
-#define MSG(_msg) "[core/lua] " _msg
+#define MSG(_msg) "[luaapi] " _msg
 
 /* search path for Lua */
 #ifdef ASC_SCRIPT_DIR
@@ -43,7 +43,7 @@ static int (*const astra_mods[])(lua_State *) = {
     NULL
 };
 
-void asc_lua_core_init(void)
+void lua_core_init(void)
 {
     asc_assert(lua == NULL, MSG("lua is already initialized"));
 
@@ -68,7 +68,7 @@ void asc_lua_core_init(void)
     lua_pop(lua, 1);
 }
 
-void asc_lua_core_destroy(void)
+void lua_core_destroy(void)
 {
     ASC_FREE(lua, lua_close);
 }

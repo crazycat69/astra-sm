@@ -22,7 +22,7 @@
 #define _MODULE_CAM_H_ 1
 
 #include <astra.h>
-#include <core/stream.h>
+#include <luaapi/stream.h>
 #include <mpegts/psi.h>
 
 #define EM_MAX_SIZE 1024

@@ -29,6 +29,7 @@
  */
 
 #include <astra.h>
+#include <luaapi/luaapi.h>
 
 struct module_data_t
 {

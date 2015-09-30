@@ -31,7 +31,7 @@
  */
 
 #include <astra.h>
-#include <core/stream.h>
+#include <luaapi/stream.h>
 
 struct module_data_t
 {

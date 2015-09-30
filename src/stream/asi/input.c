@@ -19,8 +19,8 @@
  */
 
 #include <astra.h>
-#include <core/stream.h>
 #include <core/event.h>
+#include <luaapi/stream.h>
 
 #include <sys/ioctl.h>
 

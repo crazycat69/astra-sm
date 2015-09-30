@@ -43,11 +43,12 @@
 
 #include <astra.h>
 #include <core/mainloop.h>
+#include <luaapi/luaapi.h>
 
 __noreturn
 static int method_exit(lua_State *L)
 {
-    int status = luaL_optinteger(L, 1, EXIT_SUCCESS);
+    const int status = luaL_optinteger(L, 1, EXIT_SUCCESS);
     astra_exit(status);
 }
 
@@ -74,7 +75,7 @@ static int method_shutdown(lua_State *L)
 
 MODULE_LUA_BINDING(astra)
 {
-    static const luaL_Reg astra_api[] =
+    static const luaL_Reg api[] =
     {
         { "exit", method_exit },
         { "abort", method_abort },
@@ -83,16 +84,15 @@ MODULE_LUA_BINDING(astra)
         { NULL, NULL },
     };
 
-    luaL_newlib(L, astra_api);
+    luaL_newlib(L, api);
 
-    lua_pushboolean(L,
 #ifdef DEBUG
-                    1
+    static const int is_debug = 1;
 #else
-                    0
+    static const int is_debug = 0;
 #endif
-                    );
 
+    lua_pushboolean(L, is_debug);
     lua_setfield(L, -2, "debug");
 
     lua_pushstring(L, PACKAGE_STRING);

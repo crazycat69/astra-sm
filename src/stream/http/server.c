@@ -46,8 +46,8 @@
  */
 
 #include <astra.h>
-#include <core/stream.h>
 #include <core/timer.h>
+#include <luaapi/stream.h>
 
 #include "http.h"
 

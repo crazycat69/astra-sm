@@ -25,7 +25,7 @@
 #   error "Please include <astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-#include <core/stream.h>
+#include <luaapi/stream.h>
 
 #define T2MI_PLP_AUTO 0x100
 

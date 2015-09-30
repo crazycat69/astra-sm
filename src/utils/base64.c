@@ -1,5 +1,6 @@
 
 #include <astra.h>
+#include <luaapi/luaapi.h>
 
 /*
  *      base64.encode(string)

@@ -9,6 +9,7 @@
  */
 
 #include <astra.h>
+#include <luaapi/luaapi.h>
 
 typedef struct
 {

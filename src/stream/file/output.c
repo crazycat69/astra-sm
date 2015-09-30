@@ -35,7 +35,7 @@
  */
 
 #include <astra.h>
-#include <core/stream.h>
+#include <luaapi/stream.h>
 
 #ifdef HAVE_AIO
 #   include <aio.h>

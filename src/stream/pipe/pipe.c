@@ -36,9 +36,9 @@
  */
 
 #include <astra.h>
-#include <core/stream.h>
 #include <core/child.h>
 #include <core/timer.h>
+#include <luaapi/stream.h>
 #include <mpegts/sync.h>
 
 #define MSG(_msg) "[%s] " _msg, mod->config.name

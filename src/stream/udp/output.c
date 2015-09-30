@@ -35,9 +35,9 @@
  */
 
 #include <astra.h>
-#include <core/stream.h>
 #include <core/socket.h>
 #include <core/timer.h>
+#include <luaapi/stream.h>
 #include <mpegts/sync.h>
 
 #define MSG(_msg) "[udp_output %s:%d] " _msg, mod->addr, mod->port

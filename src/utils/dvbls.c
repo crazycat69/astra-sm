@@ -19,6 +19,7 @@
  */
 
 #include <astra.h>
+#include <luaapi/luaapi.h>
 
 #include <sys/ioctl.h>
 #include <sys/socket.h>
@@ -248,8 +249,6 @@ static void check_adapter(lua_State *L, const char *item)
 
 static int dvbls_scan(lua_State *L)
 {
-    __uarg(L);
-
     count = 0;
     lua_newtable(L);
     iterate_dir(L, "/dev/dvb", __adapter, check_adapter);

@@ -21,7 +21,7 @@
 #define _REMUX_H_ 1
 
 #include <astra.h>
-#include <core/stream.h>
+#include <luaapi/stream.h>
 #include <mpegts/pcr.h>
 #include <mpegts/pes.h>
 #include <mpegts/psi.h>

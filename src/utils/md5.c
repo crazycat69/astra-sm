@@ -32,6 +32,7 @@
  */
 
 #include <astra.h>
+#include <luaapi/luaapi.h>
 
 /*
  * The digest algorithm interprets the input message as a sequence of 32-bit

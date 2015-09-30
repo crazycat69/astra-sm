@@ -19,7 +19,7 @@
  */
 
 #include <astra.h>
-#include <core/stream.h>
+#include <luaapi/stream.h>
 #include <mpegts/psi.h>
 
 #include <dvbcsa/dvbcsa.h>

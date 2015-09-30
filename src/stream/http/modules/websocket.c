@@ -20,6 +20,7 @@
 
 #include <astra.h>
 #include <core/list.h>
+#include <luaapi/luaapi.h>
 #include <utils/utils.h>
 
 #include "../http.h"

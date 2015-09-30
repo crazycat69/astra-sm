@@ -1,5 +1,5 @@
 /*
- * Astra Core (Lua API)
+ * Astra Lua API
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _ASC_LUAPI_H_
-#define _ASC_LUAPI_H_ 1
+#ifndef _LUA_API_H_
+#define _LUA_API_H_ 1
 
 #ifndef _ASTRA_H_
 #   error "Please include <astra.h> first"
@@ -45,8 +45,8 @@ typedef struct
 
 extern lua_State *lua;
 
-void asc_lua_core_init(void);
-void asc_lua_core_destroy(void);
+void lua_core_init(void);
+void lua_core_destroy(void);
 
 bool module_option_integer(lua_State *L, const char *name, int *integer);
 bool module_option_string(lua_State *L, const char *name, const char **string
@@ -102,7 +102,7 @@ bool module_option_boolean(lua_State *L, const char *name, bool *boolean);
             { "__tostring", __module_tostring }, \
         }; \
         module_data_t *const mod = (module_data_t *)calloc(1, sizeof(*mod)); \
-        asc_assert(mod != NULL, "[luapi] calloc() failed"); \
+        asc_assert(mod != NULL, "[luaapi] calloc() failed"); \
         lua_newtable(L); \
         lua_newtable(L); \
         for(i = 0; i < ASC_ARRAY_SIZE(__meta_methods); ++i) \
@@ -149,4 +149,4 @@ bool module_option_boolean(lua_State *L, const char *name, bool *boolean);
 
 #include <bindings.h>
 
-#endif /* _ASC_LUAPI_H_ */
+#endif /* _LUA_API_H_ */
