@@ -1,5 +1,5 @@
 AM_CFLAGS = $(WARN_CFLAGS) $(LUA_CFLAGS)
-
+EXTRA_DIST =
 noinst_LTLIBRARIES =
 bin_PROGRAMS =
 
@@ -10,7 +10,8 @@ noinst_LTLIBRARIES += libastra.la
 libastra_la_CFLAGS = $(AM_CFLAGS)
 libastra_la_LDFLAGS = -module -static
 libastra_la_LIBADD = $(LIBRT) $(LUA_LIBS)
-libastra_la_SOURCES =
+libastra_la_SOURCES = \
+    astra.h
 
 # add Lua script path
 if HAVE_POSIX
@@ -20,36 +21,65 @@ endif
 
 # core/
 libastra_la_SOURCES += \
+    core/assert.h \
     core/child.c \
+    core/child.h \
     core/clock.c \
+    core/clock.h \
     core/compat.c \
+    core/compat.h \
+    core/compat_queue.h \
+    core/core.h \
     core/error.c \
+    core/error.h \
     core/event.c \
+    core/event.h \
     core/init.c \
+    core/init.h \
     core/list.c \
+    core/list.h \
     core/log.c \
+    core/log.h \
     core/mainloop.c \
+    core/mainloop.h \
     core/socket.c \
+    core/socket.h \
     core/spawn.c \
+    core/spawn.h \
     core/strbuffer.c \
+    core/strbuffer.h \
     core/thread.c \
-    core/timer.c
+    core/thread.h \
+    core/timer.c \
+    core/timer.h
 
 # luaapi/
 libastra_la_SOURCES += \
     luaapi/luaapi.c \
+    luaapi/luaapi.h \
     luaapi/state.c \
-    luaapi/stream.c
+    luaapi/state.h \
+    luaapi/stream.c \
+    luaapi/stream.h
 
 # mpegts/
 libastra_la_SOURCES += \
     mpegts/descriptors.c \
+    mpegts/descriptors.h \
+    mpegts/mpegts.h \
     mpegts/pcr.c \
-    mpegts/psi.c \
+    mpegts/pcr.h \
     mpegts/pes.c \
+    mpegts/pes.h \
+    mpegts/psi.c \
+    mpegts/psi.h \
     mpegts/sync.c \
+    mpegts/sync.h \
     mpegts/t2mi.c \
-    mpegts/types.c
+    mpegts/t2mi.h \
+    mpegts/tscore.h \
+    mpegts/types.c \
+    mpegts/types.h
 
 # utils/
 libastra_la_SOURCES += \
@@ -65,7 +95,8 @@ libastra_la_SOURCES += \
     utils/sha1.c \
     utils/strhex.c \
     utils/timer.c \
-    utils/utils.c
+    utils/utils.c \
+    utils/utils.h
 
 if HAVE_DVBAPI
 libastra_la_SOURCES += \
@@ -106,12 +137,16 @@ if HAVE_STREAM_BISS
 libstream_la_SOURCES += \
     stream/biss_encrypt/biss_encrypt.c
 endif
+EXTRA_DIST += stream/biss_encrypt/README.md
 
 ### dvb ###
 if HAVE_STREAM_DVB
 libstream_la_SOURCES += \
     stream/dvb/ca.c \
+    stream/dvb/ca.h \
+    stream/dvb/dvb.h \
     stream/dvb/frontend.c \
+    stream/dvb/frontend.h \
     stream/dvb/ddci.c \
     stream/dvb/input.c
 endif
@@ -131,15 +166,17 @@ endif
 ### http ###
 if HAVE_STREAM_HTTP
 libstream_la_SOURCES += \
+    stream/http/http.h \
+    stream/http/parser.c \
+    stream/http/parser.h \
+    stream/http/request.c \
+    stream/http/server.c \
+    stream/http/utils.c \
     stream/http/modules/downstream.c \
     stream/http/modules/redirect.c \
     stream/http/modules/static.c \
     stream/http/modules/upstream.c \
-    stream/http/modules/websocket.c \
-    stream/http/parser.c \
-    stream/http/request.c \
-    stream/http/server.c \
-    stream/http/utils.c
+    stream/http/modules/websocket.c
 endif
 
 ### pipe ###
@@ -152,6 +189,7 @@ endif
 if HAVE_STREAM_REMUX
 libstream_la_SOURCES += \
     stream/remux/remux.c \
+    stream/remux/remux.h \
     stream/remux/si.c \
     stream/remux/utils.c
 endif
@@ -162,6 +200,7 @@ libstream_la_CFLAGS += $(DVBCSA_CFLAGS)
 libstream_la_LIBADD += $(DVBCSA_LIBS)
 libstream_la_SOURCES += \
     stream/softcam/decrypt.c \
+    stream/softcam/module_cam.h \
     stream/softcam/cam/cam.c \
     stream/softcam/cas/bulcrypt.c \
     stream/softcam/cas/conax.c \
@@ -184,6 +223,7 @@ libstream_la_SOURCES += \
     stream/softcam/cam/newcamd.c
 endif
 endif
+EXTRA_DIST += stream/softcam/cas/template.c
 
 ### udp ###
 if HAVE_STREAM_UDP
@@ -196,11 +236,14 @@ endif
 # Main binary
 #
 bin_PROGRAMS += astra
-astra_SOURCES = main.c sighandler.c
 astra_CFLAGS = $(AM_CFLAGS)
 astra_LDADD = \
     libastra.la \
     libstream.la
+astra_SOURCES = \
+    main.c \
+    sighandler.c \
+    sighandler.h
 
 #
 # Built sources

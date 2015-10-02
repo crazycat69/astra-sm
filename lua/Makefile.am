@@ -17,37 +17,62 @@ liblua_la_LDFLAGS = -module -static
 liblua_la_LIBADD = $(LIBM) $(LIBADD_DLOPEN)
 liblua_la_SOURCES = \
     lapi.c \
+    lapi.h \
     lauxlib.c \
-    lcode.c \
-    lctype.c \
-    ldebug.c \
-    ldo.c \
-    ldump.c \
-    lfunc.c \
-    lgc.c \
-    llex.c \
-    lmem.c \
-    loadlib.c \
-    lobject.c \
-    lopcodes.c \
-    lparser.c \
-    lstate.c \
-    lstring.c \
-    ltable.c \
-    ltm.c \
-    lundump.c \
-    lvm.c \
-    lzio.c \
+    lauxlib.h \
     lbaselib.c \
     lbitlib.c \
+    lcode.c \
+    lcode.h \
     lcorolib.c \
+    lctype.c \
+    lctype.h \
     ldblib.c \
+    ldebug.c \
+    ldebug.h \
+    ldo.c \
+    ldo.h \
+    ldump.c \
+    lfunc.c \
+    lfunc.h \
+    lgc.c \
+    lgc.h \
     linit.c \
     liolib.c \
+    llex.c \
+    llex.h \
+    llimits.h \
     lmathlib.c \
+    lmem.c \
+    lmem.h \
+    loadlib.c \
+    lobject.c \
+    lobject.h \
+    lopcodes.c \
+    lopcodes.h \
     loslib.c \
+    lparser.c \
+    lparser.h \
+    lstate.c \
+    lstate.h \
+    lstring.c \
+    lstring.h \
     lstrlib.c \
-    ltablib.c
+    ltable.c \
+    ltable.h \
+    ltablib.c \
+    ltm.c \
+    ltm.h \
+    luaconf.h \
+    lua.h \
+    lua.hpp \
+    lualib.h \
+    lundump.c \
+    lundump.h \
+    lvm.c \
+    lvm.h \
+    lzio.c \
+    lzio.h
 
 #
 # Compiler

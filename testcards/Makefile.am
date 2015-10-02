@@ -1,3 +1,4 @@
+EXTRA_DIST = pm5544.png
 patterndir = $(datadir)/astra
 
 if HAVE_FFMPEG
