@@ -20,7 +20,7 @@ AC_CONFIG_MACRO_DIR([build-aux/m4])
 AC_CANONICAL_SYSTEM
 AC_USE_SYSTEM_EXTENSIONS
 
-AM_INIT_AUTOMAKE([1.11 foreign dist-xz no-dist-gzip subdir-objects -Wall -Werror])
+AM_INIT_AUTOMAKE([1.11 foreign dist-xz no-dist-gzip subdir-objects nostdinc -Wall -Werror])
 AM_MAINTAINER_MODE([enable])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_PRESERVE_HELP_ORDER
@@ -344,10 +344,10 @@ AS_IF([test "x${with_lua}" != "xno"], [
 
 AS_IF([test "x${have_lua}" = "xno"], [
     LUA_CFLAGS="-I\$(top_srcdir)/lua"
-    LUA_LIBS="\$(top_srcdir)/lua/liblua.la"
+    LUA_LIBS="\$(top_builddir)/lua/liblua.la"
 
     AS_IF([test "x${with_lua_compiler}" != "xno"], [
-        LUAC="\$(top_srcdir)/lua/luac\$(EXEEXT)"
+        LUAC="\$(top_builddir)/lua/luac\$(EXEEXT)"
     ])
 ])
 

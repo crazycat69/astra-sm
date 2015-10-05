@@ -8,11 +8,11 @@ pattern_DATA = \
     test_mpeg4_sd.ts \
     test_mpeg4_hd.ts
 
-PICTURE_FILE = pm5544.png
+PICTURE_FILE = $(srcdir)/pm5544.png
 SOUND_FILE = tone.wav
 BUILT_SOURCES = $(SOUND_FILE)
 
-TONEGEN = $(top_srcdir)/tools/tonegen$(BUILD_EXEEXT)
+TONEGEN = $(top_builddir)/tools/tonegen$(BUILD_EXEEXT)
 $(SOUND_FILE):
 	$(AM_V_GEN)$(TONEGEN) -t 30 -o $(SOUND_FILE)
 

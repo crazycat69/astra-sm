@@ -1,4 +1,8 @@
-AM_CFLAGS = $(WARN_CFLAGS) $(LUA_CFLAGS)
+AM_CFLAGS = \
+    $(WARN_CFLAGS) \
+    $(LUA_CFLAGS) \
+    -I$(builddir) -I$(srcdir)
+
 EXTRA_DIST =
 noinst_LTLIBRARIES =
 bin_PROGRAMS =
@@ -260,33 +264,37 @@ bindings.h:
 	echo " * Core library"      >>$@; \
 	echo " */"                  >>$@; \
 	echo                        >>$@; \
-	sh ../build-aux/gen-bindings-list LUA_CORE_BINDINGS $(libastra_la_SOURCES) >>$@; \
+	sh $(top_srcdir)/build-aux/gen-bindings-list \
+	    LUA_CORE_BINDINGS \
+	    $(srcdir) $(libastra_la_SOURCES) >>$@ || exit $$?; \
 	echo                        >>$@; \
 	echo "/*"                   >>$@; \
 	echo " * Streaming modules" >>$@; \
 	echo " */"                  >>$@; \
 	echo                        >>$@; \
-	sh ../build-aux/gen-bindings-list LUA_STREAM_BINDINGS $(libstream_la_SOURCES) >>$@
+	sh $(top_srcdir)/build-aux/gen-bindings-list \
+	    LUA_STREAM_BINDINGS \
+	    $(srcdir) $(libstream_la_SOURCES) >>$@ || exit $$?
 
 # built-in script
 if HAVE_INSCRIPT
 INSCRIPT_FILES = \
-    $(top_srcdir)/scripts/analyze.luac \
-    $(top_srcdir)/scripts/base.luac \
-    $(top_srcdir)/scripts/dvbls.luac \
-    $(top_srcdir)/scripts/dvbwrite.luac \
-    $(top_srcdir)/scripts/femon.luac \
-    $(top_srcdir)/scripts/relay.luac \
-    $(top_srcdir)/scripts/stream.luac
+    $(top_builddir)/scripts/analyze.luac \
+    $(top_builddir)/scripts/base.luac \
+    $(top_builddir)/scripts/dvbls.luac \
+    $(top_builddir)/scripts/dvbwrite.luac \
+    $(top_builddir)/scripts/femon.luac \
+    $(top_builddir)/scripts/relay.luac \
+    $(top_builddir)/scripts/stream.luac
 
-MKSCRIPT = $(top_srcdir)/tools/mkscript$(BUILD_EXEEXT)
+MKSCRIPT = $(top_builddir)/tools/mkscript$(BUILD_EXEEXT)
 BUILT_SOURCES += inscript/inscript.h
 
 inscript/inscript.h: $(INSCRIPT_FILES)
 	$(AM_V_GEN)echo "/* automatically generated file; do not edit */" >$@; \
 	echo >>$@; \
 	for script in $(INSCRIPT_FILES); do \
-	    $(MKSCRIPT) `basename $$script .luac` "$$script" >>$@; \
+	    $(MKSCRIPT) `basename $$script .luac` "$$script" >>$@ || exit $$?; \
 	done
 endif
 
