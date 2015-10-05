@@ -4,14 +4,10 @@
 ** See Copyright Notice in lua.h
 */
 
-#ifndef _GNU_SOURCE
-# define _GNU_SOURCE 1
-#endif
 
 #include <setjmp.h>
 #include <stdlib.h>
 #include <string.h>
-#include <setjmp.h>
 
 #define ldo_c
 #define LUA_CORE

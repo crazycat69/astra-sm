@@ -4,9 +4,6 @@
 ** See Copyright Notice in lua.h
 */
 
-#ifndef _GNU_SOURCE
-# define _GNU_SOURCE 1
-#endif
 
 #include <errno.h>
 #include <locale.h>

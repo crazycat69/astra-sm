@@ -1,9 +1,13 @@
-AM_CFLAGS = $(DEFS) $(WARN_CFLAGS) $(CHECK_CFLAGS) $(LUA_CFLAGS)
+AM_CFLAGS = \
+    $(DEFS) $(WARN_CFLAGS) \
+    $(CHECK_CFLAGS) $(LUA_CFLAGS) \
+    -I$(top_builddir)/src \
+    -I$(top_srcdir)/src
+
 AM_LDADD = \
-    ../src/libastra.la \
-    ../src/libstream.la \
-    $(LUA_LIBS) \
-    $(CHECK_LIBS)
+    $(CHECK_LIBS) $(LUA_LIBS) \
+    $(top_builddir)/src/libastra.la \
+    $(top_builddir)/src/libstream.la
 
 #
 # Unit tests
@@ -19,7 +23,8 @@ unit_tests_SOURCES = \
     core_clock.c \
     core_list.c \
     core_mainloop.c \
-    core_timer.c
+    core_timer.c \
+    unit_tests.h
 endif
 
 #

@@ -1,6 +1,17 @@
 #! /bin/sh
 
 unset version
+if [ ! -d ".git" ]; then
+    # autoreconf called in a tarball distribution tree
+    . ./version.txt
+    if [ -n "$version" ]; then
+        echo -n "$version"
+        exit 0
+    else
+        echo -n "UNKNOWN"
+        exit 1
+    fi
+fi
 
 # get current branch
 ref=`git symbolic-ref HEAD 2>/dev/null`
