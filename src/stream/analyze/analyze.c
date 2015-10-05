@@ -705,7 +705,8 @@ static void on_check_stat(void *arg)
         lua_pushinteger(L, i);
         lua_setfield(L, -2, __pid);
 
-        const uint32_t item_bitrate = (item->packets * TS_PACKET_SIZE * 8) / 1000;
+        const uint32_t item_bitrate =
+            ((uint64_t)item->packets * TS_PACKET_SIZE * 8) / 1000;
         bitrate += item_bitrate;
 
         lua_pushinteger(L, item_bitrate);
