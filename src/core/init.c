@@ -70,7 +70,7 @@ void astra_core_init(void)
 void astra_core_destroy(void)
 {
     /* this frees streaming modules */
-    lua_api_destroy(lua);
+    ASC_FREE(lua, lua_api_destroy);
 
     asc_event_core_destroy();
     asc_socket_core_destroy();
