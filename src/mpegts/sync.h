@@ -67,6 +67,5 @@ size_t mpegts_sync_get_max_size(const mpegts_sync_t *sx) __wur __func_pure;
 void mpegts_sync_loop(void *arg);
 bool mpegts_sync_push(mpegts_sync_t *sx, const void *buf, size_t count) __wur;
 void mpegts_sync_reset(mpegts_sync_t *sx, enum mpegts_sync_reset type);
-bool mpegts_sync_resize(mpegts_sync_t *sx, size_t new_size);
 
 #endif /* _TS_SYNC_ */
