@@ -202,7 +202,7 @@ int fork_and_exec(const char *command, pid_t *out_pid
 
         /* try to run command */
         execle("/bin/sh", "sh", "-c", command, NULL, environ);
-        perror_s("execl()");
+        perror_s("execle()");
         _exit(127);
     }
     else if (pid > 0)
@@ -277,7 +277,24 @@ int asc_process_kill(const asc_process_t *proc, bool forced)
     return 0;
 }
 
-#endif /* _WIN32 */
+#else /* _WIN32 */
+
+int asc_process_kill(const asc_process_t *proc, bool forced)
+{
+    const int olderr = errno;
+    const int ret = kill(*proc, (forced ? SIGKILL : SIGTERM));
+
+    /* on some systems, kill() fails when used on a zombie process */
+    if (ret == -1 && errno == ESRCH)
+    {
+        errno = olderr;
+        return 0;
+    }
+
+    return ret;
+}
+
+#endif /* !_WIN32 */
 
 /*
  * pipe-related functions

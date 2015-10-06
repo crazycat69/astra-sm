@@ -43,7 +43,6 @@ typedef struct
     } while (0)
 
 pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block);
-int asc_process_kill(const asc_process_t *proc, bool forced);
 
 #else /* _WIN32 */
 
@@ -64,13 +63,11 @@ typedef pid_t asc_process_t;
 #define asc_process_wait(__proc, __status, __block) \
     waitpid(*(__proc), __status, (__block ? 0 : WNOHANG))
 
-#define asc_process_kill(__proc, __forced) \
-    kill(*(__proc), (__forced ? SIGKILL : SIGTERM))
-
 #endif /* !_WIN32 */
 
 int asc_process_spawn(const char *command, asc_process_t *proc
                       , int *parent_sin, int *parent_sout, int *parent_serr);
+int asc_process_kill(const asc_process_t *proc, bool forced);
 
 int asc_pipe_open(int fds[2], int *parent_fd, int parent_side);
 int asc_pipe_close(int fd);
