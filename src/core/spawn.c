@@ -459,23 +459,41 @@ int asc_pipe_close(int fd)
 
 #else /* _WIN32 */
 
-/* safety wrapper for socketpair() to set the close-on-exec flag */
+#define PIPE_BUFFER (64 * 1024) /* 64 KiB */
+
+/* call socketpair(), set close-on-exec and increase buffer size */
 static
 int socketpipe(int fds[2])
 {
 #ifdef SOCK_CLOEXEC
-    if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, PF_UNSPEC, fds) == 0)
-        return 0;
+    if (socketpair(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, PF_UNSPEC, fds) != 0)
 #endif /* SOCK_CLOEXEC */
-
-    if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, fds) != 0)
-        return -1;
-
-    if (fcntl(fds[PIPE_RD], F_SETFD, FD_CLOEXEC) != 0
-        || fcntl(fds[PIPE_WR], F_SETFD, FD_CLOEXEC) != 0)
     {
-        closeall(fds, 2);
-        return -1;
+        if (socketpair(AF_UNIX, SOCK_STREAM, PF_UNSPEC, fds) != 0)
+            return -1;
+
+        if (fcntl(fds[PIPE_RD], F_SETFD, FD_CLOEXEC) != 0
+            || fcntl(fds[PIPE_WR], F_SETFD, FD_CLOEXEC) != 0)
+        {
+            closeall(fds, 2);
+            return -1;
+        }
+    }
+
+    for (unsigned int i = 0; i < ASC_ARRAY_SIZE(fds); i++)
+    {
+        int val = 0;
+        socklen_t len = sizeof(val);
+
+        const int ret = getsockopt(fds[i], SOL_SOCKET, SO_SNDBUF
+                                   , (char *)&val, &len);
+
+        if (ret == 0 && val < PIPE_BUFFER)
+        {
+            val = PIPE_BUFFER;
+            setsockopt(fds[i], SOL_SOCKET, SO_SNDBUF
+                       , (char *)&val, sizeof(val));
+        }
     }
 
     return 0;
