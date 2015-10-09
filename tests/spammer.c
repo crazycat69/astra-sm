@@ -45,18 +45,18 @@ int main(void)
         const time_t now = time(NULL);
         if (now != last)
         {
-            double stat = written;
+            double amount = written;
             const char *units = NULL;
 
             for (const char **p = unit_list; *p; p++)
             {
                 units = *p;
-                if (stat < 1024.0)
+                if (amount < 1024.0)
                     break;
 
-                stat /= 1024.0;
+                amount /= 1024.0;
             }
-            fprintf(stderr, "written: %.2f %s\n", stat, units);
+            fprintf(stderr, "written: %.2f %s\n", amount, units);
 
             written = 0;
             last = now;
