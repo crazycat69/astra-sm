@@ -55,7 +55,7 @@ END_TEST
 /* immediate exit procedure */
 #define EXIT_TEST 123
 
-static __noreturn void on_exit_timer(void *arg)
+static __dead void on_exit_timer(void *arg)
 {
     __uarg(arg);
     astra_exit(EXIT_TEST);
