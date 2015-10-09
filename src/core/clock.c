@@ -37,7 +37,7 @@ uint64_t asc_utime(void)
 #elif defined(HAVE_CLOCK_GETTIME)
     struct timespec ts;
 
-    if(clock_gettime(CLOCK_MONOTONIC, &ts) == EINVAL)
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) == EINVAL)
         (void)clock_gettime(CLOCK_REALTIME, &ts);
 
     return ((uint64_t)ts.tv_sec * 1000000) + (uint64_t)(ts.tv_nsec / 1000);
@@ -53,16 +53,18 @@ __asc_inline
 void asc_usleep(uint64_t usec)
 {
 #ifndef _WIN32
-    struct timespec ts;
-    ts.tv_sec = usec / 1000000;
-    ts.tv_nsec = (usec % 1000000) * 1000;
-    while(nanosleep(&ts, &ts) == -1 && errno == EINTR)
-         continue;
+    struct timespec ts = {
+        /* tv_sec  */ usec / 1000000,
+        /* tv_nsec */ (usec % 1000000) * 1000,
+    };
+
+    while (nanosleep(&ts, &ts) == -1 && errno == EINTR)
+        continue;
 #else
-    HANDLE timer;
     LARGE_INTEGER ft;
     ft.QuadPart = -(usec * 10);
-    timer = CreateWaitableTimer(NULL, TRUE, NULL);
+
+    const HANDLE timer = CreateWaitableTimer(NULL, TRUE, NULL);
     SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
     WaitForSingleObject(timer, INFINITE);
     CloseHandle(timer);

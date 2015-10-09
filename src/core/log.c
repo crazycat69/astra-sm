@@ -239,19 +239,16 @@ void asc_log_core_destroy(void)
     ASC_FREE(__log.filename, free);
 }
 
-__asc_inline
 void asc_log_set_stdout(bool val)
 {
     __log.sout = val;
 }
 
-__asc_inline
 void asc_log_set_debug(bool val)
 {
     __log.debug = val;
 }
 
-__asc_inline
 void asc_log_set_color(bool val)
 {
     __log.color = val;

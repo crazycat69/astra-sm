@@ -40,14 +40,12 @@ typedef struct
 
 asc_main_loop_t *main_loop;
 
-__asc_inline
 void asc_main_loop_init(void)
 {
     main_loop = (asc_main_loop_t *)calloc(1, sizeof(*main_loop));
     asc_assert(main_loop != NULL, MSG("calloc() failed"));
 }
 
-__asc_inline
 void asc_main_loop_destroy(void)
 {
     ASC_FREE(main_loop, free);

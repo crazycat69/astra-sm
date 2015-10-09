@@ -533,7 +533,9 @@ void asc_event_core_destroy(void)
         ; !asc_list_eol(event_observer.event_list)
         ; asc_list_first(event_observer.event_list))
     {
-        asc_event_t *event = (asc_event_t *)asc_list_data(event_observer.event_list);
+        asc_event_t *const event =
+            (asc_event_t *)asc_list_data(event_observer.event_list);
+
         asc_assert(event != prev_event
                    , MSG("loop on asc_event_core_destroy() event:%p")
                    , (void *)event);
@@ -576,7 +578,9 @@ void asc_event_core_loop(void)
         event_observer.is_changed = false;
         asc_list_for(event_observer.event_list)
         {
-            asc_event_t *event = (asc_event_t *)asc_list_data(event_observer.event_list);
+            asc_event_t *const event =
+                (asc_event_t *)asc_list_data(event_observer.event_list);
+
             if(event->on_read && FD_ISSET(event->fd, &rset))
             {
                 asc_main_loop_busy();
@@ -605,24 +609,24 @@ void asc_event_core_loop(void)
 static void asc_event_subscribe(asc_event_t *event)
 {
     if(event->on_read)
-        FD_SET(event->fd, &event_observer.rmaster);
+        FD_SET((unsigned)event->fd, &event_observer.rmaster);
     else
-        FD_CLR(event->fd, &event_observer.rmaster);
+        FD_CLR((unsigned)event->fd, &event_observer.rmaster);
 
     if(event->on_write)
-        FD_SET(event->fd, &event_observer.wmaster);
+        FD_SET((unsigned)event->fd, &event_observer.wmaster);
     else
-        FD_CLR(event->fd, &event_observer.wmaster);
+        FD_CLR((unsigned)event->fd, &event_observer.wmaster);
 
     if(event->on_error)
-        FD_SET(event->fd, &event_observer.emaster);
+        FD_SET((unsigned)event->fd, &event_observer.emaster);
     else
-        FD_CLR(event->fd, &event_observer.emaster);
+        FD_CLR((unsigned)event->fd, &event_observer.emaster);
 }
 
 asc_event_t *asc_event_init(int fd, void *arg)
 {
-    asc_event_t *event = (asc_event_t *)calloc(1, sizeof(*event));
+    asc_event_t *const event = (asc_event_t *)calloc(1, sizeof(*event));
     asc_assert(event != NULL, MSG("calloc() failed"));
 
     event->fd = fd;
@@ -661,7 +665,9 @@ void asc_event_close(asc_event_t *event)
         ; !asc_list_eol(event_observer.event_list)
         ; )
     {
-        asc_event_t *i_event = (asc_event_t *)asc_list_data(event_observer.event_list);
+        asc_event_t *const i_event =
+            (asc_event_t *)asc_list_data(event_observer.event_list);
+
         if(i_event == event)
         {
             asc_list_remove_current(event_observer.event_list);
