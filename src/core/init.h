@@ -32,7 +32,7 @@ void asc_srand(void);
 void astra_core_init(void);
 void astra_core_destroy(void);
 
-void astra_exit(int status) __noreturn;
-void astra_abort(void) __noreturn;
+void astra_exit(int status) __dead;
+void astra_abort(void) __dead;
 
 #endif /* _ASC_INIT_H_ */

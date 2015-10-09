@@ -102,14 +102,17 @@
 /* function attributes */
 #ifndef __wur
 #   define __wur __attribute__((__warn_unused_result__))
-#endif /* __wur */
+#endif /* !__wur */
+
+#ifndef __dead
+#   define __dead __attribute__((__noreturn__))
+#endif /* !__dead */
 
 #define __fmt_printf(__index, __first) \
     __attribute__((__format__(__printf__, __index, __first)))
 
 #define __func_pure __attribute__((__pure__))
 #define __func_const __attribute__((__const__))
-#define __noreturn __attribute__((__noreturn__))
 
 /* additional exit codes */
 #define EXIT_ABORT      2   /* astra_abort() */

@@ -45,18 +45,18 @@
 #include <core/mainloop.h>
 #include <luaapi/luaapi.h>
 
-__noreturn
 static int method_exit(lua_State *L)
 {
     const int status = luaL_optinteger(L, 1, EXIT_SUCCESS);
     astra_exit(status);
+    return 0; /* unreachable */
 }
 
-__noreturn
 static int method_abort(lua_State *L)
 {
     __uarg(L);
     astra_abort();
+    return 0; /* unreachable */
 }
 
 static int method_reload(lua_State *L)
