@@ -197,10 +197,12 @@ static int module_call(lua_State *L, module_data_t *mod)
     const char *path = lua_tostring(L, -1);
     lua_pop(L, 2); // request + path
 
-    char *filename = (char *)malloc(PATH_MAX);
-    sprintf(filename, "%s%s", mod->path, &path[mod->path_skip]);
+    char *const filename = (char *)calloc(1, PATH_MAX);
+    asc_assert(filename != NULL, "calloc() failed");
+    snprintf(filename, PATH_MAX, "%s%s", mod->path, &path[mod->path_skip]);
     client->response->file_fd = open(filename, O_RDONLY);
     free(filename);
+
     if(client->response->file_fd == -1)
     {
         http_client_warning(client, "file not found %s", path);

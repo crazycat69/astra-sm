@@ -398,13 +398,14 @@ void outer_leave_pid(const mpegts_t2mi_t *mi, uint16_t pid)
 /*
  * init/destroy
  */
-__asc_inline
 mpegts_t2mi_t *mpegts_t2mi_init(void)
 {
-    mpegts_t2mi_t *mi = (mpegts_t2mi_t *)calloc(1, sizeof(*mi));
+    mpegts_t2mi_t *const mi = (mpegts_t2mi_t *)calloc(1, sizeof(*mi));
     asc_assert(mi != NULL, "[t2mi] calloc() failed");
 
-    strcpy(mi->name, "t2mi");
+    static const char def_name[] = "t2mi";
+    strncpy(mi->name, def_name, sizeof(def_name));
+
     mi->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
     mi->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, 0);
 
@@ -443,14 +444,12 @@ void mpegts_t2mi_set_fname(mpegts_t2mi_t *mi, const char *format, ...)
     va_end(ap);
 }
 
-__asc_inline
 void mpegts_t2mi_set_callback(mpegts_t2mi_t *mi, ts_callback_t cb, void *arg)
 {
     mi->on_ts = cb;
     mi->arg = arg;
 }
 
-__asc_inline
 void mpegts_t2mi_set_plp(mpegts_t2mi_t *mi, unsigned plp_id)
 {
     if (plp_id > T2MI_PLP_AUTO)
@@ -460,7 +459,6 @@ void mpegts_t2mi_set_plp(mpegts_t2mi_t *mi, unsigned plp_id)
     mi->l1_current.cksum = 0;
 }
 
-__asc_inline
 void mpegts_t2mi_set_demux(mpegts_t2mi_t *mi, void *arg
                            , demux_callback_t join_pid
                            , demux_callback_t leave_pid)

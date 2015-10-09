@@ -310,10 +310,6 @@ void remux_sdt(void *arg, mpegts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
 
-    /*
-     * TODO: options to alter SDT
-     */
-
     const uint32_t crc32 = PSI_GET_CRC32(psi);
     if(crc32 == mod->sdt->crc32)
         /* SDT unchanged */

@@ -390,9 +390,9 @@ void md5_crypt(const char *pw, const char *salt, char passwd[36])
     }
 
     // Now make the output string
-    strcpy(passwd, md5_magic);
+    strncpy(passwd, md5_magic, md5_magic_len + 1);
     strncat(passwd, sp, sl);
-    strcat(passwd, "$");
+    strncat(passwd, "$", 1);
 
     md5_final(&ctx, final);
 

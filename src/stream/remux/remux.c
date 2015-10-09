@@ -102,15 +102,7 @@ void remux_ts_out(void *arg, const uint8_t *ts)
     /*
      * TS output hook
      */
-    module_data_t *mod = (module_data_t *)arg;
-
-    /*
-     * TODO
-     *
-     *  - software scrambling using libdvbcsa BS mode
-     *  - BISS w/CAT and CA_descriptor in PMT
-     *  - inserting ECM and EMM into output stream
-     */
+    module_data_t *const mod = (module_data_t *)arg;
 
     /* write early; PCR gets messed up otherwise */
     mod->offset += TS_PACKET_SIZE;
@@ -150,7 +142,7 @@ void remux_pes(void *arg, mpegts_pes_t *pes)
     /*
      * PES output hook
      */
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     /* reset error stats */
     if(pes->truncated || pes->dropped)
@@ -159,14 +151,19 @@ void remux_pes(void *arg, mpegts_pes_t *pes)
         if(pes->sent > 0)
         {
             char str[128];
-            unsigned pos = 0;
 
-            pos += sprintf(&str[pos], "pid: %hu", pes->pid);
+            size_t pos = snprintf(str, sizeof(str), "pid: %hu", pes->pid);
             if (pes->dropped)
-                pos += sprintf(&str[pos], ", TS dropped: %u", pes->dropped);
+            {
+                pos += snprintf(&str[pos], sizeof(str) - pos
+                                , ", TS dropped: %u", pes->dropped);
+            }
 
             if (pes->truncated)
-                pos += sprintf(&str[pos], ", PES truncated: %u", pes->truncated);
+            {
+                pos += snprintf(&str[pos], sizeof(str) - pos
+                                , ", PES truncated: %u", pes->truncated);
+            }
 
             asc_log_error(MSG("%s"), str);
         }
@@ -188,8 +185,6 @@ void remux_pes(void *arg, mpegts_pes_t *pes)
      *
      *  - PCR recovery using PTS/DTS values
      *    (in case original PCR is missing/invalid)
-     *
-     *  - add audio mixing/recoding
      */
 }
 
@@ -274,10 +269,7 @@ void remux_ts_in(module_data_t *mod, const uint8_t *orig_ts)
                 ts = copy;
             }
 
-        /* pass these through for now */
         case MPEGTS_PACKET_CA:
-            /* TODO: drop_ca option */
-
         case MPEGTS_PACKET_EIT:
         case MPEGTS_PACKET_NIT:
         case MPEGTS_PACKET_DATA:
@@ -294,7 +286,6 @@ void remux_ts_in(module_data_t *mod, const uint8_t *orig_ts)
             /* conditional access table */
             mpegts_psi_mux(mod->cat, ts, remux_cat, mod);
             break;
-            /* TODO: drop_ca option */
 
         case MPEGTS_PACKET_SDT:
             /* service description table */

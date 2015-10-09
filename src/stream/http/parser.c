@@ -329,9 +329,9 @@ static bool http_parse_auth_challenge(const char *str, size_t size, parse_match_
     return true;
 }
 
-char * http_authorization(const char *auth_header, size_t size,
-    const char *method, const char *path,
-    const char *login, const char *password)
+char *http_authorization(const char *auth_header, size_t size
+                         , const char *method, const char *path
+                         , const char *login, const char *password)
 {
     if(!login)
         return NULL;
@@ -340,13 +340,15 @@ char * http_authorization(const char *auth_header, size_t size,
 
     if(!strncasecmp(auth_header, "basic", 5))
     {
-        size_t sl = strlen(login) + 1 + strlen(password);
-        char *s = (char *)malloc(sl + 1);
-        sprintf(s, "%s:%s", login, password);
+        const size_t sl = strlen(login) + 1 + strlen(password);
+        char *const s = (char *)calloc(1, sl + 1);
+        asc_assert(s != NULL, "calloc() failed");
+        snprintf(s, sl + 1, "%s:%s", login, password);
         size_t tl = 0;
-        char *t = base64_encode(s, sl, &tl);
-        char *r = (char *)malloc(6 + tl + 1);
-        sprintf(r, "Basic %s", t);
+        char *const t = base64_encode(s, sl, &tl);
+        const size_t rl = 6 + tl + 1;
+        char *const r = (char *)calloc(1, rl);
+        snprintf(r, rl, "Basic %s", t);
         free(s);
         free(t);
         return r;
@@ -441,11 +443,13 @@ char * http_authorization(const char *auth_header, size_t size,
                                      "uri=\"%s\", "
                                      "response=\"%s\"";
         const size_t auth_template_len = sizeof(auth_template) - (2 * 5) - 1;
+        const size_t rl =
+            auth_template_len + login_len + realm_len +
+            nonce_len + path_len + MD5_DIGEST_SIZE * 2 + 1;
 
-        char *r = (char *)malloc(auth_template_len +
-            login_len + realm_len + nonce_len + path_len + MD5_DIGEST_SIZE * 2 + 1);
-
-        sprintf(r, auth_template, login, realm, nonce, path, ha3);
+        char *const r = (char *)calloc(1, rl);
+        asc_assert(r != NULL, "calloc() failed");
+        snprintf(r, rl, auth_template, login, realm, nonce, path, ha3);
         return r;
     }
 
