@@ -480,7 +480,7 @@ int socketpipe(int fds[2])
         }
     }
 
-    for (unsigned int i = 0; i < ASC_ARRAY_SIZE(fds); i++)
+    for (unsigned int i = 0; i < 2; i++)
     {
         int val = 0;
         socklen_t len = sizeof(val);
