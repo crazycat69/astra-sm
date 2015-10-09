@@ -43,17 +43,15 @@
  * and on PPC we do 1-byte loads anyway.
  */
 
-#if defined(BYTE_ORDER) && BYTE_ORDER == LITTLE_ENDIAN
+#if defined(UNALIGNED_OK) && (defined(__i386__) || defined(__x86_64__))
 #   define FETCH_32(p) (*(const uint32_t *)(p))
-#elif defined(BYTE_ORDER) && BYTE_ORDER == BIG_ENDIAN
-#   define FETCH_32(p) \
-                       (((uint32_t)*((const uint8_t *)(p))) | \
-                       (((uint32_t)*((const uint8_t *)(p) + 1)) << 8) | \
-                       (((uint32_t)*((const uint8_t *)(p) + 2)) << 16) | \
-                       (((uint32_t)*((const uint8_t *)(p) + 3)) << 24))
 #else
-#   error "Please fix BYTE_ORDER defines"
-#endif /* BYTE_ORDER */
+#   define FETCH_32(p) \
+        (((uint32_t)*((const uint8_t *)(p))) | \
+        (((uint32_t)*((const uint8_t *)(p) + 1)) << 8) | \
+        (((uint32_t)*((const uint8_t *)(p) + 2)) << 16) | \
+        (((uint32_t)*((const uint8_t *)(p) + 3)) << 24))
+#endif
 
 /*
  * Encodes input (uint32_t) into output (uint8_t). Assumes len is
@@ -65,14 +63,14 @@ static void md5_encode(uint8_t *output, uint32_t *input, uint32_t len)
 
     for (i = 0, j = 0; j < len; i++, j += 4)
     {
-#if defined(__i386__) || defined(__x86_64__)
+#if defined(UNALIGNED_OK) && (defined(__i386__) || defined(__x86_64__))
         *(uint32_t *)(output + j) = input[i];
 #else
         output[j] = input[i] & 0xff;
         output[j + 1] = (input[i] >> 8) & 0xff;
         output[j + 2] = (input[i] >> 16) & 0xff;
         output[j + 3] = (input[i] >> 24) & 0xff;
-#endif /* __i386__ || __x86_64__ */
+#endif /* UNALIGNED_OK && (__i386__ || __x86_64__) */
     }
 }
 
