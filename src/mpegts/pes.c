@@ -47,31 +47,26 @@ bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts)
     const uint8_t *payload = TS_GET_PAYLOAD(ts);
     size_t paylen = TS_PACKET_SIZE - (payload - ts);
 
-    if(!payload || paylen > TS_BODY_SIZE)
+    if (!payload || paylen > TS_BODY_SIZE)
         /* no payload/invalid size */
         return false;
 
-    /* check continuity */
+    /* check continuity, propagate CC errors */
     const uint8_t cc = TS_GET_CC(ts);
-    bool cc_fail = false;
 
-    if(pes->expect_size && cc != ((pes->i_cc + 1) & 0xf))
-    {
-        pes->truncated++;
-        cc_fail = true;
-        /* XXX: do we need to bump o_cc? */
-    }
+    if (pes->expect_size && cc != ((pes->i_cc + 1) & 0xf))
+        pes->o_cc++;
 
     pes->i_cc = cc;
 
     /* check for PES header */
     const bool is_start = (PES_BUFFER_IS_START(payload, ts)
-        && paylen >= PES_HEADER_SIZE);
+                           && paylen >= PES_HEADER_SIZE);
 
     /* force-out TS path; used by both modes */
     const bool has_data = (pes->expect_size && pes->buf_read < pes->buf_write);
 
-    if((is_start && has_data) || cc_fail)
+    if (is_start && has_data)
     {
         pes->fast = false;
         mpegts_pes_demux(pes);
