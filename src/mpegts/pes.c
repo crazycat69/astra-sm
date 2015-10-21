@@ -27,7 +27,7 @@
 
 mpegts_pes_t *mpegts_pes_init(uint16_t pid)
 {
-    mpegts_pes_t *pes = (mpegts_pes_t *)calloc(1, sizeof(*pes));
+    mpegts_pes_t *const pes = (mpegts_pes_t *)calloc(1, sizeof(*pes));
     asc_assert(pes != NULL, MSG("calloc() failed"));
 
     pes->pid = pid;
@@ -93,19 +93,19 @@ bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts)
         pes->stream_id = PES_BUFFER_GET_SID(payload);
         memcpy(&pes->ext, &payload[PES_HDR_BASIC], PES_HDR_EXT);
 
-        if(pes->ext.pts)
+        if (pes->ext.pts)
         {
             pes->pts = PES_GET_PTS(payload);
-            if(pes->ext.dts)
+            if (pes->ext.dts)
                 pes->dts = PES_GET_DTS(payload);
         }
 
-        if(TS_IS_PCR(ts))
+        if (TS_IS_PCR(ts))
             pes->pcr = TS_GET_PCR(ts);
 
         /* cut off header before buffering */
         const size_t hdrlen = (PES_HEADER_SIZE + pes->ext.hdrlen);
-        if(hdrlen >= paylen)
+        if (hdrlen >= paylen)
             /* no data to buffer */
             return false;
 
@@ -115,7 +115,7 @@ bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts)
         /* set mode and adjust expected packet size */
         pes->fast = (pes->mode == PES_MODE_FAST);
 
-        if(pes->expect_size <= hdrlen)
+        if (pes->expect_size <= hdrlen)
             /* variable length (e.g. video) */
             pes->expect_size = PES_MAX_BUFFER;
         else
@@ -151,14 +151,14 @@ bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts)
 
 void mpegts_pes_demux(mpegts_pes_t *pes)
 {
-    uint8_t *ts = pes->ts;
+    uint8_t *const ts = pes->ts;
 
-    while(pes->buf_read < pes->buf_write)
+    while (pes->buf_read < pes->buf_write)
     {
         const bool is_start = (pes->buf_read == 0);
         const size_t remain = (pes->buf_write - pes->buf_read);
 
-        if(pes->fast && remain < TS_BODY_SIZE)
+        if (pes->fast && remain < TS_BODY_SIZE)
             /* wait for more data */
             break;
 
@@ -170,7 +170,7 @@ void mpegts_pes_demux(mpegts_pes_t *pes)
         ts[0] = 0x47;
         ts[1] = pes->pid >> 8;
         ts[2] = pes->pid;
-        if(is_start)
+        if (is_start)
             /* set PUSI */
             ts[1] |= 0x40;
 
@@ -181,21 +181,21 @@ void mpegts_pes_demux(mpegts_pes_t *pes)
         /* AF and PES header, first packet only */
         size_t af_size = 0;
         size_t pes_hlen = 0;
-        if(is_start)
+        if (is_start)
         {
             /* callback might change header, so call it first */
-            if(pes->on_pes)
+            if (pes->on_pes)
                 pes->on_pes(pes->cb_arg, pes);
 
             /* set random access on key frames */
-            if(pes->key)
+            if (pes->key)
             {
                 ts[5] |= 0x40;
                 af_size = 2;
             }
 
             /* add PCR if requested */
-            if(pes->pcr != XTS_NONE)
+            if (pes->pcr != XTS_NONE)
             {
                 ts[5] |= 0x10;
                 TS_SET_PCR(ts, pes->pcr);
@@ -206,11 +206,11 @@ void mpegts_pes_demux(mpegts_pes_t *pes)
             memset((uint8_t *)(&pes->ext) + 1, 0, sizeof(pes->ext) - 1);
 
             /* calculate PES header size */
-            if(pes->pts != XTS_NONE)
+            if (pes->pts != XTS_NONE)
             {
                 pes->ext.pts = 1;
                 pes_hlen += 5;
-                if(pes->dts != XTS_NONE)
+                if (pes->dts != XTS_NONE)
                 {
                     pes->ext.dts = 1;
                     pes_hlen += 5;
@@ -229,16 +229,16 @@ void mpegts_pes_demux(mpegts_pes_t *pes)
             pes_h[3] = pes->stream_id;
 
             /* recalculate packet size */
-            if(!pes->fast)
+            if (!pes->fast)
                 pes->expect_size = pes->buf_write;
 
-            if(pes->expect_size != PES_MAX_BUFFER)
+            if (pes->expect_size != PES_MAX_BUFFER)
             {
                 /* NOTE: packet length doesn't include basic 6-byte header */
                 const size_t pktlen =
                     pes->expect_size + pes_hlen - PES_HDR_BASIC;
 
-                if(pktlen <= 0xFFFF)
+                if (pktlen <= 0xFFFF)
                 {
                     /* can't define length for larger packets */
                     pes_h[4] = pktlen >> 8;
@@ -248,10 +248,10 @@ void mpegts_pes_demux(mpegts_pes_t *pes)
 
             /* extension */
             memcpy(&pes_h[PES_HDR_BASIC], &pes->ext, sizeof(pes->ext));
-            if(pes->ext.pts)
+            if (pes->ext.pts)
             {
                 PES_SET_PTS(pes_h, pes->pts);
-                if(pes->ext.dts)
+                if (pes->ext.dts)
                 {
                     PES_SET_DTS(pes_h, pes->dts);
                     pes_h[9] |= 0x10;
@@ -262,11 +262,11 @@ void mpegts_pes_demux(mpegts_pes_t *pes)
         }
 
         /* pad last TS packet via AF */
-        if(remain < space)
+        if (remain < space)
         {
             const size_t stuffing = (space - remain);
             memset(&pay[af_size], 0xff, stuffing);
-            if(!af_size)
+            if (!af_size)
             {
                 /* dummy AF; clear all flags */
                 ts[5] = 0;
@@ -276,7 +276,7 @@ void mpegts_pes_demux(mpegts_pes_t *pes)
         }
 
         /* finalize AF */
-        if(af_size)
+        if (af_size)
         {
             ts[3] |= 0x20;       /* AF flag */
             ts[4] = af_size - 1; /* AF length */
@@ -284,7 +284,7 @@ void mpegts_pes_demux(mpegts_pes_t *pes)
         }
 
         /* write PES header */
-        if(pes_hlen)
+        if (pes_hlen)
         {
             memcpy(pay, pes_h, pes_hlen);
             free(pes_h);
@@ -292,17 +292,17 @@ void mpegts_pes_demux(mpegts_pes_t *pes)
         }
 
         memcpy(pay, &pes->buffer[pes->buf_read], space);
-        if(pes->on_ts)
+        if (pes->on_ts)
             pes->on_ts(pes->cb_arg, ts);
 
         pes->sent++;
         pes->buf_read += space;
     }
 
-    if(!pes->fast)
+    if (!pes->fast)
     {
-        if(pes->expect_size != PES_MAX_BUFFER
-           && pes->buf_write != pes->expect_size)
+        if (pes->expect_size != PES_MAX_BUFFER
+            && pes->buf_write != pes->expect_size)
         {
             /* happens with crappy streams */
             asc_log_error(MSG("wrong size: expected %zu, got %zu, pid: %hu")

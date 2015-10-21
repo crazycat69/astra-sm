@@ -99,10 +99,10 @@ typedef enum {
 
     /* wait until we have the whole packet */
     PES_MODE_WHOLE,
-} pes_mode_t;
+} mpegts_pes_mode_t;
 
 /* extension header struct */
-typedef struct __attribute__ ((__packed__)) {
+typedef struct __attribute__((__packed__)) {
 #if defined(BYTE_ORDER) && BYTE_ORDER == LITTLE_ENDIAN
     unsigned original  : 1;
     unsigned copyright : 1;
@@ -180,7 +180,7 @@ struct mpegts_pes_t
     uint8_t ts[TS_PACKET_SIZE];
 
     /* output mode */
-    pes_mode_t mode;
+    mpegts_pes_mode_t mode;
     bool fast;
 
     /* callbacks */
