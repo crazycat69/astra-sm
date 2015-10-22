@@ -67,7 +67,7 @@
 #define TS_GET_PAYLOAD(_ts) ( \
     (!TS_IS_PAYLOAD(_ts)) ? (NULL) : ( \
         (!TS_IS_AF(_ts)) ? (&_ts[TS_HEADER_SIZE]) : ( \
-            (_ts[4] > TS_BODY_SIZE - 1) ? (NULL) : (&_ts[TS_HEADER_SIZE + 1 + _ts[4]])) \
+            (_ts[4] >= TS_BODY_SIZE - 1) ? (NULL) : (&_ts[TS_HEADER_SIZE + 1 + _ts[4]])) \
         ) \
     )
 

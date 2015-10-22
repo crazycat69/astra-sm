@@ -38,13 +38,6 @@
         (_pes[0] << 16) | (_pes[1] << 8) | (_pes[2]) \
     )
 
-/* first PES segment */
-#define PES_BUFFER_IS_START(_pes, _ts) \
-    ( \
-        TS_IS_PAYLOAD_START(_ts) && \
-        PES_BUFFER_GET_HEADER(_pes) == 0x000001 \
-    )
-
 /* stream ID */
 #define PES_BUFFER_GET_SID(_pes) (_pes[3])
 
@@ -166,7 +159,6 @@ struct mpegts_pes_t
     uint64_t pcr;
 
     /* packet counters */
-    unsigned received;
     unsigned sent;
     unsigned truncated;
     unsigned dropped;
