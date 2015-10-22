@@ -123,7 +123,21 @@ bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts)
         memcpy(&pes->buffer[pes->buf_write], payload, paylen);
         pes->buf_write += paylen;
 
-        if (pes->expect_size == pes->buf_write)
+        if (pes->buf_write > PES_MAX_BUFFER - TS_BODY_SIZE)
+        {
+            /* avoid buffer overflow on next write */
+            asc_log_error(MSG("packet is over %u bytes, truncating. pid: %hu")
+                          , PES_MAX_BUFFER, pes->pid);
+
+            pes->expect_size = pes->buf_write;
+            pes->truncated++;
+
+            pes->fast = false;
+            mpegts_pes_demux(pes);
+
+            pes->o_cc++;
+        }
+        else if (pes->expect_size == pes->buf_write)
         {
             /* fixed-length TS path; used by both modes */
             pes->fast = false;
