@@ -173,7 +173,6 @@ struct mpegts_pes_t
 
     /* output mode */
     mpegts_pes_mode_t mode;
-    bool fast;
 
     /* callbacks */
     void *cb_arg;
@@ -185,6 +184,5 @@ mpegts_pes_t *mpegts_pes_init(uint16_t pid) __wur;
 void mpegts_pes_destroy(mpegts_pes_t *pes);
 
 bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts);
-void mpegts_pes_demux(mpegts_pes_t *pes);
 
 #endif /* _TS_PES_ */

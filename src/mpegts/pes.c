@@ -41,6 +41,8 @@ void mpegts_pes_destroy(mpegts_pes_t *pes)
     free(pes);
 }
 
+static void pes_demux(mpegts_pes_t *pes, bool fast);
+
 bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts)
 {
     /* locate payload */
@@ -65,8 +67,7 @@ bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts)
         if (pes->expect_size > 0 && pes->buf_read < pes->buf_write)
         {
             /* push-out TS path; used by both modes */
-            pes->fast = false;
-            mpegts_pes_demux(pes);
+            pes_demux(pes, false);
 
             if (pes->buf_write != pes->buf_read)
                 asc_log_error(MSG("BUG: didn't send whole buffer"));
@@ -103,9 +104,7 @@ bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts)
         if (TS_IS_PCR(ts))
             pes->pcr = TS_GET_PCR(ts);
 
-        /* set mode and adjust expected packet size */
-        pes->fast = (pes->mode == PES_MODE_FAST);
-
+        /* adjust expected packet size */
         if (pes->expect_size <= hdrlen)
             /* variable length (e.g. video) */
             pes->expect_size = PES_MAX_BUFFER;
@@ -132,21 +131,19 @@ bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts)
             pes->expect_size = pes->buf_write;
             pes->truncated++;
 
-            pes->fast = false;
-            mpegts_pes_demux(pes);
+            pes_demux(pes, false);
 
             pes->o_cc++;
         }
         else if (pes->expect_size == pes->buf_write)
         {
             /* fixed-length TS path; used by both modes */
-            pes->fast = false;
-            mpegts_pes_demux(pes);
+            pes_demux(pes, false);
         }
-        else if (pes->fast)
+        else if (pes->mode == PES_MODE_FAST)
         {
             /* fast TS path; send output as soon as possible */
-            mpegts_pes_demux(pes);
+            pes_demux(pes, true);
         }
     }
     else
@@ -158,7 +155,8 @@ bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts)
     return true;
 }
 
-void mpegts_pes_demux(mpegts_pes_t *pes)
+static
+void pes_demux(mpegts_pes_t *pes, bool fast)
 {
     uint8_t *const ts = pes->ts;
 
@@ -167,7 +165,7 @@ void mpegts_pes_demux(mpegts_pes_t *pes)
         const bool is_start = (pes->buf_read == 0);
         const size_t remain = (pes->buf_write - pes->buf_read);
 
-        if (pes->fast && remain < TS_BODY_SIZE)
+        if (fast && remain < TS_BODY_SIZE)
             /* wait for more data */
             break;
 
@@ -239,7 +237,7 @@ void mpegts_pes_demux(mpegts_pes_t *pes)
             pes_h[3] = pes->stream_id;
 
             /* recalculate packet size */
-            if (!pes->fast)
+            if (!fast)
                 pes->expect_size = pes->buf_write;
 
             if (pes->expect_size != PES_MAX_BUFFER)
@@ -309,7 +307,7 @@ void mpegts_pes_demux(mpegts_pes_t *pes)
         pes->buf_read += space;
     }
 
-    if (!pes->fast)
+    if (!fast)
     {
         if (pes->expect_size != PES_MAX_BUFFER
             && pes->buf_write != pes->expect_size)
