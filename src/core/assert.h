@@ -28,16 +28,15 @@
 #include <core/init.h>
 #include <core/log.h>
 
-#define __asc_assert(_cond, _file, _line, ...) \
-    ( \
-        asc_log_error("%s:%u: failed assertion `%s'", _file, _line, _cond) \
-        , asc_log_error(__VA_ARGS__) \
-        , astra_abort() \
-    )
-
-#define asc_assert(_cond, ...) \
-    ( \
-        (_cond) ? (void)0 : __asc_assert(#_cond, __FILE__, __LINE__, __VA_ARGS__) \
-    )
+#define asc_assert(__cond, ...) \
+    do { \
+        if (!(__cond)) \
+        { \
+            asc_log_error("%s:%u: failed assertion `%s'" \
+                          , __FILE__, __LINE__, #__cond); \
+            asc_log_error(__VA_ARGS__); \
+            astra_abort(); \
+        } \
+    } while (0)
 
 #endif /* _ASC_ASSERT_H_ */
