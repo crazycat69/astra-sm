@@ -54,7 +54,14 @@ void asc_list_remove_current(asc_list_t *list);
 void asc_list_remove_item(asc_list_t *list, const void *data);
 
 #define asc_list_for(__list) \
-    for (asc_list_first(__list); !asc_list_eol(__list); asc_list_next(__list))
+    for (asc_list_first(__list) \
+         ; !asc_list_eol(__list) \
+         ; asc_list_next(__list))
+
+#define asc_list_clear(__list) \
+    for (asc_list_first(__list) \
+         ; !asc_list_eol(__list) \
+         ; asc_list_remove_current(__list))
 
 static inline
 void asc_list_first(asc_list_t *list)
@@ -65,7 +72,7 @@ void asc_list_first(asc_list_t *list)
 static inline
 void asc_list_next(asc_list_t *list)
 {
-    if(list->current)
+    if (list->current)
         list->current = TAILQ_NEXT(list->current, entries);
 }
 

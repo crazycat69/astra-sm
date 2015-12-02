@@ -145,6 +145,26 @@ START_TEST(no_data_full)
 }
 END_TEST
 
+START_TEST(clear_list)
+{
+    const unsigned items[] = { 0, 1, 2, 3, 4, 5 };
+    for (size_t i = 0; i < ASC_ARRAY_SIZE(items); i++)
+    {
+        void *const ptr = (void *)((intptr_t)items[i]);
+        asc_list_insert_tail(list, ptr);
+    }
+
+    size_t index = 0;
+    asc_list_clear(list)
+    {
+        void *const ptr = asc_list_data(list);
+        ck_assert((intptr_t)ptr == items[index++]);
+    }
+    ck_assert(asc_list_size(list) == 0);
+    ck_assert(asc_list_eol(list));
+}
+END_TEST
+
 Suite *core_list(void)
 {
     Suite *const s = suite_create("list");
@@ -155,6 +175,7 @@ Suite *core_list(void)
     tcase_add_test(tc, empty_list);
     tcase_add_test(tc, random_values);
     tcase_add_test(tc, selective_delete);
+    tcase_add_test(tc, clear_list);
 
     if (can_fork != CK_NOFORK)
     {
