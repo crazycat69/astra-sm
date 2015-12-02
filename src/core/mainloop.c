@@ -38,7 +38,7 @@ typedef struct
     unsigned stop_cnt;
 } asc_main_loop_t;
 
-asc_main_loop_t *main_loop;
+static asc_main_loop_t *main_loop;
 
 void asc_main_loop_init(void)
 {
