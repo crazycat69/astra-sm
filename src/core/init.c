@@ -56,7 +56,9 @@ void asc_srand(void)
 
 void astra_core_init(void)
 {
-    /* call order doesn't really matter here */
+    asc_log_core_init();
+
+    /* call order doesn't really matter from here */
     lua = lua_api_init();
 
     asc_thread_core_init();

@@ -1,8 +1,9 @@
 /*
- * Astra Core
+ * Astra Core (Logging)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,22 +26,23 @@
 #   error "Please include <astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-void asc_log_set_stdout(bool);
-void asc_log_set_debug(bool);
-void asc_log_set_color(bool);
-void asc_log_set_file(const char *);
+void asc_log_set_stdout(bool val);
+void asc_log_set_debug(bool val);
+void asc_log_set_color(bool val);
+void asc_log_set_file(const char *val);
 #ifndef _WIN32
-void asc_log_set_syslog(const char *);
+void asc_log_set_syslog(const char *val);
 #endif
+bool asc_log_is_debug(void) __func_pure;
 
-void asc_log_hup(void);
+void asc_log_core_init(void);
 void asc_log_core_destroy(void);
 
-void asc_log_info(const char *, ...) __fmt_printf(1, 2);
-void asc_log_error(const char *, ...) __fmt_printf(1, 2);
-void asc_log_warning(const char *, ...) __fmt_printf(1, 2);
-void asc_log_debug(const char *, ...) __fmt_printf(1, 2);
+void asc_log_reopen(void);
 
-bool asc_log_is_debug(void) __func_pure;
+void asc_log_info(const char *msg, ...) __fmt_printf(1, 2);
+void asc_log_error(const char *msg, ...) __fmt_printf(1, 2);
+void asc_log_warning(const char *msg, ...) __fmt_printf(1, 2);
+void asc_log_debug(const char *msg, ...) __fmt_printf(1, 2);
 
 #endif /* _ASC_LOG_H_ */

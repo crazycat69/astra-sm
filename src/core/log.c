@@ -1,8 +1,9 @@
 /*
- * Astra Core
+ * Astra Core (Logging)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,123 +30,162 @@
 
 typedef struct
 {
-    int fd;
     bool color;
     bool debug;
+
     bool sout;
+
+    int fd;
     char *filename;
+
 #ifndef _WIN32
     char *syslog;
-#endif /* !_WIN32 */
-} log_t;
+#else
+    HANDLE con;
+    WORD attr;
+#endif
+} asc_logger_t;
 
-log_t __log =
+static asc_logger_t *logger = NULL;
+
+typedef enum
 {
-    -1,
-    false,
-    false,
-    true,
-    NULL,
+    ASC_LOG_ERROR = 0,
+    ASC_LOG_WARNING,
+    ASC_LOG_INFO,
+    ASC_LOG_DEBUG,
+} asc_log_type_t;
+
 #ifndef _WIN32
-    NULL,
-#endif /* !_WIN32 */
+static const int type_syslog[] = {
+    LOG_ERR, LOG_WARNING, LOG_INFO, LOG_DEBUG
 };
 
-enum
-{
-    LOG_TYPE_INFO       = 0x00000001,
-    LOG_TYPE_ERROR      = 0x00000002,
-    LOG_TYPE_WARNING    = 0x00000004,
-    LOG_TYPE_DEBUG      = 0x00000008
+static const char *type_color_reset = "\x1b[0m";
+
+static const char *type_colors[] = {
+    /* error = red */
+    "\x1b[31m",
+
+    /* warning = yellow */
+    "\x1b[33m",
+
+    /* default color for other types */
+    NULL,
+    NULL,
+};
+#else /* !_WIN32 */
+static const WORD type_colors[] = {
+    /* error = red */
+    FOREGROUND_INTENSITY | FOREGROUND_RED,
+
+    /* warning = yellow */
+    FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN,
+
+    /* default color for other types */
+    0,
+    0,
 };
 
-#ifndef _WIN32
-static int _get_type_syslog(int type)
+static struct tm *localtime_r(const time_t *timep, struct tm *result)
 {
-    switch(type & 0x000000FF)
-    {
-        case LOG_TYPE_INFO: return LOG_INFO;
-        case LOG_TYPE_WARNING: return LOG_WARNING;
-        case LOG_TYPE_DEBUG: return LOG_DEBUG;
-        case LOG_TYPE_ERROR:
-        default: return LOG_ERR;
-    }
+    /* NOTE: localtime() is thread-safe on Windows */
+    struct tm *ptr = localtime(timep);
+    if (ptr != NULL)
+        memcpy(result, ptr, sizeof(struct tm));
+
+    return ptr;
 }
+#endif /* _WIN32 */
+
+static const char *type_strings[] = {
+    "ERROR", "WARNING", "INFO", "DEBUG"
+};
+
+static __fmt_printf(2, 0)
+void log_write(asc_log_type_t type, const char *msg, va_list ap)
+{
+    char buf[512];
+    ssize_t space = sizeof(buf);
+    int ret;
+
+    /* add timestamp and severity */
+    size_t len_prefix = 0;
+    const time_t ct = time(NULL);
+    struct tm sct;
+
+    tzset();
+    if (localtime_r(&ct, &sct) != NULL)
+    {
+        len_prefix += strftime(buf, space, "%b %d %X: ", &sct);
+        space -= len_prefix;
+    }
+
+    ret = snprintf(&buf[len_prefix], space, "%s: ", type_strings[type]);
+    if (ret > 0 && ret < space)
+    {
+        len_prefix += ret;
+        space -= ret;
+    }
+
+    /* add message */
+    size_t len = 0;
+    ret = vsnprintf(&buf[len_prefix], space, msg, ap);
+    if (ret > 0 && ret < space)
+        len = len_prefix + ret; /* success */
+    else if (ret >= space)
+        len = sizeof(buf) - 1; /* string truncated */
+    else
+        return; /* error or empty string */
+
+    if (logger == NULL)
+    {
+        fprintf(stderr, "%s\n", &buf[len_prefix]);
+        return;
+    }
+
+    /* send it out through configured channels */
+#ifndef _WIN32
+    if (logger->syslog != NULL)
+        syslog(type_syslog[type], "%s", &buf[len_prefix]);
 #endif /* !_WIN32 */
 
-static const char *_get_type_str(int type)
-{
-    switch(type & 0x000000FF)
+    if (logger->sout)
     {
-        case LOG_TYPE_INFO: return "INFO";
-        case LOG_TYPE_WARNING: return "WARNING";
-        case LOG_TYPE_DEBUG: return "DEBUG";
-        case LOG_TYPE_ERROR: return "ERROR";
-        default: return "UNKNOWN";
-    }
-}
-
-__fmt_printf(2, 0)
-static void _log(int type, const char *msg, va_list ap)
-{
-    char buffer[4096];
-
-    size_t len_1 = 0; /* to skip time stamp */
-    time_t ct = time(NULL);
-    struct tm *sct = localtime(&ct);
-    len_1 = strftime(buffer, sizeof(buffer), "%b %d %X: ", sct);
-
-    size_t len_2 = len_1;
-    const char *type_str = _get_type_str(type);
-    len_2 += snprintf(&buffer[len_2], sizeof(buffer) - len_2, "%s: ", type_str);
-    len_2 += vsnprintf(&buffer[len_2], sizeof(buffer) - len_2, msg, ap);
-
 #ifndef _WIN32
-    if(__log.syslog)
-        syslog(_get_type_syslog(type), "%s", &buffer[len_1]);
-#endif /* !_WIN32 */
+        const char *color_on = "";
+        const char *color_off = "";
 
-    buffer[len_2] = '\n';
-    ++len_2;
+        if (logger->color && type_colors[type] != NULL
+            && isatty(STDOUT_FILENO))
+        {
+            color_on = type_colors[type];
+            color_off = type_color_reset;
+        }
 
-    if(__log.sout)
-    {
+        printf("%s%s%s\n", color_on, buf, color_off);
+#else /* !_WIN32 */
         bool reset_color = false;
-        if(__log.color && isatty(STDOUT_FILENO))
+
+        if (logger->color && type_colors[type] != 0 && logger->con != NULL)
         {
-            switch(type)
-            {
-                case LOG_TYPE_WARNING:
-                    /* yellow */
-                    if(write(STDOUT_FILENO, "\x1b[33m", 5) != -1)
-                        reset_color = true;
-                    break;
-
-                case LOG_TYPE_ERROR:
-                    /* red */
-                    if(write(STDOUT_FILENO, "\x1b[31m", 5) != -1)
-                        reset_color = true;
-                    break;
-
-                default:
-                    break;
-            }
+            if (SetConsoleTextAttribute(logger->con, type_colors[type]))
+                reset_color = true;
         }
-        const int ret = write(STDOUT_FILENO, buffer, len_2);
-        if(reset_color)
-            write(STDOUT_FILENO, "\x1b[0m", 4);
 
-        if(ret == -1)
-        {
-            fprintf(stderr, MSG("failed to write to stdout: %s\n")
-                    , strerror(errno));
-        }
+        printf("%s\n", buf);
+
+        if (reset_color)
+            SetConsoleTextAttribute(logger->con, logger->attr);
+#endif /* _WIN32 */
     }
 
-    if(__log.fd != -1)
+    if (logger->fd != -1)
     {
-        const int ret = write(__log.fd, buffer, len_2);
-        if (ret == -1)
+        /* replace null with newline before writing to file */
+        buf[len++] = '\n';
+
+        if (write(logger->fd, buf, len) == -1)
         {
             fprintf(stderr, MSG("failed to write to log file: %s\n")
                     , strerror(errno));
@@ -157,7 +197,7 @@ void asc_log_info(const char *msg, ...)
 {
     va_list ap;
     va_start(ap, msg);
-    _log(LOG_TYPE_INFO, msg, ap);
+    log_write(ASC_LOG_INFO, msg, ap);
     va_end(ap);
 }
 
@@ -165,7 +205,7 @@ void asc_log_error(const char *msg, ...)
 {
     va_list ap;
     va_start(ap, msg);
-    _log(LOG_TYPE_ERROR, msg, ap);
+    log_write(ASC_LOG_ERROR, msg, ap);
     va_end(ap);
 }
 
@@ -173,110 +213,125 @@ void asc_log_warning(const char *msg, ...)
 {
     va_list ap;
     va_start(ap, msg);
-    _log(LOG_TYPE_WARNING, msg, ap);
+    log_write(ASC_LOG_WARNING, msg, ap);
     va_end(ap);
 }
 
 void asc_log_debug(const char *msg, ...)
 {
-    if(!__log.debug)
+    if (logger != NULL && !logger->debug)
         return;
 
     va_list ap;
     va_start(ap, msg);
-    _log(LOG_TYPE_DEBUG, msg, ap);
+    log_write(ASC_LOG_DEBUG, msg, ap);
     va_end(ap);
 }
 
-__asc_inline
 bool asc_log_is_debug(void)
 {
-    return __log.debug;
+    return logger->debug;
 }
 
-void asc_log_hup(void)
+void asc_log_core_init(void)
 {
-    if(__log.fd != -1)
+    logger = (asc_logger_t *)calloc(1, sizeof(*logger));
+    asc_assert(logger != NULL, MSG("calloc() failed"));
+
+    logger->sout = true;
+    logger->fd = -1;
+
+#ifdef _WIN32
+    /* get default text color */
+    const HANDLE con = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+
+    if (con != NULL && GetConsoleScreenBufferInfo(con, &csbi))
     {
-        close(__log.fd);
-        __log.fd = -1;
+        logger->con = con;
+        logger->attr = csbi.wAttributes;
+    }
+#endif /* _WIN32 */
+}
+
+void asc_log_core_destroy(void)
+{
+    if (logger->fd != -1)
+        close(logger->fd);
+
+#ifndef _WIN32
+    if (logger->syslog)
+    {
+        closelog();
+        ASC_FREE(logger->syslog, free);
+    }
+#endif /* !_WIN32 */
+
+    ASC_FREE(logger->filename, free);
+    ASC_FREE(logger, free);
+}
+
+void asc_log_reopen(void)
+{
+    if (logger->fd != -1)
+    {
+        close(logger->fd);
+        logger->fd = -1;
     }
 
-    if(!__log.filename)
+    if (logger->filename == NULL)
         return;
 
     const int flags = O_WRONLY | O_CREAT | O_APPEND;
     const mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
 
-    __log.fd = open(__log.filename, flags, mode);
-    if(__log.fd == -1)
+    logger->fd = open(logger->filename, flags, mode);
+    if (logger->fd == -1)
     {
-        fprintf(stderr, MSG("failed to open %s: %s\n"), __log.filename
+        fprintf(stderr, MSG("failed to open %s: %s\n"), logger->filename
                 , strerror(errno));
     }
 }
 
-void asc_log_core_destroy(void)
-{
-    if(__log.fd != -1)
-    {
-        close(__log.fd);
-        __log.fd = -1;
-    }
-
-#ifndef _WIN32
-    if(__log.syslog)
-    {
-        closelog();
-        ASC_FREE(__log.syslog, free);
-    }
-#endif /* !_WIN32 */
-
-    __log.color = false;
-    __log.debug = false;
-    __log.sout = true;
-
-    ASC_FREE(__log.filename, free);
-}
-
 void asc_log_set_stdout(bool val)
 {
-    __log.sout = val;
+    logger->sout = val;
 }
 
 void asc_log_set_debug(bool val)
 {
-    __log.debug = val;
+    logger->debug = val;
 }
 
 void asc_log_set_color(bool val)
 {
-    __log.color = val;
+    logger->color = val;
 }
 
 void asc_log_set_file(const char *val)
 {
-    ASC_FREE(__log.filename, free);
+    ASC_FREE(logger->filename, free);
 
-    if(val && strlen(val))
-        __log.filename = strdup(val);
+    if (val != NULL && strlen(val))
+        logger->filename = strdup(val);
 
-    asc_log_hup();
+    asc_log_reopen();
 }
 
 #ifndef _WIN32
 void asc_log_set_syslog(const char *val)
 {
-    if(__log.syslog)
+    if (logger->syslog != NULL)
     {
         closelog();
-        ASC_FREE(__log.syslog, free);
+        ASC_FREE(logger->syslog, free);
     }
 
-    if(!val)
+    if (val == NULL)
         return;
 
-    __log.syslog = strdup(val);
-    openlog(__log.syslog, LOG_PID | LOG_CONS, LOG_USER);
+    logger->syslog = strdup(val);
+    openlog(logger->syslog, LOG_PID | LOG_CONS | LOG_NOWAIT | LOG_NDELAY
+            , LOG_USER);
 }
 #endif /* !_WIN32 */

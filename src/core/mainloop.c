@@ -38,7 +38,7 @@ typedef struct
     unsigned stop_cnt;
 } asc_main_loop_t;
 
-static asc_main_loop_t *main_loop;
+static asc_main_loop_t *main_loop = NULL;
 
 void asc_main_loop_init(void)
 {
@@ -51,7 +51,6 @@ void asc_main_loop_destroy(void)
     ASC_FREE(main_loop, free);
 }
 
-__asc_inline
 void asc_main_loop_set(uint32_t flag)
 {
     main_loop->flags |= flag;
@@ -84,7 +83,7 @@ bool asc_main_loop_run(void)
             }
             else if (flags & MAIN_LOOP_SIGHUP)
             {
-                asc_log_hup();
+                asc_log_reopen();
 
                 lua_getglobal(lua, "on_sighup");
                 if(lua_isfunction(lua, -1))

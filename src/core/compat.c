@@ -33,7 +33,7 @@
 #ifndef HAVE_PREAD
 ssize_t pread(int fd, void *buffer, size_t size, off_t off)
 {
-    if(lseek(fd, off, SEEK_SET) != off)
+    if (lseek(fd, off, SEEK_SET) != off)
         return -1;
 
     return read(fd, buffer, size);
