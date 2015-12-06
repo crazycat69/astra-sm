@@ -50,8 +50,8 @@ libastra_la_SOURCES += \
     core/socket.h \
     core/spawn.c \
     core/spawn.h \
-    core/strbuffer.c \
-    core/strbuffer.h \
+    core/strbuf.c \
+    core/strbuf.h \
     core/thread.c \
     core/thread.h \
     core/timer.c \

@@ -5,7 +5,7 @@
 #include <astra.h>
 #include <core/event.h>
 #include <core/socket.h>
-#include <core/strbuffer.h>
+#include <core/strbuf.h>
 
 #include "parser.h"
 

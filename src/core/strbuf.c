@@ -20,7 +20,9 @@
  */
 
 #include <astra.h>
-#include <core/strbuffer.h>
+#include <core/strbuf.h>
+
+#define MSG(_msg) "[core/strbuf] " _msg
 
 #define MAX_BUFFER_SIZE 4096
 
@@ -35,25 +37,25 @@ struct string_buffer_t
 
 string_buffer_t *string_buffer_alloc(void)
 {
-    string_buffer_t *buffer = (string_buffer_t *)malloc(sizeof(string_buffer_t));
-    buffer->size = 0;
-    buffer->last = buffer;
-    buffer->next = NULL;
-    return buffer;
+    string_buffer_t *const buf = (string_buffer_t *)calloc(1, sizeof(*buf));
+    asc_assert(buf != NULL, MSG("calloc() failed"));
+
+    buf->last = buf;
+
+    return buf;
 }
 
 /* only for single char operations */
-static __wur string_buffer_t *__string_buffer_last(string_buffer_t *buffer)
+static __wur
+string_buffer_t *__string_buffer_last(string_buffer_t *buffer)
 {
     string_buffer_t *last = buffer->last;
     if(last->size >= MAX_BUFFER_SIZE)
     {
-        last->next = (string_buffer_t *)malloc(sizeof(string_buffer_t));
-        last = last->next;
-        last->size = 0;
-        last->last = NULL;
-        last->next = NULL;
-        buffer->last = last;
+        last->next = (string_buffer_t *)calloc(1, sizeof(*last->next));
+        asc_assert(last->next != NULL, MSG("calloc() failed"));
+
+        buffer->last = last = last->next;
     }
     return last;
 }
@@ -93,17 +95,15 @@ void string_buffer_addlstring(string_buffer_t *buffer, const char *str, size_t s
                 skip += cap;
             }
 
-            last->next = (string_buffer_t *)malloc(sizeof(string_buffer_t));
-            last = last->next;
-            last->size = 0;
-            last->last = NULL;
-            last->next = NULL;
-            buffer->last = last;
+            last->next = (string_buffer_t *)calloc(1, sizeof(*last->next));
+            asc_assert(last->next != NULL, MSG("calloc() failed"));
+
+            buffer->last = last = last->next;
         }
     }
 }
 
-void strung_buffer_addvastring(string_buffer_t *buffer, const char *str, va_list ap)
+void string_buffer_addvastring(string_buffer_t *buffer, const char *str, va_list ap)
 {
     string_buffer_t *last;
 
@@ -337,7 +337,7 @@ void string_buffer_addfstring(string_buffer_t *buffer, const char *str, ...)
 {
     va_list ap;
     va_start(ap, str);
-    strung_buffer_addvastring(buffer, str, ap);
+    string_buffer_addvastring(buffer, str, ap);
     va_end(ap);
 }
 
@@ -349,7 +349,9 @@ char *string_buffer_release(string_buffer_t *buffer, size_t *size)
     for(skip = 0, next = buffer; next; next = next->next)
         skip += next->size;
 
-    char *str = (char *)malloc(skip + 1);
+    char *str = (char *)calloc(1, skip + 1);
+    asc_assert(str != NULL, MSG("calloc() failed"));
+
     for(skip = 0, next = buffer; next && (next_next = next->next, 1); next = next_next)
     {
         memcpy(&str[skip], next->buffer, next->size);
@@ -366,24 +368,15 @@ char *string_buffer_release(string_buffer_t *buffer, size_t *size)
 
 void string_buffer_push(lua_State *L, string_buffer_t *buffer)
 {
-    luaL_Buffer b;
-    luaL_buffinit(L, &b);
-
-    string_buffer_t *next_next;
-    for(string_buffer_t *next = buffer; next && (next_next = next->next, 1); next = next_next)
-    {
-        luaL_addlstring(&b, next->buffer, next->size);
-        free(next);
-    }
-
-    luaL_pushresult(&b);
+    size_t size = 0;
+    char *result = string_buffer_release(buffer, &size);
+    lua_pushlstring(L, result, size);
+    free(result);
 }
 
 void string_buffer_free(string_buffer_t *buffer)
 {
     string_buffer_t *next_next;
     for(string_buffer_t *next = buffer; next && (next_next = next->next, 1); next = next_next)
-    {
         free(next);
-    }
 }
