@@ -23,6 +23,9 @@
 #include <core/mainloop.h>
 #include <core/list.h>
 
+#define TIMER_DELAY_MIN 1000 /* 1ms */
+#define TIMER_DELAY_MAX 100000 /* 100ms */
+
 struct asc_timer_t
 {
     timer_callback_t callback;
@@ -32,7 +35,7 @@ struct asc_timer_t
     uint64_t next_shot;
 };
 
-static asc_list_t *timer_list;
+static asc_list_t *timer_list = NULL;
 
 void asc_timer_core_init(void)
 {
@@ -41,72 +44,72 @@ void asc_timer_core_init(void)
 
 void asc_timer_core_destroy(void)
 {
-    if (!timer_list)
+    if (timer_list == NULL)
         return;
 
-    asc_list_first(timer_list);
-    while(!asc_list_eol(timer_list))
+    asc_list_clear(timer_list)
     {
         free(asc_list_data(timer_list));
-        asc_list_remove_current(timer_list);
     }
 
     ASC_FREE(timer_list, asc_list_destroy);
 }
 
-void asc_timer_core_loop(void)
+unsigned int asc_timer_core_loop(void)
 {
-    int is_detached = 0;
-
-    asc_list_for(timer_list)
-    {
-        asc_timer_t *timer = (asc_timer_t *)asc_list_data(timer_list);
-        if(!timer->callback)
-        {
-            ++is_detached;
-            continue;
-        }
-
-        if(asc_utime() >= timer->next_shot)
-        {
-            if(timer->interval == 0)
-            {
-                // one shot timer
-                asc_main_loop_busy();
-                timer->callback(timer->arg);
-                timer->callback = NULL;
-                ++is_detached;
-            }
-            else
-            {
-                asc_main_loop_busy();
-                timer->callback(timer->arg);
-                timer->next_shot = asc_utime() + timer->interval;
-            }
-        }
-    }
-
-    if(!is_detached)
-        return;
+    uint64_t nearest = UINT64_MAX;
+    uint64_t now = asc_utime();
 
     asc_list_first(timer_list);
-    while(!asc_list_eol(timer_list))
+    while (!asc_list_eol(timer_list))
     {
-        asc_timer_t *timer = (asc_timer_t *)asc_list_data(timer_list);
-        if(timer->callback)
-            asc_list_next(timer_list);
+        asc_timer_t *const timer = (asc_timer_t *)asc_list_data(timer_list);
+
+        if (timer->callback != NULL && now >= timer->next_shot)
+        {
+            timer->callback(timer->arg);
+
+            /* refresh timestamp */
+            now = asc_utime();
+
+            if (timer->interval > 0)
+                timer->next_shot = now + timer->interval; /* periodic timer */
+            else
+                timer->callback = NULL; /* one shot timer, so remove it */
+        }
+
+        if (timer->callback == NULL)
+        {
+            asc_list_remove_current(timer_list);
+            free(timer);
+        }
         else
         {
-            free(asc_list_data(timer_list));
-            asc_list_remove_current(timer_list);
+            if (timer->next_shot < nearest)
+                nearest = timer->next_shot;
+
+            asc_list_next(timer_list);
         }
     }
+
+    uint64_t diff;
+    if (nearest < now + TIMER_DELAY_MIN)
+        diff = TIMER_DELAY_MIN;
+    else if (nearest > now + TIMER_DELAY_MAX)
+        diff = TIMER_DELAY_MAX;
+    else
+        diff = nearest - now;
+
+    return (diff / 1000);
 }
 
-asc_timer_t *asc_timer_init(unsigned int ms, timer_callback_t callback, void *arg)
+asc_timer_t *asc_timer_init(unsigned int ms, timer_callback_t callback
+                            , void *arg)
 {
-    asc_timer_t *const timer = (asc_timer_t *)calloc(1, sizeof(asc_timer_t));
-    timer->interval = ms * 1000;
+    asc_timer_t *const timer = (asc_timer_t *)calloc(1, sizeof(*timer));
+    asc_assert(timer != NULL, "[core/timer] calloc() failed");
+
+    timer->interval = ms * 1000ULL;
     timer->callback = callback;
     timer->arg = arg;
 
@@ -117,7 +120,8 @@ asc_timer_t *asc_timer_init(unsigned int ms, timer_callback_t callback, void *ar
     return timer;
 }
 
-asc_timer_t *asc_timer_one_shot(unsigned int ms, timer_callback_t callback, void *arg)
+asc_timer_t *asc_timer_one_shot(unsigned int ms, timer_callback_t callback
+                                , void *arg)
 {
     asc_timer_t *const timer = asc_timer_init(ms, callback, arg);
     timer->interval = 0;
@@ -127,8 +131,9 @@ asc_timer_t *asc_timer_one_shot(unsigned int ms, timer_callback_t callback, void
 
 void asc_timer_destroy(asc_timer_t *timer)
 {
-    if(!timer)
+    if (timer == NULL)
         return;
 
+    /* setting callback to NULL causes timer removal by loop function */
     timer->callback = NULL;
 }
