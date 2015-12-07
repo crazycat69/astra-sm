@@ -166,17 +166,24 @@ void asc_event_core_destroy(void)
     ASC_FREE(event_observer.event_list, asc_list_destroy);
 }
 
-void asc_event_core_loop(void)
+void asc_event_core_loop(unsigned int timeout)
 {
-    if(!asc_list_size(event_observer.event_list))
+    if(asc_list_size(event_observer.event_list) == 0)
+    {
+        asc_usleep(timeout * 1000ULL); /* dry run */
         return;
+    }
 
 #if defined(EV_TYPE_KQUEUE)
-    static const struct timespec timeout = { 0, 0 };
+    const struct timespec ts = {
+        (timeout / 1000), /* tv_sec */
+        (timeout % 1000) * 1000000UL, /* tv_nsec */
+    };
     const int ret = kevent(event_observer.fd, NULL, 0
-                           , event_observer.ed_list, EV_LIST_SIZE, &timeout);
+                           , event_observer.ed_list, EV_LIST_SIZE, &ts);
 #else
-    const int ret = epoll_wait(event_observer.fd, event_observer.ed_list, EV_LIST_SIZE, 0);
+    const int ret = epoll_wait(event_observer.fd, event_observer.ed_list
+                               , EV_LIST_SIZE, timeout);
 #endif
 
     if(ret == -1)
@@ -202,21 +209,18 @@ void asc_event_core_loop(void)
 #endif
         if(event->on_read && is_rd)
         {
-            asc_main_loop_busy();
             event->on_read(event->arg);
             if(event_observer.is_changed)
                 break;
         }
         if(event->on_error && is_er)
         {
-            asc_main_loop_busy();
             event->on_error(event->arg);
             if(event_observer.is_changed)
                 break;
         }
         if(event->on_write && is_wr)
         {
-            asc_main_loop_busy();
             event->on_write(event->arg);
             if(event_observer.is_changed)
                 break;
@@ -377,12 +381,15 @@ void asc_event_core_destroy(void)
     }
 }
 
-void asc_event_core_loop(void)
+void asc_event_core_loop(unsigned int timeout)
 {
-    if(!event_observer.fd_count)
+    if(event_observer.fd_count == 0)
+    {
+        asc_usleep(timeout * 1000ULL); /* dry run */
         return;
+    }
 
-    int ret = poll(event_observer.fd_list, event_observer.fd_count, 0);
+    int ret = poll(event_observer.fd_list, event_observer.fd_count, timeout);
     if(ret == -1)
     {
 #ifndef _WIN32
@@ -405,21 +412,18 @@ void asc_event_core_loop(void)
         asc_event_t *const event = event_observer.event_list[i];
         if(event->on_read && (revents & POLLIN))
         {
-            asc_main_loop_busy();
             event->on_read(event->arg);
             if(event_observer.is_changed)
                 break;
         }
         if(event->on_error && (revents & (POLLERR | POLLHUP | POLLNVAL)))
         {
-            asc_main_loop_busy();
             event->on_error(event->arg);
             if(event_observer.is_changed)
                 break;
         }
         if(event->on_write && (revents & POLLOUT))
         {
-            asc_main_loop_busy();
             event->on_write(event->arg);
             if(event_observer.is_changed)
                 break;
@@ -547,10 +551,13 @@ void asc_event_core_destroy(void)
     ASC_FREE(event_observer.event_list, asc_list_destroy);
 }
 
-void asc_event_core_loop(void)
+void asc_event_core_loop(unsigned int timeout)
 {
-    if(!asc_list_size(event_observer.event_list))
+    if(asc_list_size(event_observer.event_list) == 0)
+    {
+        asc_usleep(timeout * 1000ULL); /* dry run */
         return;
+    }
 
     fd_set rset;
     fd_set wset;
@@ -559,9 +566,12 @@ void asc_event_core_loop(void)
     memcpy(&wset, &event_observer.wmaster, sizeof(wset));
     memcpy(&eset, &event_observer.emaster, sizeof(eset));
 
-    static struct timeval timeout = { 0, 0 };
+    struct timeval tv = {
+        (timeout / 1000), /* tv_sec */
+        (timeout % 1000) * 1000UL, /* tv_usec */
+    };
     const int ret = select(event_observer.max_fd + 1
-                           , &rset, &wset, &eset, &timeout);
+                           , &rset, &wset, &eset, &tv);
 
     if(ret == -1)
     {
@@ -583,21 +593,18 @@ void asc_event_core_loop(void)
 
             if(event->on_read && FD_ISSET(event->fd, &rset))
             {
-                asc_main_loop_busy();
                 event->on_read(event->arg);
                 if(event_observer.is_changed)
                     break;
             }
             if(event->on_error && FD_ISSET(event->fd, &eset))
             {
-                asc_main_loop_busy();
                 event->on_error(event->arg);
                 if(event_observer.is_changed)
                     break;
             }
             if(event->on_write && FD_ISSET(event->fd, &wset))
             {
-                asc_main_loop_busy();
                 event->on_write(event->arg);
                 if(event_observer.is_changed)
                     break;

@@ -63,7 +63,7 @@ bool asc_main_loop_run(void)
 
     while (true)
     {
-        asc_event_core_loop();
+        asc_event_core_loop(0);
         asc_timer_core_loop();
         asc_thread_core_loop();
 

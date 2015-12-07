@@ -29,7 +29,7 @@ typedef struct asc_event_t asc_event_t;
 typedef void (*event_callback_t)(void *);
 
 void asc_event_core_init(void);
-void asc_event_core_loop(void);
+void asc_event_core_loop(unsigned int timeout);
 void asc_event_core_destroy(void);
 
 asc_event_t *asc_event_init(int fd, void *arg) __wur;
