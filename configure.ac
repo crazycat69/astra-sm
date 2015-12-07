@@ -131,7 +131,9 @@ case "${host_os}" in
         # TODO: add option to set winver
         #    WSAPoll() needs at least 0x0600
 
-        # TODO: add -lwinmm for timeBeginPeriod
+        # check winmm (needed for timer resolution APIs)
+        AC_CHECK_LIB([winmm], [main],
+            [], AC_MSG_ERROR([cannot link with winmm.dll]) )
 
         # check winsock
         AC_CHECK_LIB([ws2_32], [main],
