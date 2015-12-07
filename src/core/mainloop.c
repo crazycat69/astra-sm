@@ -35,7 +35,7 @@
 typedef struct
 {
     uint32_t flags;
-    unsigned stop_cnt;
+    unsigned int stop_cnt;
 } asc_main_loop_t;
 
 static asc_main_loop_t *main_loop = NULL;

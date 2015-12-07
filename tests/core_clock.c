@@ -40,7 +40,10 @@ END_TEST
 START_TEST(func_asc_usleep)
 {
     static const unsigned intervals[] = {
-        1000, 2500, 5000, 10000, 25000, 50000, 100000, 250000
+#ifndef _WIN32
+        1000,
+#endif
+        2500, 5000, 10000, 25000, 50000, 100000, 250000
     };
 
     for (size_t i = 0; i < ASC_ARRAY_SIZE(intervals); i++)
@@ -55,7 +58,8 @@ START_TEST(func_asc_usleep)
 
         const uint64_t duration = time_b - time_a;
         ck_assert_msg(duration >= (usecs * 0.9) && duration <= (usecs * 1.3)
-                      , "Requested %uus sleep, got %" PRIu64 "us", usecs, duration);
+                      , "Requested %uus sleep, got %" PRIu64 "us"
+                      , usecs, duration);
     }
 }
 END_TEST

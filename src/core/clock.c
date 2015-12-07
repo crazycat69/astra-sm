@@ -59,7 +59,7 @@ void asc_usleep(uint64_t usec)
     };
 
     while (nanosleep(&ts, &ts) == -1 && errno == EINTR)
-        continue;
+        ;
 #else
     LARGE_INTEGER ft;
     ft.QuadPart = -(usec * 10);

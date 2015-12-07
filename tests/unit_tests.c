@@ -20,11 +20,21 @@
 
 #include "unit_tests.h"
 
+#ifdef _WIN32
+#   include <mmsystem.h>
+#endif
+
 enum fork_status can_fork;
 
 int main(void)
 {
     SRunner *sr = NULL;
+
+#ifdef _WIN32
+    TIMECAPS timecaps = { 0, 0 };
+    if (timeGetDevCaps(&timecaps, sizeof(timecaps)) == TIMERR_NOERROR)
+        timeBeginPeriod(timecaps.wPeriodMin);
+#endif /* _WIN32 */
 
     for (suite_func_t *p = suite_list; *p != NULL; p++)
     {
