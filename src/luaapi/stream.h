@@ -39,7 +39,7 @@ struct module_stream_t
     module_stream_t *parent;
 
     stream_callback_t on_ts;
-    asc_list_t *childs;
+    asc_list_t *children;
 
     demux_callback_t join_pid;
     demux_callback_t leave_pid;

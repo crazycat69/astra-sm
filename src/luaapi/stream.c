@@ -21,38 +21,30 @@
 #include <astra.h>
 #include <luaapi/stream.h>
 
-static void __module_stream_detach(module_stream_t *stream
-                                   , module_stream_t *child)
+static
+void stream_detach(module_stream_t *stream, module_stream_t *child)
 {
-    asc_list_for(stream->childs)
-    {
-        if (child == asc_list_data(stream->childs))
-        {
-            asc_list_remove_current(stream->childs);
-            break;
-        }
-    }
-
+    asc_list_remove_item(stream->children, child);
     child->parent = NULL;
 }
 
 void __module_stream_attach(module_stream_t *stream, module_stream_t *child)
 {
-    if (child->parent)
-        __module_stream_detach(child->parent, child);
+    if (child->parent != NULL)
+        stream_detach(child->parent, child);
 
     child->parent = stream;
-    asc_list_insert_tail(stream->childs, child);
+    asc_list_insert_tail(stream->children, child);
 }
 
 void __module_stream_send(void *arg, const uint8_t *ts)
 {
     module_stream_t *const stream = (module_stream_t *)arg;
 
-    asc_list_for(stream->childs)
+    asc_list_for(stream->children)
     {
         module_stream_t *const i =
-            (module_stream_t *)asc_list_data(stream->childs);
+            (module_stream_t *)asc_list_data(stream->children);
 
         if (i->on_ts != NULL)
             i->on_ts(i->self, ts);
@@ -61,23 +53,21 @@ void __module_stream_send(void *arg, const uint8_t *ts)
 
 void __module_stream_init(module_stream_t *stream)
 {
-    stream->childs = asc_list_init();
+    stream->children = asc_list_init();
 }
 
 void __module_stream_destroy(module_stream_t *stream)
 {
-    if (stream->parent)
-        __module_stream_detach(stream->parent, stream);
+    if (stream->parent != NULL)
+        stream_detach(stream->parent, stream);
 
-    asc_list_first(stream->childs);
-    while (!asc_list_eol(stream->childs))
+    asc_list_clear(stream->children)
     {
         module_stream_t *const i =
-            (module_stream_t *)asc_list_data(stream->childs);
+            (module_stream_t *)asc_list_data(stream->children);
 
         i->parent = NULL;
-        asc_list_remove_current(stream->childs);
     }
 
-    ASC_FREE(stream->childs, asc_list_destroy);
+    ASC_FREE(stream->children, asc_list_destroy);
 }
