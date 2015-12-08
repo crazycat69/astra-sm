@@ -203,7 +203,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 
         mpegts_sync_set_on_write(mod->sync, (ts_callback_t)on_ts);
         mpegts_sync_set_arg(mod->sync, (void *)mod);
-        mpegts_sync_set_fname(mod->sync, "udp/sync %s:%d"
+        mpegts_sync_set_fname(mod->sync, "udp_output/sync %s:%d"
                               , mod->addr, mod->port);
 
         const char *optstr = NULL;
