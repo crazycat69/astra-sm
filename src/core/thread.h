@@ -25,6 +25,13 @@
 #   error "Please include <astra.h> first"
 #endif /* !_ASTRA_H_ */
 
+#ifndef _WIN32
+#   include <pthread.h>
+#endif
+
+/*
+ * threads
+ */
 typedef struct asc_thread_t asc_thread_t;
 typedef struct asc_thread_buffer_t asc_thread_buffer_t;
 typedef void (*thread_callback_t)(void *);
@@ -49,5 +56,70 @@ ssize_t asc_thread_buffer_read(asc_thread_buffer_t *buffer
                                , void *data, size_t size) __wur;
 ssize_t asc_thread_buffer_write(asc_thread_buffer_t *buffer
                                 , const void *data, size_t size) __wur;
+
+/*
+ * mutexes
+ */
+#ifdef _WIN32
+typedef CRITICAL_SECTION asc_mutex_t;
+
+static inline
+void asc_mutex_init(asc_mutex_t *mutex)
+{
+    InitializeCriticalSection(mutex);
+}
+
+static inline
+void asc_mutex_destroy(asc_mutex_t *mutex)
+{
+    DeleteCriticalSection(mutex);
+}
+
+static inline
+void asc_mutex_lock(asc_mutex_t *mutex)
+{
+    EnterCriticalSection(mutex);
+}
+
+static inline
+void asc_mutex_unlock(asc_mutex_t *mutex)
+{
+    LeaveCriticalSection(mutex);
+}
+#else /* _WIN32 */
+typedef pthread_mutex_t asc_mutex_t;
+
+static inline
+void asc_mutex_init(asc_mutex_t *mutex)
+{
+    const int ret = pthread_mutex_init(mutex, NULL);
+    asc_assert(ret == 0, "[core/thread] couldn't init mutex: %s"
+               , strerror(ret));
+}
+
+static inline
+void asc_mutex_destroy(asc_mutex_t *mutex)
+{
+    const int ret = pthread_mutex_destroy(mutex);
+    asc_assert(ret == 0, "[core/thread] couldn't destroy mutex: %s"
+               , strerror(ret));
+}
+
+static inline
+void asc_mutex_lock(asc_mutex_t *mutex)
+{
+    const int ret = pthread_mutex_lock(mutex);
+    asc_assert(ret == 0, "[core/thread] couldn't lock mutex: %s"
+               , strerror(ret));
+}
+
+static inline
+void asc_mutex_unlock(asc_mutex_t *mutex)
+{
+    const int ret = pthread_mutex_unlock(mutex);
+    asc_assert(ret == 0, "[core/thread] couldn't unlock mutex: %s"
+               , strerror(ret));
+}
+#endif /* !_WIN32 */
 
 #endif /* _ASC_THREAD_H_ */

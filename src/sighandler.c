@@ -23,7 +23,7 @@
 
 #include "sighandler.h"
 
-#define LOCK_WAIT 5000 /* ms */
+#define SIGNAL_LOCK_WAIT 5000 /* ms */
 
 static void lock_timeout(void)
 {
@@ -102,7 +102,7 @@ static void *thread_loop(void *arg)
         if (ret != 0)
             perror_exit(ret, "sigwait()");
 
-        if (!mutex_timedlock(signal_lock, LOCK_WAIT))
+        if (!mutex_timedlock(signal_lock, SIGNAL_LOCK_WAIT))
         {
             /*
              * looks like the main thread disabled signal handling and
@@ -316,7 +316,7 @@ static void WINAPI service_handler(DWORD control)
                  */
                 service_set_state(SERVICE_STOP_PENDING);
 
-                if (mutex_timedlock(signal_lock, LOCK_WAIT))
+                if (mutex_timedlock(signal_lock, SIGNAL_LOCK_WAIT))
                 {
                     if (!ignore_ctrl)
                         astra_shutdown();
@@ -347,7 +347,7 @@ static BOOL WINAPI console_handler(DWORD type)
         case CTRL_C_EVENT:
         case CTRL_BREAK_EVENT:
         case CTRL_CLOSE_EVENT:
-            if (mutex_timedlock(signal_lock, LOCK_WAIT))
+            if (mutex_timedlock(signal_lock, SIGNAL_LOCK_WAIT))
             {
                 if (!ignore_ctrl)
                     astra_shutdown();

@@ -23,10 +23,6 @@
 #include <core/mainloop.h>
 #include <core/list.h>
 
-#ifndef _WIN32
-#   include <pthread.h>
-#endif
-
 #define MSG(_msg) "[core/thread] " _msg
 
 struct asc_thread_buffer_t
@@ -37,11 +33,7 @@ struct asc_thread_buffer_t
     size_t write;
     size_t count;
 
-#ifdef _WIN32
-    HANDLE mutex;
-#else
-    pthread_mutex_t mutex;
-#endif
+    asc_mutex_t mutex;
 };
 
 struct asc_thread_t
@@ -70,18 +62,6 @@ typedef struct
 } thread_observer_t;
 
 static thread_observer_t thread_observer;
-
-#ifdef _WIN32
-#   define asc_thread_mutex_init(_mutex) _mutex = CreateMutex(NULL, FALSE, NULL)
-#   define asc_thread_mutex_destroy(_mutex) CloseHandle(_mutex)
-#   define asc_thread_mutex_lock(_mutex) WaitForSingleObject(_mutex, INFINITE)
-#   define asc_thread_mutex_unlock(_mutex) ReleaseMutex(_mutex)
-#else
-#   define asc_thread_mutex_init(_mutex) pthread_mutex_init(&_mutex, NULL)
-#   define asc_thread_mutex_destroy(_mutex) pthread_mutex_destroy(&_mutex)
-#   define asc_thread_mutex_lock(_mutex) pthread_mutex_lock(&_mutex)
-#   define asc_thread_mutex_unlock(_mutex) pthread_mutex_unlock(&_mutex)
-#endif
 
 void asc_thread_core_init(void)
 {
@@ -230,7 +210,7 @@ asc_thread_buffer_t *asc_thread_buffer_init(size_t size)
     asc_thread_buffer_t *buffer = (asc_thread_buffer_t *)calloc(1, sizeof(asc_thread_buffer_t));
     buffer->size = size;
     buffer->buffer = (uint8_t *)malloc(size);
-    asc_thread_mutex_init(buffer->mutex);
+    asc_mutex_init(&buffer->mutex);
     return buffer;
 }
 
@@ -239,28 +219,28 @@ void asc_thread_buffer_destroy(asc_thread_buffer_t *buffer)
     if(!buffer)
         return;
     free(buffer->buffer);
-    asc_thread_mutex_destroy(buffer->mutex);
+    asc_mutex_destroy(&buffer->mutex);
     free(buffer);
 }
 
 void asc_thread_buffer_flush(asc_thread_buffer_t *buffer)
 {
-    asc_thread_mutex_lock(buffer->mutex);
+    asc_mutex_lock(&buffer->mutex);
     buffer->count = 0;
     buffer->read = 0;
     buffer->write = 0;
-    asc_thread_mutex_unlock(buffer->mutex);
+    asc_mutex_unlock(&buffer->mutex);
 }
 
 ssize_t asc_thread_buffer_read(asc_thread_buffer_t *buffer, void *data, size_t size)
 {
-    asc_thread_mutex_lock(buffer->mutex);
+    asc_mutex_lock(&buffer->mutex);
     if(size > buffer->count)
         size = buffer->count;
 
     if(!size)
     {
-        asc_thread_mutex_unlock(buffer->mutex);
+        asc_mutex_unlock(&buffer->mutex);
         return 0;
     }
 
@@ -284,7 +264,7 @@ ssize_t asc_thread_buffer_read(asc_thread_buffer_t *buffer, void *data, size_t s
     }
 
     buffer->count -= size;
-    asc_thread_mutex_unlock(buffer->mutex);
+    asc_mutex_unlock(&buffer->mutex);
 
     return size;
 }
@@ -294,10 +274,10 @@ ssize_t asc_thread_buffer_write(asc_thread_buffer_t *buffer, const void *data, s
     if(!size)
         return 0;
 
-    asc_thread_mutex_lock(buffer->mutex);
+    asc_mutex_lock(&buffer->mutex);
     if(buffer->count + size > buffer->size)
     {
-        asc_thread_mutex_unlock(buffer->mutex);
+        asc_mutex_unlock(&buffer->mutex);
         return -1; // buffer overflow
     }
 
@@ -315,7 +295,7 @@ ssize_t asc_thread_buffer_write(asc_thread_buffer_t *buffer, const void *data, s
         buffer->write += size;
     }
     buffer->count += size;
-    asc_thread_mutex_unlock(buffer->mutex);
+    asc_mutex_unlock(&buffer->mutex);
 
     return size;
 }
