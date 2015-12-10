@@ -93,21 +93,6 @@ void asc_socket_core_destroy(void)
 }
 #endif /* _WIN32 */
 
-__asc_inline
-bool asc_socket_would_block(void)
-{
-#ifdef _WIN32
-    const int err = WSAGetLastError();
-    if (err == WSAEWOULDBLOCK)
-        return true;
-#else
-    if (errno == EAGAIN || errno == EWOULDBLOCK)
-        return true;
-#endif
-
-    return false;
-}
-
 /*
  *   ooooooo  oooooooooo ooooooooooo oooo   oooo
  * o888   888o 888    888 888    88   8888o  88
@@ -612,7 +597,6 @@ ssize_t asc_socket_sendto(asc_socket_t *sock, const void *buffer, size_t size)
  *
  */
 
-__asc_inline
 int asc_socket_fd(asc_socket_t *sock)
 {
     return sock->fd;

@@ -37,8 +37,6 @@ void asc_socket_core_destroy(void);
 #define asc_socket_core_destroy(...)
 #endif /* _WIN32 */
 
-bool asc_socket_would_block(void);
-
 asc_socket_t *asc_socket_open_tcp4(void *arg) __wur;
 asc_socket_t *asc_socket_open_udp4(void *arg) __wur;
 asc_socket_t *asc_socket_open_sctp4(void *arg) __wur;
@@ -65,7 +63,7 @@ ssize_t asc_socket_recvfrom(asc_socket_t *sock, void *buffer, size_t size) __wur
 ssize_t asc_socket_send(asc_socket_t *sock, const void *buffer, size_t size) __wur;
 ssize_t asc_socket_sendto(asc_socket_t *sock, const void *buffer, size_t size) __wur;
 
-int asc_socket_fd(asc_socket_t *sock) __wur;
+int asc_socket_fd(asc_socket_t *sock) __func_pure __wur;
 const char *asc_socket_addr(asc_socket_t *sock) __wur;
 int asc_socket_port(asc_socket_t *sock) __wur;
 
@@ -84,5 +82,15 @@ void asc_socket_set_multicast_loop(asc_socket_t *sock, int is_on);
 void asc_socket_multicast_join(asc_socket_t *sock, const char *addr, const char *localaddr);
 void asc_socket_multicast_leave(asc_socket_t *sock);
 void asc_socket_multicast_renew(asc_socket_t *sock);
+
+static inline __wur
+bool asc_socket_would_block(void)
+{
+#ifdef _WIN32
+    return (WSAGetLastError() == WSAEWOULDBLOCK);
+#else
+    return (errno == EAGAIN || errno == EWOULDBLOCK);
+#endif
+}
 
 #endif /* _ASC_SOCKET_H_ */
