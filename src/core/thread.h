@@ -1,8 +1,9 @@
 /*
- * Astra Core
+ * Astra Core (Threads)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,12 +42,10 @@ void asc_thread_core_destroy(void);
 void asc_thread_core_loop(void);
 
 asc_thread_t *asc_thread_init(void *arg) __wur;
-void asc_thread_start(asc_thread_t *thread
-                      , thread_callback_t loop
-                      , thread_callback_t on_read
-                      , asc_thread_buffer_t *buffer
+void asc_thread_start(asc_thread_t *thr, thread_callback_t proc
+                      , thread_callback_t on_read, asc_thread_buffer_t *buffer
                       , thread_callback_t on_close);
-void asc_thread_destroy(asc_thread_t *thread);
+void asc_thread_destroy(asc_thread_t *thr);
 
 asc_thread_buffer_t *asc_thread_buffer_init(size_t buffer_size) __wur;
 void asc_thread_buffer_destroy(asc_thread_buffer_t *buffer);

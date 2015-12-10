@@ -40,7 +40,7 @@
 #   endif /* __GNUC__ */
 #   define __USE_MINGW_ANSI_STDIO 1
 
-    /* maximum set size for select() */
+    /* increase maximum set size for select() */
 #   define FD_SETSIZE 1024
 
     /* target XP by default */

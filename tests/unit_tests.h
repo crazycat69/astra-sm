@@ -30,6 +30,7 @@ extern enum fork_status can_fork;
 Suite *core_clock(void);
 Suite *core_list(void);
 Suite *core_mainloop(void);
+Suite *core_thread(void);
 Suite *core_timer(void);
 
 /* unit test list */
@@ -40,6 +41,7 @@ static suite_func_t suite_list[] = {
     core_clock,
     core_list,
     core_mainloop,
+    core_thread,
     core_timer,
 
     NULL,

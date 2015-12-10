@@ -1,8 +1,9 @@
 /*
- * Astra Core
+ * Astra Core (Threads)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
+ *                    2015, Artem Kharitonov <artem@sysert.ru>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,7 +24,7 @@
 #include <core/mainloop.h>
 #include <core/list.h>
 
-#define MSG(_msg) "[core/thread] " _msg
+#define MSG(_msg) "[core/thread %p] " _msg, (void *)thr
 
 struct asc_thread_buffer_t
 {
@@ -38,84 +39,98 @@ struct asc_thread_buffer_t
 
 struct asc_thread_t
 {
-    thread_callback_t loop;
-    thread_callback_t on_read;
+    thread_callback_t proc;
     thread_callback_t on_close;
-
-    asc_thread_buffer_t *buffer; // on_read
     void *arg;
 
-    bool is_started;
-    bool is_closed;
+    asc_thread_buffer_t *buffer;
+    thread_callback_t on_read;
 
 #ifdef _WIN32
     HANDLE thread;
 #else
-    pthread_t thread;
+    pthread_t *thread;
 #endif
+
+    bool started;
+    bool exited;
 };
 
 typedef struct
 {
-    asc_list_t *thread_list;
+    asc_list_t *list;
     bool is_changed;
-} thread_observer_t;
+} asc_thread_mgr_t;
 
-static thread_observer_t thread_observer;
+static asc_thread_mgr_t *thread_mgr = NULL;
 
 void asc_thread_core_init(void)
 {
-    memset(&thread_observer, 0, sizeof(thread_observer));
-    thread_observer.thread_list = asc_list_init();
+    thread_mgr = (asc_thread_mgr_t *)calloc(1, sizeof(*thread_mgr));
+    asc_assert(thread_mgr != NULL, "[core/thread] calloc() failed");
+
+    thread_mgr->list = asc_list_init();
 }
 
 void asc_thread_core_destroy(void)
 {
-    if (!thread_observer.thread_list)
-        return;
+    asc_thread_t *thr, *prev = NULL;
 
-    asc_thread_t *prev_thread = NULL;
-    for(asc_list_first(thread_observer.thread_list)
-        ; !asc_list_eol(thread_observer.thread_list)
-        ; asc_list_first(thread_observer.thread_list))
+    asc_list_first(thread_mgr->list);
+    while (!asc_list_eol(thread_mgr->list))
     {
-        asc_thread_t *thread = (asc_thread_t *)asc_list_data(thread_observer.thread_list);
-        asc_assert(thread != prev_thread
-                   , MSG("loop on asc_thread_core_destroy() thread:%p")
-                   , (void *)thread);
-        if(thread->on_close)
-            thread->on_close(thread->arg);
-        prev_thread = thread;
+        thr = (asc_thread_t *)asc_list_data(thread_mgr->list);
+        asc_assert(thr != prev, MSG("on_close didn't destroy thread"));
+
+        if (thr->on_close != NULL)
+        {
+            /* NOTE: on_close has to call asc_thread_destroy() */
+            thr->on_close(thr->arg);
+        }
+        else
+        {
+            if (thr->started && !thr->exited)
+                asc_log_debug(MSG("on_close not set, joining thread anyway"));
+
+            asc_thread_destroy(thr);
+        }
+
+        prev = thr;
+        asc_list_first(thread_mgr->list);
     }
 
-    ASC_FREE(thread_observer.thread_list, asc_list_destroy);
+    ASC_FREE(thread_mgr->list, asc_list_destroy);
+    ASC_FREE(thread_mgr, free);
 }
 
 void asc_thread_core_loop(void)
 {
-    thread_observer.is_changed = false;
-    asc_list_for(thread_observer.thread_list)
+    thread_mgr->is_changed = false;
+    asc_list_for(thread_mgr->list)
     {
-        asc_thread_t *thread = (asc_thread_t *)asc_list_data(thread_observer.thread_list);
-        if(!thread->is_started)
+        asc_thread_t *const thr =
+            (asc_thread_t *)asc_list_data(thread_mgr->list);
+
+        if (!thr->started)
             continue;
 
-        if(thread->on_read)
-        {
-            if(thread->buffer->count > 0)
-            {
-                asc_main_loop_busy();
-                thread->on_read(thread->arg);
-                if(thread_observer.is_changed)
-                    break;
-            }
-        }
-
-        if(thread->on_close && thread->is_closed)
+        if (thr->on_read != NULL && thr->buffer->count > 0)
         {
             asc_main_loop_busy();
-            thread->on_close(thread->arg);
-            if(thread_observer.is_changed)
+            thr->on_read(thr->arg);
+            if (thread_mgr->is_changed)
+                break;
+        }
+
+        if (thr->exited)
+        {
+            asc_main_loop_busy();
+            if (thr->on_close != NULL)
+                thr->on_close(thr->arg);
+            else
+                asc_thread_destroy(thr);
+
+            if (thread_mgr->is_changed)
                 break;
         }
     }
@@ -123,101 +138,99 @@ void asc_thread_core_loop(void)
 
 asc_thread_t *asc_thread_init(void *arg)
 {
-    asc_thread_t *thread = (asc_thread_t *)calloc(1, sizeof(asc_thread_t));
+    asc_thread_t *const thr = (asc_thread_t *)calloc(1, sizeof(*thr));
+    asc_assert(thr != NULL, "[core/thread] calloc failed()");
 
-    thread->arg = arg;
+    thr->arg = arg;
 
-    asc_list_insert_tail(thread_observer.thread_list, thread);
-    thread_observer.is_changed = true;
+    asc_list_insert_tail(thread_mgr->list, thr);
+    thread_mgr->is_changed = true;
 
-    return thread;
+    return thr;
 }
 
 #ifdef _WIN32
-static DWORD WINAPI asc_thread_loop(void *arg)
+static DWORD WINAPI thread_proc(void *arg)
 #else
-static void *asc_thread_loop(void *arg)
+static void *thread_proc(void *arg)
 #endif
 {
-    asc_thread_t *thread = (asc_thread_t *)arg;
+    asc_thread_t *const thr = (asc_thread_t *)arg;
 
-    thread->is_started = true;
-    thread->loop(thread->arg);
-    thread->is_closed = true;
+    thr->started = true;
+    thr->proc(thr->arg);
+    thr->exited = true;
 
     return 0;
 }
 
-void asc_thread_start(  asc_thread_t *thread
-                      , thread_callback_t loop
+void asc_thread_start(asc_thread_t *thr, thread_callback_t proc
                       , thread_callback_t on_read, asc_thread_buffer_t *buffer
                       , thread_callback_t on_close)
 {
+    thr->proc = proc;
+    thr->on_close = on_close;
 
-    thread->loop = loop;
-    asc_assert(thread->loop != NULL, MSG("loop required"));
-
-    thread->on_read = on_read;
-    if(on_read)
+    if (on_read != NULL && buffer != NULL)
     {
-        thread->buffer = buffer;
-        asc_assert(thread->buffer != NULL, MSG("buffer required"));
+        thr->on_read = on_read;
+        thr->buffer = buffer;
     }
 
-    thread->on_close = on_close;
-    asc_assert(thread->on_close != NULL, MSG("on_close required"));
-
 #ifdef _WIN32
-    DWORD tid;
-    thread->thread = CreateThread(NULL, 0, &asc_thread_loop, thread, 0, &tid);
-    if(thread->thread != NULL)
-        return;
-#else
-    pthread_attr_t attr;
-    pthread_attr_init(&attr);
-    pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
-    const int ret = pthread_create(&thread->thread, &attr, asc_thread_loop, thread);
-    pthread_attr_destroy(&attr);
-    if(ret == 0)
-        return;
-#endif
+    thr->thread = CreateThread(NULL, 0, thread_proc, thr, 0, NULL);
+    asc_assert(thr->thread != NULL, MSG("failed to create thread: %s")
+               , asc_error_msg());
+#else /* _WIN32 */
+    thr->thread = (pthread_t *)calloc(1, sizeof(*thr->thread));
+    asc_assert(thr->thread != NULL, MSG("calloc() failed"));
 
-    asc_assert(0, MSG("failed to start thread"));
+    const int ret = pthread_create(thr->thread, NULL, thread_proc, thr);
+    asc_assert(ret == 0, MSG("failed to create thread: %s")
+               , strerror(ret));
+#endif /* !_WIN32 */
 }
 
-void asc_thread_destroy(asc_thread_t *thread)
+void asc_thread_destroy(asc_thread_t *thr)
 {
-    if(!thread)
-        return;
-
-    thread->is_closed = true;
-
+    if (thr->thread != NULL)
+    {
 #ifdef _WIN32
-    WaitForSingleObject(thread->thread, INFINITE);
-    CloseHandle(thread->thread);
-#else
-    pthread_join(thread->thread, NULL);
-#endif
+        const DWORD ret = WaitForSingleObject(thr->thread, INFINITE);
+        if (ret != WAIT_OBJECT_0)
+            asc_log_error(MSG("failed to join thread: %s"), asc_error_msg());
 
-    thread_observer.is_changed = true;
-    asc_list_remove_item(thread_observer.thread_list, thread);
+        CloseHandle(thr->thread);
+#else /* _WIN32 */
+        const int ret = pthread_join(*thr->thread, NULL);
+        if (ret != 0)
+            asc_log_error(MSG("failed to join thread: %s"), strerror(ret));
 
-    free(thread);
+        free(thr->thread);
+#endif /* !_WIN32 */
+    }
+
+    asc_list_remove_item(thread_mgr->list, thr);
+    thread_mgr->is_changed = true;
+
+    free(thr);
 }
 
 asc_thread_buffer_t *asc_thread_buffer_init(size_t size)
 {
-    asc_thread_buffer_t *buffer = (asc_thread_buffer_t *)calloc(1, sizeof(asc_thread_buffer_t));
+    asc_thread_buffer_t *const buffer =
+        (asc_thread_buffer_t *)calloc(1, sizeof(*buffer));
+    asc_assert(buffer != NULL, "[core/thread] calloc() failed");
+
     buffer->size = size;
     buffer->buffer = (uint8_t *)malloc(size);
     asc_mutex_init(&buffer->mutex);
+
     return buffer;
 }
 
 void asc_thread_buffer_destroy(asc_thread_buffer_t *buffer)
 {
-    if(!buffer)
-        return;
     free(buffer->buffer);
     asc_mutex_destroy(&buffer->mutex);
     free(buffer);
@@ -232,25 +245,26 @@ void asc_thread_buffer_flush(asc_thread_buffer_t *buffer)
     asc_mutex_unlock(&buffer->mutex);
 }
 
-ssize_t asc_thread_buffer_read(asc_thread_buffer_t *buffer, void *data, size_t size)
+ssize_t asc_thread_buffer_read(asc_thread_buffer_t *buffer, void *data
+                               , size_t size)
 {
     asc_mutex_lock(&buffer->mutex);
-    if(size > buffer->count)
+    if (size > buffer->count)
         size = buffer->count;
 
-    if(!size)
+    if (!size)
     {
         asc_mutex_unlock(&buffer->mutex);
         return 0;
     }
 
     const size_t next_read = buffer->read + size;
-    if(next_read < buffer->size)
+    if (next_read < buffer->size)
     {
         memcpy(data, &buffer->buffer[buffer->read], size);
         buffer->read += size;
     }
-    else if(next_read > buffer->size)
+    else if (next_read > buffer->size)
     {
         const size_t tail = buffer->size - buffer->read;
         memcpy(data, &buffer->buffer[buffer->read], tail);
@@ -269,19 +283,20 @@ ssize_t asc_thread_buffer_read(asc_thread_buffer_t *buffer, void *data, size_t s
     return size;
 }
 
-ssize_t asc_thread_buffer_write(asc_thread_buffer_t *buffer, const void *data, size_t size)
+ssize_t asc_thread_buffer_write(asc_thread_buffer_t *buffer, const void *data
+                                , size_t size)
 {
-    if(!size)
+    if (!size)
         return 0;
 
     asc_mutex_lock(&buffer->mutex);
-    if(buffer->count + size > buffer->size)
+    if (buffer->count + size > buffer->size)
     {
         asc_mutex_unlock(&buffer->mutex);
         return -1; // buffer overflow
     }
 
-    if(buffer->write + size >= buffer->size)
+    if (buffer->write + size >= buffer->size)
     {
         const size_t tail = buffer->size - buffer->write;
         memcpy(&buffer->buffer[buffer->write], data, tail);
