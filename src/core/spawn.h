@@ -24,6 +24,14 @@
 #   error "Please include <astra.h> first"
 #endif /* !_ASTRA_H_ */
 
+enum
+{
+    PIPE_RD = 0,
+    PIPE_WR,
+    PIPE_BOTH,
+    PIPE_NONE,
+};
+
 #ifdef _WIN32
 typedef struct
 {
@@ -76,7 +84,7 @@ int asc_process_spawn(const char *command, asc_process_t *proc
                       , int *parent_sin, int *parent_sout, int *parent_serr);
 int asc_process_kill(const asc_process_t *proc, bool forced);
 
-int asc_pipe_open(int fds[2], int *parent_fd, int parent_side);
+int asc_pipe_open(int fds[2], int *nb_fd, unsigned int nb_side);
 int asc_pipe_close(int fd);
 
 #endif /* _ASC_SPAWN_H_ */

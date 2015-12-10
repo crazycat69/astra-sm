@@ -20,9 +20,6 @@
 #include <astra.h>
 #include <core/spawn.h>
 
-#define PIPE_RD 0
-#define PIPE_WR 1
-
 /*
  * spawning routines
  */
@@ -511,28 +508,32 @@ int asc_pipe_close(int fd)
  */
 
 /* create a pipe with an optional non-blocking side and return its fd */
-int asc_pipe_open(int fds[2], int *parent_fd, int parent_side)
+int asc_pipe_open(int fds[2], int *nb_fd, unsigned int nb_side)
 {
     if (socketpipe(fds) != 0)
         return -1;
 
-    if (parent_fd != NULL)
+    for (unsigned int i = 0; i < 2; i++)
     {
+        if (nb_side == i || nb_side == PIPE_BOTH)
+        {
 #ifdef _WIN32
-        unsigned long nonblock = 1;
-        const int ret = ioctlsocket(fds[parent_side], FIONBIO, &nonblock);
+            unsigned long nonblock = 1;
+            const int ret = ioctlsocket(fds[i], FIONBIO, &nonblock);
 #else /* _WIN32 */
-        const int ret = fcntl(fds[parent_side], F_SETFL, O_NONBLOCK);
+            const int ret = fcntl(fds[i], F_SETFL, O_NONBLOCK);
 #endif /* !_WIN32 */
 
-        if (ret != 0)
-        {
-            /* couldn't set non-blocking mode; this shouldn't happen */
-            closeall(fds, 2);
-            return -1;
-        }
+            if (ret != 0)
+            {
+                /* couldn't set non-blocking mode; this shouldn't happen */
+                closeall(fds, 2);
+                return -1;
+            }
 
-        *parent_fd = fds[parent_side];
+            if (nb_fd != NULL)
+                *nb_fd = fds[i];
+        }
     }
 
     return 0;
