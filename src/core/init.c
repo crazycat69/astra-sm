@@ -56,30 +56,45 @@ void asc_srand(void)
 
 void astra_core_init(void)
 {
+    /* rest of the init routines may need logging functions */
     asc_log_core_init();
 
-    /* call order doesn't really matter from here */
-    lua = lua_api_init();
+    /* ...and sockets */
+    asc_socket_core_init();
 
+    /* call order doesn't really matter for these */
     asc_thread_core_init();
     asc_timer_core_init();
-    asc_socket_core_init();
     asc_event_core_init();
-
     asc_main_loop_init();
+
+    /* Lua modules may need features init'd above */
+    lua = lua_api_init();
 }
 
 void astra_core_destroy(void)
 {
-    /* this frees streaming modules */
+    /*
+     * Clean up our Lua state along with all the module instances.
+     *
+     * Unless there's a buggy module in there somewhere, this should
+     * take care of any and all background threads, event handles,
+     * timers, etc.
+     */
     ASC_FREE(lua, lua_api_destroy);
 
-    asc_event_core_destroy();
-    asc_socket_core_destroy();
-    asc_timer_core_destroy();
+    /* join any stray threads and close the wake up pipe */
     asc_thread_core_destroy();
 
+    /* cleaning up rogue events might invoke their on_error callbacks */
+    asc_event_core_destroy();
+
+    /* no side effects for these two */
     asc_main_loop_destroy();
+    asc_timer_core_destroy();
+
+    /* nothing left to use sockets or logs */
+    asc_socket_core_destroy();
     asc_log_core_destroy();
 }
 
