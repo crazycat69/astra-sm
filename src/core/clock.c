@@ -38,14 +38,14 @@ uint64_t asc_utime(void)
     struct timespec ts;
 
     if (clock_gettime(CLOCK_MONOTONIC, &ts) == EINVAL)
-        (void)clock_gettime(CLOCK_REALTIME, &ts);
+        clock_gettime(CLOCK_REALTIME, &ts);
 
-    return ((uint64_t)ts.tv_sec * 1000000) + (uint64_t)(ts.tv_nsec / 1000);
+    return (ts.tv_sec * 1000000ULL) + (ts.tv_nsec / 1000ULL);
 #else
     struct timeval tv;
 
     gettimeofday(&tv, NULL);
-    return ((uint64_t)tv.tv_sec * 1000000) + (uint64_t)tv.tv_usec;
+    return (tv.tv_sec * 1000000ULL) + tv.tv_usec;
 #endif
 }
 
