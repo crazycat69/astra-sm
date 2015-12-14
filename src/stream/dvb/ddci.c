@@ -129,10 +129,12 @@ static void sec_open(module_data_t *mod)
         astra_abort();
     }
 
-    mod->sec_thread = asc_thread_init(mod);
+    mod->sec_thread = asc_thread_init();
     mod->sec_thread_output = asc_thread_buffer_init(BUFFER_SIZE);
-    asc_thread_start(mod->sec_thread,
-        thread_loop, on_thread_read, mod->sec_thread_output, on_thread_close);
+
+    asc_thread_start(mod->sec_thread, mod, thread_loop
+                     , on_thread_read, mod->sec_thread_output
+                     , on_thread_close, true);
 }
 
 static void sec_close(module_data_t *mod)
@@ -294,8 +296,9 @@ static void module_init(lua_State *L, module_data_t *mod)
         astra_abort();
     }
 
-    mod->ca_thread = asc_thread_init(mod);
-    asc_thread_start(mod->ca_thread, ca_thread_loop, NULL, NULL, on_ca_thread_close);
+    mod->ca_thread = asc_thread_init();
+    asc_thread_start(mod->ca_thread, mod, ca_thread_loop
+                     , NULL, NULL, on_ca_thread_close, false);
 
     sec_open(mod);
 

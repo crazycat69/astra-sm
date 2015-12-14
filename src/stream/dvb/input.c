@@ -161,19 +161,15 @@ static void dvr_on_retry(void *arg)
         }
     }
 
-    mod->thread = asc_thread_init(mod);
+    mod->thread = asc_thread_init();
 
     thread_callback_t loop;
     if(mod->fe->type != DVB_TYPE_UNKNOWN)
-    {
         loop = thread_loop;
-    }
     else
-    {
         loop = thread_loop_slave;
-    }
 
-    asc_thread_start(mod->thread, loop, NULL, NULL, on_thread_close);
+    asc_thread_start(mod->thread, mod, loop, NULL, NULL, on_thread_close, false);
     while(!mod->is_thread_started)
         asc_usleep(500);
 }

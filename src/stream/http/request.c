@@ -887,12 +887,11 @@ static void on_read(void *arg)
                 asc_socket_set_on_ready(mod->sock, NULL);
                 asc_socket_set_on_close(mod->sock, NULL);
 
-                mod->thread = asc_thread_init(mod);
+                mod->thread = asc_thread_init();
                 mod->thread_output = asc_thread_buffer_init(mod->sync.buffer_size);
-                asc_thread_start(  mod->thread
-                                 , thread_loop
+                asc_thread_start(mod->thread, mod, thread_loop
                                  , on_thread_read, mod->thread_output
-                                 , on_thread_close);
+                                 , on_thread_close, true);
             }
 
             mod->buffer_skip = 0;
