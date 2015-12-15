@@ -20,7 +20,6 @@
 
 #include <astra.h>
 #include <core/event.h>
-#include <core/mainloop.h>
 #include <core/list.h>
 
 #ifndef EV_LIST_SIZE

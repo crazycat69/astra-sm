@@ -23,6 +23,7 @@
 #include <core/thread.h>
 #include <core/event.h>
 #include <core/list.h>
+#include <core/mainloop.h>
 #include <core/socket.h>
 #include <core/spawn.h>
 
@@ -209,6 +210,7 @@ void asc_thread_core_loop(void)
 
         if (thr->on_read != NULL && thr->buffer->count > 0)
         {
+            asc_main_loop_busy();
             thr->on_read(thr->arg);
             if (thread_mgr->is_changed)
                 break;
@@ -433,8 +435,6 @@ ssize_t asc_thread_buffer_write(asc_thread_buffer_t *buffer, const void *data
     }
     buffer->count += size;
     asc_mutex_unlock(&buffer->mutex);
-
-    asc_thread_wake();
 
     return size;
 }

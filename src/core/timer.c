@@ -20,7 +20,6 @@
 
 #include <astra.h>
 #include <core/timer.h>
-#include <core/mainloop.h>
 #include <core/list.h>
 
 #define TIMER_DELAY_MIN 1000 /* 1ms */
