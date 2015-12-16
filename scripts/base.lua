@@ -575,6 +575,7 @@ init_input_module.http = function(conf)
             path = conf.path,
             stream = true,
             sync = conf.sync,
+            sync_opts = conf.sync_opts,
             timeout = conf.timeout,
             sctp = conf.sctp,
             headers = {
