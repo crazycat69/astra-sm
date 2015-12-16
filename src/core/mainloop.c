@@ -60,10 +60,11 @@ bool asc_main_loop_run(void)
 {
     uint64_t current_time = asc_utime();
     uint64_t gc_check_timeout = current_time;
+    unsigned int ev_sleep = 0;
 
     while (true)
     {
-        asc_event_core_loop(0);
+        asc_event_core_loop(ev_sleep);
         asc_timer_core_loop();
         asc_thread_core_loop();
 
@@ -87,15 +88,15 @@ bool asc_main_loop_run(void)
 
                 lua_getglobal(lua, "on_sighup");
                 if(lua_isfunction(lua, -1))
-                {
                     lua_call(lua, 0, 0);
-                    asc_main_loop_busy();
-                }
                 else
                     lua_pop(lua, 1);
             }
             else if (flags & MAIN_LOOP_NO_SLEEP)
+            {
+                ev_sleep = 0;
                 continue;
+            }
         }
 
         current_time = asc_utime();
@@ -105,7 +106,7 @@ bool asc_main_loop_run(void)
             lua_gc(lua, LUA_GCCOLLECT, 0);
         }
 
-        asc_usleep(1000);
+        ev_sleep = 1;
     }
 }
 
