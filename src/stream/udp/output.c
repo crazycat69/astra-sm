@@ -211,7 +211,9 @@ static void module_init(lua_State *L, module_data_t *mod)
         if (optstr != NULL && !mpegts_sync_parse_opts(mod->sync, optstr))
             luaL_error(L, MSG("invalid value for option 'sync_opts'"));
 
-        mod->sync_loop = asc_timer_init(1, mpegts_sync_loop, mod->sync);
+        mod->sync_loop = asc_timer_init(SYNC_INTERVAL_MSEC, mpegts_sync_loop
+                                        , mod->sync);
+
         on_ts = on_sync_ts;
     }
 

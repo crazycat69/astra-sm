@@ -372,7 +372,9 @@ void module_init(lua_State *L, module_data_t *mod)
         mod->sync_ration_size = mpegts_sync_get_max_size(mod->sync) / 2;
         mod->sync_feed = mod->sync_ration_size;
 
-        mod->sync_loop = asc_timer_init(1, mpegts_sync_loop, mod->sync);
+        mod->sync_loop = asc_timer_init(SYNC_INTERVAL_MSEC, mpegts_sync_loop
+                                        , mod->sync);
+
         mod->config.sout.on_flush = on_child_ts_sync;
     }
 

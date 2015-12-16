@@ -25,6 +25,9 @@
 #   error "Please include <astra.h> first"
 #endif /* !_ASTRA_H_ */
 
+/* default timer interval */
+#define SYNC_INTERVAL_MSEC 1 /* 1ms */
+
 typedef struct mpegts_sync_t mpegts_sync_t;
 typedef void (*sync_callback_t)(void *);
 
