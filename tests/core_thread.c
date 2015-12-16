@@ -71,12 +71,13 @@ START_TEST(set_value)
     thread_test_t tt;
     memset(&tt, 0, sizeof(tt));
 
-    asc_thread_t *const thr = asc_thread_init(&tt);
+    asc_thread_t *const thr = asc_thread_init();
     ck_assert(thr != NULL);
 
     tt.thread = thr;
 
-    asc_thread_start(thr, set_value_proc, NULL, NULL, set_value_close);
+    asc_thread_start(thr, &tt, set_value_proc, NULL, NULL, set_value_close
+                     , false);
     ck_assert(asc_main_loop_run() == false);
     ck_assert(tt.value == 0xdeadbeef);
 }
@@ -125,7 +126,7 @@ START_TEST(producers)
     producer_running = 0;
     for (size_t i = 0; i < ASC_ARRAY_SIZE(tt); i++)
     {
-        tt[i].thread = asc_thread_init(&tt[i]);
+        tt[i].thread = asc_thread_init();
         ck_assert(tt[i].thread != NULL);
 
         tt[i].list = list;
@@ -133,7 +134,8 @@ START_TEST(producers)
         tt[i].id = i;
         tt[i].value = 0;
 
-        asc_thread_start(tt[i].thread, producer_proc, NULL, NULL, NULL);
+        asc_thread_start(tt[i].thread, &tt[i], producer_proc, NULL, NULL, NULL
+                         , false);
         producer_running++;
     }
 
@@ -163,7 +165,7 @@ END_TEST
 /* thread that never gets started */
 START_TEST(no_start)
 {
-    asc_thread_t *const thr = asc_thread_init(NULL);
+    asc_thread_t *const thr = asc_thread_init();
     __uarg(thr);
 }
 END_TEST
@@ -183,8 +185,52 @@ static void no_destroy_close(void *arg)
 
 START_TEST(no_destroy)
 {
-    asc_thread_t *const thr = asc_thread_init(NULL);
-    asc_thread_start(thr, no_destroy_proc, NULL, NULL, no_destroy_close);
+    asc_thread_t *const thr = asc_thread_init();
+    asc_thread_start(thr, NULL, no_destroy_proc, NULL, NULL, no_destroy_close
+                     , false);
+
+    ck_assert(asc_main_loop_run() == false);
+}
+END_TEST
+
+/* main thread wake up */
+static uint64_t exit_time = 0;
+
+static void wake_up_proc(void *arg)
+{
+    __uarg(arg);
+
+    /*
+     * TODO: test asc_main_loop_queue() + asc_thread_wake().
+     *       the former hasn't been implemented yet.
+     */
+
+    asc_usleep(50 * 1000); /* 50ms */
+
+    /*
+     * NOTE: on_close must also wake up the event loop, but only
+     *       if the thread was started with can_wake set to true.
+     */
+    exit_time = asc_utime();
+
+    /* TODO: queue callback that calls astra_shutdown() */
+}
+
+static void wake_up_close(void *arg)
+{
+    asc_thread_t *const thr = (asc_thread_t *)arg;
+
+    const uint64_t now = asc_utime();
+    ck_assert_msg(now - exit_time < (5 * 1000), "didn't wake up within 5ms");
+
+    astra_shutdown(); /* TODO: remove this */
+    asc_thread_destroy(thr);
+}
+
+START_TEST(wake_up)
+{
+    asc_thread_t *const thr = asc_thread_init();
+    asc_thread_start(thr, thr, wake_up_proc, NULL, NULL, wake_up_close, true);
 
     ck_assert(asc_main_loop_run() == false);
 }
@@ -200,6 +246,7 @@ Suite *core_thread(void)
     tcase_add_test(tc, set_value);
     tcase_add_test(tc, producers);
     tcase_add_test(tc, no_start);
+    tcase_add_test(tc, wake_up);
 
     if (can_fork != CK_NOFORK)
     {
