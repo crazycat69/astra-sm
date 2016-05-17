@@ -75,17 +75,12 @@ static void on_thread_close(void *arg)
 
     if(mod->sec_thread)
     {
-        asc_thread_destroy(mod->sec_thread);
-        mod->sec_thread = NULL;
-
+        ASC_FREE(mod->sec_thread, asc_thread_join);
         asc_wake_close();
     }
 
     if(mod->sec_thread_output)
-    {
-        asc_thread_buffer_destroy(mod->sec_thread_output);
-        mod->sec_thread_output = NULL;
-    }
+        ASC_FREE(mod->sec_thread_output, asc_thread_buffer_destroy);
 }
 
 static void on_thread_read(void *arg)
@@ -166,12 +161,8 @@ static void on_ca_thread_close(void *arg)
     module_data_t *mod = (module_data_t *)arg;
 
     mod->is_ca_thread_started = false;
-
     if(mod->ca_thread)
-    {
-        asc_thread_destroy(mod->ca_thread);
-        mod->ca_thread = NULL;
-    }
+        ASC_FREE(mod->ca_thread, asc_thread_join);
 }
 
 static void ca_thread_loop(void *arg)

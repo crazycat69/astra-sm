@@ -203,11 +203,11 @@ void asc_thread_core_destroy(void)
     while (!asc_list_eol(thread_mgr->list))
     {
         thr = (asc_thread_t *)asc_list_data(thread_mgr->list);
-        asc_assert(thr != prev, MSG("on_close didn't destroy thread"));
+        asc_assert(thr != prev, MSG("on_close didn't join thread"));
 
         if (thr->on_close != NULL)
         {
-            /* NOTE: on_close has to call asc_thread_destroy() */
+            /* NOTE: on_close has to call asc_thread_join() */
             thr->on_close(thr->arg);
         }
         else
@@ -215,7 +215,7 @@ void asc_thread_core_destroy(void)
             if (thr->started && !thr->exited)
                 asc_log_debug(MSG("on_close not set, joining thread anyway"));
 
-            asc_thread_destroy(thr);
+            asc_thread_join(thr);
         }
 
         prev = thr;
@@ -250,7 +250,7 @@ void asc_thread_core_loop(void)
             if (thr->on_close != NULL)
                 thr->on_close(thr->arg);
             else
-                asc_thread_destroy(thr);
+                asc_thread_join(thr);
 
             if (thread_mgr->is_changed)
                 break;
@@ -316,7 +316,7 @@ void asc_thread_start(asc_thread_t *thr, void *arg, thread_callback_t proc
 #endif /* !_WIN32 */
 }
 
-void asc_thread_destroy(asc_thread_t *thr)
+void asc_thread_join(asc_thread_t *thr)
 {
     if (thr->thread != NULL)
     {

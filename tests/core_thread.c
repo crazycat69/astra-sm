@@ -63,7 +63,7 @@ static void set_value_close(void *arg)
     thread_test_t *const tt = (thread_test_t *)arg;
 
     astra_shutdown();
-    asc_thread_destroy(tt->thread);
+    asc_thread_join(tt->thread);
 }
 
 START_TEST(set_value)
@@ -221,7 +221,7 @@ static void wake_up_close(void *arg)
     ck_assert_msg(now - exit_time < (5 * 1000), "didn't wake up within 5ms");
 
     astra_shutdown(); /* TODO: remove this */
-    asc_thread_destroy(thr);
+    asc_thread_join(thr);
     asc_wake_close();
 }
 

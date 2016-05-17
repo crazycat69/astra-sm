@@ -827,7 +827,7 @@ static void on_thread_close(void *arg)
     module_data_t *mod = (module_data_t *)arg;
 
     mod->is_thread_started = false;
-    ASC_FREE(mod->thread, asc_thread_destroy);
+    ASC_FREE(mod->thread, asc_thread_join);
 }
 
 static void thread_loop(void *arg)

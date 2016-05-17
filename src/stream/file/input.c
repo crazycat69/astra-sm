@@ -320,16 +320,10 @@ static void on_thread_close(void *arg)
     }
 
     if(mod->thread)
-    {
-        asc_thread_destroy(mod->thread);
-        mod->thread = NULL;
-    }
+        ASC_FREE(mod->thread, asc_thread_join);
 
     if(mod->thread_output)
-    {
-        asc_thread_buffer_destroy(mod->thread_output);
-        mod->thread_output = NULL;
-    }
+        ASC_FREE(mod->thread_output, asc_thread_buffer_destroy);
 
     if(mod->is_eof && mod->idx_callback)
     {
