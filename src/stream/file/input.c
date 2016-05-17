@@ -436,7 +436,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 
     asc_thread_start(mod->thread, mod, thread_loop
                      , on_thread_read, mod->thread_output
-                     , on_thread_close, true);
+                     , on_thread_close);
 }
 
 static void module_destroy(module_data_t *mod)

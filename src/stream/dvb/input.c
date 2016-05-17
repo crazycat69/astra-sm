@@ -169,7 +169,7 @@ static void dvr_on_retry(void *arg)
     else
         loop = thread_loop_slave;
 
-    asc_thread_start(mod->thread, mod, loop, NULL, NULL, on_thread_close, false);
+    asc_thread_start(mod->thread, mod, loop, NULL, NULL, on_thread_close);
     while(!mod->is_thread_started)
         asc_usleep(500);
 }

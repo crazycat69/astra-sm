@@ -76,8 +76,7 @@ START_TEST(set_value)
 
     tt.thread = thr;
 
-    asc_thread_start(thr, &tt, set_value_proc, NULL, NULL, set_value_close
-                     , false);
+    asc_thread_start(thr, &tt, set_value_proc, NULL, NULL, set_value_close);
     ck_assert(asc_main_loop_run() == false);
     ck_assert(tt.value == 0xdeadbeef);
 }
@@ -134,8 +133,7 @@ START_TEST(producers)
         tt[i].id = i;
         tt[i].value = 0;
 
-        asc_thread_start(tt[i].thread, &tt[i], producer_proc, NULL, NULL, NULL
-                         , false);
+        asc_thread_start(tt[i].thread, &tt[i], producer_proc, NULL, NULL, NULL);
         producer_running++;
     }
 
@@ -186,8 +184,7 @@ static void no_destroy_close(void *arg)
 START_TEST(no_destroy)
 {
     asc_thread_t *const thr = asc_thread_init();
-    asc_thread_start(thr, NULL, no_destroy_proc, NULL, NULL, no_destroy_close
-                     , false);
+    asc_thread_start(thr, NULL, no_destroy_proc, NULL, NULL, no_destroy_close);
 
     ck_assert(asc_main_loop_run() == false);
 }
@@ -209,7 +206,7 @@ static void wake_up_proc(void *arg)
 
     /*
      * NOTE: on_close must also wake up the event loop, but only
-     *       if the thread was started with can_wake set to true.
+     *       if the pipe is open.
      */
     exit_time = asc_utime();
 
@@ -225,12 +222,15 @@ static void wake_up_close(void *arg)
 
     astra_shutdown(); /* TODO: remove this */
     asc_thread_destroy(thr);
+    asc_wake_close();
 }
 
 START_TEST(wake_up)
 {
     asc_thread_t *const thr = asc_thread_init();
-    asc_thread_start(thr, thr, wake_up_proc, NULL, NULL, wake_up_close, true);
+
+    asc_wake_open();
+    asc_thread_start(thr, thr, wake_up_proc, NULL, NULL, wake_up_close);
 
     ck_assert(asc_main_loop_run() == false);
 }

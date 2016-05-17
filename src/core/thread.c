@@ -58,7 +58,6 @@ struct asc_thread_t
 
     bool started;
     bool exited;
-    bool can_wake;
 };
 
 typedef struct
@@ -73,6 +72,9 @@ typedef struct
 
 static asc_thread_mgr_t *thread_mgr = NULL;
 
+/*
+ * main thread wake up
+ */
 static void on_wake_read(void *arg);
 
 static bool wake_open(void)
@@ -148,7 +150,31 @@ static void on_wake_read(void *arg)
        asc_log_error(MSGN("couldn't reopen pipe: %s"), asc_error_msg());
 }
 
-void asc_thread_wake(void)
+void asc_wake_open(void)
+{
+    if (thread_mgr->wake_cnt == 0)
+    {
+        asc_log_debug(MSGN("opening main loop wake up pipe"));
+        if (!wake_open())
+            asc_log_error(MSGN("couldn't open pipe: %s"), asc_error_msg());
+    }
+
+    ++thread_mgr->wake_cnt;
+}
+
+void asc_wake_close(void)
+{
+    asc_assert(thread_mgr->wake_cnt > 0, MSGN("wake up pipe already closed"));
+    --thread_mgr->wake_cnt;
+
+    if (thread_mgr->wake_cnt == 0)
+    {
+        asc_log_debug(MSGN("closing main loop wake up pipe"));
+        wake_close();
+    }
+}
+
+void asc_wake(void)
 {
     const int fd = thread_mgr->wake_fd[PIPE_WR];
     static const char byte = '\0';
@@ -157,6 +183,9 @@ void asc_thread_wake(void)
         asc_log_error(MSGN("wake up send(): %s"), asc_error_msg());
 }
 
+/*
+ * threads
+ */
 void asc_thread_core_init(void)
 {
     thread_mgr = (asc_thread_mgr_t *)calloc(1, sizeof(*thread_mgr));
@@ -252,15 +281,14 @@ static void *thread_proc(void *arg)
     thr->proc(thr->arg);
     thr->exited = true;
 
-    if (thr->can_wake)
-        asc_thread_wake();
+    asc_wake();
 
     return 0;
 }
 
 void asc_thread_start(asc_thread_t *thr, void *arg, thread_callback_t proc
                       , thread_callback_t on_read, asc_thread_buffer_t *buffer
-                      , thread_callback_t on_close, bool can_wake)
+                      , thread_callback_t on_close)
 {
     asc_assert(thr->thread == NULL, MSG("can't start thread twice"));
 
@@ -272,21 +300,6 @@ void asc_thread_start(asc_thread_t *thr, void *arg, thread_callback_t proc
     {
         thr->on_read = on_read;
         thr->buffer = buffer;
-    }
-
-    if (can_wake)
-    {
-        thr->can_wake = true;
-
-        /* open wake up pipe on demand */
-        if (thread_mgr->wake_cnt == 0)
-        {
-            asc_log_debug(MSG("opening main loop wake up pipe"));
-            if (!wake_open())
-                asc_log_error(MSG("couldn't open pipe: %s"), asc_error_msg());
-        }
-
-        ++thread_mgr->wake_cnt;
     }
 
 #ifdef _WIN32
@@ -322,24 +335,15 @@ void asc_thread_destroy(asc_thread_t *thr)
 #endif /* !_WIN32 */
     }
 
-    if (thr->can_wake)
-    {
-        /* close wake up pipe if it's no longer needed */
-        --thread_mgr->wake_cnt;
-
-        if (thread_mgr->wake_cnt == 0)
-        {
-            asc_log_debug(MSG("closing main loop wake up pipe"));
-            wake_close();
-        }
-    }
-
     asc_list_remove_item(thread_mgr->list, thr);
     thread_mgr->is_changed = true;
 
     free(thr);
 }
 
+/*
+ * thread buffer
+ */
 asc_thread_buffer_t *asc_thread_buffer_init(size_t size)
 {
     asc_thread_buffer_t *const buffer =

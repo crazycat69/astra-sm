@@ -77,6 +77,8 @@ static void on_thread_close(void *arg)
     {
         asc_thread_destroy(mod->sec_thread);
         mod->sec_thread = NULL;
+
+        asc_wake_close();
     }
 
     if(mod->sec_thread_output)
@@ -132,9 +134,10 @@ static void sec_open(module_data_t *mod)
     mod->sec_thread = asc_thread_init();
     mod->sec_thread_output = asc_thread_buffer_init(BUFFER_SIZE);
 
+    asc_wake_open();
     asc_thread_start(mod->sec_thread, mod, thread_loop
                      , on_thread_read, mod->sec_thread_output
-                     , on_thread_close, true);
+                     , on_thread_close);
 }
 
 static void sec_close(module_data_t *mod)
@@ -298,7 +301,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 
     mod->ca_thread = asc_thread_init();
     asc_thread_start(mod->ca_thread, mod, ca_thread_loop
-                     , NULL, NULL, on_ca_thread_close, false);
+                     , NULL, NULL, on_ca_thread_close);
 
     sec_open(mod);
 
