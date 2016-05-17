@@ -91,7 +91,6 @@ const stream_type_t *mpegts_stream_type(uint8_t type_id)
     return st;
 }
 
-__asc_inline
 mpegts_packet_type_t mpegts_priv_type(uint8_t desc_type)
 {
     switch (desc_type)
@@ -109,7 +108,6 @@ mpegts_packet_type_t mpegts_priv_type(uint8_t desc_type)
     }
 }
 
-__asc_inline
 const char *mpegts_type_name(mpegts_packet_type_t type)
 {
     switch(type)

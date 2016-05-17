@@ -91,14 +91,6 @@
 #   define ASC_PATH_SEPARATOR "\\"
 #endif /* _WIN32 */
 
-#if defined(__GNUC_GNU_INLINE__) \
-    || (defined(__GNUC__) && !defined(__GNUC_STDC_INLINE__))
-    /* workaround for older GCC versions */
-#   define __asc_inline inline
-#else
-#   define __asc_inline extern inline
-#endif
-
 /* function attributes */
 #ifndef __wur
 #   define __wur __attribute__((__warn_unused_result__))

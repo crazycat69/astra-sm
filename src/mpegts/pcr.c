@@ -21,7 +21,6 @@
 #include <astra.h>
 #include <mpegts/pcr.h>
 
-__asc_inline
 uint64_t mpegts_pcr_block_us(uint64_t *pcr_last, const uint64_t *pcr_current)
 {
     if(*pcr_current <= *pcr_last)

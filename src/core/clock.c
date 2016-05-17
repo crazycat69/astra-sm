@@ -22,7 +22,6 @@
 #include <astra.h>
 #include <core/clock.h>
 
-__asc_inline
 uint64_t asc_utime(void)
 {
 #ifdef _WIN32
@@ -49,7 +48,6 @@ uint64_t asc_utime(void)
 #endif
 }
 
-__asc_inline
 void asc_usleep(uint64_t usec)
 {
 #ifndef _WIN32
