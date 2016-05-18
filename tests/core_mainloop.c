@@ -211,6 +211,35 @@ START_TEST(callback_prune)
 }
 END_TEST
 
+/* callback procedure cancelling the next ones */
+#define BS_OWNER (void *)0xdeadbeef
+
+static void on_backstab(void *arg)
+{
+    unsigned int *const i = (unsigned *)arg;
+
+    if ((*i)++ == 0)
+        asc_job_prune(BS_OWNER);
+    else
+        astra_shutdown();
+}
+
+START_TEST(callback_cancel)
+{
+    unsigned int triggered = 0;
+
+    for (size_t i = 0; i < 10; i++)
+        asc_job_queue(BS_OWNER, on_backstab, &triggered);
+
+    asc_job_queue(NULL, on_backstab, &triggered);
+
+    const bool again = asc_main_loop_run();
+    ck_assert(again == false);
+
+    ck_assert(triggered == 2);
+}
+END_TEST
+
 Suite *core_mainloop(void)
 {
     Suite *const s = suite_create("mainloop");
@@ -225,6 +254,7 @@ Suite *core_mainloop(void)
     tcase_add_test(tc, iterations);
     tcase_add_test(tc, callback_simple);
     tcase_add_test(tc, callback_prune);
+    tcase_add_test(tc, callback_cancel);
 
     if (can_fork != CK_NOFORK)
     {

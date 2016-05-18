@@ -48,7 +48,6 @@ typedef struct
     unsigned int stop_cnt;
 
     loop_job_t jobs[JOB_QUEUE_SIZE];
-    loop_job_t jobs_tmp[JOB_QUEUE_SIZE];
     unsigned int job_cnt;
     asc_mutex_t job_mutex;
 } asc_main_loop_t;
@@ -97,7 +96,7 @@ void asc_job_prune(void *owner)
         if (job->owner == owner)
         {
             main_loop->job_cnt--;
-            memmove(job, job + 1, (main_loop->job_cnt - i) * sizeof(*job));
+            memmove(job, &job[1], (main_loop->job_cnt - i) * sizeof(*job));
         }
         else
         {
@@ -110,20 +109,23 @@ void asc_job_prune(void *owner)
 /* run all queued callbacks */
 static void run_jobs(void)
 {
-    loop_job_t *const jobs = main_loop->jobs_tmp;
-    unsigned int cnt = 0;
+    loop_job_t *const first = &main_loop->jobs[0];
+    loop_job_t job;
 
     asc_mutex_lock(&main_loop->job_mutex);
-    if (main_loop->job_cnt > 0)
+    while (main_loop->job_cnt > 0)
     {
-        cnt = main_loop->job_cnt;
-        main_loop->job_cnt = 0;
-        memcpy(jobs, main_loop->jobs, sizeof(jobs[0]) * cnt);
+        /* pull first job in queue */
+        main_loop->job_cnt--;
+        job = *first;
+        memmove(first, &first[1], main_loop->job_cnt * sizeof(*first));
+
+        /* run it with mutex unlocked */
+        asc_mutex_unlock(&main_loop->job_mutex);
+        job.proc(job.arg);
+        asc_mutex_lock(&main_loop->job_mutex);
     }
     asc_mutex_unlock(&main_loop->job_mutex);
-
-    for (unsigned int i = 0; i < cnt; i++)
-        jobs[i].proc(jobs[i].arg);
 }
 
 /*
