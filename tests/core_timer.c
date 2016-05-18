@@ -32,6 +32,7 @@ typedef struct
 } timer_test_t;
 
 static bool timed_out;
+static uint64_t time_stop;
 
 /*
  * test fixture
@@ -49,7 +50,10 @@ static void teardown(void)
 static void on_stop(void *arg)
 {
     __uarg(arg);
+
     timed_out = true;
+    time_stop = asc_utime();
+
     astra_shutdown();
 }
 
@@ -58,13 +62,14 @@ static uint64_t run_loop(unsigned ms)
     const uint64_t start = asc_utime();
 
     timed_out = false;
+    time_stop = 0;
     asc_timer_t *const stopper = asc_timer_one_shot(ms, on_stop, NULL);
     ck_assert(stopper != NULL);
 
     const bool again = asc_main_loop_run();
     ck_assert(again == false);
 
-    const uint64_t bench = (asc_utime() - start) / 1000;
+    const uint64_t bench = (time_stop - start) / 1000;
     fail_unless(bench <= (ms * 1.3));
 
     return bench;
@@ -125,6 +130,8 @@ END_TEST
 static void on_single_timer(void *arg)
 {
     unsigned *const count = (unsigned *)arg;
+
+    time_stop = asc_utime();
     if (++(*count) >= 10)
         astra_shutdown();
 }
