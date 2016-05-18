@@ -47,23 +47,16 @@ struct asc_thread_t
     thread_callback_t on_close;
     void *arg;
 
-    asc_thread_buffer_t *buffer;
-    thread_callback_t on_read;
-
 #ifdef _WIN32
     HANDLE thread;
 #else
     pthread_t *thread;
 #endif
-
-    bool started;
-    bool exited;
 };
 
 typedef struct
 {
     asc_list_t *list;
-    bool is_changed;
 
     int wake_fd[2];
     asc_event_t *wake_ev;
@@ -122,7 +115,6 @@ static void on_wake_read(void *arg)
 
     char buf[32];
     const int ret = recv(thread_mgr->wake_fd[PIPE_RD], buf, sizeof(buf), 0);
-
     switch (ret)
     {
         case -1:
@@ -228,7 +220,6 @@ asc_thread_t *asc_thread_init(void)
     asc_assert(thr != NULL, MSGN("calloc failed()"));
 
     asc_list_insert_tail(thread_mgr->list, thr);
-    thread_mgr->is_changed = true;
 
     return thr;
 }
@@ -251,17 +242,13 @@ static void *thread_proc(void *arg)
 {
     asc_thread_t *const thr = (asc_thread_t *)arg;
 
-    thr->started = true;
     thr->proc(thr->arg);
-    thr->exited = true;
-
     asc_job_queue(thr, on_thread_exit, thr);
 
     return 0;
 }
 
 void asc_thread_start(asc_thread_t *thr, void *arg, thread_callback_t proc
-                      , thread_callback_t on_read, asc_thread_buffer_t *buffer
                       , thread_callback_t on_close)
 {
     asc_assert(thr->thread == NULL, MSG("can't start thread twice"));
@@ -269,12 +256,6 @@ void asc_thread_start(asc_thread_t *thr, void *arg, thread_callback_t proc
     thr->arg = arg;
     thr->proc = proc;
     thr->on_close = on_close;
-
-    if (on_read != NULL && buffer != NULL)
-    {
-        thr->on_read = on_read;
-        thr->buffer = buffer;
-    }
 
 #ifdef _WIN32
     thr->thread = CreateThread(NULL, 0, thread_proc, thr, 0, NULL);
@@ -310,9 +291,8 @@ void asc_thread_join(asc_thread_t *thr)
     }
 
     asc_list_remove_item(thread_mgr->list, thr);
-    thread_mgr->is_changed = true;
-
     asc_job_prune(thr);
+
     free(thr);
 }
 

@@ -83,7 +83,7 @@ void astra_core_destroy(void)
      */
     ASC_FREE(lua, lua_api_destroy);
 
-    /* join any stray threads and close the wake up pipe */
+    /* join any stray threads */
     asc_thread_core_destroy();
 
     /* cleaning up rogue events might invoke their on_error callbacks */

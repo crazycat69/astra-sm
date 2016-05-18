@@ -30,6 +30,7 @@
  */
 
 #include <astra.h>
+#include <core/mainloop.h>
 #include <core/thread.h>
 #include <core/timer.h>
 #include <luaapi/stream.h>
@@ -187,6 +188,8 @@ static bool open_file(module_data_t *mod)
     return true;
 }
 
+static void on_thread_read(void *arg);
+
 static void thread_loop(void *arg)
 {
     module_data_t *mod = (module_data_t *)arg;
@@ -194,6 +197,7 @@ static void thread_loop(void *arg)
     // block sync
     uint64_t   pcr
              , system_time, system_time_check
+             , system_time_buffer = 0
              , block_time, block_time_total = 0;
     size_t block_size = 0;
 
@@ -287,6 +291,18 @@ static void thread_loop(void *arg)
                 reset = true;
                 break;
             }
+
+            /*
+             * NOTE: this is a temporary workaround to make file:// input
+             *       work without asc_thread_core_loop().
+             */
+            if (system_time > system_time_buffer + 5000)
+            {
+                system_time_buffer = system_time;
+                asc_job_queue(mod->thread_output, on_thread_read, mod);
+                asc_wake();
+            }
+
             system_time_check = system_time;
 
             if(block_time_total > system_time + 100)
@@ -320,10 +336,16 @@ static void on_thread_close(void *arg)
     }
 
     if(mod->thread)
+    {
         ASC_FREE(mod->thread, asc_thread_join);
+        asc_wake_close();
+    }
 
     if(mod->thread_output)
+    {
         ASC_FREE(mod->thread_output, asc_thread_buffer_destroy);
+        asc_job_prune(mod->thread_output);
+    }
 
     if(mod->is_eof && mod->idx_callback)
     {
@@ -339,11 +361,15 @@ static void on_thread_read(void *arg)
     module_data_t *mod = (module_data_t *)arg;
 
     uint8_t ts[TS_PACKET_SIZE];
-    const ssize_t r = asc_thread_buffer_read(mod->thread_output, ts, TS_PACKET_SIZE);
-    if(r != TS_PACKET_SIZE)
-        return;
+    while (true)
+    {
+        const ssize_t r = asc_thread_buffer_read(mod->thread_output, ts
+                                                 , TS_PACKET_SIZE);
+        if (r != TS_PACKET_SIZE)
+            return;
 
-    module_stream_send(mod, ts);
+        module_stream_send(mod, ts);
+    }
 }
 
 static void timer_skip_set(void *arg)
@@ -428,9 +454,8 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->thread_output = asc_thread_buffer_init(mod->buffer_size);
     mod->thread_run = true;
 
-    asc_thread_start(mod->thread, mod, thread_loop
-                     , on_thread_read, mod->thread_output
-                     , on_thread_close);
+    asc_wake_open();
+    asc_thread_start(mod->thread, mod, thread_loop, on_thread_close);
 }
 
 static void module_destroy(module_data_t *mod)

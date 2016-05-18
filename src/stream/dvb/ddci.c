@@ -19,6 +19,7 @@
  */
 
 #include "dvb.h"
+#include <core/mainloop.h>
 #include <core/thread.h>
 
 #define MSG(_msg) "[ddci %d:%d] " _msg, mod->adapter, mod->device
@@ -80,7 +81,10 @@ static void on_thread_close(void *arg)
     }
 
     if(mod->sec_thread_output)
+    {
         ASC_FREE(mod->sec_thread_output, asc_thread_buffer_destroy);
+        asc_job_prune(mod->sec_thread_output);
+    }
 }
 
 static void on_thread_read(void *arg)
@@ -88,15 +92,21 @@ static void on_thread_read(void *arg)
     module_data_t *mod = (module_data_t *)arg;
 
     uint8_t ts[TS_PACKET_SIZE];
-    const ssize_t r = asc_thread_buffer_read(mod->sec_thread_output, ts, sizeof(ts));
-    if(r == sizeof(ts))
+    while (true)
+    {
+        const ssize_t r = asc_thread_buffer_read(mod->sec_thread_output, ts, sizeof(ts));
+        if (r != sizeof(ts))
+            return;
+
         module_stream_send(mod, ts);
+    }
 }
 
 static void thread_loop(void *arg)
 {
     module_data_t *mod = (module_data_t *)arg;
     uint8_t ts[TS_PACKET_SIZE];
+    uint64_t system_time, system_time_buffer = 0;
 
     mod->dec_sec_fd = open(mod->dev_name, O_RDONLY);
 
@@ -112,6 +122,19 @@ static void thread_loop(void *arg)
             if(r != TS_PACKET_SIZE)
             {
                 // overflow
+            }
+            else
+            {
+                /*
+                 * TODO: add proper buffering with sync byte alignment checks
+                 */
+                system_time = asc_utime();
+                if (system_time > system_time_buffer + 5000)
+                {
+                    system_time_buffer = system_time;
+                    asc_job_queue(mod->sec_thread_output, on_thread_read, mod);
+                    asc_wake();
+                }
             }
         }
     }
@@ -130,9 +153,7 @@ static void sec_open(module_data_t *mod)
     mod->sec_thread_output = asc_thread_buffer_init(BUFFER_SIZE);
 
     asc_wake_open();
-    asc_thread_start(mod->sec_thread, mod, thread_loop
-                     , on_thread_read, mod->sec_thread_output
-                     , on_thread_close);
+    asc_thread_start(mod->sec_thread, mod, thread_loop, on_thread_close);
 }
 
 static void sec_close(module_data_t *mod)
@@ -291,8 +312,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     }
 
     mod->ca_thread = asc_thread_init();
-    asc_thread_start(mod->ca_thread, mod, ca_thread_loop
-                     , NULL, NULL, on_ca_thread_close);
+    asc_thread_start(mod->ca_thread, mod, ca_thread_loop, on_ca_thread_close);
 
     sec_open(mod);
 

@@ -2,7 +2,7 @@
  * Astra: Unit tests
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,7 +76,7 @@ START_TEST(set_value)
 
     tt.thread = thr;
 
-    asc_thread_start(thr, &tt, set_value_proc, NULL, NULL, set_value_close);
+    asc_thread_start(thr, &tt, set_value_proc, set_value_close);
     ck_assert(asc_main_loop_run() == false);
     ck_assert(tt.value == 0xdeadbeef);
 }
@@ -133,7 +133,7 @@ START_TEST(producers)
         tt[i].id = i;
         tt[i].value = 0;
 
-        asc_thread_start(tt[i].thread, &tt[i], producer_proc, NULL, NULL, NULL);
+        asc_thread_start(tt[i].thread, &tt[i], producer_proc, NULL);
         producer_running++;
     }
 
@@ -184,45 +184,46 @@ static void no_destroy_close(void *arg)
 START_TEST(no_destroy)
 {
     asc_thread_t *const thr = asc_thread_init();
-    asc_thread_start(thr, NULL, no_destroy_proc, NULL, NULL, no_destroy_close);
+    asc_thread_start(thr, NULL, no_destroy_proc, no_destroy_close);
 
     ck_assert(asc_main_loop_run() == false);
 }
 END_TEST
 
 /* main thread wake up */
-static uint64_t exit_time = 0;
+static uint64_t wake_time = 0;
+
+static void wake_up_cb(void *arg)
+{
+    __uarg(arg);
+
+    const uint64_t now = asc_utime();
+    ck_assert_msg(now - wake_time < (5 * 1000), "didn't wake up within 5ms");
+}
 
 static void wake_up_proc(void *arg)
 {
     __uarg(arg);
 
     /*
-     * TODO: test asc_main_loop_queue() + asc_thread_wake().
-     *       the former hasn't been implemented yet.
+     * TODO: add APIs for conditional variables, simulate data exchange
+     *       between main and auxiliary threads.
      */
-
     asc_usleep(50 * 1000); /* 50ms */
 
-    /*
-     * NOTE: on_close must also wake up the event loop, but only
-     *       if the pipe is open.
-     */
-    exit_time = asc_utime();
-
-    /* TODO: queue callback that calls astra_shutdown() */
+    wake_time = asc_utime();
+    asc_job_queue(NULL, wake_up_cb, NULL);
+    asc_wake();
 }
 
 static void wake_up_close(void *arg)
 {
     asc_thread_t *const thr = (asc_thread_t *)arg;
 
-    const uint64_t now = asc_utime();
-    ck_assert_msg(now - exit_time < (5 * 1000), "didn't wake up within 5ms");
-
-    astra_shutdown(); /* TODO: remove this */
     asc_thread_join(thr);
     asc_wake_close();
+
+    astra_shutdown();
 }
 
 START_TEST(wake_up)
@@ -230,7 +231,7 @@ START_TEST(wake_up)
     asc_thread_t *const thr = asc_thread_init();
 
     asc_wake_open();
-    asc_thread_start(thr, thr, wake_up_proc, NULL, NULL, wake_up_close);
+    asc_thread_start(thr, thr, wake_up_proc, wake_up_close);
 
     ck_assert(asc_main_loop_run() == false);
 }
