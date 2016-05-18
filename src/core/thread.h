@@ -40,7 +40,6 @@ void asc_wake(void);
 
 void asc_thread_core_init(void);
 void asc_thread_core_destroy(void);
-void asc_thread_core_loop(void);
 
 asc_thread_t *asc_thread_init(void) __wur;
 void asc_thread_start(asc_thread_t *thr, void *arg, thread_callback_t proc

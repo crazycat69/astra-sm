@@ -222,27 +222,6 @@ void asc_thread_core_destroy(void)
     ASC_FREE(thread_mgr, free);
 }
 
-void asc_thread_core_loop(void)
-{
-    thread_mgr->is_changed = false;
-    asc_list_for(thread_mgr->list)
-    {
-        asc_thread_t *const thr =
-            (asc_thread_t *)asc_list_data(thread_mgr->list);
-
-        if (!thr->started)
-            continue;
-
-        if (thr->on_read != NULL && thr->buffer->count > 0)
-        {
-            asc_main_loop_busy();
-            thr->on_read(thr->arg);
-            if (thread_mgr->is_changed)
-                break;
-        }
-    }
-}
-
 asc_thread_t *asc_thread_init(void)
 {
     asc_thread_t *const thr = (asc_thread_t *)calloc(1, sizeof(*thr));

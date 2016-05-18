@@ -157,7 +157,6 @@ bool asc_main_loop_run(void)
     {
         asc_event_core_loop(ev_sleep);
         asc_timer_core_loop();
-        asc_thread_core_loop();
 
         if (main_loop->flags)
         {
