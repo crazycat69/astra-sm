@@ -156,7 +156,6 @@ bool asc_main_loop_run(void)
     while (true)
     {
         asc_event_core_loop(ev_sleep);
-        asc_timer_core_loop();
 
         if (main_loop->flags)
         {
@@ -182,11 +181,6 @@ bool asc_main_loop_run(void)
                 else
                     lua_pop(lua, 1);
             }
-            else if (flags & MAIN_LOOP_NO_SLEEP)
-            {
-                ev_sleep = 0;
-                continue;
-            }
         }
 
         current_time = asc_utime();
@@ -197,8 +191,7 @@ bool asc_main_loop_run(void)
         }
 
         run_jobs();
-
-        ev_sleep = 1;
+        ev_sleep = asc_timer_core_loop();
     }
 }
 

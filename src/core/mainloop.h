@@ -30,10 +30,9 @@ typedef void (*loop_callback_t)(void *);
 
 enum
 {
-    MAIN_LOOP_NO_SLEEP = 0x00000001,
-    MAIN_LOOP_SIGHUP   = 0x00000002,
-    MAIN_LOOP_RELOAD   = 0x00000004,
-    MAIN_LOOP_SHUTDOWN = 0x00000008,
+    MAIN_LOOP_SIGHUP   = 0x00000001,
+    MAIN_LOOP_RELOAD   = 0x00000002,
+    MAIN_LOOP_SHUTDOWN = 0x00000004,
 };
 
 void asc_job_queue(void *owner, loop_callback_t proc, void *arg);
@@ -45,9 +44,6 @@ bool asc_main_loop_run(void) __wur;
 
 void asc_main_loop_set(uint32_t flag);
 void astra_shutdown(void);
-
-#define asc_main_loop_busy() \
-    asc_main_loop_set(MAIN_LOOP_NO_SLEEP)
 
 #define astra_reload() \
     asc_main_loop_set(MAIN_LOOP_RELOAD)
