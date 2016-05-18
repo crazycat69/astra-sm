@@ -210,17 +210,9 @@ void asc_thread_core_destroy(void)
         asc_assert(thr != prev, MSG("on_close didn't join thread"));
 
         if (thr->on_close != NULL)
-        {
-            /* NOTE: on_close has to call asc_thread_join() */
             thr->on_close(thr->arg);
-        }
         else
-        {
-            if (thr->started && !thr->exited)
-                asc_log_debug(MSG("on_close not set, joining thread anyway"));
-
             asc_thread_join(thr);
-        }
 
         prev = thr;
         asc_list_first(thread_mgr->list);
@@ -248,17 +240,6 @@ void asc_thread_core_loop(void)
             if (thread_mgr->is_changed)
                 break;
         }
-
-        if (thr->exited)
-        {
-            if (thr->on_close != NULL)
-                thr->on_close(thr->arg);
-            else
-                asc_thread_join(thr);
-
-            if (thread_mgr->is_changed)
-                break;
-        }
     }
 }
 
@@ -273,6 +254,16 @@ asc_thread_t *asc_thread_init(void)
     return thr;
 }
 
+static void on_thread_exit(void *arg)
+{
+    asc_thread_t *const thr = (asc_thread_t *)arg;
+
+    if (thr->on_close != NULL)
+        thr->on_close(thr->arg);
+    else
+        asc_thread_join(thr);
+}
+
 #ifdef _WIN32
 static DWORD WINAPI thread_proc(void *arg)
 #else
@@ -285,7 +276,7 @@ static void *thread_proc(void *arg)
     thr->proc(thr->arg);
     thr->exited = true;
 
-    asc_wake();
+    asc_job_queue(thr, on_thread_exit, thr);
 
     return 0;
 }
@@ -342,6 +333,7 @@ void asc_thread_join(asc_thread_t *thr)
     asc_list_remove_item(thread_mgr->list, thr);
     thread_mgr->is_changed = true;
 
+    asc_job_prune(thr);
     free(thr);
 }
 
