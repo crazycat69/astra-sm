@@ -86,6 +86,11 @@
 #       define S_IWOTH 0
 #   endif /* !S_IWOTH */
 
+    /* maximum path length */
+#   ifndef PATH_MAX
+#       define PATH_MAX MAX_PATH
+#   endif /* ! */
+
     /* cast int to HANDLE */
 #   define ASC_TO_HANDLE(__x) ((HANDLE)((intptr_t)(__x)))
     /*
