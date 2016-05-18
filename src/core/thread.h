@@ -1,9 +1,9 @@
 /*
- * Astra Core (Threads)
+ * Astra Core (Auxiliary threads)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,19 +30,13 @@
 #   include <pthread.h>
 #endif
 
-/*
- * main thread wake up
- */
-void asc_wake_open(void);
-void asc_wake_close(void);
-void asc_wake(void);
-
-/*
- * threads
- */
 typedef struct asc_thread_t asc_thread_t;
 typedef struct asc_thread_buffer_t asc_thread_buffer_t;
 typedef void (*thread_callback_t)(void *);
+
+void asc_wake_open(void);
+void asc_wake_close(void);
+void asc_wake(void);
 
 void asc_thread_core_init(void);
 void asc_thread_core_destroy(void);
@@ -54,9 +48,6 @@ void asc_thread_start(asc_thread_t *thr, void *arg, thread_callback_t proc
                       , thread_callback_t on_close);
 void asc_thread_join(asc_thread_t *thr);
 
-/*
- * thread buffer
- */
 asc_thread_buffer_t *asc_thread_buffer_init(size_t buffer_size) __wur;
 void asc_thread_buffer_destroy(asc_thread_buffer_t *buffer);
 
@@ -66,10 +57,8 @@ ssize_t asc_thread_buffer_read(asc_thread_buffer_t *buffer
 ssize_t asc_thread_buffer_write(asc_thread_buffer_t *buffer
                                 , const void *data, size_t size) __wur;
 
-/*
- * mutexes
- */
 #ifdef _WIN32
+
 typedef CRITICAL_SECTION asc_mutex_t;
 
 static inline
@@ -95,7 +84,9 @@ void asc_mutex_unlock(asc_mutex_t *mutex)
 {
     LeaveCriticalSection(mutex);
 }
+
 #else /* _WIN32 */
+
 typedef pthread_mutex_t asc_mutex_t;
 
 static inline
@@ -129,6 +120,7 @@ void asc_mutex_unlock(asc_mutex_t *mutex)
     asc_assert(ret == 0, "[core/thread] couldn't unlock mutex: %s"
                , strerror(ret));
 }
+
 #endif /* !_WIN32 */
 
 #endif /* _ASC_THREAD_H_ */

@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,30 +32,119 @@
 /* garbage collector interval */
 #define LUA_GC_TIMEOUT (1 * 1000 * 1000)
 
+/* maximum number of jobs queued */
+#define JOB_QUEUE_SIZE 256
+
+typedef struct
+{
+    loop_callback_t proc;
+    void *arg;
+    void *owner;
+} loop_job_t;
+
 typedef struct
 {
     uint32_t flags;
     unsigned int stop_cnt;
+
+    loop_job_t jobs[JOB_QUEUE_SIZE];
+    loop_job_t jobs_tmp[JOB_QUEUE_SIZE];
+    unsigned int job_cnt;
+    asc_mutex_t job_mutex;
 } asc_main_loop_t;
 
 static asc_main_loop_t *main_loop = NULL;
 
+/*
+ * callback queue
+ */
+
+/* add a procedure to main loop's job list */
+void asc_job_queue(void *owner, loop_callback_t proc, void *arg)
+{
+    bool overflow = false;
+
+    asc_mutex_lock(&main_loop->job_mutex);
+    if (main_loop->job_cnt < JOB_QUEUE_SIZE)
+    {
+        loop_job_t *const job = &main_loop->jobs[main_loop->job_cnt++];
+
+        job->proc = proc;
+        job->arg = arg;
+        job->owner = owner;
+    }
+    else
+    {
+        main_loop->job_cnt = 0;
+        overflow = true;
+    }
+    asc_mutex_unlock(&main_loop->job_mutex);
+
+    if (overflow)
+        asc_log_error(MSG("job queue overflow, list flushed"));
+}
+
+/* remove jobs belonging to a specific module or object */
+void asc_job_prune(void *owner)
+{
+    unsigned int i = 0;
+
+    asc_mutex_lock(&main_loop->job_mutex);
+    while (i < main_loop->job_cnt)
+    {
+        loop_job_t *const job = &main_loop->jobs[i];
+
+        if (job->owner == owner)
+        {
+            main_loop->job_cnt--;
+            memmove(job, job + 1, (main_loop->job_cnt - i) * sizeof(*job));
+        }
+        else
+        {
+            i++;
+        }
+    }
+    asc_mutex_unlock(&main_loop->job_mutex);
+}
+
+/* run all queued callbacks */
+static void run_jobs(void)
+{
+    loop_job_t *const jobs = main_loop->jobs_tmp;
+    unsigned int cnt = 0;
+
+    asc_mutex_lock(&main_loop->job_mutex);
+    if (main_loop->job_cnt > 0)
+    {
+        cnt = main_loop->job_cnt;
+        main_loop->job_cnt = 0;
+        memcpy(jobs, main_loop->jobs, sizeof(jobs[0]) * cnt);
+    }
+    asc_mutex_unlock(&main_loop->job_mutex);
+
+    for (unsigned int i = 0; i < cnt; i++)
+        jobs[i].proc(jobs[i].arg);
+}
+
+/*
+ * event loop
+ */
 void asc_main_loop_init(void)
 {
     main_loop = (asc_main_loop_t *)calloc(1, sizeof(*main_loop));
     asc_assert(main_loop != NULL, MSG("calloc() failed"));
+
+    asc_mutex_init(&main_loop->job_mutex);
 }
 
 void asc_main_loop_destroy(void)
 {
+    asc_mutex_destroy(&main_loop->job_mutex);
+
     ASC_FREE(main_loop, free);
 }
 
-void asc_main_loop_set(uint32_t flag)
-{
-    main_loop->flags |= flag;
-}
-
+/* process events, return when a shutdown or reload is requested */
 bool asc_main_loop_run(void)
 {
     uint64_t current_time = asc_utime();
@@ -87,7 +176,7 @@ bool asc_main_loop_run(void)
                 asc_log_reopen();
 
                 lua_getglobal(lua, "on_sighup");
-                if(lua_isfunction(lua, -1))
+                if (lua_isfunction(lua, -1))
                     lua_call(lua, 0, 0);
                 else
                     lua_pop(lua, 1);
@@ -106,10 +195,21 @@ bool asc_main_loop_run(void)
             lua_gc(lua, LUA_GCCOLLECT, 0);
         }
 
+        run_jobs();
+
         ev_sleep = 1;
     }
 }
 
+/*
+ * loop controls
+ */
+void asc_main_loop_set(uint32_t flag)
+{
+    main_loop->flags |= flag;
+}
+
+/* request graceful shutdown, abort if called multiple times */
 void astra_shutdown(void)
 {
     if (main_loop->flags & MAIN_LOOP_SHUTDOWN)

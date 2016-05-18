@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,12 +19,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _ASC_LOOPCTL_H_
-#define _ASC_LOOPCTL_H_ 1
+#ifndef _ASC_MAINLOOP_H_
+#define _ASC_MAINLOOP_H_ 1
 
 #ifndef _ASTRA_H_
 #   error "Please include <astra.h> first"
 #endif /* !_ASTRA_H_ */
+
+typedef void (*loop_callback_t)(void *);
 
 enum
 {
@@ -34,11 +36,14 @@ enum
     MAIN_LOOP_SHUTDOWN = 0x00000008,
 };
 
+void asc_job_queue(void *owner, loop_callback_t proc, void *arg);
+void asc_job_prune(void *owner);
+
 void asc_main_loop_init(void);
 void asc_main_loop_destroy(void);
-void asc_main_loop_set(uint32_t flag);
 bool asc_main_loop_run(void) __wur;
 
+void asc_main_loop_set(uint32_t flag);
 void astra_shutdown(void);
 
 #define asc_main_loop_busy() \
@@ -50,4 +55,4 @@ void astra_shutdown(void);
 #define astra_sighup() \
     asc_main_loop_set(MAIN_LOOP_SIGHUP)
 
-#endif /* _ASC_LOOPCTL_H_ */
+#endif /* _ASC_MAINLOOP_H_ */

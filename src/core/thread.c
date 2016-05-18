@@ -1,9 +1,9 @@
 /*
- * Astra Core (Threads)
+ * Astra Core (Auxiliary threads)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -73,7 +73,7 @@ typedef struct
 static asc_thread_mgr_t *thread_mgr = NULL;
 
 /*
- * main thread wake up
+ * main thread wake up mechanism
  */
 static void on_wake_read(void *arg);
 
@@ -115,6 +115,7 @@ static void wake_close(void)
     }
 }
 
+/* read event handler: discard incoming data, reopen pipe on errors */
 static void on_wake_read(void *arg)
 {
     __uarg(arg);
@@ -150,6 +151,7 @@ static void on_wake_read(void *arg)
        asc_log_error(MSGN("couldn't reopen pipe: %s"), asc_error_msg());
 }
 
+/* increase pipe refcount, opening it if necessary */
 void asc_wake_open(void)
 {
     if (thread_mgr->wake_cnt == 0)
@@ -162,6 +164,7 @@ void asc_wake_open(void)
     ++thread_mgr->wake_cnt;
 }
 
+/* decrease pipe refcount, closing it when it's no longer needed */
 void asc_wake_close(void)
 {
     asc_assert(thread_mgr->wake_cnt > 0, MSGN("wake up pipe already closed"));
@@ -174,6 +177,7 @@ void asc_wake_close(void)
     }
 }
 
+/* signal event polling function to return */
 void asc_wake(void)
 {
     const int fd = thread_mgr->wake_fd[PIPE_WR];

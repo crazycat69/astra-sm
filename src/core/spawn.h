@@ -33,6 +33,7 @@ enum
 };
 
 #ifdef _WIN32
+
 typedef struct
 {
     PROCESS_INFORMATION pi;
@@ -54,7 +55,9 @@ void asc_process_free(asc_process_t *proc)
 }
 
 pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block);
+
 #else /* _WIN32 */
+
 #include <signal.h>
 #include <sys/socket.h>
 #include <sys/wait.h>
@@ -78,6 +81,7 @@ pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block)
 {
     return waitpid(*proc, status, (block ? 0 : WNOHANG));
 }
+
 #endif /* !_WIN32 */
 
 int asc_process_spawn(const char *command, asc_process_t *proc

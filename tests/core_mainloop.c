@@ -135,6 +135,82 @@ START_TEST(blocked_thread)
 }
 END_TEST
 
+/* callback queue and timers */
+static unsigned int cb_remaining;
+
+static void on_cb_timer(void *arg);
+
+static void on_callback(void *arg)
+{
+    if (--cb_remaining > 0)
+    {
+        asc_timer_t *timer = asc_timer_one_shot(10, on_cb_timer, arg);
+        ck_assert(timer != NULL);
+    }
+    else
+    {
+        astra_shutdown();
+    }
+}
+
+static void on_cb_timer(void *arg)
+{
+    asc_job_queue(NULL, on_callback, arg);
+}
+
+START_TEST(callback_simple)
+{
+    cb_remaining = 10;
+    on_callback(NULL);
+
+    const bool again = asc_main_loop_run();
+    ck_assert(again == false);
+
+    ck_assert(cb_remaining == 0);
+}
+END_TEST
+
+/* pruning the callback queue */
+#define CB_OWNERS 20
+#define CB_COUNT 100
+#define CB_MARKER ~0U
+
+static void on_last(void *arg)
+{
+    __uarg(arg);
+    astra_shutdown();
+}
+
+static void on_pruned(void *arg)
+{
+    unsigned int *cnt = (unsigned *)arg;
+    (*cnt)++;
+}
+
+START_TEST(callback_prune)
+{
+    unsigned int cb_counters[CB_OWNERS] = { 0 };
+
+    for (size_t i = 0; i < CB_COUNT; i++)
+    {
+        const size_t idx = rand() % CB_OWNERS;
+        unsigned int *const cnt = &cb_counters[idx];
+        asc_job_queue(cnt, on_pruned, cnt);
+    }
+    asc_job_queue(NULL, on_last, NULL);
+
+    const size_t prune_idx = rand() % CB_OWNERS;
+    unsigned int *const prune = &cb_counters[prune_idx];
+    cb_counters[prune_idx] = CB_MARKER;
+    asc_job_prune(prune);
+
+    const bool again = asc_main_loop_run();
+    ck_assert(again == false);
+
+    ck_assert(cb_counters[prune_idx] == CB_MARKER);
+}
+END_TEST
+
 Suite *core_mainloop(void)
 {
     Suite *const s = suite_create("mainloop");
@@ -147,6 +223,8 @@ Suite *core_mainloop(void)
 
     tcase_add_test(tc, controls);
     tcase_add_test(tc, iterations);
+    tcase_add_test(tc, callback_simple);
+    tcase_add_test(tc, callback_prune);
 
     if (can_fork != CK_NOFORK)
     {
