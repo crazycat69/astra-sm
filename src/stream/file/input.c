@@ -343,8 +343,8 @@ static void on_thread_close(void *arg)
 
     if(mod->thread_output)
     {
-        ASC_FREE(mod->thread_output, asc_thread_buffer_destroy);
         asc_job_prune(mod->thread_output);
+        ASC_FREE(mod->thread_output, asc_thread_buffer_destroy);
     }
 
     if(mod->is_eof && mod->idx_callback)

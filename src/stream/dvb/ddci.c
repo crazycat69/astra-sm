@@ -82,8 +82,8 @@ static void on_thread_close(void *arg)
 
     if(mod->sec_thread_output)
     {
-        ASC_FREE(mod->sec_thread_output, asc_thread_buffer_destroy);
         asc_job_prune(mod->sec_thread_output);
+        ASC_FREE(mod->sec_thread_output, asc_thread_buffer_destroy);
     }
 }
 
