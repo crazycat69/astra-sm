@@ -62,7 +62,7 @@ static void set_value_close(void *arg)
 {
     thread_test_t *const tt = (thread_test_t *)arg;
 
-    astra_shutdown();
+    asc_main_loop_shutdown();
     asc_thread_join(tt->thread);
 }
 
@@ -105,7 +105,7 @@ static void producer_proc(void *arg)
 
     asc_mutex_lock(tt->mutex);
     if (--producer_running == 0)
-        astra_shutdown();
+        asc_main_loop_shutdown();
     asc_mutex_unlock(tt->mutex);
 }
 
@@ -178,7 +178,7 @@ static void no_destroy_proc(void *arg)
 static void no_destroy_close(void *arg)
 {
     __uarg(arg);
-    astra_shutdown();
+    asc_main_loop_shutdown();
 }
 
 START_TEST(no_destroy)
@@ -223,7 +223,7 @@ static void wake_up_close(void *arg)
     asc_thread_join(thr);
     asc_wake_close();
 
-    astra_shutdown();
+    asc_main_loop_shutdown();
 }
 
 START_TEST(wake_up)

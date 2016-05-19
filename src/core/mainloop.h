@@ -35,8 +35,8 @@ void asc_main_loop_init(void);
 void asc_main_loop_destroy(void);
 bool asc_main_loop_run(void) __wur;
 
-void astra_shutdown(void);
-void astra_reload(void);
-void astra_sighup(void);
+void asc_main_loop_shutdown(void);
+void asc_main_loop_reload(void);
+void asc_main_loop_sighup(void);
 
 #endif /* _ASC_MAINLOOP_H_ */

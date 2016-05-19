@@ -125,15 +125,15 @@ static void *thread_loop(void *arg)
         {
             case SIGINT:
             case SIGTERM:
-                astra_shutdown();
+                asc_main_loop_shutdown();
                 break;
 
             case SIGUSR1:
-                astra_reload();
+                asc_main_loop_reload();
                 break;
 
             case SIGHUP:
-                astra_sighup();
+                asc_main_loop_sighup();
                 break;
 
             case SIGQUIT:
@@ -319,7 +319,7 @@ static void WINAPI service_handler(DWORD control)
                 if (mutex_timedlock(signal_lock, SIGNAL_LOCK_WAIT))
                 {
                     if (!ignore_ctrl)
-                        astra_shutdown();
+                        asc_main_loop_shutdown();
 
                     mutex_unlock(signal_lock);
                 }
@@ -350,7 +350,7 @@ static BOOL WINAPI console_handler(DWORD type)
             if (mutex_timedlock(signal_lock, SIGNAL_LOCK_WAIT))
             {
                 if (!ignore_ctrl)
-                    astra_shutdown();
+                    asc_main_loop_shutdown();
 
                 mutex_unlock(signal_lock);
             }

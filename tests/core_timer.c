@@ -54,7 +54,7 @@ static void on_stop(void *arg)
     timed_out = true;
     time_stop = asc_utime();
 
-    astra_shutdown();
+    asc_main_loop_shutdown();
 }
 
 static uint64_t run_loop(unsigned ms)
@@ -133,7 +133,7 @@ static void on_single_timer(void *arg)
 
     time_stop = asc_utime();
     if (++(*count) >= 10)
-        astra_shutdown();
+        asc_main_loop_shutdown();
 }
 
 START_TEST(single_timer)

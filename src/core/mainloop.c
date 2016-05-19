@@ -207,7 +207,7 @@ bool asc_main_loop_run(void)
  */
 
 /* request graceful shutdown, abort if called multiple times */
-void astra_shutdown(void)
+void asc_main_loop_shutdown(void)
 {
     if (main_loop->flags & MAIN_LOOP_SHUTDOWN)
     {
@@ -232,13 +232,13 @@ void astra_shutdown(void)
 }
 
 /* ask loader program (i.e. main.c) to restart the instance */
-void astra_reload(void)
+void asc_main_loop_reload(void)
 {
     main_loop->flags |= MAIN_LOOP_RELOAD;
 }
 
 /* reopen logs and run `on_sighup` Lua function if defined */
-void astra_sighup(void)
+void asc_main_loop_sighup(void)
 {
     main_loop->flags |= MAIN_LOOP_SIGHUP;
 }

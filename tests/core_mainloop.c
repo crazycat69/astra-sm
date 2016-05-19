@@ -42,11 +42,11 @@ static void teardown(void)
 /* basic shutdown and reload commands */
 START_TEST(controls)
 {
-    astra_shutdown();
+    asc_main_loop_shutdown();
     bool again = asc_main_loop_run();
     ck_assert_msg(again == false, "expected shutdown");
 
-    astra_reload();
+    asc_main_loop_reload();
     again = asc_main_loop_run();
     ck_assert_msg(again == true, "expected restart");
 }
@@ -89,7 +89,7 @@ static void on_iteration(void *arg)
 
     unsigned *counter = (unsigned *)arg;
     if (++(*counter) >= ITERATIONS)
-        astra_shutdown();
+        asc_main_loop_shutdown();
 }
 
 START_TEST(iterations)
@@ -104,14 +104,14 @@ START_TEST(iterations)
 }
 END_TEST
 
-/* block thread then call astra_shutdown() until it aborts */
+/* block thread then call asc_main_loop_shutdown() until it aborts */
 static void on_block(void *arg)
 {
     __uarg(arg);
 
     while (true)
     {
-        astra_shutdown();
+        asc_main_loop_shutdown();
         asc_usleep(100000);
     }
 }
@@ -149,7 +149,7 @@ static void on_callback(void *arg)
     }
     else
     {
-        astra_shutdown();
+        asc_main_loop_shutdown();
     }
 }
 
@@ -178,7 +178,7 @@ END_TEST
 static void on_last(void *arg)
 {
     __uarg(arg);
-    astra_shutdown();
+    asc_main_loop_shutdown();
 }
 
 static void on_pruned(void *arg)
@@ -221,7 +221,7 @@ static void on_backstab(void *arg)
     if ((*i)++ == 0)
         asc_job_prune(BS_OWNER);
     else
-        astra_shutdown();
+        asc_main_loop_shutdown();
 }
 
 START_TEST(callback_cancel)
