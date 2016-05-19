@@ -63,6 +63,11 @@ void asc_list_remove_item(asc_list_t *list, const void *data);
          ; !asc_list_eol(__list) \
          ; asc_list_remove_current(__list))
 
+#define asc_list_till_empty(__list) \
+    for (asc_list_first(__list) \
+         ; !asc_list_eol(__list) \
+         ; asc_list_first(__list))
+
 static inline
 void asc_list_first(asc_list_t *list)
 {

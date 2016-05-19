@@ -165,6 +165,47 @@ START_TEST(clear_list)
 }
 END_TEST
 
+START_TEST(till_empty)
+{
+    const unsigned items[] = { 0xface, 0xbeef, 0xcafe, 0xf00d };
+
+    /* valid use: current item is removed on every iteration */
+    for (size_t i = 0; i < ASC_ARRAY_SIZE(items); i++)
+        asc_list_insert_tail(list, (void *)((intptr_t)items[i]));
+
+    ck_assert(asc_list_size(list) == ASC_ARRAY_SIZE(items));
+
+    asc_list_till_empty(list)
+        asc_list_remove_current(list);
+
+    ck_assert(asc_list_size(list) == 0);
+    ck_assert(asc_list_eol(list));
+
+    /* invalid use (not removing items) */
+    for (size_t i = 0; i < ASC_ARRAY_SIZE(items); i++)
+        asc_list_insert_tail(list, (void *)((intptr_t)items[i]));
+
+    ck_assert(asc_list_size(list) == ASC_ARRAY_SIZE(items));
+
+    void *prev = NULL;
+    asc_list_till_empty(list)
+    {
+        /* this will loop until stopped */
+        void *ptr = asc_list_data(list);
+
+        if (prev != NULL)
+        {
+            ck_assert(prev == ptr);
+            break;
+        }
+
+        prev = ptr;
+    }
+
+    asc_list_clear(list);
+}
+END_TEST
+
 Suite *core_list(void)
 {
     Suite *const s = suite_create("list");
@@ -176,6 +217,7 @@ Suite *core_list(void)
     tcase_add_test(tc, random_values);
     tcase_add_test(tc, selective_delete);
     tcase_add_test(tc, clear_list);
+    tcase_add_test(tc, till_empty);
 
     if (can_fork != CK_NOFORK)
     {
