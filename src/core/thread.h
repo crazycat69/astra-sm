@@ -30,10 +30,6 @@ typedef struct asc_thread_t asc_thread_t;
 typedef struct asc_thread_buffer_t asc_thread_buffer_t;
 typedef void (*thread_callback_t)(void *);
 
-void asc_wake_open(void);
-void asc_wake_close(void);
-void asc_wake(void);
-
 void asc_thread_core_init(void);
 void asc_thread_core_destroy(void);
 

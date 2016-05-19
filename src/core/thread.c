@@ -22,14 +22,10 @@
 #include <astra.h>
 #include <core/thread.h>
 #include <core/mutex.h>
-#include <core/event.h>
 #include <core/list.h>
 #include <core/mainloop.h>
-#include <core/socket.h>
-#include <core/spawn.h>
 
 #define MSG(_msg) "[core/thread %p] " _msg, (void *)thr
-#define MSGN(_msg) "[core/thread] " _msg
 
 struct asc_thread_buffer_t
 {
@@ -58,127 +54,9 @@ struct asc_thread_t
 typedef struct
 {
     asc_list_t *list;
-
-    int wake_fd[2];
-    asc_event_t *wake_ev;
-    unsigned int wake_cnt;
 } asc_thread_mgr_t;
 
 static asc_thread_mgr_t *thread_mgr = NULL;
-
-/*
- * main thread wake up mechanism
- */
-static void on_wake_read(void *arg);
-
-static bool wake_open(void)
-{
-    int fds[2] = { -1, -1 };
-
-    if (asc_pipe_open(fds, NULL, PIPE_BOTH) != 0)
-        return false;
-
-    thread_mgr->wake_fd[0] = fds[0];
-    thread_mgr->wake_fd[1] = fds[1];
-
-    thread_mgr->wake_ev = asc_event_init(fds[PIPE_RD], NULL);
-    asc_event_set_on_read(thread_mgr->wake_ev, on_wake_read);
-
-    return true;
-}
-
-static void wake_close(void)
-{
-    ASC_FREE(thread_mgr->wake_ev, asc_event_close);
-
-    const int fds[2] = {
-        thread_mgr->wake_fd[0],
-        thread_mgr->wake_fd[1],
-    };
-
-    if (fds[0] != -1)
-    {
-        thread_mgr->wake_fd[0] = -1;
-        asc_pipe_close(fds[0]);
-    }
-
-    if (fds[1] != -1)
-    {
-        thread_mgr->wake_fd[1] = -1;
-        asc_pipe_close(fds[1]);
-    }
-}
-
-/* read event handler: discard incoming data, reopen pipe on errors */
-static void on_wake_read(void *arg)
-{
-    __uarg(arg);
-
-    char buf[32];
-    const int ret = recv(thread_mgr->wake_fd[PIPE_RD], buf, sizeof(buf), 0);
-    switch (ret)
-    {
-        case -1:
-            /* error that may or may not be EWOULDBLOCK */
-            if (asc_socket_would_block())
-                return;
-
-            asc_log_error(MSGN("wake up recv(): %s"), asc_error_msg());
-            break;
-
-        case 0:
-            /* connection closed from the other side */
-            asc_log_error(MSGN("wake up pipe closed unexpectedly"));
-            break;
-
-        default:
-            /* successful read */
-            return;
-    }
-
-    /* this code is highly unlikely to be reached */
-    asc_log_warning(MSGN("reopening wake up pipe"));
-
-    wake_close();
-    if (!wake_open())
-       asc_log_error(MSGN("couldn't reopen pipe: %s"), asc_error_msg());
-}
-
-/* increase pipe refcount, opening it if necessary */
-void asc_wake_open(void)
-{
-    if (thread_mgr->wake_cnt == 0)
-    {
-        asc_log_debug(MSGN("opening main loop wake up pipe"));
-        if (!wake_open())
-            asc_log_error(MSGN("couldn't open pipe: %s"), asc_error_msg());
-    }
-
-    ++thread_mgr->wake_cnt;
-}
-
-/* decrease pipe refcount, closing it when it's no longer needed */
-void asc_wake_close(void)
-{
-    asc_assert(thread_mgr->wake_cnt > 0, MSGN("wake up pipe already closed"));
-    --thread_mgr->wake_cnt;
-
-    if (thread_mgr->wake_cnt == 0)
-    {
-        asc_log_debug(MSGN("closing main loop wake up pipe"));
-        wake_close();
-    }
-}
-
-/* signal event polling function to return */
-void asc_wake(void)
-{
-    const int fd = thread_mgr->wake_fd[PIPE_WR];
-    static const char byte = '\0';
-
-    if (fd != -1 && send(fd, &byte, 1, 0) == -1)
-        asc_log_error(MSGN("wake up send(): %s"), asc_error_msg());
-}
 
 /*
  * threads
@@ -186,10 +64,9 @@ void asc_wake(void)
 void asc_thread_core_init(void)
 {
     thread_mgr = (asc_thread_mgr_t *)calloc(1, sizeof(*thread_mgr));
-    asc_assert(thread_mgr != NULL, MSGN("calloc() failed"));
+    asc_assert(thread_mgr != NULL, "[core/thread] calloc() failed");
 
     thread_mgr->list = asc_list_init();
-    thread_mgr->wake_fd[0] = thread_mgr->wake_fd[1] = -1;
 }
 
 void asc_thread_core_destroy(void)
@@ -216,7 +93,7 @@ void asc_thread_core_destroy(void)
 asc_thread_t *asc_thread_init(void)
 {
     asc_thread_t *const thr = (asc_thread_t *)calloc(1, sizeof(*thr));
-    asc_assert(thr != NULL, MSGN("calloc failed()"));
+    asc_assert(thr != NULL, "[core/thread] calloc() failed");
 
     asc_list_insert_tail(thread_mgr->list, thr);
 
@@ -302,7 +179,7 @@ asc_thread_buffer_t *asc_thread_buffer_init(size_t size)
 {
     asc_thread_buffer_t *const buffer =
         (asc_thread_buffer_t *)calloc(1, sizeof(*buffer));
-    asc_assert(buffer != NULL, MSGN("calloc() failed"));
+    asc_assert(buffer != NULL, "[core/thread] calloc() failed");
 
     buffer->size = size;
     buffer->buffer = (uint8_t *)malloc(size);

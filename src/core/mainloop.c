@@ -24,6 +24,8 @@
 #include <core/event.h>
 #include <core/mutex.h>
 #include <core/timer.h>
+#include <core/socket.h>
+#include <core/spawn.h>
 #include <luaapi/luaapi.h>
 #include <luaapi/state.h>
 
@@ -54,12 +56,130 @@ typedef struct
     uint32_t flags;
     unsigned int stop_cnt;
 
+    int wake_fd[2];
+    asc_event_t *wake_ev;
+    unsigned int wake_cnt;
+
     loop_job_t jobs[JOB_QUEUE_SIZE];
     unsigned int job_cnt;
     asc_mutex_t job_mutex;
 } asc_main_loop_t;
 
 static asc_main_loop_t *main_loop = NULL;
+
+/*
+ * main thread wake up mechanism
+ */
+static void on_wake_read(void *arg);
+
+static bool wake_open(void)
+{
+    int fds[2] = { -1, -1 };
+
+    if (asc_pipe_open(fds, NULL, PIPE_BOTH) != 0)
+        return false;
+
+    main_loop->wake_fd[0] = fds[0];
+    main_loop->wake_fd[1] = fds[1];
+
+    main_loop->wake_ev = asc_event_init(fds[PIPE_RD], NULL);
+    asc_event_set_on_read(main_loop->wake_ev, on_wake_read);
+
+    return true;
+}
+
+static void wake_close(void)
+{
+    ASC_FREE(main_loop->wake_ev, asc_event_close);
+
+    const int fds[2] = {
+        main_loop->wake_fd[0],
+        main_loop->wake_fd[1],
+    };
+
+    if (fds[0] != -1)
+    {
+        main_loop->wake_fd[0] = -1;
+        asc_pipe_close(fds[0]);
+    }
+
+    if (fds[1] != -1)
+    {
+        main_loop->wake_fd[1] = -1;
+        asc_pipe_close(fds[1]);
+    }
+}
+
+/* read event handler: discard incoming data, reopen pipe on errors */
+static void on_wake_read(void *arg)
+{
+    __uarg(arg);
+
+    char buf[32];
+    const int ret = recv(main_loop->wake_fd[PIPE_RD], buf, sizeof(buf), 0);
+    switch (ret)
+    {
+        case -1:
+            /* error that may or may not be EWOULDBLOCK */
+            if (asc_socket_would_block())
+                return;
+
+            asc_log_error(MSG("wake up recv(): %s"), asc_error_msg());
+            break;
+
+        case 0:
+            /* connection closed from the other side */
+            asc_log_error(MSG("wake up pipe closed unexpectedly"));
+            break;
+
+        default:
+            /* successful read */
+            return;
+    }
+
+    /* this code is highly unlikely to be reached */
+    asc_log_warning(MSG("reopening wake up pipe"));
+
+    wake_close();
+    if (!wake_open())
+       asc_log_error(MSG("couldn't reopen pipe: %s"), asc_error_msg());
+}
+
+/* increase pipe refcount, opening it if necessary */
+void asc_wake_open(void)
+{
+    if (main_loop->wake_cnt == 0)
+    {
+        asc_log_debug(MSG("opening main loop wake up pipe"));
+        if (!wake_open())
+            asc_log_error(MSG("couldn't open pipe: %s"), asc_error_msg());
+    }
+
+    ++main_loop->wake_cnt;
+}
+
+/* decrease pipe refcount, closing it when it's no longer needed */
+void asc_wake_close(void)
+{
+    asc_assert(main_loop->wake_cnt > 0, MSG("wake up pipe already closed"));
+    --main_loop->wake_cnt;
+
+    if (main_loop->wake_cnt == 0)
+    {
+        asc_log_debug(MSG("closing main loop wake up pipe"));
+        wake_close();
+    }
+}
+
+/* signal event polling function to return */
+void asc_wake(void)
+{
+    const int fd = main_loop->wake_fd[PIPE_WR];
+    static const char byte = '\0';
+
+    if (fd != -1 && send(fd, &byte, 1, 0) == -1)
+        asc_log_error(MSG("wake up send(): %s"), asc_error_msg());
+}
 
 /*
  * callback queue
@@ -143,11 +263,13 @@ void asc_main_loop_init(void)
     main_loop = (asc_main_loop_t *)calloc(1, sizeof(*main_loop));
     asc_assert(main_loop != NULL, MSG("calloc() failed"));
 
+    main_loop->wake_fd[0] = main_loop->wake_fd[1] = -1;
     asc_mutex_init(&main_loop->job_mutex);
 }
 
 void asc_main_loop_destroy(void)
 {
+    wake_close();
     asc_mutex_destroy(&main_loop->job_mutex);
 
     ASC_FREE(main_loop, free);

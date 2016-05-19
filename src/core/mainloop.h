@@ -28,6 +28,10 @@
 
 typedef void (*loop_callback_t)(void *);
 
+void asc_wake_open(void);
+void asc_wake_close(void);
+void asc_wake(void);
+
 void asc_job_queue(void *owner, loop_callback_t proc, void *arg);
 void asc_job_prune(void *owner);
 
