@@ -142,23 +142,23 @@ void asc_event_core_init(void)
 
 void asc_event_core_destroy(void)
 {
-    if(!event_observer.event_list || !event_observer.fd)
+    if (!event_observer.event_list || !event_observer.fd)
         return;
 
     close(event_observer.fd);
     event_observer.fd = 0;
 
     asc_event_t *prev_event = NULL;
-    for(asc_list_first(event_observer.event_list)
-        ; !asc_list_eol(event_observer.event_list)
-        ; asc_list_first(event_observer.event_list))
+    asc_list_till_empty(event_observer.event_list)
     {
         asc_event_t *event = (asc_event_t *)asc_list_data(event_observer.event_list);
         asc_assert(event != prev_event
                    , MSG("loop on asc_event_core_destroy() event:%p")
                    , (void *)event);
-        if(event->on_error)
+
+        if (event->on_error)
             event->on_error(event->arg);
+
         prev_event = event;
     }
 
@@ -532,9 +532,7 @@ void asc_event_core_destroy(void)
         return;
 
     asc_event_t *prev_event = NULL;
-    for(asc_list_first(event_observer.event_list)
-        ; !asc_list_eol(event_observer.event_list)
-        ; asc_list_first(event_observer.event_list))
+    asc_list_till_empty(event_observer.event_list)
     {
         asc_event_t *const event =
             (asc_event_t *)asc_list_data(event_observer.event_list);
@@ -542,8 +540,10 @@ void asc_event_core_destroy(void)
         asc_assert(event != prev_event
                    , MSG("loop on asc_event_core_destroy() event:%p")
                    , (void *)event);
-        if(event->on_error)
+
+        if (event->on_error)
             event->on_error(event->arg);
+
         prev_event = event;
     }
 
@@ -649,7 +649,7 @@ asc_event_t *asc_event_init(int fd, void *arg)
 
 void asc_event_close(asc_event_t *event)
 {
-    if(!event)
+    if (!event)
         return;
 
     event_observer.is_changed = true;
@@ -659,7 +659,7 @@ void asc_event_close(asc_event_t *event)
     event->on_error = NULL;
     asc_event_subscribe(event);
 
-    if(event->fd < event_observer.max_fd)
+    if (event->fd < event_observer.max_fd)
     {
         asc_list_remove_item(event_observer.event_list, event);
         free(event);
@@ -667,14 +667,13 @@ void asc_event_close(asc_event_t *event)
     }
 
     event_observer.max_fd = 0;
-    for(asc_list_first(event_observer.event_list)
-        ; !asc_list_eol(event_observer.event_list)
-        ; )
+    asc_list_first(event_observer.event_list);
+    while (!asc_list_eol(event_observer.event_list))
     {
         asc_event_t *const i_event =
             (asc_event_t *)asc_list_data(event_observer.event_list);
 
-        if(i_event == event)
+        if (i_event == event)
         {
             asc_list_remove_current(event_observer.event_list);
             free(event);
@@ -683,6 +682,7 @@ void asc_event_close(asc_event_t *event)
         {
             if(i_event->fd > event_observer.max_fd)
                 event_observer.max_fd = i_event->fd;
+
             asc_list_next(event_observer.event_list);
         }
     }

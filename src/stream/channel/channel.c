@@ -957,7 +957,7 @@ static void module_destroy(module_data_t *mod)
 
     if(mod->map)
     {
-        for(asc_list_first(mod->map); !asc_list_eol(mod->map); asc_list_first(mod->map))
+        asc_list_till_empty(mod->map)
         {
             free(asc_list_data(mod->map));
             asc_list_remove_current(mod->map);

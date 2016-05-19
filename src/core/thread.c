@@ -195,8 +195,7 @@ void asc_thread_core_destroy(void)
 {
     asc_thread_t *thr, *prev = NULL;
 
-    asc_list_first(thread_mgr->list);
-    while (!asc_list_eol(thread_mgr->list))
+    asc_list_till_empty(thread_mgr->list)
     {
         thr = (asc_thread_t *)asc_list_data(thread_mgr->list);
         asc_assert(thr != prev, MSG("on_close didn't join thread"));
@@ -207,7 +206,6 @@ void asc_thread_core_destroy(void)
             asc_thread_join(thr);
 
         prev = thr;
-        asc_list_first(thread_mgr->list);
     }
 
     ASC_FREE(thread_mgr->list, asc_list_destroy);

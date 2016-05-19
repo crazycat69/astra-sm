@@ -747,9 +747,7 @@ static void mmi_free(mmi_data_t *mmi)
             free(mmi->object.menu.title);
             free(mmi->object.menu.subtitle);
             free(mmi->object.menu.bottom);
-            for(asc_list_first(mmi->object.menu.choices)
-                ; !asc_list_eol(mmi->object.menu.choices)
-                ; asc_list_first(mmi->object.menu.choices))
+            asc_list_till_empty(mmi->object.menu.choices)
             {
                 free(asc_list_data(mmi->object.menu.choices));
                 asc_list_remove_current(mmi->object.menu.choices);
@@ -1436,7 +1434,7 @@ static void ca_slot_reset(dvb_ca_t *ca, uint8_t slot_id)
     slot->is_busy = false;
     slot->is_first_ca_pmt = true;
 
-    for(asc_list_first(slot->queue); !asc_list_eol(slot->queue); asc_list_first(slot->queue))
+    asc_list_till_empty(slot->queue)
     {
         free(asc_list_data(slot->queue));
         asc_list_remove_current(slot->queue);
@@ -1806,9 +1804,7 @@ void ca_close(dvb_ca_t *ca)
     {
         ca_pmt_send_all(ca, CA_PMT_LM_UPDATE, CA_PMT_CMD_NOT_SELECTED);
 
-        for(asc_list_first(ca->ca_pmt_list)
-            ; !asc_list_eol(ca->ca_pmt_list)
-            ; asc_list_first(ca->ca_pmt_list))
+        asc_list_till_empty(ca->ca_pmt_list)
         {
             free(asc_list_data(ca->ca_pmt_list));
             asc_list_remove_current(ca->ca_pmt_list);
@@ -1819,9 +1815,7 @@ void ca_close(dvb_ca_t *ca)
 
     if(ca->ca_pmt_list_new)
     {
-        for(asc_list_first(ca->ca_pmt_list_new)
-            ; !asc_list_eol(ca->ca_pmt_list_new)
-            ; asc_list_first(ca->ca_pmt_list_new))
+        asc_list_till_empty(ca->ca_pmt_list_new)
         {
             free(asc_list_data(ca->ca_pmt_list_new));
             asc_list_remove_current(ca->ca_pmt_list_new);
@@ -1833,9 +1827,7 @@ void ca_close(dvb_ca_t *ca)
 
     if(ca->ca_pmt_list_del)
     {
-        for(asc_list_first(ca->ca_pmt_list_del)
-            ; !asc_list_eol(ca->ca_pmt_list_del)
-            ; asc_list_first(ca->ca_pmt_list_del))
+        asc_list_till_empty(ca->ca_pmt_list_del)
         {
             asc_list_remove_current(ca->ca_pmt_list_del);
         }
@@ -1857,9 +1849,7 @@ void ca_close(dvb_ca_t *ca)
         for(int i = 0; i < ca->slots_num; ++i)
         {
             ca_slot_t *slot = &ca->slots[i];
-            for(asc_list_first(slot->queue)
-                ; !asc_list_eol(slot->queue)
-                ; asc_list_first(slot->queue))
+            asc_list_till_empty(slot->queue)
             {
                 free(asc_list_data(slot->queue));
                 asc_list_remove_current(slot->queue);

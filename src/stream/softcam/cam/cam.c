@@ -50,9 +50,7 @@ void module_cam_ready(module_cam_t *cam)
 {
     cam->is_ready = true;
 
-    for(asc_list_first(cam->decrypt_list)
-        ; !asc_list_eol(cam->decrypt_list)
-        ; asc_list_next(cam->decrypt_list))
+    asc_list_for(cam->decrypt_list)
     {
         module_decrypt_t *__decrypt = (module_decrypt_t *)asc_list_data(cam->decrypt_list);
         on_cam_ready(__decrypt->self);
@@ -63,19 +61,17 @@ void module_cam_reset(module_cam_t *cam)
 {
     cam->is_ready = false;
 
-    for(  asc_list_first(cam->decrypt_list)
-        ; !asc_list_eol(cam->decrypt_list)
-        ; asc_list_next(cam->decrypt_list))
+    asc_list_for(cam->decrypt_list)
     {
         module_decrypt_t *__decrypt = (module_decrypt_t *)asc_list_data(cam->decrypt_list);
         on_cam_error(__decrypt->self);
     }
-    for(  asc_list_first(cam->prov_list)
-        ; !asc_list_eol(cam->prov_list)
-        ; asc_list_first(cam->prov_list))
+
+    asc_list_till_empty(cam->prov_list)
     {
         asc_list_remove_current(cam->prov_list);
     }
+
     module_cam_queue_flush(cam, NULL);
 }
 

@@ -813,9 +813,7 @@ static void on_server_close(void *arg)
     if(mod->clients)
     {
         http_client_t *prev_client = NULL;
-        for(  asc_list_first(mod->clients)
-            ; !asc_list_eol(mod->clients)
-            ; asc_list_first(mod->clients))
+        asc_list_till_empty(mod->clients)
         {
             http_client_t *client = (http_client_t *)asc_list_data(mod->clients);
             asc_assert(client != prev_client
@@ -831,9 +829,7 @@ static void on_server_close(void *arg)
 
     if(mod->routes)
     {
-        for(  asc_list_first(mod->routes)
-            ; !asc_list_eol(mod->routes)
-            ; asc_list_first(mod->routes))
+        asc_list_till_empty(mod->routes)
         {
             route_t *route = (route_t *)asc_list_data(mod->routes);
             luaL_unref(L, LUA_REGISTRYINDEX, route->idx_callback);

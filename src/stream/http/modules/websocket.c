@@ -329,9 +329,7 @@ static int module_call(lua_State *L, module_data_t *mod)
             }
             if(client->response->frame_queue)
             {
-                for(  asc_list_first(client->response->frame_queue)
-                    ; !asc_list_eol(client->response->frame_queue)
-                    ; asc_list_remove_current(client->response->frame_queue))
+                asc_list_clear(client->response->frame_queue)
                 {
                     frame_t *frame = (frame_t *)asc_list_data(client->response->frame_queue);
                     free(frame->buffer);

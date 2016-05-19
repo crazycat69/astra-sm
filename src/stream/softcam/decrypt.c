@@ -179,9 +179,7 @@ static void module_decrypt_cas_destroy(module_data_t *mod)
         mod->__decrypt.cas = NULL;
     }
 
-    for(  asc_list_first(mod->el_list)
-        ; !asc_list_eol(mod->el_list)
-        ; asc_list_remove_current(mod->el_list))
+    asc_list_clear(mod->el_list)
     {
         el_stream_t *el_stream = (el_stream_t *)asc_list_data(mod->el_list);
         free(el_stream);
@@ -195,9 +193,7 @@ static void module_decrypt_cas_destroy(module_data_t *mod)
         return;
     }
 
-    for(  asc_list_first(mod->ca_list)
-        ; !asc_list_eol(mod->ca_list)
-        ; asc_list_remove_current(mod->ca_list))
+    asc_list_clear(mod->ca_list)
     {
         ca_stream_t *ca_stream = (ca_stream_t *)asc_list_data(mod->ca_list);
         ca_stream_destroy(ca_stream);
