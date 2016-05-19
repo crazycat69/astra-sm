@@ -130,7 +130,8 @@ libstream_la_LIBADD = libastra.la
 libstream_la_SOURCES = \
     stream/analyze/analyze.c \
     stream/channel/channel.c \
-    stream/transmit/transmit.c
+    stream/transmit/transmit.c \
+    stream/t2mi/decap.c
 
 ### asi ###
 if HAVE_STREAM_ASI
