@@ -35,7 +35,7 @@
             asc_log_error("%s:%u: failed assertion `%s'" \
                           , __FILE__, __LINE__, #__cond); \
             asc_log_error(__VA_ARGS__); \
-            astra_abort(); \
+            asc_lib_abort(); \
         } \
     } while (0)
 

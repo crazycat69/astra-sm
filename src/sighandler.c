@@ -137,7 +137,7 @@ static void *thread_loop(void *arg)
                 break;
 
             case SIGQUIT:
-                astra_abort();
+                asc_lib_abort();
                 break;
 
             default:
@@ -468,10 +468,10 @@ static bool service_destroy(void)
     if (service_thread != NULL)
     {
         /* notify SCM if we're exiting because of an error */
-        if (astra_exit_status != EXIT_SUCCESS)
+        if (asc_exit_status != EXIT_SUCCESS)
         {
             service_status.dwWin32ExitCode = ERROR_SERVICE_SPECIFIC_ERROR;
-            service_status.dwServiceSpecificExitCode = astra_exit_status;
+            service_status.dwServiceSpecificExitCode = asc_exit_status;
         }
 
         /* report service shutdown, join dispatcher thread */

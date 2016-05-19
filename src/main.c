@@ -47,7 +47,7 @@ int main(int argc, const char **argv)
 
 astra_reload_entry:
     asc_srand();
-    astra_core_init();
+    asc_lib_init();
     signal_enable(true);
 
     /* pass command line to lua */
@@ -74,7 +74,7 @@ astra_reload_entry:
         {
             printf(PACKAGE_STRING "\n");
             printf("Usage: %s script.lua [OPTIONS]\n", argv[0]);
-            astra_exit(EXIT_FAILURE);
+            asc_lib_exit(EXIT_FAILURE);
         }
 
         int ret = -1;
@@ -86,7 +86,7 @@ astra_reload_entry:
         else
         {
             printf("Error: initial script isn't found\n");
-            astra_exit(EXIT_FAILURE);
+            asc_lib_exit(EXIT_FAILURE);
         }
 
         if(ret != 0)
@@ -98,7 +98,7 @@ astra_reload_entry:
     asc_log_info("[main] %s", again ? "restarting" : "shutting down");
 
     signal_enable(false);
-    astra_core_destroy();
+    asc_lib_destroy();
 
     if (again)
         goto astra_reload_entry;

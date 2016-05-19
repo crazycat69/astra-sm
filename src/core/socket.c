@@ -83,7 +83,7 @@ void asc_socket_core_init(void)
         asc_log_error("[core/socket] WSAStartup() failed: %s"
                       , asc_strerror(err, buf, sizeof(buf)));
 
-        astra_abort();
+        asc_lib_abort();
     }
 }
 

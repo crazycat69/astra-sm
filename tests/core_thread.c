@@ -37,12 +37,12 @@ typedef struct
  */
 static void setup(void)
 {
-    astra_core_init();
+    asc_lib_init();
 }
 
 static void teardown(void)
 {
-    astra_core_destroy();
+    asc_lib_destroy();
 }
 
 /*

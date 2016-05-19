@@ -146,7 +146,7 @@ static void sec_open(module_data_t *mod)
     if(mod->enc_sec_fd <= 0)
     {
         asc_log_error(MSG("failed to open sec [%s]"), strerror(errno));
-        astra_abort();
+        asc_lib_abort();
     }
 
     mod->sec_thread = asc_thread_init();
@@ -213,7 +213,7 @@ static void ca_thread_loop(void *arg)
         if(ret < 0)
         {
             asc_log_error(MSG("poll() failed [%s]"), strerror(errno));
-            astra_abort();
+            asc_lib_abort();
         }
 
         if(ret > 0)
@@ -288,7 +288,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     if(!module_option_integer(L, __adapter, &mod->adapter))
     {
         asc_log_error(MSG("option '%s' is required"), __adapter);
-        astra_abort();
+        asc_lib_abort();
     }
     module_option_integer(L, "device", &mod->device);
     mod->ca->adapter = mod->adapter;
@@ -308,7 +308,7 @@ static void module_init(lua_State *L, module_data_t *mod)
             break;
 
         asc_log_error(MSG("ci-device is not found"));
-        astra_abort();
+        asc_lib_abort();
     }
 
     mod->ca_thread = asc_thread_init();

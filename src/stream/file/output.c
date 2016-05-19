@@ -239,7 +239,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     if(!mod->config.filename)
     {
         asc_log_error("[file_output] option 'filename' is required");
-        astra_abort();
+        asc_lib_abort();
     }
 
     bool m2ts = 0;
@@ -272,7 +272,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         if(posix_memalign((void **)&mod->buffer, ALIGN, mod->buffer_size))
         {
             asc_log_error(MSG("cannot malloc aligned memory"));
-            astra_abort();
+            asc_lib_abort();
         }
     }
     else
@@ -297,7 +297,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     if(mod->fd <= 0)
     {
         asc_log_error(MSG("failed to open file [%s]"), strerror(errno));
-        astra_abort();
+        asc_lib_abort();
     }
 
     struct stat st;
@@ -314,7 +314,7 @@ static void module_init(lua_State *L, module_data_t *mod)
             if(posix_memalign(&mod->buffer_aio, ALIGN, mod->buffer_size))
             {
                 asc_log_error(MSG("cannot malloc aligned memory"));
-                astra_abort();
+                asc_lib_abort();
             }
 #else /* !HAVE_POSIX_MEMALIGN */
             mod->buffer_aio = malloc(mod->buffer_size);

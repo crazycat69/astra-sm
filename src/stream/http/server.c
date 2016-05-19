@@ -864,7 +864,7 @@ static void on_server_accept(void *arg)
     {
         free(client);
         on_server_close(mod);
-        astra_abort(); // TODO: try to restart server
+        asc_lib_abort(); // TODO: try to restart server
     }
 
     asc_list_insert_tail(mod->clients, client);
@@ -1021,7 +1021,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     if(!asc_socket_bind(mod->sock, mod->addr, mod->port))
     {
         on_server_close(mod);
-        astra_abort(); // TODO: try to restart server
+        asc_lib_abort(); // TODO: try to restart server
     }
     asc_socket_listen(mod->sock, on_server_accept, on_server_close);
 }

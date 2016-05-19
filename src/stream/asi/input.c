@@ -50,7 +50,7 @@ static void asi_on_error(void *arg)
     asc_log_error(MSG("asi read error [%s]"), strerror(errno));
     asc_event_close(mod->event);
     close(mod->fd);
-    astra_abort();
+    asc_lib_abort();
 }
 
 
@@ -78,7 +78,7 @@ static void set_pid(module_data_t *mod, uint16_t pid, int is_set)
     if(pid >= MAX_PID)
     {
         asc_log_error(MSG("PID value must be less then %d"), MAX_PID);
-        astra_abort();
+        asc_lib_abort();
     }
 
     if(is_set)
@@ -114,7 +114,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     if(!module_option_integer(L, "adapter", &mod->adapter))
     {
         asc_log_error("[asi_input] option 'adapter' is required");
-        astra_abort();
+        asc_lib_abort();
     }
     module_option_boolean(L, "budget", &mod->budget);
 

@@ -397,7 +397,7 @@ void asc_event_core_loop(unsigned int timeout)
 #endif /* !_WIN32 */
 
         asc_log_error(MSG("poll() failed: %s"), asc_error_msg());
-        astra_abort();
+        asc_lib_abort();
     }
 
     event_observer.is_changed = false;
@@ -580,7 +580,7 @@ void asc_event_core_loop(unsigned int timeout)
 #endif /* !_WIN32 */
 
         asc_log_error(MSG("select() failed: %s"), asc_error_msg());
-        astra_abort();
+        asc_lib_abort();
     }
     else if(ret > 0)
     {

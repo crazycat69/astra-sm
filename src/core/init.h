@@ -2,7 +2,7 @@
  * Astra Core (Initialization)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,14 +25,14 @@
 #   error "Please include <astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-extern int astra_exit_status;
+extern int asc_exit_status;
 
 void asc_srand(void);
 
-void astra_core_init(void);
-void astra_core_destroy(void);
+void asc_lib_init(void);
+void asc_lib_destroy(void);
 
-void astra_exit(int status) __dead;
-void astra_abort(void) __dead;
+void asc_lib_exit(int status) __dead;
+void asc_lib_abort(void) __dead;
 
 #endif /* _ASC_INIT_H_ */

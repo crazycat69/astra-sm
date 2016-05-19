@@ -2,7 +2,7 @@
  * Astra Core (Initialization)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@
 
 #define MSG(_msg) "[core] " _msg
 
-int astra_exit_status = 0;
+int asc_exit_status = 0;
 
 void asc_srand(void)
 {
@@ -54,7 +54,7 @@ void asc_srand(void)
     srand(c);
 }
 
-void astra_core_init(void)
+void asc_lib_init(void)
 {
     /* rest of the init routines may need logging functions */
     asc_log_core_init();
@@ -72,7 +72,7 @@ void astra_core_init(void)
     lua = lua_api_init();
 }
 
-void astra_core_destroy(void)
+void asc_lib_destroy(void)
 {
     /*
      * Clean up our Lua state along with all the module instances.
@@ -98,16 +98,16 @@ void astra_core_destroy(void)
     asc_log_core_destroy();
 }
 
-void astra_exit(int status)
+void asc_lib_exit(int status)
 {
     asc_log_debug(MSG("immediate exit requested, rc=%d"), status);
 
-    astra_core_destroy();
-    astra_exit_status = status;
+    asc_lib_destroy();
+    asc_exit_status = status;
     exit(status);
 }
 
-void astra_abort(void)
+void asc_lib_abort(void)
 {
     int level = 0;
     if (lua != NULL)
@@ -129,6 +129,6 @@ void astra_abort(void)
     if (level == 0)
         asc_log_error(MSG("abort execution"));
 
-    astra_exit_status = EXIT_ABORT;
+    asc_exit_status = EXIT_ABORT;
     exit(EXIT_ABORT);
 }

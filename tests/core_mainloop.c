@@ -27,12 +27,12 @@
  */
 static void setup(void)
 {
-    astra_core_init();
+    asc_lib_init();
 }
 
 static void teardown(void)
 {
-    astra_core_destroy();
+    asc_lib_destroy();
 }
 
 /*
@@ -58,12 +58,12 @@ END_TEST
 static __dead void on_exit_timer(void *arg)
 {
     __uarg(arg);
-    astra_exit(EXIT_TEST);
+    asc_lib_exit(EXIT_TEST);
 }
 
 static void on_process_exit(void)
 {
-    ck_assert(astra_exit_status == EXIT_TEST);
+    ck_assert(asc_exit_status == EXIT_TEST);
 }
 
 START_TEST(exit_status)
@@ -118,7 +118,7 @@ static void on_block(void *arg)
 
 static void on_process_abort(void)
 {
-    ck_assert(astra_exit_status == EXIT_MAINLOOP);
+    ck_assert(asc_exit_status == EXIT_MAINLOOP);
 }
 
 START_TEST(blocked_thread)
