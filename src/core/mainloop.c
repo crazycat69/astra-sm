@@ -35,6 +35,13 @@
 /* maximum number of jobs queued */
 #define JOB_QUEUE_SIZE 256
 
+enum
+{
+    MAIN_LOOP_SIGHUP   = 0x00000001,
+    MAIN_LOOP_RELOAD   = 0x00000002,
+    MAIN_LOOP_SHUTDOWN = 0x00000004,
+};
+
 typedef struct
 {
     loop_callback_t proc;
@@ -198,10 +205,6 @@ bool asc_main_loop_run(void)
 /*
  * loop controls
  */
-void asc_main_loop_set(uint32_t flag)
-{
-    main_loop->flags |= flag;
-}
 
 /* request graceful shutdown, abort if called multiple times */
 void astra_shutdown(void)
@@ -225,5 +228,17 @@ void astra_shutdown(void)
         }
     }
 
-    asc_main_loop_set(MAIN_LOOP_SHUTDOWN);
+    main_loop->flags |= MAIN_LOOP_SHUTDOWN;
+}
+
+/* ask loader program (i.e. main.c) to restart the instance */
+void astra_reload(void)
+{
+    main_loop->flags |= MAIN_LOOP_RELOAD;
+}
+
+/* reopen logs and run `on_sighup` Lua function if defined */
+void astra_sighup(void)
+{
+    main_loop->flags |= MAIN_LOOP_SIGHUP;
 }
