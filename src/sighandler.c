@@ -20,6 +20,7 @@
 
 #include <astra.h>
 #include <core/mainloop.h>
+#include <core/mutex.h>
 
 #include "sighandler.h"
 
@@ -47,7 +48,7 @@ static void perror_exit(int errnum, const char *str)
 
 /* TODO: move these to core/thread.h */
 #define mutex_lock(__mutex) pthread_mutex_lock(&__mutex)
-#define mutex_timedlock(__mutex, __ms) __mutex_timedlock(&__mutex, (__ms))
+#define mutex_timedlock(__mutex, __ms) asc_mutex_timedlock(&__mutex, (__ms))
 #define mutex_unlock(__mutex) pthread_mutex_unlock(&__mutex)
 
 struct signal_setup
@@ -72,24 +73,6 @@ static sigset_t old_mask;
 static pthread_t signal_thread;
 static pthread_mutex_t signal_lock;
 static bool quit_thread = true;
-
-static bool __mutex_timedlock(pthread_mutex_t *mutex, unsigned ms)
-{
-    struct timespec ts = { 0, 0 };
-#ifdef HAVE_CLOCK_GETTIME
-    if (clock_gettime(CLOCK_REALTIME, &ts) != 0)
-#endif
-        ts.tv_sec = time(NULL);
-
-    /* try not to overflow tv_nsec */
-    ts.tv_sec += (ms / 1000);
-    ts.tv_nsec += (ms % 1000) * 1000000;
-    ts.tv_sec += ts.tv_nsec / 1000000000;
-    ts.tv_nsec %= 1000000000;
-
-    const int ret = pthread_mutex_timedlock(mutex, &ts);
-    return (ret == 0);
-}
 
 static void *thread_loop(void *arg)
 {

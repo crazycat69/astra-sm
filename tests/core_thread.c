@@ -238,6 +238,82 @@ START_TEST(wake_up)
 }
 END_TEST
 
+/* mutex timed lock */
+#define TL_P1_WAIT (100 * 1000) /* 100ms */
+#define TL_P2_WAIT (200 * 1000) /* 200ms */
+#define TL_MS 500 /* timeout in msecs */
+
+#define TL_CHECK_TIME(__start, __timeout) \
+    do { \
+        const uint64_t __bench = asc_utime() - (__start); \
+        ck_assert(__bench <= (__timeout) * 1.3 \
+                  && __bench >= (__timeout) * 0.7); \
+    } while (0)
+
+static asc_mutex_t tl_mutex1;
+static asc_mutex_t tl_mutex2;
+static asc_mutex_t tl_mutex3;
+
+static void timedlock_proc(void *arg)
+{
+    __uarg(arg);
+
+    asc_mutex_lock(&tl_mutex2); /* locked M2 */
+
+    /* part 1 */
+    const uint64_t start = asc_utime();
+    const bool ret = asc_mutex_timedlock(&tl_mutex1, TL_MS); /* locked M1 */
+    ck_assert(ret == true);
+    TL_CHECK_TIME(start, TL_P1_WAIT);
+
+    /* part 2 */
+    asc_usleep(TL_P2_WAIT);
+    asc_mutex_unlock(&tl_mutex2); /* released M2 */
+
+    /* part 3 */
+    asc_mutex_lock(&tl_mutex3); /* locked M3 */
+    asc_mutex_unlock(&tl_mutex1); /* released M1 */
+    asc_mutex_unlock(&tl_mutex3); /* released M3 */
+}
+
+START_TEST(timedlock)
+{
+    asc_mutex_init(&tl_mutex1);
+    asc_mutex_init(&tl_mutex2);
+    asc_mutex_init(&tl_mutex3);
+
+    asc_mutex_lock(&tl_mutex3); /* locked M3 */
+
+    /* part 1: aux thread waits for main */
+    asc_mutex_lock(&tl_mutex1); /* locked M1 */
+    asc_thread_t *thr = asc_thread_init();
+    asc_thread_start(thr, NULL, timedlock_proc, NULL);
+    asc_usleep(TL_P1_WAIT);
+    asc_mutex_unlock(&tl_mutex1); /* released M1 */
+
+    /* part 2: main thread waits for aux */
+    uint64_t start = asc_utime();
+    bool ret = asc_mutex_timedlock(&tl_mutex2, TL_MS); /* locked M2 */
+    ck_assert(ret == true);
+    TL_CHECK_TIME(start, TL_P2_WAIT);
+
+    /* part 3: timedlock failure */
+    start = asc_utime();
+    ret = asc_mutex_timedlock(&tl_mutex1, TL_MS); /* timeout for M1 */
+    ck_assert(ret == false);
+    TL_CHECK_TIME(start, TL_MS * 1000);
+
+    /* join thread and clean up */
+    asc_mutex_unlock(&tl_mutex2); /* released M2 */
+    asc_mutex_unlock(&tl_mutex3); /* released M3 */
+    asc_thread_join(thr);
+
+    asc_mutex_destroy(&tl_mutex1);
+    asc_mutex_destroy(&tl_mutex2);
+    asc_mutex_destroy(&tl_mutex3);
+}
+END_TEST
+
 Suite *core_thread(void)
 {
     Suite *const s = suite_create("thread");
@@ -249,6 +325,7 @@ Suite *core_thread(void)
     tcase_add_test(tc, producers);
     tcase_add_test(tc, no_start);
     tcase_add_test(tc, wake_up);
+    tcase_add_test(tc, timedlock);
 
     if (can_fork != CK_NOFORK)
     {

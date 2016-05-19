@@ -252,8 +252,7 @@ AC_CHECK_HEADERS([netinet/sctp.h sys/queue.h])
 #   posix_memalign(): used by stream/file
 #   accept4(): used by core/socket
 #   mkostemp(): used for creating pidfiles
-AC_CHECK_FUNCS([pread strndup strnlen posix_memalign accept4 mkostemp])
-# TODO: check for pthread_mutex_timedlock
+AC_CHECK_FUNCS([pread strndup strnlen posix_memalign accept4 mkostemp pthread_mutex_timedlock])
 
 # getifaddrs(): used by utils.c
 AC_CHECK_FUNCS([getifaddrs],

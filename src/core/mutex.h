@@ -35,7 +35,7 @@ static inline
 void asc_mutex_init(asc_mutex_t *mutex)
 {
     const int ret = pthread_mutex_init(mutex, NULL);
-    asc_assert(ret == 0, "[core/thread] couldn't init mutex: %s"
+    asc_assert(ret == 0, "[core/mutex] couldn't init mutex: %s"
                , strerror(ret));
 }
 
@@ -43,7 +43,7 @@ static inline
 void asc_mutex_destroy(asc_mutex_t *mutex)
 {
     const int ret = pthread_mutex_destroy(mutex);
-    asc_assert(ret == 0, "[core/thread] couldn't destroy mutex: %s"
+    asc_assert(ret == 0, "[core/mutex] couldn't destroy mutex: %s"
                , strerror(ret));
 }
 
@@ -51,7 +51,7 @@ static inline
 void asc_mutex_lock(asc_mutex_t *mutex)
 {
     const int ret = pthread_mutex_lock(mutex);
-    asc_assert(ret == 0, "[core/thread] couldn't lock mutex: %s"
+    asc_assert(ret == 0, "[core/mutex] couldn't lock mutex: %s"
                , strerror(ret));
 }
 
@@ -59,7 +59,7 @@ static inline
 void asc_mutex_unlock(asc_mutex_t *mutex)
 {
     const int ret = pthread_mutex_unlock(mutex);
-    asc_assert(ret == 0, "[core/thread] couldn't unlock mutex: %s"
+    asc_assert(ret == 0, "[core/mutex] couldn't unlock mutex: %s"
                , strerror(ret));
 }
 
@@ -92,5 +92,7 @@ void asc_mutex_unlock(asc_mutex_t *mutex)
 }
 
 #endif /* _WIN32 */
+
+bool asc_mutex_timedlock(asc_mutex_t *mutex, unsigned int ms) __wur;
 
 #endif /* _ASC_MUTEX_H_ */
