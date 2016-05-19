@@ -46,6 +46,8 @@ libastra_la_SOURCES += \
     core/log.h \
     core/mainloop.c \
     core/mainloop.h \
+    core/mutex.c \
+    core/mutex.h \
     core/socket.c \
     core/socket.h \
     core/spawn.c \

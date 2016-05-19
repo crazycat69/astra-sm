@@ -1,5 +1,5 @@
 /*
- * Astra Core (Auxiliary threads)
+ * Astra Core (Auxiliary thread)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
@@ -21,6 +21,7 @@
 
 #include <astra.h>
 #include <core/thread.h>
+#include <core/mutex.h>
 #include <core/event.h>
 #include <core/list.h>
 #include <core/mainloop.h>

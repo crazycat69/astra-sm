@@ -22,7 +22,7 @@
 #include <astra.h>
 #include <core/mainloop.h>
 #include <core/event.h>
-#include <core/thread.h>
+#include <core/mutex.h>
 #include <core/timer.h>
 #include <luaapi/luaapi.h>
 #include <luaapi/state.h>

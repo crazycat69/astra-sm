@@ -22,6 +22,7 @@
 #include <core/list.h>
 #include <core/mainloop.h>
 #include <core/thread.h>
+#include <core/mutex.h>
 
 typedef struct
 {
