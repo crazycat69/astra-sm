@@ -2,6 +2,7 @@
 -- https://cesbo.com/astra/
 --
 -- Copyright (C) 2014-2015, Andrey Dyldin <and@cesbo.com>
+--               2015-2016, Artem Kharitonov <artem@3phase.pw>
 --
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -883,15 +884,14 @@ function make_t2mi_decap(conf)
     if conf.name == nil then
         error("[make_t2mi_decap] option 'name' is required")
     end
-    if conf.input == nil then
-        error("[make_t2mi_decap] option 'input' is required")
-    end
-
     local instance = t2mi_input_instance_list[conf.name]
     if instance ~= nil then
         return instance
     end
 
+    if conf.input == nil then
+        error("[make_t2mi_decap] option 'input' is required")
+    end
     local input = parse_url(conf.input)
     if input == nil then
         error("[make_t2mi_decap] wrong input format")
@@ -925,14 +925,13 @@ init_input_module.t2mi = function(conf)
     if not check_def() then
         error("[" .. conf.name .. "] t2mi decap definition not found")
     end
-    local instance_id = instance.name
 
     if instance.clients == 0 then
         instance.source = init_input(instance.input)
         instance.conf.upstream = instance.source.tail:stream()
         instance.t2mi = t2mi_decap(instance.conf)
 
-        t2mi_input_instance_list[instance_id] = instance
+        t2mi_input_instance_list[instance.name] = instance
     end
 
     instance.clients = instance.clients + 1
