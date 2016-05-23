@@ -22,7 +22,6 @@
 #include <core/event.h>
 #include <core/thread.h>
 #include <core/timer.h>
-#include <mpegts/t2mi.h>
 
 #define MSG(_msg) "[dvb_input %d:%d] " _msg, mod->adapter, mod->device
 
@@ -66,22 +65,8 @@ struct module_data_t
 
     int do_bounce;
 
-    /* T2-MI */
-    struct
-    {
-        bool on;
-        unsigned pnr;
-        unsigned pid;
-        unsigned plp;
-
-        mpegts_t2mi_t *ctx;
-    } t2mi;
-
     dvb_fe_t *fe;
     dvb_ca_t *ca;
-
-    ts_callback_t send_ts;
-    void *send_arg;
 };
 
 #define THREAD_DELAY_FE (1 * 1000 * 1000)
@@ -201,7 +186,7 @@ static void dvr_on_read(void *arg)
         if(mod->ca->ca_fd > 0)
             ca_on_ts(mod->ca, ts);
 
-        mod->send_ts(mod->send_arg, ts);
+        module_stream_send(mod, ts);
 
         if(TS_IS_SYNC(ts) && TS_GET_PID(ts) == 0)
             mpegts_psi_mux(mod->pat, ts, on_pat, mod);
@@ -781,16 +766,6 @@ static void module_options(lua_State *L, module_data_t *mod)
     }
     mod->ca->pmt_delay = ca_pmt_delay * 1000 * 1000;
 
-    module_option_boolean(L, "t2mi", &mod->t2mi.on);
-    if (mod->t2mi.on)
-    {
-        mod->t2mi.plp = T2MI_PLP_AUTO;
-
-        module_option_integer(L, "t2mi_plp", (int *)&mod->t2mi.plp);
-        module_option_integer(L, "t2mi_pnr", (int *)&mod->t2mi.pnr);
-        module_option_integer(L, "t2mi_pid", (int *)&mod->t2mi.pid);
-    }
-
     switch(mod->fe->type)
     {
         case DVB_TYPE_UNKNOWN:
@@ -1049,12 +1024,6 @@ static int method_ca_set_pnr(lua_State *L, module_data_t *mod)
 
 static int method_close(lua_State *L, module_data_t *mod)
 {
-    if (mod->t2mi.ctx)
-    {
-        mpegts_t2mi_set_demux(mod->t2mi.ctx, NULL, NULL, NULL);
-        ASC_FREE(mod->t2mi.ctx, mpegts_t2mi_destroy);
-    }
-
     dvr_close(mod);
     on_thread_close(mod);
 
@@ -1092,39 +1061,12 @@ static void leave_pid(void *arg, uint16_t pid)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, NULL);
+    module_stream_demux_set(mod, join_pid, leave_pid);
 
     mod->fe = (dvb_fe_t *)calloc(1, sizeof(dvb_fe_t));
     mod->ca = (dvb_ca_t *)calloc(1, sizeof(dvb_ca_t));
 
     module_options(L, mod);
-
-    if (mod->t2mi.on)
-    {
-        module_stream_demux_set(mod, NULL, NULL);
-
-        mod->t2mi.ctx = mpegts_t2mi_init();
-        mpegts_t2mi_set_fname(mod->t2mi.ctx, "dvb_input %d:%d"
-                              , mod->adapter, mod->device);
-
-        mpegts_t2mi_set_demux(mod->t2mi.ctx, mod, join_pid, leave_pid);
-        mpegts_t2mi_set_payload(mod->t2mi.ctx, mod->t2mi.pnr, mod->t2mi.pid);
-        mpegts_t2mi_set_plp(mod->t2mi.ctx, mod->t2mi.plp);
-
-        /* put received TS through decapsulator */
-        mod->send_ts = (ts_callback_t)mpegts_t2mi_decap;
-        mod->send_arg = mod->t2mi.ctx;
-
-        mpegts_t2mi_set_callback(mod->t2mi.ctx
-                                 , __module_stream_send
-                                 , &mod->__stream);
-    }
-    else
-    {
-        module_stream_demux_set(mod, join_pid, leave_pid);
-
-        mod->send_ts = __module_stream_send;
-        mod->send_arg = &mod->__stream;
-    }
 
     lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
     if(lua_isfunction(L, -1))

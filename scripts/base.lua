@@ -2,6 +2,7 @@
 -- https://cesbo.com/astra/
 --
 -- Copyright (C) 2014-2015, Andrey Dyldin <and@cesbo.com>
+--               2015-2016, Artem Kharitonov <artem@3phase.pw>
 --
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -869,8 +870,111 @@ init_input_module.pipe = function(conf)
     return pipe_generic(conf)
 end
 
-kill_input_module.pipe = function(module)
+kill_input_module.pipe = function(module, conf)
     --
+end
+
+--
+-- Input: t2mi://
+--
+
+t2mi_input_instance_list = {}
+
+function make_t2mi_decap(conf)
+    if conf.name == nil then
+        error("[make_t2mi_decap] option 'name' is required")
+    end
+    local instance = t2mi_input_instance_list[conf.name]
+    if instance ~= nil then
+        return instance
+    end
+
+    if conf.input == nil then
+        error("[make_t2mi_decap] option 'input' is required")
+    end
+    local input = parse_url(conf.input)
+    if input == nil then
+        error("[make_t2mi_decap] wrong input format")
+    end
+    input.name = conf.name
+
+    instance = {
+        name = conf.name,
+        input = input,
+        conf = {
+            name = conf.name,
+            pnr = conf.pnr,
+            pid = conf.pid,
+            plp = conf.plp,
+        },
+        clients = 0,
+    }
+
+    return instance
+end
+
+init_input_module.t2mi = function(conf)
+    local instance = nil
+    if conf.addr == nil or #conf.addr == 0 then
+        -- ad-hoc configuration
+        local input = parse_url(conf.t2mi_input)
+        if not input then
+            error("[" .. conf.name .. "] wrong t2mi input format")
+        end
+        for k, v in pairs(conf) do
+            if k ~= "format" and k ~= "addr" and not k:find("t2mi_", 1) then
+                input[k] = v
+            end
+        end
+        instance = {
+            name = conf.name,
+            input = input,
+            conf = {
+                name = conf.name,
+                pnr = conf.t2mi_pnr,
+                pid = conf.t2mi_pid,
+                plp = conf.t2mi_plp,
+            },
+            clients = 0,
+        }
+    else
+        -- pre-defined decapsulator
+        instance = _G[conf.addr]
+    end
+
+    local function check_def()
+        if not instance then return false end
+        if not instance.name then return false end
+        if not instance.input then return false end
+        if not instance.conf then return false end
+        return true
+    end
+    if not check_def() then
+        error("[" .. conf.name .. "] t2mi decap definition not found")
+    end
+
+    if instance.clients == 0 then
+        instance.source = init_input(instance.input)
+        instance.conf.upstream = instance.source.tail:stream()
+        instance.t2mi = t2mi_decap(instance.conf)
+
+        t2mi_input_instance_list[instance.name] = instance
+    end
+
+    instance.clients = instance.clients + 1
+    return instance.t2mi
+end
+
+kill_input_module.t2mi = function(module, conf)
+    local instance_id = module.__options.name
+    local instance = t2mi_input_instance_list[instance_id]
+
+    instance.clients = instance.clients - 1
+    if instance.clients == 0 then
+        instance.t2mi = nil
+        kill_input(instance.source)
+        t2mi_input_instance_list[instance_id] = nil
+    end
 end
 
 -- ooooo         oooooooooo  ooooooooooo ooooo         ooooooo      o      ooooooooo
