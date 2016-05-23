@@ -914,7 +914,34 @@ function make_t2mi_decap(conf)
 end
 
 init_input_module.t2mi = function(conf)
-    local instance = _G[conf.addr]
+    local instance = nil
+    if conf.addr == nil or #conf.addr == 0 then
+        -- ad-hoc configuration
+        local input = parse_url(conf.t2mi_input)
+        if not input then
+            error("[" .. conf.name .. "] wrong t2mi input format")
+        end
+        for k, v in pairs(conf) do
+            if k ~= "format" and k ~= "addr" and not k:find("t2mi_", 1) then
+                input[k] = v
+            end
+        end
+        instance = {
+            name = conf.name,
+            input = input,
+            conf = {
+                name = conf.name,
+                pnr = conf.t2mi_pnr,
+                pid = conf.t2mi_pid,
+                plp = conf.t2mi_plp,
+            },
+            clients = 0,
+        }
+    else
+        -- pre-defined decapsulator
+        instance = _G[conf.addr]
+    end
+
     local function check_def()
         if not instance then return false end
         if not instance.name then return false end
