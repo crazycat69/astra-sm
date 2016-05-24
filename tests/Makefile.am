@@ -20,6 +20,7 @@ AM_COLOR_TESTS = no
 unit_tests_LDADD = $(AM_LDADD)
 unit_tests_SOURCES = \
     unit_tests.c \
+    core_alloc.c \
     core_clock.c \
     core_list.c \
     core_mainloop.c \

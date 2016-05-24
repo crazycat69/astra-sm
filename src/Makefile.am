@@ -25,6 +25,7 @@ endif
 
 # core/
 libastra_la_SOURCES += \
+    core/alloc.h \
     core/assert.h \
     core/child.c \
     core/child.h \

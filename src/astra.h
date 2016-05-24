@@ -74,14 +74,6 @@
 #define ASC_ARRAY_SIZE(_a) \
     (sizeof(_a) / sizeof(_a[0]))
 
-#define ASC_FREE(_o, _m) \
-    do { \
-        if (_o != NULL) { \
-            _m(_o); \
-            _o = NULL; \
-        } \
-    } while (0)
-
 #define __uarg(_x) \
     do { (void)_x; } while (0)
 
