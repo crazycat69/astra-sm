@@ -21,7 +21,8 @@
 #include <astra.h>
 #include <core/list.h>
 #include <luaapi/luaapi.h>
-#include <utils/utils.h>
+#include <utils/base64.h>
+#include <utils/sha1.h>
 
 #include "../http.h"
 
@@ -372,12 +373,12 @@ static int module_call(lua_State *L, module_data_t *mod)
         const int key_size = luaL_len(L, -1);
         sha1_ctx_t ctx;
         memset(&ctx, 0, sizeof(sha1_ctx_t));
-        sha1_init(&ctx);
-        sha1_update(&ctx, (const uint8_t *)key, key_size);
-        sha1_update(&ctx, (const uint8_t *)__websocket_magic, sizeof(__websocket_magic) - 1);
+        au_sha1_init(&ctx);
+        au_sha1_update(&ctx, (const uint8_t *)key, key_size);
+        au_sha1_update(&ctx, (const uint8_t *)__websocket_magic, sizeof(__websocket_magic) - 1);
         uint8_t digest[SHA1_DIGEST_SIZE];
-        sha1_final(&ctx, digest);
-        accept_key = base64_encode(digest, sizeof(digest), NULL);
+        au_sha1_final(&ctx, digest);
+        accept_key = au_base64_enc(digest, sizeof(digest), NULL);
     }
     lua_pop(L, 1); // sec-websocket-key
 

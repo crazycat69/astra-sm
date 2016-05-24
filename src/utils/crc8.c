@@ -2,7 +2,7 @@
  * Astra Utils (CRC-8)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,6 +19,7 @@
  */
 
 #include <astra.h>
+#include <utils/crc8.h>
 
 /*
  * CRC-8 calculation routine as per ETSI EN 302 755.
@@ -50,7 +51,7 @@ static const uint8_t crc8_table[256] = {
     0x53, 0x86, 0x2c, 0xf9
 };
 
-uint8_t crc8(const uint8_t *buffer, size_t len)
+uint8_t au_crc8(const uint8_t *buffer, size_t len)
 {
     unsigned int crc = 0;
 

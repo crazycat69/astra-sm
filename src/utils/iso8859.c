@@ -20,6 +20,7 @@
  */
 
 #include <astra.h>
+#include <utils/iso8859.h>
 #include <luaapi/luaapi.h>
 
 static uint8_t *iso8859_1_decode(const uint8_t *data, size_t size)
@@ -383,7 +384,7 @@ static uint8_t *iso8859_9_decode(const uint8_t *data, size_t size)
     return text;
 }
 
-char *iso8859_decode(const uint8_t *data, size_t size)
+char *au_iso8859_dec(const uint8_t *data, size_t size)
 {
     if(size == 0)
     {

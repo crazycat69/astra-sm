@@ -19,6 +19,7 @@
  */
 
 #include <astra.h>
+#include <utils/strhex.h>
 #include <luaapi/stream.h>
 #include <mpegts/psi.h>
 
@@ -167,7 +168,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     asc_assert(biss_length == 16, "[biss_encrypt] key must be 16 char length");
 
     uint8_t key[8];
-    str_to_hex(key_value, key, 16);
+    au_str2hex(key_value, key, 16);
     key[3] = (key[0] + key[1] + key[2]) & 0xFF;
     key[7] = (key[4] + key[5] + key[6]) & 0xFF;
 

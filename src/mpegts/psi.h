@@ -26,6 +26,8 @@
 #   error "Please include <astra.h> first"
 #endif /* !_ASTRA_H_ */
 
+#include <utils/crc32b.h>
+
 /*
  * common definitions
  */
@@ -61,7 +63,7 @@ void mpegts_psi_mux(mpegts_psi_t *psi, const uint8_t *ts, psi_callback_t callbac
 void mpegts_psi_demux(mpegts_psi_t *psi, ts_callback_t callback, void *arg);
 
 #define PSI_CALC_CRC32(_psi) \
-    crc32b(_psi->buffer, _psi->buffer_size - CRC32_SIZE)
+    au_crc32b(_psi->buffer, _psi->buffer_size - CRC32_SIZE)
 
 // with inline function we have nine more instructions
 #define PSI_GET_CRC32(_psi) ( \

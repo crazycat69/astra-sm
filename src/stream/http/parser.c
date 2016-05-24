@@ -345,7 +345,7 @@ char *http_authorization(const char *auth_header, size_t size
         asc_assert(s != NULL, "calloc() failed");
         snprintf(s, sl + 1, "%s:%s", login, password);
         size_t tl = 0;
-        char *const t = base64_encode(s, sl, &tl);
+        char *const t = au_base64_enc(s, sl, &tl);
         const size_t rl = 6 + tl + 1;
         char *const r = (char *)calloc(1, rl);
         snprintf(r, rl, "Basic %s", t);
@@ -388,25 +388,25 @@ char *http_authorization(const char *auth_header, size_t size
         }
 
         memset(&ctx, 0, sizeof(md5_ctx_t));
-        md5_init(&ctx);
-        md5_update(&ctx, (uint8_t *)login, login_len);
-        md5_update(&ctx, (uint8_t *)":", 1);
-        md5_update(&ctx, (uint8_t *)realm, realm_len);
-        md5_update(&ctx, (uint8_t *)":", 1);
-        md5_update(&ctx, (uint8_t *)password, password_len);
-        md5_final(&ctx, digest);
-        hex_to_str(ha1, digest, MD5_DIGEST_SIZE);
+        au_md5_init(&ctx);
+        au_md5_update(&ctx, (uint8_t *)login, login_len);
+        au_md5_update(&ctx, (uint8_t *)":", 1);
+        au_md5_update(&ctx, (uint8_t *)realm, realm_len);
+        au_md5_update(&ctx, (uint8_t *)":", 1);
+        au_md5_update(&ctx, (uint8_t *)password, password_len);
+        au_md5_final(&ctx, digest);
+        au_hex2str(ha1, digest, MD5_DIGEST_SIZE);
 
         const size_t method_len = strlen(method);
         const size_t path_len = strlen(path);
 
         memset(&ctx, 0, sizeof(md5_ctx_t));
-        md5_init(&ctx);
-        md5_update(&ctx, (uint8_t *)method, method_len);
-        md5_update(&ctx, (uint8_t *)":", 1);
-        md5_update(&ctx, (uint8_t *)path, path_len);
-        md5_final(&ctx, digest);
-        hex_to_str(ha2, digest, MD5_DIGEST_SIZE);
+        au_md5_init(&ctx);
+        au_md5_update(&ctx, (uint8_t *)method, method_len);
+        au_md5_update(&ctx, (uint8_t *)":", 1);
+        au_md5_update(&ctx, (uint8_t *)path, path_len);
+        au_md5_final(&ctx, digest);
+        au_hex2str(ha2, digest, MD5_DIGEST_SIZE);
 
         for(int i = 0; i < MD5_DIGEST_SIZE * 2; ++i)
         {
@@ -420,14 +420,14 @@ char *http_authorization(const char *auth_header, size_t size
         }
 
         memset(&ctx, 0, sizeof(md5_ctx_t));
-        md5_init(&ctx);
-        md5_update(&ctx, (uint8_t *)ha1, MD5_DIGEST_SIZE * 2);
-        md5_update(&ctx, (uint8_t *)":", 1);
-        md5_update(&ctx, (uint8_t *)nonce, nonce_len);
-        md5_update(&ctx, (uint8_t *)":", 1);
-        md5_update(&ctx, (uint8_t *)ha2, MD5_DIGEST_SIZE * 2);
-        md5_final(&ctx, digest);
-        hex_to_str(ha3, digest, MD5_DIGEST_SIZE);
+        au_md5_init(&ctx);
+        au_md5_update(&ctx, (uint8_t *)ha1, MD5_DIGEST_SIZE * 2);
+        au_md5_update(&ctx, (uint8_t *)":", 1);
+        au_md5_update(&ctx, (uint8_t *)nonce, nonce_len);
+        au_md5_update(&ctx, (uint8_t *)":", 1);
+        au_md5_update(&ctx, (uint8_t *)ha2, MD5_DIGEST_SIZE * 2);
+        au_md5_final(&ctx, digest);
+        au_hex2str(ha3, digest, MD5_DIGEST_SIZE);
 
         for(int i = 0; i < MD5_DIGEST_SIZE * 2; ++i)
         {

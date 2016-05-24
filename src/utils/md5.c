@@ -32,6 +32,7 @@
  */
 
 #include <astra.h>
+#include <utils/md5.h>
 #include <luaapi/luaapi.h>
 
 /*
@@ -241,7 +242,7 @@ static void md5_transform(uint32_t a, uint32_t b, uint32_t c, uint32_t d
 /*
  * MD5 initialization. Begins an MD5 operation, writing a new context.
  */
-void md5_init(md5_ctx_t *context)
+void au_md5_init(md5_ctx_t *context)
 {
     context->count[0] = context->count[1] = 0;
 
@@ -257,7 +258,7 @@ void md5_init(md5_ctx_t *context)
  * operation, processing another message block, and updating the
  * context.
  */
-void md5_update(md5_ctx_t *context, const uint8_t *data, size_t len)
+void au_md5_update(md5_ctx_t *context, const uint8_t *data, size_t len)
 {
     uint32_t i, idx, partLen;
 
@@ -305,7 +306,7 @@ void md5_update(md5_ctx_t *context, const uint8_t *data, size_t len)
  * MD5 finalization. Ends an MD5 message-digest operation, writing the
  * the message digest and zeroizing the context.
  */
-void md5_final(md5_ctx_t *context, uint8_t digest[MD5_DIGEST_SIZE])
+void au_md5_final(md5_ctx_t *context, uint8_t digest[MD5_DIGEST_SIZE])
 {
     uint8_t bits[8];
     uint32_t idx = (context->count[0] >> 3) & 0x3f;
@@ -314,10 +315,10 @@ void md5_final(md5_ctx_t *context, uint8_t digest[MD5_DIGEST_SIZE])
     md5_encode(bits, context->count, 8);
 
     /* Pad out to 56 mod 64. */
-    md5_update(context, PADDING, ((idx < 56) ? 56 : 120) - idx);
+    au_md5_update(context, PADDING, ((idx < 56) ? 56 : 120) - idx);
 
     /* Append length (before padding) */
-    md5_update(context, bits, 8);
+    au_md5_update(context, bits, 8);
 
     /* Store state in digest */
     md5_encode(digest, context->state, 16);
@@ -342,7 +343,7 @@ static void md5_to64(char *s, uint64_t v, int n)
 }
 
 // From FreeBSD
-void md5_crypt(const char *pw, const char *salt, char passwd[36])
+void au_md5_crypt(const char *pw, const char *salt, char passwd[36])
 {
     const char *ep;
     const char *sp = salt;
@@ -360,31 +361,31 @@ void md5_crypt(const char *pw, const char *salt, char passwd[36])
     const int sl = (int)(ep - sp);
 
     md5_ctx_t ctx;
-    md5_init(&ctx);
+    au_md5_init(&ctx);
 
     // The password first, since that is what is most unknown
     const size_t pw_len = strlen(pw);
-    md5_update(&ctx, (uint8_t *)pw, pw_len);
+    au_md5_update(&ctx, (uint8_t *)pw, pw_len);
     // Then our magic string
-    md5_update(&ctx, (uint8_t *)md5_magic, md5_magic_len);
+    au_md5_update(&ctx, (uint8_t *)md5_magic, md5_magic_len);
     // Then the raw salt
-    md5_update(&ctx, (uint8_t *)sp, sl);
+    au_md5_update(&ctx, (uint8_t *)sp, sl);
     // Then just as many characters of the MD5(pw,salt,pw)
     md5_ctx_t ctx1;
-    md5_init(&ctx1);
-    md5_update(&ctx1, (uint8_t *)pw, pw_len);
-    md5_update(&ctx1, (uint8_t *)sp, sl);
-    md5_update(&ctx1, (uint8_t *)pw, pw_len);
+    au_md5_init(&ctx1);
+    au_md5_update(&ctx1, (uint8_t *)pw, pw_len);
+    au_md5_update(&ctx1, (uint8_t *)sp, sl);
+    au_md5_update(&ctx1, (uint8_t *)pw, pw_len);
     uint8_t final[17];
-    md5_final(&ctx1, final);
+    au_md5_final(&ctx1, final);
     for(int i = (int)pw_len; i > 0; i -= 16)
-        md5_update(&ctx, (const uint8_t *)final, (i > 16) ? 16 : i);
+        au_md5_update(&ctx, (const uint8_t *)final, (i > 16) ? 16 : i);
 
     memset(final, 0, sizeof(final));
     for(int i = (int)pw_len; i; i >>= 1)
     {
         const uint8_t *d = (i & 1) ? final : (uint8_t *)pw;
-        md5_update(&ctx, d, 1);
+        au_md5_update(&ctx, d, 1);
     }
 
     // Now make the output string
@@ -392,29 +393,29 @@ void md5_crypt(const char *pw, const char *salt, char passwd[36])
     strncat(passwd, sp, sl);
     strncat(passwd, "$", 1);
 
-    md5_final(&ctx, final);
+    au_md5_final(&ctx, final);
 
     for(int i = 0; i < 1000; i++)
     {
-        md5_init(&ctx1);
+        au_md5_init(&ctx1);
 
         if(i & 1)
-            md5_update(&ctx1, (uint8_t *)pw, pw_len);
+            au_md5_update(&ctx1, (uint8_t *)pw, pw_len);
         else
-            md5_update(&ctx1, final, 16);
+            au_md5_update(&ctx1, final, 16);
 
         if(i % 3)
-            md5_update(&ctx1, (uint8_t *)sp, sl);
+            au_md5_update(&ctx1, (uint8_t *)sp, sl);
 
         if(i % 7)
-            md5_update(&ctx1, (uint8_t *)pw, pw_len);
+            au_md5_update(&ctx1, (uint8_t *)pw, pw_len);
 
         if(i & 1)
-            md5_update(&ctx1, final, 16);
+            au_md5_update(&ctx1, final, 16);
         else
-            md5_update(&ctx1, (uint8_t *)pw, pw_len);
+            au_md5_update(&ctx1, (uint8_t *)pw, pw_len);
 
-        md5_final(&ctx1, final);
+        au_md5_final(&ctx1, final);
     }
 
     uint64_t l;
@@ -430,7 +431,7 @@ void md5_crypt(const char *pw, const char *salt, char passwd[36])
     *p = '\0';
 
     memset(final, 0, sizeof(final));
-} /* md5_crypt */
+} /* au_md5_crypt */
 
 static int method_md5(lua_State *L)
 {
@@ -439,10 +440,10 @@ static int method_md5(lua_State *L)
 
     md5_ctx_t ctx;
     memset(&ctx, 0, sizeof(md5_ctx_t));
-    md5_init(&ctx);
-    md5_update(&ctx, (uint8_t *)data, data_size);
+    au_md5_init(&ctx);
+    au_md5_update(&ctx, (uint8_t *)data, data_size);
     uint8_t digest[MD5_DIGEST_SIZE];
-    md5_final(&ctx, digest);
+    au_md5_final(&ctx, digest);
 
     lua_pushlstring(L, (char *)digest, sizeof(digest));
     return 1;

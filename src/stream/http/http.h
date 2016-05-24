@@ -6,6 +6,7 @@
 #include <core/event.h>
 #include <core/socket.h>
 #include <core/strbuf.h>
+#include <utils/strhex.h>
 
 #include "parser.h"
 

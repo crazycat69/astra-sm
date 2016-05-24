@@ -99,4 +99,5 @@ size_t asc_list_size(const asc_list_t *list)
 {
     return list->size;
 }
+
 #endif /* _ASC_LIST_H_ */

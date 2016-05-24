@@ -21,6 +21,7 @@
 #include <astra.h>
 #include <mpegts/t2mi.h>
 #include <mpegts/psi.h>
+#include <utils/crc8.h>
 
 #define MSG(_msg) "[t2mi/%s] " _msg, mi->name
 
@@ -663,7 +664,7 @@ bool on_bbframe(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
     bb->data = &ptr[BBFRAME_HEADER_SIZE];
 
     /* verify CRC-8 */
-    bb->crc8 = crc8(ptr, BBFRAME_HEADER_SIZE - 1);
+    bb->crc8 = au_crc8(ptr, BBFRAME_HEADER_SIZE - 1);
     bb->mode = ptr[9] ^ bb->crc8;
 
     if (bb->mode & ~0x1)
@@ -1012,7 +1013,7 @@ bool on_t2mi(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
             pkt->frame_idx = ptr[0];
             l1_c->data = &ptr[T2MI_L1_CURRENT_HEADER_SIZE];
 
-            cksum = crc8(l1_c->data, L1_CURRENT_PRE_SIZE - 1);
+            cksum = au_crc8(l1_c->data, L1_CURRENT_PRE_SIZE - 1);
             if (l1_c->cksum != cksum)
             {
                 if (l1_c->cksum != 0)
@@ -1124,7 +1125,7 @@ void on_outer_ts(mpegts_t2mi_t *mi, const uint8_t *ts)
         /* check CRC32 */
         const size_t crc32_pos = want - CRC32_SIZE;
         pkt->crc32 = GET_UINT32(&buf[crc32_pos]);
-        const uint32_t calc_crc32 = crc32b(buf, crc32_pos);
+        const uint32_t calc_crc32 = au_crc32b(buf, crc32_pos);
 
         if (pkt->crc32 != calc_crc32)
         {

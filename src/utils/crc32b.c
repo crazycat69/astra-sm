@@ -6,6 +6,7 @@
  */
 
 #include <astra.h>
+#include <utils/crc32b.h>
 
 static const uint32_t crc32_table[256] = {
     0x00000000, 0x04c11db7, 0x09823b6e, 0x0d4326d9, 0x130476dc, 0x17c56b6b,
@@ -53,7 +54,7 @@ static const uint32_t crc32_table[256] = {
     0xbcb4666d, 0xb8757bda, 0xb5365d03, 0xb1f740b4
 };
 
-uint32_t crc32b(const uint8_t *buffer, int size)
+uint32_t au_crc32b(const uint8_t *buffer, int size)
 {
     register uint32_t crc = 0xffffffff;
 

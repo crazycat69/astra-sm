@@ -895,8 +895,8 @@ void on_cam_response(module_data_t *mod, void *arg, const uint8_t *data)
         if(asc_log_is_debug())
         {
             char key_1[17], key_2[17];
-            hex_to_str(key_1, &data[3], 8);
-            hex_to_str(key_2, &data[11], 8);
+            au_hex2str(key_1, &data[3], 8);
+            au_hex2str(key_2, &data[11], 8);
             const uint64_t responsetime = (asc_utime() - ca_stream->sendtime) / 1000;
             asc_log_debug(  MSG("ECM Found id:0x%02X time:%" PRIu64 "ms key:%s:%s")
                           , data[0], responsetime, key_1, key_2);
@@ -951,7 +951,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         mod->disable_emm = true;
 
         uint8_t key[8];
-        str_to_hex(biss_key, key, sizeof(key));
+        au_str2hex(biss_key, key, sizeof(key));
         key[3] = (key[0] + key[1] + key[2]) & 0xFF;
         key[7] = (key[4] + key[5] + key[6]) & 0xFF;
 
@@ -976,7 +976,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         if(cas_data)
         {
             mod->__decrypt.is_cas_data = true;
-            str_to_hex(cas_data, mod->__decrypt.cas_data, sizeof(mod->__decrypt.cas_data));
+            au_str2hex(cas_data, mod->__decrypt.cas_data, sizeof(mod->__decrypt.cas_data));
         }
 
         module_option_boolean(L, "disable_emm", &mod->disable_emm);

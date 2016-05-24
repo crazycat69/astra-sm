@@ -20,6 +20,8 @@
  */
 
 #include <astra.h>
+#include <utils/iso8859.h>
+#include <utils/strhex.h>
 #include <mpegts/descriptors.h>
 #include <mpegts/psi.h>
 
@@ -48,7 +50,7 @@ static void push_description_text(lua_State *L, const uint8_t *data)
     luaL_Buffer b;
     luaL_buffinit(L, &b);
 
-    char *text = iso8859_decode(&data[1], data[0]);
+    char *text = au_iso8859_dec(&data[1], data[0]);
     luaL_addstring(&b, text);
     free(text);
 
@@ -89,7 +91,7 @@ static char *fancy_hex_str(const uint8_t *ptr, size_t len)
             break;
         }
 
-        hex_to_str(&buf[pos], ptr++, 1);
+        au_hex2str(&buf[pos], ptr++, 1);
         pos += 2;
     }
 

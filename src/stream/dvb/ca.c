@@ -20,6 +20,7 @@
 
 #include "dvb.h"
 #include <core/list.h>
+#include <utils/iso8859.h>
 #include <mpegts/psi.h>
 
 #include <netinet/in.h>
@@ -832,7 +833,7 @@ static uint16_t mmi_get_text(  dvb_ca_t *ca
     }
 
     uint8_t skip = 3;
-    *text = iso8859_decode(&buffer[skip + 1], buffer[skip]);
+    *text = au_iso8859_dec(&buffer[skip + 1], buffer[skip]);
 
     return skip + 1 + buffer[skip];
 }

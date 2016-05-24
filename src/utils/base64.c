@@ -1,5 +1,25 @@
+/*
+ * Astra Utils (Base64)
+ * http://cesbo.com/astra
+ *
+ * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 #include <astra.h>
+#include <utils/base64.h>
 #include <luaapi/luaapi.h>
 
 /*
@@ -34,7 +54,7 @@ static const uint8_t base64_index[256] =
     XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX, XX,XX,XX,XX,
 };
 
-char *base64_encode(const void *in, size_t in_size, size_t *out_size)
+char *au_base64_enc(const void *in, size_t in_size, size_t *out_size)
 {
     if(!in)
         return NULL;
@@ -75,7 +95,7 @@ char *base64_encode(const void *in, size_t in_size, size_t *out_size)
     return out;
 }
 
-void *base64_decode(const char *in, size_t in_size, size_t *out_size)
+void *au_base64_dec(const char *in, size_t in_size, size_t *out_size)
 {
     if(in_size == 0)
     {
@@ -128,7 +148,7 @@ static int method_base64_encode(lua_State *L)
     const int data_size = luaL_len(L, 1);
 
     size_t data_enc_size = 0;
-    const char *data_enc = base64_encode(data, data_size, &data_enc_size);
+    const char *data_enc = au_base64_enc(data, data_size, &data_enc_size);
     lua_pushlstring(L, data_enc, data_enc_size);
 
     free((void *)data_enc);
@@ -141,7 +161,7 @@ static int method_base64_decode(lua_State *L)
     const int data_size = luaL_len(L, 1);
 
     size_t data_dec_size = 0;
-    const char *data_dec = (char *)base64_decode(data, data_size, &data_dec_size);
+    const char *data_dec = (char *)au_base64_dec(data, data_size, &data_dec_size);
     lua_pushlstring(L, data_dec, data_dec_size);
 
     free((void *)data_dec);

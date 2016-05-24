@@ -21,6 +21,7 @@
 #include "../module_cam.h"
 #include <core/socket.h>
 #include <core/timer.h>
+#include <utils/md5.h>
 
 #include <openssl/des.h>
 
@@ -505,7 +506,7 @@ static void on_newcamd_read_packet(void *arg)
         asc_log_info(  MSG("CaID=0x%04X AU=%s UA=%s")
                      , mod->__cam.caid
                      , (buffer[3] == 1) ? "YES" : "NO"
-                     , hex_to_str(hex_str, mod->__cam.ua, 8));
+                     , au_hex2str(hex_str, mod->__cam.ua, 8));
 
         mod->__cam.disable_emm = (mod->config.disable_emm) ? (true) : (buffer[3] != 1);
 
@@ -522,8 +523,8 @@ static void on_newcamd_read_packet(void *arg)
             memcpy(&p[3], &buffer[18 + (11 * i)], 8);
             asc_list_insert_tail(mod->__cam.prov_list, p);
             asc_log_info(  MSG("Prov:%d ID:%s SA:%s"), i
-                         , hex_to_str(hex_str, &p[0], 3)
-                         , hex_to_str(&hex_str[8], &p[3], 8));
+                         , au_hex2str(hex_str, &p[0], 3)
+                         , au_hex2str(&hex_str[8], &p[3], 8));
         }
 
         asc_timer_destroy(mod->timeout);
@@ -690,13 +691,13 @@ static void module_init(lua_State *L, module_data_t *mod)
     const char *pass = NULL;
     module_option_string(L, "pass", &pass, NULL);
     asc_assert(pass != NULL, MSG("option 'pass' is required"));
-    md5_crypt(pass, "$1$abcdefgh$", mod->config.pass);
+    au_md5_crypt(pass, "$1$abcdefgh$", mod->config.pass);
 
     const char *key = "0102030405060708091011121314";
     size_t key_size = 28;
     module_option_string(L, "key", &key, &key_size);
     asc_assert(key_size == 28, MSG("option 'key' must be 28 chars length"));
-    str_to_hex(key, mod->config.key, sizeof(mod->config.key));
+    au_str2hex(key, mod->config.key, sizeof(mod->config.key));
 
     module_option_boolean(L, "disable_emm", &mod->config.disable_emm);
 

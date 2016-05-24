@@ -91,18 +91,24 @@ libastra_la_SOURCES += \
 libastra_la_SOURCES += \
     utils/astra.c \
     utils/base64.c \
+    utils/base64.h \
     utils/crc32b.c \
+    utils/crc32b.h \
     utils/crc8.c \
+    utils/crc8.h \
     utils/iso8859.c \
+    utils/iso8859.h \
     utils/json.c \
     utils/log.c \
     utils/md5.c \
+    utils/md5.h \
     utils/rc4.c \
     utils/sha1.c \
+    utils/sha1.h \
     utils/strhex.c \
+    utils/strhex.h \
     utils/timer.c \
-    utils/utils.c \
-    utils/utils.h
+    utils/utils.c
 
 if HAVE_DVBAPI
 libastra_la_SOURCES += \

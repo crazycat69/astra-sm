@@ -10,6 +10,7 @@
  */
 
 #include <astra.h>
+#include <utils/sha1.h>
 #include <luaapi/luaapi.h>
 
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
@@ -93,7 +94,7 @@ static void sha1_transform(uint32_t state[5], const uint8_t buffer[64])
 }
 
 /* SHA1Init - Initialize new context */
-void sha1_init(sha1_ctx_t *context)
+void au_sha1_init(sha1_ctx_t *context)
 {
     /* SHA1 initialization constants */
     context->state[0] = 0x67452301;
@@ -105,7 +106,7 @@ void sha1_init(sha1_ctx_t *context)
 }
 
 /* Run your data through this. */
-void sha1_update(sha1_ctx_t *context, const uint8_t* data, size_t len)
+void au_sha1_update(sha1_ctx_t *context, const uint8_t* data, size_t len)
 {
     size_t i, j;
 
@@ -128,7 +129,7 @@ void sha1_update(sha1_ctx_t *context, const uint8_t* data, size_t len)
 }
 
 /* Add padding and return the message digest. */
-void sha1_final(sha1_ctx_t *context, uint8_t digest[SHA1_DIGEST_SIZE])
+void au_sha1_final(sha1_ctx_t *context, uint8_t digest[SHA1_DIGEST_SIZE])
 {
     uint32_t i;
     uint8_t  finalcount[8];
@@ -137,10 +138,10 @@ void sha1_final(sha1_ctx_t *context, uint8_t digest[SHA1_DIGEST_SIZE])
         finalcount[i] = (unsigned char)((context->count[(i >= 4 ? 0 : 1)]
          >> ((3-(i & 3)) * 8) ) & 255);  /* Endian independent */
     }
-    sha1_update(context, (uint8_t *)"\200", 1);
+    au_sha1_update(context, (uint8_t *)"\200", 1);
     while ((context->count[0] & 504) != 448)
-        sha1_update(context, (uint8_t *)"\0", 1);
-    sha1_update(context, finalcount, 8);  /* Should cause a SHA1_Transform() */
+        au_sha1_update(context, (uint8_t *)"\0", 1);
+    au_sha1_update(context, finalcount, 8);  /* Should cause a SHA1_Transform() */
     for (i = 0; i < SHA1_DIGEST_SIZE; i++)
         digest[i] = (uint8_t)((context->state[i>>2] >> ((3-(i & 3)) * 8) ) & 255);
 
@@ -163,10 +164,10 @@ static int method_sha1(lua_State *L)
 
     sha1_ctx_t ctx;
     memset(&ctx, 0, sizeof(sha1_ctx_t));
-    sha1_init(&ctx);
-    sha1_update(&ctx, (uint8_t *)data, data_size);
+    au_sha1_init(&ctx);
+    au_sha1_update(&ctx, (uint8_t *)data, data_size);
     uint8_t digest[SHA1_DIGEST_SIZE];
-    sha1_final(&ctx, digest);
+    au_sha1_final(&ctx, digest);
 
     lua_pushlstring(L, (char *)digest, sizeof(digest));
     return 1;

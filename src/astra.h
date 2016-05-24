@@ -120,7 +120,6 @@ extern "C" {
 
 #include "core/core.h"
 #include "mpegts/mpegts.h"
-#include "utils/utils.h"
 
 #ifdef __cplusplus
 }
