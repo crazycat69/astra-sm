@@ -34,19 +34,6 @@ typedef struct
 static bool timed_out;
 static uint64_t time_stop;
 
-/*
- * test fixture
- */
-static void setup(void)
-{
-    asc_lib_init();
-}
-
-static void teardown(void)
-{
-    asc_lib_destroy();
-}
-
 static void on_stop(void *arg)
 {
     __uarg(arg);
@@ -74,10 +61,6 @@ static uint64_t run_loop(unsigned ms)
 
     return bench;
 }
-
-/*
- * unit tests
- */
 
 /* do nothing for 500ms */
 START_TEST(empty_loop)
@@ -227,7 +210,7 @@ Suite *core_timer(void)
     Suite *const s = suite_create("timer");
 
     TCase *const tc = tcase_create("default");
-    tcase_add_checked_fixture(tc, setup, teardown);
+    tcase_add_checked_fixture(tc, lib_setup, lib_teardown);
 
     if (can_fork != CK_NOFORK)
         tcase_set_timeout(tc, 5);

@@ -22,23 +22,6 @@
 #include <core/mainloop.h>
 #include <core/timer.h>
 
-/*
- * test fixture
- */
-static void setup(void)
-{
-    asc_lib_init();
-}
-
-static void teardown(void)
-{
-    asc_lib_destroy();
-}
-
-/*
- * unit tests
- */
-
 /* basic shutdown and reload commands */
 START_TEST(controls)
 {
@@ -245,7 +228,7 @@ Suite *core_mainloop(void)
     Suite *const s = suite_create("mainloop");
 
     TCase *const tc = tcase_create("default");
-    tcase_add_checked_fixture(tc, setup, teardown);
+    tcase_add_checked_fixture(tc, lib_setup, lib_teardown);
 
     if (can_fork != CK_NOFORK)
         tcase_set_timeout(tc, 5);

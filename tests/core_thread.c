@@ -33,23 +33,6 @@ typedef struct
     unsigned int value;
 } thread_test_t;
 
-/*
- * test fixture
- */
-static void setup(void)
-{
-    asc_lib_init();
-}
-
-static void teardown(void)
-{
-    asc_lib_destroy();
-}
-
-/*
- * unit tests
- */
-
 /* set variable and exit */
 static void set_value_proc(void *arg)
 {
@@ -319,7 +302,7 @@ Suite *core_thread(void)
     Suite *const s = suite_create("thread");
 
     TCase *const tc = tcase_create("default");
-    tcase_add_checked_fixture(tc, setup, teardown);
+    tcase_add_checked_fixture(tc, lib_setup, lib_teardown);
 
     tcase_add_test(tc, set_value);
     tcase_add_test(tc, producers);

@@ -26,9 +26,48 @@
 
 enum fork_status can_fork;
 
+void lib_setup(void)
+{
+    asc_srand();
+    asc_lib_init();
+
+    /* don't clutter output with library messages */
+    asc_log_set_debug(true);
+    asc_log_set_stdout(false);
+    asc_log_set_file("./libastra.log");
+}
+
+void lib_teardown(void)
+{
+    asc_lib_destroy();
+}
+
+static void redirect_output(void)
+{
+    const char *const fd_str = getenv("OUTPUT_REDIRECT_FD");
+    if (fd_str == NULL)
+        return;
+
+    const int fd = atoi(fd_str);
+    if (fd <= STDERR_FILENO)
+    {
+        fprintf(stderr, "invalid fd: %s\n", fd_str);
+        exit(EXIT_FAILURE);
+    }
+
+    if (dup2(fd, STDOUT_FILENO) != STDOUT_FILENO
+        || dup2(fd, STDERR_FILENO) != STDERR_FILENO)
+    {
+        fprintf(stderr, "couldn't redirect output to fd %d: %s\n"
+                , fd, strerror(errno));
+
+        exit(EXIT_FAILURE);
+    }
+}
+
 int main(void)
 {
-    SRunner *sr = NULL;
+    redirect_output();
 
 #ifdef _WIN32
     TIMECAPS timecaps = { 0, 0 };
@@ -36,19 +75,16 @@ int main(void)
         timeBeginPeriod(timecaps.wPeriodMin);
 #endif /* _WIN32 */
 
+    int failed = 0;
+
     for (suite_func_t *p = suite_list; *p != NULL; p++)
     {
-        if (sr == NULL)
-        {
-            sr = srunner_create((*p)());
-            can_fork = srunner_fork_status(sr);
-        }
-        else
-            srunner_add_suite(sr, (*p)());
+        SRunner *const sr = srunner_create((*p)());
+        can_fork = srunner_fork_status(sr);
+        srunner_run_all(sr, CK_VERBOSE);
+        failed += srunner_ntests_failed(sr);
+        srunner_free(sr);
     }
-
-    srunner_run_all(sr, CK_VERBOSE);
-    const int failed = srunner_ntests_failed(sr);
 
     return (failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

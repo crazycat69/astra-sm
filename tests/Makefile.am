@@ -13,9 +13,15 @@ AM_LDADD = \
 # Unit tests
 #
 if HAVE_CHECK
+# TODO: fix output redirection on Windows
+if HAVE_POSIX
+AM_TESTS_ENVIRONMENT = export OUTPUT_REDIRECT_FD=9;
+AM_TESTS_FD_REDIRECT = 9>&2
+endif
+
 check_PROGRAMS = unit_tests
 TESTS = $(check_PROGRAMS)
-AM_COLOR_TESTS = no
+CLEANFILES = libastra.log
 
 unit_tests_LDADD = $(AM_LDADD)
 unit_tests_SOURCES = \

@@ -25,13 +25,14 @@ static asc_list_t *list = NULL;
 
 static void setup(void)
 {
-    asc_srand();
+    lib_setup();
     list = asc_list_init();
 }
 
 static void teardown(void)
 {
     ASC_FREE(list, asc_list_destroy);
+    lib_teardown();
 }
 
 START_TEST(empty_list)

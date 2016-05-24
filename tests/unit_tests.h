@@ -26,6 +26,10 @@
 
 extern enum fork_status can_fork;
 
+/* test setup and teardown */
+void lib_setup(void);
+void lib_teardown(void);
+
 /* core */
 Suite *core_alloc(void);
 Suite *core_clock(void);
