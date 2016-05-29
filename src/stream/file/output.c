@@ -110,7 +110,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
             if(mod->config.aio_kernel)
             {
                 if(!mod->io[0])
-                    mod->io[0] = (struct iocb *)malloc(sizeof(struct iocb));
+                    mod->io[0] = ASC_ALLOC(1, struct iocb);
                 else
                 {
                     struct io_event events[1];
@@ -278,7 +278,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     else
 #endif
     {
-        mod->buffer = (uint8_t *)malloc(mod->buffer_size);
+        mod->buffer = ASC_ALLOC(mod->buffer_size, uint8_t);
     }
 
     int flags = O_CREAT | O_APPEND | O_WRONLY;
@@ -317,7 +317,7 @@ static void module_init(lua_State *L, module_data_t *mod)
                 asc_lib_abort();
             }
 #else /* !HAVE_POSIX_MEMALIGN */
-            mod->buffer_aio = malloc(mod->buffer_size);
+            mod->buffer_aio = ASC_ALLOC(mod->buffer_size, uint8_t);
 #endif /* HAVE_POSIX_MEMALIGN */
             memset(&mod->ctx, 0, sizeof(mod->ctx));
             io_queue_init(1, &mod->ctx);
@@ -326,7 +326,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         else
 #endif /* HAVE_LIBAIO */
         { /* !mod->aio_kernel */
-            mod->buffer_aio = malloc(mod->buffer_size);
+            mod->buffer_aio = ASC_ALLOC(mod->buffer_size, uint8_t);
 
             memset(&mod->aiocb, 0, sizeof(struct aiocb));
             mod->aiocb.aio_fildes = mod->fd;

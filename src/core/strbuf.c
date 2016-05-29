@@ -37,9 +37,7 @@ struct string_buffer_t
 
 string_buffer_t *string_buffer_alloc(void)
 {
-    string_buffer_t *const buf = (string_buffer_t *)calloc(1, sizeof(*buf));
-    asc_assert(buf != NULL, MSG("calloc() failed"));
-
+    string_buffer_t *const buf = ASC_ALLOC(1, string_buffer_t);
     buf->last = buf;
 
     return buf;
@@ -52,9 +50,7 @@ string_buffer_t *__string_buffer_last(string_buffer_t *buffer)
     string_buffer_t *last = buffer->last;
     if(last->size >= MAX_BUFFER_SIZE)
     {
-        last->next = (string_buffer_t *)calloc(1, sizeof(*last->next));
-        asc_assert(last->next != NULL, MSG("calloc() failed"));
-
+        last->next = ASC_ALLOC(1, string_buffer_t);
         buffer->last = last = last->next;
     }
     return last;
@@ -95,9 +91,7 @@ void string_buffer_addlstring(string_buffer_t *buffer, const char *str, size_t s
                 skip += cap;
             }
 
-            last->next = (string_buffer_t *)calloc(1, sizeof(*last->next));
-            asc_assert(last->next != NULL, MSG("calloc() failed"));
-
+            last->next = ASC_ALLOC(1, string_buffer_t);
             buffer->last = last = last->next;
         }
     }
@@ -349,8 +343,7 @@ char *string_buffer_release(string_buffer_t *buffer, size_t *size)
     for(skip = 0, next = buffer; next; next = next->next)
         skip += next->size;
 
-    char *str = (char *)calloc(1, skip + 1);
-    asc_assert(str != NULL, MSG("calloc() failed"));
+    char *str = ASC_ALLOC(skip + 1, char);
 
     for(skip = 0, next = buffer; next && (next_next = next->next, 1); next = next_next)
     {

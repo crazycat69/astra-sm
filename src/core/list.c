@@ -26,9 +26,7 @@
 
 asc_list_t *asc_list_init(void)
 {
-    asc_list_t *const list = (asc_list_t *)calloc(1, sizeof(*list));
-    asc_assert(list != NULL, MSG("calloc() failed"));
-
+    asc_list_t *const list = ASC_ALLOC(1, asc_list_t);
     TAILQ_INIT(&list->list);
 
     return list;
@@ -46,10 +44,9 @@ void asc_list_insert_head(asc_list_t *list, void *data)
 {
     ++list->size;
 
-    asc_item_t *const item = (asc_item_t *)calloc(1, sizeof(*item));
-    asc_assert(item != NULL, MSG("calloc() failed"));
-
+    asc_item_t *const item = ASC_ALLOC(1, asc_item_t);
     item->data = data;
+
     TAILQ_INSERT_HEAD(&list->list, item, entries);
 }
 
@@ -57,10 +54,9 @@ void asc_list_insert_tail(asc_list_t *list, void *data)
 {
     ++list->size;
 
-    asc_item_t *const item = (asc_item_t *)calloc(1, sizeof(*item));
-    asc_assert(item != NULL, MSG("calloc() failed"));
-
+    asc_item_t *const item = ASC_ALLOC(1, asc_item_t);
     item->data = data;
+
     TAILQ_INSERT_TAIL(&list->list, item, entries);
 }
 

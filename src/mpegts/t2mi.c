@@ -401,8 +401,7 @@ void outer_leave_pid(const mpegts_t2mi_t *mi, uint16_t pid)
  */
 mpegts_t2mi_t *mpegts_t2mi_init(void)
 {
-    mpegts_t2mi_t *const mi = (mpegts_t2mi_t *)calloc(1, sizeof(*mi));
-    asc_assert(mi != NULL, "[t2mi] calloc() failed");
+    mpegts_t2mi_t *const mi = ASC_ALLOC(1, mpegts_t2mi_t);
 
     static const char def_name[] = "t2mi";
     strncpy(mi->name, def_name, sizeof(def_name));
@@ -816,9 +815,7 @@ bool on_l1_current(mpegts_t2mi_t *mi, const t2mi_packet_t *pkt)
         t2_plp_t *plp = mi->plps[plp_id];
         if (plp == NULL)
         {
-            plp = mi->plps[plp_id] = (t2_plp_t *)calloc(1, sizeof(*plp));
-            asc_assert(plp != NULL, MSG("calloc() failed"));
-
+            plp = mi->plps[plp_id] = ASC_ALLOC(1, t2_plp_t);
             asc_log_debug(MSG("added PLP %u"), plp_id);
         }
 

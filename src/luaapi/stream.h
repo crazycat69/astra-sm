@@ -107,8 +107,7 @@ void __module_stream_send(void *arg, const uint8_t *ts);
     do { \
         if(_mod->__stream.pid_list == NULL) \
         { \
-            uint8_t *const _lst = (uint8_t *)calloc(MAX_PID, sizeof(*_lst)); \
-            asc_assert(_lst != NULL, "[stream] calloc() failed"); \
+            uint8_t *const _lst = ASC_ALLOC(MAX_PID, uint8_t); \
             _mod->__stream.pid_list = _lst; \
         } \
         _mod->__stream.join_pid = _join_pid; \

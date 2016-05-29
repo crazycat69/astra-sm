@@ -494,9 +494,17 @@ static int method_json_load(lua_State *L)
         lua_pushnil(L);
         return 1;
     }
+
     struct stat sb;
-    fstat(fd, &sb);
-    char *json = (char *)malloc(sb.st_size);
+    const int ret = fstat(fd, &sb);
+    if(ret != 0)
+    {
+        asc_log_error(MSG("fstat(): %s: %s"), filename, strerror(errno));
+        lua_pushnil(L);
+        return 1;
+    }
+
+    char *const json = ASC_ALLOC(sb.st_size, char);
     off_t skip = 0;
     while(skip != sb.st_size)
     {

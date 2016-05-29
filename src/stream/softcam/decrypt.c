@@ -129,14 +129,13 @@ static ca_stream_t * ca_stream_init(module_data_t *mod, uint16_t ecm_pid)
             return ca_stream;
     }
 
-    ca_stream = (ca_stream_t *)calloc(1, sizeof(*ca_stream));
+    ca_stream = ASC_ALLOC(1, ca_stream_t);
 
     ca_stream->ecm_pid = ecm_pid;
 
     ca_stream->even_key = dvbcsa_bs_key_alloc();
     ca_stream->odd_key = dvbcsa_bs_key_alloc();
-    ca_stream->batch =
-        (struct dvbcsa_bs_batch_s *)calloc(mod->batch_size + 1, sizeof(*ca_stream->batch));
+    ca_stream->batch = ASC_ALLOC(mod->batch_size + 1, struct dvbcsa_bs_batch_s);
 
     asc_list_insert_tail(mod->ca_list, ca_stream);
 
@@ -534,7 +533,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
 
         if(ca_stream_e)
         {
-            el_stream_t *el_stream = (el_stream_t *)calloc(1, sizeof(*el_stream));
+            el_stream_t *const el_stream = ASC_ALLOC(1, el_stream_t);
             el_stream->es_pid = PMT_ITEM_GET_PID(psi, pointer);
             el_stream->ca_stream = ca_stream_e;
             asc_list_insert_tail(mod->el_list, el_stream);
@@ -938,7 +937,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->batch_size = dvbcsa_bs_batch_size();
 
     mod->storage.size = mod->batch_size * 4 * TS_PACKET_SIZE;
-    mod->storage.buffer = (uint8_t *)malloc(mod->storage.size);
+    mod->storage.buffer = ASC_ALLOC(mod->storage.size, uint8_t);
 
     const char *biss_key = NULL;
     size_t biss_length = 0;
@@ -991,7 +990,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     if(shift > 0)
     {
         mod->shift.size = (shift * 1000 * 1000) / (TS_PACKET_SIZE * 8) * (TS_PACKET_SIZE);
-        mod->shift.buffer = (uint8_t *)malloc(mod->shift.size);
+        mod->shift.buffer = ASC_ALLOC(mod->shift.size, uint8_t);
     }
 
     stream_reload(mod);

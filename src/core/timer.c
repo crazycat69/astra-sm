@@ -105,8 +105,7 @@ unsigned int asc_timer_core_loop(void)
 asc_timer_t *asc_timer_init(unsigned int ms, timer_callback_t callback
                             , void *arg)
 {
-    asc_timer_t *const timer = (asc_timer_t *)calloc(1, sizeof(*timer));
-    asc_assert(timer != NULL, "[core/timer] calloc() failed");
+    asc_timer_t *const timer = ASC_ALLOC(1, asc_timer_t);
 
     timer->interval = ms * 1000ULL;
     timer->callback = callback;

@@ -259,9 +259,7 @@ void on_sin_write(void *arg)
  */
 asc_child_t *asc_child_init(const asc_child_cfg_t *cfg)
 {
-    asc_child_t *const child = (asc_child_t *)calloc(1, sizeof(*child));
-    asc_assert(child != NULL, "[child] calloc() failed");
-
+    asc_child_t *const child = ASC_ALLOC(1, asc_child_t);
     child->name = cfg->name;
 
     /* start the process */

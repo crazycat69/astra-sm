@@ -104,7 +104,7 @@ bool lua_safe_path(lua_State *L, const char *str, size_t size)
     size_t skip = 0;
 
     size_t sskip = 0;
-    char *safe = (char *)malloc(size + 1);
+    char *const safe = ASC_ALLOC(size + 1, char);
 
     while(skip < size)
     {

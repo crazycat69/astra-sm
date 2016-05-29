@@ -26,7 +26,7 @@
 #endif /* !_ASTRA_H_ */
 
 #define ASC_ALLOC(_nmemb, _type) \
-    (_type *)asc_calloc(_nmemb, sizeof(_type))
+    (_type *)asc_calloc((_nmemb), sizeof(_type))
 
 #define ASC_FREE(_ptr, _destructor) \
     do { \

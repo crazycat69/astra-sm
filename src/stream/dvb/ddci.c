@@ -282,7 +282,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_stream_init(mod, on_ts);
     module_stream_demux_set(mod, join_pid, leave_pid);
 
-    mod->ca = (dvb_ca_t *)calloc(1, sizeof(*mod->ca));
+    mod->ca = ASC_ALLOC(1, dvb_ca_t);
 
     static const char __adapter[] = "adapter";
     if(!module_option_integer(L, __adapter, &mod->adapter))

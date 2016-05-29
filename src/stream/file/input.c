@@ -409,7 +409,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     if(!module_option_integer(L, "buffer_size", &buffer_size) || buffer_size <= 0)
         buffer_size = INPUT_BUFFER_SIZE;
     mod->buffer_size = buffer_size * 1024 * 1024;
-    mod->buffer = (uint8_t *)malloc(mod->buffer_size);
+    mod->buffer = ASC_ALLOC(mod->buffer_size, uint8_t);
 
     bool check_length;
     if(module_option_boolean(L, "check_length", &check_length) && check_length)

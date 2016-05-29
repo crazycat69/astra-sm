@@ -235,8 +235,7 @@ bool asc_log_is_debug(void)
 
 void asc_log_core_init(void)
 {
-    logger = (asc_logger_t *)calloc(1, sizeof(*logger));
-    asc_assert(logger != NULL, MSG("calloc() failed"));
+    logger = ASC_ALLOC(1, asc_logger_t);
 
     logger->sout = true;
     logger->fd = -1;

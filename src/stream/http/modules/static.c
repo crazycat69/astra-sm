@@ -185,7 +185,7 @@ static int module_call(lua_State *L, module_data_t *mod)
         return 0;
     }
 
-    client->response = (http_response_t *)calloc(1, sizeof(http_response_t));
+    client->response = ASC_ALLOC(1, http_response_t);
     client->response->mod = mod;
     client->on_send = NULL;
     client->on_read = NULL;
@@ -197,8 +197,7 @@ static int module_call(lua_State *L, module_data_t *mod)
     const char *path = lua_tostring(L, -1);
     lua_pop(L, 2); // request + path
 
-    char *const filename = (char *)calloc(1, PATH_MAX);
-    asc_assert(filename != NULL, "calloc() failed");
+    char *const filename = ASC_ALLOC(PATH_MAX, char);
     snprintf(filename, PATH_MAX, "%s%s", mod->path, &path[mod->path_skip]);
     client->response->file_fd = open(filename, O_RDONLY);
     free(filename);

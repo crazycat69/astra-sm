@@ -341,13 +341,12 @@ char *http_authorization(const char *auth_header, size_t size
     if(!strncasecmp(auth_header, "basic", 5))
     {
         const size_t sl = strlen(login) + 1 + strlen(password);
-        char *const s = (char *)calloc(1, sl + 1);
-        asc_assert(s != NULL, "calloc() failed");
+        char *const s = ASC_ALLOC(sl + 1, char);
         snprintf(s, sl + 1, "%s:%s", login, password);
         size_t tl = 0;
         char *const t = au_base64_enc(s, sl, &tl);
         const size_t rl = 6 + tl + 1;
-        char *const r = (char *)calloc(1, rl);
+        char *const r = ASC_ALLOC(rl, char);
         snprintf(r, rl, "Basic %s", t);
         free(s);
         free(t);
@@ -447,8 +446,7 @@ char *http_authorization(const char *auth_header, size_t size
             auth_template_len + login_len + realm_len +
             nonce_len + path_len + MD5_DIGEST_SIZE * 2 + 1;
 
-        char *const r = (char *)calloc(1, rl);
-        asc_assert(r != NULL, "calloc() failed");
+        char *const r = ASC_ALLOC(rl, char);
         snprintf(r, rl, auth_template, login, realm, nonce, path, ha3);
         return r;
     }

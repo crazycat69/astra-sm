@@ -281,8 +281,7 @@ static void asc_event_subscribe(asc_event_t *event)
 
 asc_event_t *asc_event_init(int fd, void *arg)
 {
-    asc_event_t *event = (asc_event_t *)calloc(1, sizeof(*event));
-    asc_assert(event != NULL, MSG("calloc() failed"));
+    asc_event_t *const event = ASC_ALLOC(1, asc_event_t);
 
     event->fd = fd;
     event->arg = arg;
@@ -454,8 +453,7 @@ asc_event_t *asc_event_init(int fd, void *arg)
     memset(&event_observer.fd_list[i], 0, sizeof(struct pollfd));
     event_observer.fd_list[i].fd = fd;
 
-    asc_event_t *const event = (asc_event_t *)calloc(1, sizeof(*event));
-    asc_assert(event != NULL, MSG("calloc() failed"));
+    asc_event_t *const event = ASC_ALLOC(1, asc_event_t);
 
     event_observer.event_list[i] = event;
     event->fd = fd;
@@ -632,8 +630,7 @@ static void asc_event_subscribe(asc_event_t *event)
 
 asc_event_t *asc_event_init(int fd, void *arg)
 {
-    asc_event_t *const event = (asc_event_t *)calloc(1, sizeof(*event));
-    asc_assert(event != NULL, MSG("calloc() failed"));
+    asc_event_t *const event = ASC_ALLOC(1, asc_event_t);
 
     event->fd = fd;
     event->arg = arg;

@@ -850,9 +850,9 @@ static void on_server_close(void *arg)
 
 static void on_server_accept(void *arg)
 {
-    module_data_t *mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
-    http_client_t *client = (http_client_t *)calloc(1, sizeof(http_client_t));
+    http_client_t *const client = ASC_ALLOC(1, http_client_t);
     client->mod = mod;
     client->idx_server = mod->idx_self;
 
@@ -991,7 +991,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         } while(0);
         asc_assert(is_ok, MSG("route format: { { \"/path\", callback }, ... }"));
 
-        route_t *route = (route_t *)malloc(sizeof(route_t));
+        route_t *const route = ASC_ALLOC(1, route_t);
         route->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
         route->path = lua_tostring(L, -1);
         lua_pop(L, 1); // path

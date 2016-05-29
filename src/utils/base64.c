@@ -61,7 +61,7 @@ char *au_base64_enc(const void *in, size_t in_size, size_t *out_size)
 
     size_t size = ((in_size + 2) / 3) * 4;
 
-    char *out = (char *)malloc(size + 1);
+    char *const out = ASC_ALLOC(size + 1, char);
 
     for(size_t i = 0, j = 0; i < in_size;)
     {
@@ -113,7 +113,7 @@ void *au_base64_dec(const char *in, size_t in_size, size_t *out_size)
     else if(in[in_size - 1] == '=')
         size -= 1;
 
-    uint8_t *out = (uint8_t *)malloc(size);
+    uint8_t *const out = ASC_ALLOC(size, uint8_t);
 
     for(size_t i = 0, j = 0; i < in_size;)
     {

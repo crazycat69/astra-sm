@@ -91,8 +91,7 @@ struct mpegts_sync_t
 
 mpegts_sync_t *mpegts_sync_init(void)
 {
-    mpegts_sync_t *const sx = (mpegts_sync_t *)calloc(1, sizeof(*sx));
-    asc_assert(sx != NULL, "[sync] calloc() failed");
+    mpegts_sync_t *const sx = ASC_ALLOC(1, mpegts_sync_t);
 
     sx->low_blocks = LOW_BUFFER_BLOCKS;
     sx->enough_blocks = ENOUGH_BUFFER_BLOCKS;
@@ -105,8 +104,7 @@ mpegts_sync_t *mpegts_sync_init(void)
     sx->pcr_last = XTS_NONE;
     sx->pcr_cur = XTS_NONE;
 
-    sx->buf = (ts_packet_t *)calloc(sx->size, sizeof(*sx->buf));
-    asc_assert(sx->buf != NULL, "[sync] calloc() failed");
+    sx->buf = ASC_ALLOC(sx->size, ts_packet_t);
 
     return sx;
 }
@@ -451,8 +449,7 @@ bool buffer_resize(mpegts_sync_t *sx, size_t new_size)
     sx->pos.pcr = lookahead;
 
     /* move contents to new buffer */
-    ts_packet_t *const buf = (ts_packet_t *)calloc(new_size, sizeof(*buf));
-    asc_assert(buf != NULL, MSG("calloc() failed"));
+    ts_packet_t *const buf = ASC_ALLOC(new_size, ts_packet_t);
 
     size_t pos = sx->pos.send;
     size_t left = filled;

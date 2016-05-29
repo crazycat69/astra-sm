@@ -27,8 +27,7 @@
 
 mpegts_pes_t *mpegts_pes_init(uint16_t pid)
 {
-    mpegts_pes_t *const pes = (mpegts_pes_t *)calloc(1, sizeof(*pes));
-    asc_assert(pes != NULL, MSG("calloc() failed"));
+    mpegts_pes_t *const pes = ASC_ALLOC(1, mpegts_pes_t);
 
     pes->pid = pid;
     pes->o_cc = 15; /* wraps over to zero */
@@ -229,8 +228,7 @@ void pes_demux(mpegts_pes_t *pes, bool fast)
             pes_hlen += PES_HEADER_SIZE;
 
             /* alloc */
-            pes_h = (uint8_t *)calloc(1, pes_hlen);
-            asc_assert(pes_h != NULL, MSG("calloc() failed"));
+            pes_h = ASC_ALLOC(pes_hlen, uint8_t);
 
             /* basic part */
             pes_h[2] = 0x01; /* start code */

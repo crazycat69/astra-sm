@@ -205,7 +205,7 @@ static void on_upstream_send(void *arg)
         return;
     }
 
-    client->response->buffer = (uint8_t *)malloc(client->response->buffer_size);
+    client->response->buffer = ASC_ALLOC(client->response->buffer_size, uint8_t);
 
     // like module_stream_init()
     client->response->__stream.self = (module_data_t *)client;
@@ -251,7 +251,7 @@ static int module_call(lua_State *L, module_data_t *mod)
         return 0;
     }
 
-    client->response = (http_response_t *)calloc(1, sizeof(http_response_t));
+    client->response = ASC_ALLOC(1, http_response_t);
     client->response->mod = mod;
 
     client->on_send = on_upstream_send;

@@ -271,7 +271,7 @@ static void application_information_event(dvb_ca_t *ca, uint8_t slot_id, uint16_
             buffer += 1 + 2 + 2;
 
             buffer += asn_1_decode(buffer, &size);
-            char *name = (char *)malloc(size + 1);
+            char *const name = ASC_ALLOC(size + 1, char);
             memcpy(name, buffer, size);
             name[size] = '\0';
             asc_log_info(  MSG("CA: Module %s. 0x%02X 0x%04X 0x%04X")
@@ -506,7 +506,7 @@ static void conditional_access_event(dvb_ca_t *ca, uint8_t slot_id, uint16_t ses
 
             free(data->caid_list);
             data->caid_list_size = size / 2;
-            data->caid_list = (uint16_t *)calloc(data->caid_list_size, sizeof(uint16_t));
+            data->caid_list = ASC_ALLOC(data->caid_list_size, uint16_t);
 
             for(int i = 0; i < data->caid_list_size; ++i)
             {
@@ -544,7 +544,7 @@ static void conditional_access_open(dvb_ca_t *ca, uint8_t slot_id, uint16_t sess
     ca_session_t *session = &ca->slots[slot_id].sessions[session_id];
     session->event = conditional_access_event;
     session->close = conditional_access_close;
-    session->data = (ca_data_t *)calloc(1, sizeof(ca_data_t));
+    session->data = ASC_ALLOC(1, ca_data_t);
 
     ca_apdu_send(ca, slot_id, session_id, AOT_CA_INFO_ENQ, NULL, 0);
 }
@@ -660,7 +660,7 @@ static void date_time_open(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id)
     session->event = date_time_event;
     session->manage = date_time_manage;
     session->close = date_time_close;
-    session->data = (date_time_data_t *)calloc(1, sizeof(date_time_data_t));
+    session->data = ASC_ALLOC(1, date_time_data_t);
 
     date_time_send(ca, slot_id, session_id);
 }
@@ -812,7 +812,7 @@ static void mmi_enq_event(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id)
     mmi->object_type = EN50221_MMI_ENQ;
     mmi->object.enq.blind = (buffer[0] & 0x01) ? true : false;
     buffer += 2; size -= 2; /* skip answer_text_length */
-    mmi->object.enq.text = (char *)malloc(size + 1);
+    mmi->object.enq.text = ASC_ALLOC(size + 1, char);
     memcpy(mmi->object.enq.text, buffer, size);
     mmi->object.enq.text[size] = '\0';
 }
@@ -932,7 +932,7 @@ static void mmi_open(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id)
     ca_session_t *session = &ca->slots[slot_id].sessions[session_id];
     session->event = mmi_event;
     session->close = mmi_close;
-    session->data = (mmi_data_t *)calloc(1, sizeof(mmi_data_t));
+    session->data = ASC_ALLOC(1, mmi_data_t);
 }
 
 /*
@@ -973,7 +973,7 @@ static uint8_t * ca_apdu_get_buffer(dvb_ca_t *ca, uint8_t slot_id, uint16_t *siz
 static void ca_apdu_send(  dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id
                          , uint32_t tag, const uint8_t *data, uint16_t size)
 {
-    uint8_t *buffer = (uint8_t *)malloc(size + SPDU_HEADER_SIZE + 12);
+    uint8_t *const buffer = ASC_ALLOC(size + SPDU_HEADER_SIZE + 12, uint8_t);
     uint32_t skip = 0;
 
     // SPDU Header
@@ -1238,7 +1238,7 @@ static void ca_tpdu_send(  dvb_ca_t *ca, uint8_t slot_id
 {
     ca_slot_t *slot = &ca->slots[slot_id];
 
-    ca_tpdu_message_t *m = (ca_tpdu_message_t *)malloc(sizeof(ca_tpdu_message_t));
+    ca_tpdu_message_t *const m = ASC_ALLOC(1, ca_tpdu_message_t);
     uint8_t *buffer = m->buffer;
     uint16_t buffer_size = 3;
 
@@ -1598,7 +1598,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
 
         pmt_checksum->crc = crc32;
 
-        ca_pmt_t *ca_pmt = (ca_pmt_t *)malloc(sizeof(ca_pmt_t));
+        ca_pmt_t *const ca_pmt = ASC_ALLOC(1, ca_pmt_t);
         ca_pmt->pnr = pnr;
         ca_pmt->buffer_size = 0;
         ca_pmt->psi = mpegts_psi_init(MPEGTS_PACKET_PMT, psi->pid);
@@ -1659,7 +1659,7 @@ void ca_append_pnr(dvb_ca_t *ca, uint16_t pnr)
     ++ca->pmt_count;
     if(ca->pmt_count == 1)
     {
-        ca->pmt_checksum_list = (pmt_checksum_t *)calloc(1, sizeof(pmt_checksum_t));
+        ca->pmt_checksum_list = ASC_ALLOC(1, pmt_checksum_t);
     }
     else
     {
@@ -1683,8 +1683,9 @@ void ca_remove_pnr(dvb_ca_t *ca, uint16_t pnr)
     }
     else
     {
-        pmt_checksum_t *pmt_checksum_list = (pmt_checksum_t *)calloc(
-            ca->pmt_count - 1, sizeof(pmt_checksum_t));
+        pmt_checksum_t *const pmt_checksum_list =
+            ASC_ALLOC(ca->pmt_count - 1, pmt_checksum_t);
+
         int j = 0;
         for(int i = 0; i < ca->pmt_count; ++i)
         {
@@ -1764,7 +1765,7 @@ void ca_open(dvb_ca_t *ca)
         return;
     }
 
-    ca->slots = (ca_slot_t *)calloc(caps.slot_num, sizeof(ca_slot_t));
+    ca->slots = ASC_ALLOC(caps.slot_num, ca_slot_t);
 
     for(uint8_t slot_id = 0; slot_id < ca->slots_num; ++slot_id)
     {

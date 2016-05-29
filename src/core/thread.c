@@ -63,9 +63,7 @@ static asc_thread_mgr_t *thread_mgr = NULL;
  */
 void asc_thread_core_init(void)
 {
-    thread_mgr = (asc_thread_mgr_t *)calloc(1, sizeof(*thread_mgr));
-    asc_assert(thread_mgr != NULL, "[core/thread] calloc() failed");
-
+    thread_mgr = ASC_ALLOC(1, asc_thread_mgr_t);
     thread_mgr->list = asc_list_init();
 }
 
@@ -92,9 +90,7 @@ void asc_thread_core_destroy(void)
 
 asc_thread_t *asc_thread_init(void)
 {
-    asc_thread_t *const thr = (asc_thread_t *)calloc(1, sizeof(*thr));
-    asc_assert(thr != NULL, "[core/thread] calloc() failed");
-
+    asc_thread_t *const thr = ASC_ALLOC(1, asc_thread_t);
     asc_list_insert_tail(thread_mgr->list, thr);
 
     return thr;
@@ -138,8 +134,7 @@ void asc_thread_start(asc_thread_t *thr, void *arg, thread_callback_t proc
     asc_assert(thr->thread != NULL, MSG("failed to create thread: %s")
                , asc_error_msg());
 #else /* _WIN32 */
-    thr->thread = (pthread_t *)calloc(1, sizeof(*thr->thread));
-    asc_assert(thr->thread != NULL, MSG("calloc() failed"));
+    thr->thread = ASC_ALLOC(1, pthread_t);
 
     const int ret = pthread_create(thr->thread, NULL, thread_proc, thr);
     asc_assert(ret == 0, MSG("failed to create thread: %s")
@@ -177,12 +172,10 @@ void asc_thread_join(asc_thread_t *thr)
  */
 asc_thread_buffer_t *asc_thread_buffer_init(size_t size)
 {
-    asc_thread_buffer_t *const buffer =
-        (asc_thread_buffer_t *)calloc(1, sizeof(*buffer));
-    asc_assert(buffer != NULL, "[core/thread] calloc() failed");
+    asc_thread_buffer_t *const buffer = ASC_ALLOC(1, asc_thread_buffer_t);
 
     buffer->size = size;
-    buffer->buffer = (uint8_t *)malloc(size);
+    buffer->buffer = ASC_ALLOC(size, uint8_t);
     asc_mutex_init(&buffer->mutex);
 
     return buffer;

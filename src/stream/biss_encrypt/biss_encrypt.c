@@ -70,7 +70,7 @@ static void process_ts(module_data_t *mod, const uint8_t *ts, uint8_t hdr_size)
         uint8_t *storage_tmp = mod->batch_storage_send;
         mod->batch_storage_send = mod->batch_storage_recv;
         if(!storage_tmp)
-            storage_tmp = (uint8_t *)malloc(mod->storage_size);
+            storage_tmp = ASC_ALLOC(mod->storage_size, uint8_t);
         mod->batch_storage_recv = storage_tmp;
         mod->batch_skip = 0;
         mod->storage_skip = 0;
@@ -173,9 +173,9 @@ static void module_init(lua_State *L, module_data_t *mod)
     key[7] = (key[4] + key[5] + key[6]) & 0xFF;
 
     const int batch_size = dvbcsa_bs_batch_size();
-    mod->batch = (struct dvbcsa_bs_batch_s *)calloc(batch_size + 1, sizeof(*mod->batch));
+    mod->batch = ASC_ALLOC(batch_size + 1, struct dvbcsa_bs_batch_s);
     mod->storage_size = batch_size * TS_PACKET_SIZE;
-    mod->batch_storage_recv = (uint8_t *)malloc(mod->storage_size);
+    mod->batch_storage_recv = ASC_ALLOC(mod->storage_size, uint8_t);
 
     mod->key = dvbcsa_bs_key_alloc();
     dvbcsa_bs_key_set(key, mod->key);

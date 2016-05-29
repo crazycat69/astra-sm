@@ -24,8 +24,7 @@
  */
 ts_program_t *ts_program_init(uint16_t pnr, uint16_t pid)
 {
-    ts_program_t *const prog = (ts_program_t *)calloc(1, sizeof(*prog));
-    asc_assert(prog != NULL, MSGF("calloc() failed"));
+    ts_program_t *const prog = ASC_ALLOC(1, ts_program_t);
 
     prog->pnr = pnr;
     prog->pmt_pid = pid;
@@ -61,8 +60,7 @@ void ts_program_destroy(ts_program_t *p)
  */
 pcr_stream_t *pcr_stream_init(uint16_t pid)
 {
-    pcr_stream_t *const st = (pcr_stream_t *)calloc(1, sizeof(*st));
-    asc_assert(st != NULL, MSGF("calloc() failed"));
+    pcr_stream_t *const st = ASC_ALLOC(1, pcr_stream_t);
 
     st->pid = pid;
 

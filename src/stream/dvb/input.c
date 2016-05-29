@@ -338,14 +338,14 @@ static void dmx_open(module_data_t *mod)
 
     if(mod->dmx_budget)
     {
-        mod->dmx_fd_list = (int *)calloc(1, sizeof(int));
+        mod->dmx_fd_list = ASC_ALLOC(1, int);
         mod->dmx_fd_list[0] = fd;
         __dmx_join_pid(mod, fd, MAX_PID);
     }
     else
     {
         close(fd);
-        mod->dmx_fd_list = (int *)calloc(MAX_PID, sizeof(int));
+        mod->dmx_fd_list = ASC_ALLOC(MAX_PID, int);
     }
 }
 
@@ -1063,8 +1063,8 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_stream_init(mod, NULL);
     module_stream_demux_set(mod, join_pid, leave_pid);
 
-    mod->fe = (dvb_fe_t *)calloc(1, sizeof(dvb_fe_t));
-    mod->ca = (dvb_ca_t *)calloc(1, sizeof(dvb_ca_t));
+    mod->fe = ASC_ALLOC(1, dvb_fe_t);
+    mod->ca = ASC_ALLOC(1, dvb_ca_t);
 
     module_options(L, mod);
 

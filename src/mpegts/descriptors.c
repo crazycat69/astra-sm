@@ -73,8 +73,7 @@ static char *strncpy_print(char *dest, const uint8_t *src, size_t len)
 
 static char *fancy_hex_str(const uint8_t *ptr, size_t len)
 {
-    char *buf = (char *)calloc(1, HEX_BUFSIZE);
-    asc_assert(buf != NULL, "calloc() failed");
+    char *const buf = ASC_ALLOC(HEX_BUFSIZE, char);
 
     size_t pos = 0;
     buf[pos++] = '0';

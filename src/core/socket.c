@@ -108,8 +108,7 @@ static asc_socket_t *sock_init(int family, int type, int protocol, void *arg)
     asc_assert(fd != -1, "[core/socket] failed to open socket: %s"
                , asc_error_msg());
 
-    asc_socket_t *const sock = (asc_socket_t *)calloc(1, sizeof(*sock));
-    asc_assert(sock != NULL, "[core/socket] calloc() failed");
+    asc_socket_t *const sock = ASC_ALLOC(1, asc_socket_t);
 
     sock->fd = fd;
     sock->mreq.imr_multiaddr.s_addr = INADDR_NONE;
@@ -446,8 +445,7 @@ bool asc_socket_accept(asc_socket_t *sock, asc_socket_t **client_ptr
         return false;
     }
 
-    asc_socket_t *const client = (asc_socket_t *)calloc(1, sizeof(*client));
-    asc_assert(client != NULL, "[core/socket] calloc() failed");
+    asc_socket_t *const client = ASC_ALLOC(1, asc_socket_t);
 
     client->fd = fd;
     client->addr = addr;

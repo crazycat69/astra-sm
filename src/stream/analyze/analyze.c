@@ -194,7 +194,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
         lua_settable(L, -3); // append to the "programs" table
 
         if(!mod->stream[pid])
-            mod->stream[pid] = (analyze_item_t *)calloc(1, sizeof(analyze_item_t));
+            mod->stream[pid] = ASC_ALLOC(1, analyze_item_t);
 
         if(pnr != 0)
         {
@@ -214,12 +214,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
 
     ASC_FREE(mod->pmt_checksum_list, free);
     if(mod->pmt_count > 0)
-    {
-        pmt_checksum_t *const list =
-            (pmt_checksum_t *)calloc(mod->pmt_count, sizeof(*list));
-
-        mod->pmt_checksum_list = list;
-    }
+        mod->pmt_checksum_list = ASC_ALLOC(mod->pmt_count, pmt_checksum_t);
 
     callback(L, mod);
 }
@@ -390,7 +385,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
         lua_newtable(L);
 
         if(!mod->stream[pid])
-            mod->stream[pid] = (analyze_item_t *)calloc(1, sizeof(analyze_item_t));
+            mod->stream[pid] = ASC_ALLOC(1, analyze_item_t);
 
         const stream_type_t *const st = mpegts_stream_type(type);
         mod->stream[pid]->type = st->pkt_type;
@@ -471,7 +466,7 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
     {
         const uint8_t max_section_id = SDT_GET_LAST_SECTION_NUMBER(psi);
         mod->sdt_max_section_id = max_section_id;
-        mod->sdt_checksum_list = (uint32_t *)calloc(max_section_id + 1, sizeof(uint32_t));
+        mod->sdt_checksum_list = ASC_ALLOC(max_section_id + 1, uint32_t);
     }
     const uint8_t section_id = SDT_GET_SECTION_NUMBER(psi);
     if(section_id > mod->sdt_max_section_id)
@@ -805,24 +800,24 @@ static void module_init(lua_State *L, module_data_t *mod)
     }
 
     // PAT
-    mod->stream[0x00] = (analyze_item_t *)calloc(1, sizeof(analyze_item_t));
+    mod->stream[0x00] = ASC_ALLOC(1, analyze_item_t);
     mod->stream[0x00]->type = MPEGTS_PACKET_PAT;
     mod->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0x00);
     // CAT
-    mod->stream[0x01] = (analyze_item_t *)calloc(1, sizeof(analyze_item_t));
+    mod->stream[0x01] = ASC_ALLOC(1, analyze_item_t);
     mod->stream[0x01]->type = MPEGTS_PACKET_CAT;
     mod->cat = mpegts_psi_init(MPEGTS_PACKET_CAT, 0x01);
     // SDT
-    mod->stream[0x11] = (analyze_item_t *)calloc(1, sizeof(analyze_item_t));
+    mod->stream[0x11] = ASC_ALLOC(1, analyze_item_t);
     mod->stream[0x11]->type = MPEGTS_PACKET_SDT;
     mod->sdt = mpegts_psi_init(MPEGTS_PACKET_SDT, 0x11);
     // EIT
-    mod->stream[0x12] = (analyze_item_t *)calloc(1, sizeof(analyze_item_t));
+    mod->stream[0x12] = ASC_ALLOC(1, analyze_item_t);
     mod->stream[0x12]->type = MPEGTS_PACKET_EIT;
     // PMT
     mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, MAX_PID);
     // NULL
-    mod->stream[NULL_TS_PID] = (analyze_item_t *)calloc(1, sizeof(analyze_item_t));
+    mod->stream[NULL_TS_PID] = ASC_ALLOC(1, analyze_item_t);
     mod->stream[NULL_TS_PID]->type = MPEGTS_PACKET_NULL;
 
     mod->check_stat = asc_timer_init(1000, on_check_stat, mod);

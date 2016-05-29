@@ -514,7 +514,7 @@ static void on_newcamd_read_packet(void *arg)
         static const int info_size = 3 + 8; /* ident + sa */
 
         free(mod->prov_buffer);
-        mod->prov_buffer = (uint8_t *)calloc(prov_count, info_size);
+        mod->prov_buffer = ASC_ALLOC(prov_count * info_size, uint8_t);
 
         for(int i = 0; i < prov_count; i++)
         {
@@ -640,7 +640,7 @@ static void newcamd_send_em(  module_data_t *mod
         return;
     }
 
-    em_packet_t *packet = (em_packet_t *)malloc(sizeof(*packet));
+    em_packet_t *const packet = ASC_ALLOC(1, em_packet_t);
     memcpy(packet->buffer, buffer, size);
     packet->buffer_size = size;
     packet->decrypt = decrypt;

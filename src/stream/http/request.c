@@ -610,9 +610,7 @@ static void on_read(void *arg)
             lua_setfield(L, -2, __stream);
             callback(L, mod);
 
-            mod->ts.buf = (uint8_t *)malloc(mod->ts.buf_size);
-            asc_assert(mod->ts.buf != NULL, MSG("malloc() failed"));
-
+            mod->ts.buf = ASC_ALLOC(mod->ts.buf_size, uint8_t);
             mod->timeout = asc_timer_init(mod->timeout_ms, check_is_active, mod);
 
             asc_socket_set_on_read(mod->sock, on_ts_read);
@@ -1126,8 +1124,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         int value = 1024;
         module_option_integer(L, "buffer_size", &value);
         mod->ts.buf_size = value * 1024;
-        mod->ts.buf = (uint8_t *)malloc(mod->ts.buf_size);
-        asc_assert(mod->ts.buf != NULL, MSG("malloc() failed"));
+        mod->ts.buf = ASC_ALLOC(mod->ts.buf_size, uint8_t);
 
         value = 128;
         module_option_integer(L, "buffer_fill", &value);

@@ -260,8 +260,7 @@ static void run_jobs(void)
  */
 void asc_main_loop_init(void)
 {
-    main_loop = (asc_main_loop_t *)calloc(1, sizeof(*main_loop));
-    asc_assert(main_loop != NULL, MSG("calloc() failed"));
+    main_loop = ASC_ALLOC(1, asc_main_loop_t);
 
     main_loop->wake_fd[0] = main_loop->wake_fd[1] = -1;
     asc_mutex_init(&main_loop->job_mutex);

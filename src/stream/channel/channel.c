@@ -630,8 +630,7 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
     {
         const uint8_t max_section_id = SDT_GET_LAST_SECTION_NUMBER(psi);
         mod->sdt_max_section_id = max_section_id;
-        mod->sdt_checksum_list =
-            (uint32_t *)calloc(max_section_id + 1, sizeof(uint32_t));
+        mod->sdt_checksum_list = ASC_ALLOC(max_section_id + 1, uint32_t);
     }
     const uint8_t section_id = SDT_GET_SECTION_NUMBER(psi);
     if(section_id > mod->sdt_max_section_id)
@@ -893,7 +892,7 @@ static void module_init(lua_State *L, module_data_t *mod)
             asc_assert((val > 0 && val < NULL_TS_PID), "option 'map': value is out of range");
             lua_pop(L, 1);
 
-            map_item_t *map_item = (map_item_t *)calloc(1, sizeof(map_item_t));
+            map_item_t *const map_item = ASC_ALLOC(1, map_item_t);
             strncpy(map_item->type, key, sizeof(map_item->type));
 
             if(key[0] >= '1' && key[0] <= '9')
