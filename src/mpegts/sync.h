@@ -31,11 +31,27 @@
 typedef struct mpegts_sync_t mpegts_sync_t;
 typedef void (*sync_callback_t)(void *);
 
-enum mpegts_sync_reset {
+enum mpegts_sync_reset
+{
     SYNC_RESET_ALL = 0,
     SYNC_RESET_BLOCKS,
     SYNC_RESET_PCR,
 };
+
+typedef struct
+{
+    /* buffer configuration */
+    unsigned int enough_blocks;
+    unsigned int low_blocks;
+    size_t max_size;
+
+    /* operational status */
+    size_t size;
+    size_t filled;
+    size_t want;
+    double bitrate;
+    unsigned int num_blocks;
+} mpegts_sync_stat_t;
 
 mpegts_sync_t *mpegts_sync_init(void) __wur;
 void mpegts_sync_destroy(mpegts_sync_t *sx);
@@ -66,6 +82,7 @@ bool mpegts_sync_set_blocks(mpegts_sync_t *sx, unsigned int enough
                             , unsigned int low);
 
 size_t mpegts_sync_get_max_size(const mpegts_sync_t *sx) __wur __func_pure;
+void mpegts_sync_query(const mpegts_sync_t *sx, mpegts_sync_stat_t *out);
 
 void mpegts_sync_loop(void *arg);
 bool mpegts_sync_push(mpegts_sync_t *sx, const void *buf, size_t count) __wur;

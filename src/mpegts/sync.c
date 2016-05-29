@@ -239,6 +239,36 @@ size_t mpegts_sync_get_max_size(const mpegts_sync_t *sx)
     return sx->max_size;
 }
 
+static
+size_t buffer_slots(const mpegts_sync_t *sx, bool filled);
+
+void mpegts_sync_query(const mpegts_sync_t *sx, mpegts_sync_stat_t *out)
+{
+    out->size = sx->size;
+    out->filled = buffer_slots(sx, true);
+    out->num_blocks = sx->num_blocks;
+    out->bitrate = sx->bitrate;
+
+    out->enough_blocks = sx->enough_blocks;
+    out->low_blocks = sx->low_blocks;
+    out->max_size = sx->max_size;
+
+    /* suggested packet count to push */
+    if (out->filled == 0 || sx->num_blocks < sx->low_blocks)
+    {
+        out->want = sx->size / 2;
+    }
+    else if (sx->num_blocks < sx->enough_blocks)
+    {
+        const size_t more = sx->enough_blocks - sx->num_blocks;
+        out->want = (out->filled / sx->num_blocks) * more * 2;
+    }
+    else
+    {
+        out->want = 0;
+    }
+}
+
 /*
  * worker functions
  */
@@ -381,20 +411,25 @@ unsigned int usecs_elapsed(mpegts_sync_t *sx, uint64_t time_now)
     return elapsed;
 }
 
-static __func_pure
-size_t buffer_space(const mpegts_sync_t *sx)
+static
+size_t buffer_slots(const mpegts_sync_t *sx, bool filled)
 {
-    ssize_t space = sx->pos.send - sx->pos.rcv - 1;
+    ssize_t cnt;
 
-    if (space < 0)
+    if (filled)
+        cnt = sx->pos.rcv - sx->pos.send;
+    else
+        cnt = sx->pos.send - sx->pos.rcv - 1;
+
+    if (cnt < 0)
     {
-        space += sx->size;
-        if (space < 0)
+        cnt += sx->size;
+        if (cnt < 0)
             /* shouldn't happen */
             return 0;
     }
 
-    return space;
+    return cnt;
 }
 
 static
@@ -524,7 +559,7 @@ void mpegts_sync_loop(void *arg)
                               , (sx->buffered ? ", starting output" : ""));
             }
         }
-        else if (!buffer_space(sx) && !buffer_resize(sx, 0))
+        else if (!buffer_slots(sx, false) && !buffer_resize(sx, 0))
         {
             asc_log_error(MSG("PCR absent or invalid; resetting buffer"));
             mpegts_sync_reset(sx, SYNC_RESET_ALL);
@@ -549,7 +584,7 @@ void mpegts_sync_loop(void *arg)
         sx->num_blocks = block_count(sx);
 
         /* shrink buffer on < 25% fill */
-        const size_t filled = sx->size - buffer_space(sx);
+        const size_t filled = buffer_slots(sx, true);
         const size_t thresh = sx->size / 4;
 
         if (filled < thresh && sx->size > MIN_BUFFER_SIZE)
@@ -629,7 +664,7 @@ void mpegts_sync_loop(void *arg)
 
 bool mpegts_sync_push(mpegts_sync_t *sx, const void *buf, size_t count)
 {
-    while (buffer_space(sx) < count)
+    while (buffer_slots(sx, false) < count)
     {
         if (!buffer_resize(sx, 0))
         {
