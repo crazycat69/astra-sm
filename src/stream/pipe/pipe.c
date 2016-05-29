@@ -1,7 +1,7 @@
 /*
  * Astra Module: Pipe
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -51,7 +51,6 @@ struct module_data_t
 
     mpegts_sync_t *sync;
     asc_timer_t *sync_loop;
-    size_t sync_ration_size;
     ssize_t sync_feed;
 
     bool can_send;
@@ -151,7 +150,10 @@ void on_sync_read(void *arg)
 
     mpegts_sync_set_on_read(mod->sync, NULL);
     asc_child_toggle_input(mod->child, STDOUT_FILENO, true);
-    mod->sync_feed = mod->sync_ration_size;
+
+    mpegts_sync_stat_t data;
+    mpegts_sync_query(mod->sync, &data);
+    mod->sync_feed = data.want;
 }
 
 static
@@ -369,8 +371,9 @@ void module_init(lua_State *L, module_data_t *mod)
         if (optstr != NULL && !mpegts_sync_parse_opts(mod->sync, optstr))
             luaL_error(L, MSG("invalid value for option 'sync_opts'"));
 
-        mod->sync_ration_size = mpegts_sync_get_max_size(mod->sync) / 2;
-        mod->sync_feed = mod->sync_ration_size;
+        mpegts_sync_stat_t data;
+        mpegts_sync_query(mod->sync, &data);
+        mod->sync_feed = data.want;
 
         mod->sync_loop = asc_timer_init(SYNC_INTERVAL_MSEC, mpegts_sync_loop
                                         , mod->sync);
