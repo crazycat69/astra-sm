@@ -237,11 +237,6 @@ bool mpegts_sync_set_blocks(mpegts_sync_t *sx, unsigned int enough
     return true;
 }
 
-size_t mpegts_sync_get_max_size(const mpegts_sync_t *sx)
-{
-    return sx->max_size;
-}
-
 static
 size_t buffer_slots(const mpegts_sync_t *sx, bool filled);
 
