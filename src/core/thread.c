@@ -107,7 +107,7 @@ static void on_thread_exit(void *arg)
 }
 
 #ifdef _WIN32
-static DWORD WINAPI thread_proc(void *arg)
+static unsigned int __stdcall thread_proc(void *arg)
 #else
 static void *thread_proc(void *arg)
 #endif
@@ -130,15 +130,15 @@ void asc_thread_start(asc_thread_t *thr, void *arg, thread_callback_t proc
     thr->on_close = on_close;
 
 #ifdef _WIN32
-    thr->thread = CreateThread(NULL, 0, thread_proc, thr, 0, NULL);
-    asc_assert(thr->thread != NULL, MSG("failed to create thread: %s")
-               , asc_error_msg());
+    const intptr_t ret = _beginthreadex(NULL, 0, thread_proc, thr, 0, NULL);
+    asc_assert(ret > 0, MSG("failed to create thread: %s"), strerror(errno));
+
+    thr->thread = (HANDLE)ret;
 #else /* _WIN32 */
     thr->thread = ASC_ALLOC(1, pthread_t);
 
     const int ret = pthread_create(thr->thread, NULL, thread_proc, thr);
-    asc_assert(ret == 0, MSG("failed to create thread: %s")
-               , strerror(ret));
+    asc_assert(ret == 0, MSG("failed to create thread: %s"), strerror(ret));
 #endif /* !_WIN32 */
 }
 

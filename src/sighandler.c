@@ -372,7 +372,7 @@ static void WINAPI service_main(DWORD argc, LPTSTR *argv)
     SetEvent(service_event);
 }
 
-static DWORD WINAPI service_thread_proc(void *arg)
+static unsigned int __stdcall service_thread_proc(void *arg)
 {
     __uarg(arg);
 
@@ -405,9 +405,14 @@ static bool service_initialize(void)
     if (service_event == NULL)
         perror_exit(GetLastError(), "CreateEvent()");
 
-    service_thread = CreateThread(NULL, 0, service_thread_proc, NULL, 0, NULL);
-    if (service_thread == NULL)
-        perror_exit(GetLastError(), "CreateThread()");
+    const intptr_t thr = _beginthreadex(NULL, 0, service_thread_proc, NULL
+                                        , 0, NULL);
+    if (thr <= 0)
+    {
+        fprintf(stderr, "_beginthreadex(): %s\n", strerror(errno));
+        _exit(EXIT_SIGHANDLER);
+    }
+    service_thread = (HANDLE)thr;
 
     const HANDLE handles[2] = { service_event, service_thread };
     const DWORD ret = WaitForMultipleObjects(2, handles, false, INFINITE);
