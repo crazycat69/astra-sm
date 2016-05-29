@@ -22,6 +22,9 @@
 #include <mpegts/sync.h>
 #include <mpegts/pcr.h>
 
+/* FIXME: increase num_blocks on push when there's PCR in inserted packets */
+#define BLOCK_COUNTING_NOT_YET_FIXED
+
 #define MSG(_msg) "[%s] " _msg, sx->name
 
 /* default fill level thresholds (see sync.h) */
@@ -242,6 +245,11 @@ size_t mpegts_sync_get_max_size(const mpegts_sync_t *sx)
 static
 size_t buffer_slots(const mpegts_sync_t *sx, bool filled);
 
+#ifdef BLOCK_COUNTING_NOT_YET_FIXED
+static __func_pure
+unsigned int block_count(const mpegts_sync_t *sx);
+#endif
+
 void mpegts_sync_query(const mpegts_sync_t *sx, mpegts_sync_stat_t *out)
 {
     out->size = sx->size;
@@ -262,6 +270,11 @@ void mpegts_sync_query(const mpegts_sync_t *sx, mpegts_sync_stat_t *out)
     {
         const size_t more = sx->enough_blocks - sx->num_blocks;
         out->want = (out->filled / sx->num_blocks) * more * 2;
+
+#ifdef BLOCK_COUNTING_NOT_YET_FIXED
+        mpegts_sync_t *mysx = (mpegts_sync_t *)sx;
+        mysx->num_blocks = block_count(sx);
+#endif
     }
     else
     {
