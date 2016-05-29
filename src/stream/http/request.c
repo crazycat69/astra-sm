@@ -325,7 +325,7 @@ static void check_is_active(void *arg)
     on_close(mod);
 }
 
-static void on_sync_read(void *arg);
+static void on_sync_ready(void *arg);
 
 static void on_ts_read(void *arg)
 {
@@ -379,7 +379,7 @@ static void on_ts_read(void *arg)
             if (mod->ts.sync_feed > 0 && --mod->ts.sync_feed <= 0)
             {
                 asc_socket_set_on_read(mod->sock, NULL);
-                mpegts_sync_set_on_read(mod->ts.sync, on_sync_read);
+                mpegts_sync_set_on_ready(mod->ts.sync, on_sync_ready);
             }
         }
         else
@@ -391,12 +391,13 @@ static void on_ts_read(void *arg)
     }
 }
 
-static void on_sync_read(void *arg)
+static void on_sync_ready(void *arg)
 {
     module_data_t *const mod = ((module_stream_t *)arg)->self;
 
-    mpegts_sync_set_on_read(mod->ts.sync, NULL);
+    mpegts_sync_set_on_ready(mod->ts.sync, NULL);
     asc_socket_set_on_read(mod->sock, on_ts_read);
+
     mod->ts.sync_feed = mod->ts.sync_ration_size;
 }
 

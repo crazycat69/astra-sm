@@ -59,7 +59,7 @@ void mpegts_sync_destroy(mpegts_sync_t *sx);
 void mpegts_sync_set_fname(mpegts_sync_t *sx
                            , const char *format, ...) __fmt_printf(2, 3);
 
-void mpegts_sync_set_on_read(mpegts_sync_t *sx, sync_callback_t on_read);
+void mpegts_sync_set_on_ready(mpegts_sync_t *sx, sync_callback_t on_ready);
 void mpegts_sync_set_on_write(mpegts_sync_t *sx, ts_callback_t on_write);
 void mpegts_sync_set_arg(mpegts_sync_t *sx, void *arg);
 

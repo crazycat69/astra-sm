@@ -79,7 +79,7 @@ struct mpegts_sync_t
     double pending;
 
     void *arg;
-    sync_callback_t on_read;
+    sync_callback_t on_ready;
     ts_callback_t on_write;
 #ifdef SYNC_DEBUG
     uint64_t last_report;
@@ -132,9 +132,9 @@ void mpegts_sync_set_fname(mpegts_sync_t *sx, const char *format, ...)
     va_end(ap);
 }
 
-void mpegts_sync_set_on_read(mpegts_sync_t *sx, sync_callback_t on_read)
+void mpegts_sync_set_on_ready(mpegts_sync_t *sx, sync_callback_t on_ready)
 {
-    sx->on_read = on_read;
+    sx->on_ready = on_ready;
 }
 
 void mpegts_sync_set_on_write(mpegts_sync_t *sx, ts_callback_t on_write)
@@ -543,8 +543,8 @@ void mpegts_sync_loop(void *arg)
         return;
 
     /* data request hook */
-    if (sx->on_read && sx->num_blocks < sx->enough_blocks)
-        sx->on_read(sx->arg);
+    if (sx->on_ready && sx->num_blocks < sx->enough_blocks)
+        sx->on_ready(sx->arg);
 
     /* initial buffering */
     if (!sx->buffered)

@@ -66,7 +66,7 @@ struct module_data_t
  * process launch and termination
  */
 
-static void on_sync_read(void *arg);
+static void on_sync_ready(void *arg);
 
 static
 void on_child_restart(void *arg)
@@ -83,7 +83,7 @@ void on_child_restart(void *arg)
     {
         /* don't read from pipe until sync requests data */
         mod->config.sout.ignore_read = true;
-        mpegts_sync_set_on_read(mod->sync, on_sync_read);
+        mpegts_sync_set_on_ready(mod->sync, on_sync_ready);
     }
     else
         mod->config.sout.ignore_read = false;
@@ -133,7 +133,7 @@ void on_child_close(void *arg, int exit_code)
         asc_log_error(MSG("process exited with code %d; %s"), exit_code, buf);
 
     if (mod->sync != NULL)
-        mpegts_sync_set_on_read(mod->sync, NULL);
+        mpegts_sync_set_on_ready(mod->sync, NULL);
 
     mod->can_send = false;
     mod->child = NULL;
@@ -144,11 +144,11 @@ void on_child_close(void *arg, int exit_code)
  */
 
 static
-void on_sync_read(void *arg)
+void on_sync_ready(void *arg)
 {
     module_data_t *const mod = ((module_stream_t *)arg)->self;
 
-    mpegts_sync_set_on_read(mod->sync, NULL);
+    mpegts_sync_set_on_ready(mod->sync, NULL);
     asc_child_toggle_input(mod->child, STDOUT_FILENO, true);
 
     mpegts_sync_stat_t data;
@@ -176,7 +176,7 @@ void on_child_ts_sync(void *arg, const void *buf, size_t packets)
         if (mod->sync_feed <= 0)
         {
             asc_child_toggle_input(mod->child, STDOUT_FILENO, false);
-            mpegts_sync_set_on_read(mod->sync, on_sync_read);
+            mpegts_sync_set_on_ready(mod->sync, on_sync_ready);
         }
     }
 }
