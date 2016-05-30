@@ -2,7 +2,7 @@
  * Astra Module: MPEG-TS (Sync buffer)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,9 +21,6 @@
 #include <astra.h>
 #include <mpegts/sync.h>
 #include <mpegts/pcr.h>
-
-/* FIXME: increase num_blocks on push when there's PCR in inserted packets */
-#define BLOCK_COUNTING_NOT_YET_FIXED
 
 #define MSG(_msg) "[%s] " _msg, sx->name
 
@@ -240,11 +237,6 @@ bool mpegts_sync_set_blocks(mpegts_sync_t *sx, unsigned int enough
 static
 size_t buffer_slots(const mpegts_sync_t *sx, bool filled);
 
-#ifdef BLOCK_COUNTING_NOT_YET_FIXED
-static __func_pure
-unsigned int block_count(const mpegts_sync_t *sx);
-#endif
-
 void mpegts_sync_query(const mpegts_sync_t *sx, mpegts_sync_stat_t *out)
 {
     out->size = sx->size;
@@ -265,11 +257,6 @@ void mpegts_sync_query(const mpegts_sync_t *sx, mpegts_sync_stat_t *out)
     {
         const size_t more = sx->enough_blocks - sx->num_blocks;
         out->want = (out->filled / sx->num_blocks) * more * 2;
-
-#ifdef BLOCK_COUNTING_NOT_YET_FIXED
-        mpegts_sync_t *mysx = (mpegts_sync_t *)sx;
-        mysx->num_blocks = block_count(sx);
-#endif
     }
     else
     {
@@ -551,8 +538,6 @@ void mpegts_sync_loop(void *arg)
     {
         if (seek_pcr(sx))
         {
-            sx->num_blocks += block_count(sx);
-
             if (sx->num_blocks >= sx->enough_blocks)
             {
                 /* got enough data to start output */
@@ -619,7 +604,6 @@ void mpegts_sync_loop(void *arg)
     if (sx->last_error)
     {
         /* check if we can resume output */
-        sx->num_blocks = block_count(sx);
         downtime = time_now - sx->last_error;
     }
 
@@ -687,14 +671,20 @@ bool mpegts_sync_push(mpegts_sync_t *sx, const void *buf, size_t count)
         }
     }
 
-    size_t left = count;
     const ts_packet_t *ts = (const ts_packet_t *)buf;
 
-    while (left > 0)
+    /* update block count */
+    for (size_t i = 0; i < count; i++)
+    {
+        if (TS_IS_PCR(ts[i]) && TS_GET_PID(ts[i]) == sx->pcr_pid)
+            sx->num_blocks++;
+    }
+
+    while (count > 0)
     {
         size_t chunk = sx->size - sx->pos.rcv;
-        if (left < chunk)
-            chunk = left; /* last piece */
+        if (count < chunk)
+            chunk = count; /* last piece */
 
         memcpy(&sx->buf[sx->pos.rcv], ts, sizeof(*ts) * chunk);
 
@@ -704,7 +694,7 @@ bool mpegts_sync_push(mpegts_sync_t *sx, const void *buf, size_t count)
             sx->pos.rcv = 0;
 
         ts += chunk;
-        left -= chunk;
+        count -= chunk;
     }
 
     return true;
