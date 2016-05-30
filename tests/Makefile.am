@@ -19,21 +19,25 @@ AM_TESTS_ENVIRONMENT = export OUTPUT_REDIRECT_FD=9;
 AM_TESTS_FD_REDIRECT = 9>&2
 endif
 
-check_PROGRAMS = unit_tests
-TESTS = $(check_PROGRAMS)
+check_PROGRAMS = unit_tests test_slave
+TESTS = unit_tests
 CLEANFILES = libastra.log
 
 unit_tests_LDADD = $(AM_LDADD)
+unit_tests_DEPENDENCIES = test_slave
 unit_tests_SOURCES = \
     unit_tests.c \
+    unit_tests.h \
     core_alloc.c \
     core_clock.c \
     core_list.c \
     core_mainloop.c \
     core_spawn.c \
     core_thread.c \
-    core_timer.c \
-    unit_tests.h
+    core_timer.c
+
+test_slave_SOURCES = \
+    test_slave.c
 endif
 
 #
@@ -47,4 +51,5 @@ t2mi_decap_LDADD = $(AM_LDADD)
 
 spammer_SOURCES = spammer.c
 spammer_CFLAGS = $(AM_CFLAGS)
-spammer_LDADD = $(AM_LDADD)
+spammer_LDADD = \
+    $(top_builddir)/src/libastra.la

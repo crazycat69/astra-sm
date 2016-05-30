@@ -3,6 +3,7 @@
 /lua/luac
 /tests/spammer
 /tests/t2mi_decap
+/tests/test_slave
 /tests/unit_tests
 /tools/mkscript
 /tools/tonegen
