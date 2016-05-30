@@ -108,6 +108,31 @@ START_TEST(pipe_open)
 }
 END_TEST
 
+/* set child process inheritance on pipe */
+START_TEST(pipe_inherit)
+{
+    int fds[2] = { -1, -1 };
+
+    const int ret = asc_pipe_open(fds, NULL, PIPE_NONE);
+    ck_assert(ret == 0 && fds[0] != -1 && fds[1] != -1);
+
+    /* both ends must be non-inheritable by default */
+    ck_assert(pipe_get_inherit(fds[0]) == false);
+    ck_assert(pipe_get_inherit(fds[1]) == false);
+
+    for (unsigned int i = 0; i < ASC_ARRAY_SIZE(fds); i++)
+    {
+        /* enable */
+        ck_assert(asc_pipe_inherit(fds[i], true) == 0);
+        ck_assert(pipe_get_inherit(fds[i]) == true);
+
+        /* disable */
+        ck_assert(asc_pipe_inherit(fds[i], false) == 0);
+        ck_assert(pipe_get_inherit(fds[i]) == false);
+    }
+}
+END_TEST
+
 /* write to pipe, read from the other end */
 #define BUF_SIZE (128 * 1024) /* 128 KiB */
 
@@ -259,6 +284,7 @@ Suite *core_spawn(void)
     tcase_add_checked_fixture(tc, lib_setup, lib_teardown);
 
     tcase_add_test(tc, pipe_open);
+    tcase_add_test(tc, pipe_inherit);
     tcase_add_test(tc, pipe_write);
     tcase_add_test(tc, pipe_event);
 

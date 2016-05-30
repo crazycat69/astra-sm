@@ -1,7 +1,7 @@
 /*
  * Astra Core (Process spawning)
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -449,6 +449,17 @@ fail:
     return -1;
 }
 
+int asc_pipe_inherit(int fd, bool inherit)
+{
+    const HANDLE sock = ASC_TO_HANDLE(fd);
+    const DWORD val = inherit ? 1 : 0;
+
+    if (SetHandleInformation(sock, HANDLE_FLAG_INHERIT, val))
+        return 0;
+    else
+        return -1;
+}
+
 int asc_pipe_close(int fd)
 {
     return closesocket_s(fd);
@@ -494,6 +505,20 @@ int socketpipe(int fds[2])
     }
 
     return 0;
+}
+
+int asc_pipe_inherit(int fd, bool inherit)
+{
+    int flags = fcntl(fd, F_GETFD);
+    if (flags == -1)
+        return -1;
+
+    if (inherit)
+        flags &= ~FD_CLOEXEC;
+    else
+        flags |= FD_CLOEXEC;
+
+    return fcntl(fd, F_SETFD, flags);
 }
 
 int asc_pipe_close(int fd)

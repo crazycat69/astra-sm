@@ -89,6 +89,7 @@ int asc_process_spawn(const char *command, asc_process_t *proc
 int asc_process_kill(const asc_process_t *proc, bool forced);
 
 int asc_pipe_open(int fds[2], int *nb_fd, unsigned int nb_side);
+int asc_pipe_inherit(int fd, bool inherit);
 int asc_pipe_close(int fd);
 
 #endif /* _ASC_SPAWN_H_ */
