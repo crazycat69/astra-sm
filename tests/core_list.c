@@ -159,7 +159,7 @@ START_TEST(clear_list)
     asc_list_clear(list)
     {
         void *const ptr = asc_list_data(list);
-        ck_assert((intptr_t)ptr == items[index++]);
+        ck_assert((uintptr_t)ptr == items[index++]);
     }
     ck_assert(asc_list_size(list) == 0);
     ck_assert(asc_list_eol(list));

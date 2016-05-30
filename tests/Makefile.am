@@ -30,6 +30,7 @@ unit_tests_SOURCES = \
     core_clock.c \
     core_list.c \
     core_mainloop.c \
+    core_spawn.c \
     core_thread.c \
     core_timer.c \
     unit_tests.h
