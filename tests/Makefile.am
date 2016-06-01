@@ -24,7 +24,7 @@ TESTS = unit_tests
 CLEANFILES = libastra.log
 
 unit_tests_LDADD = $(AM_LDADD)
-unit_tests_DEPENDENCIES = test_slave
+unit_tests_DEPENDENCIES = test_slave$(EXEEXT)
 unit_tests_SOURCES = \
     unit_tests.c \
     unit_tests.h \
@@ -36,8 +36,8 @@ unit_tests_SOURCES = \
     core_thread.c \
     core_timer.c
 
-test_slave_SOURCES = \
-    test_slave.c
+test_slave_SOURCES = test_slave.c
+test_slave_CFLAGS = $(AM_CFLAGS)
 endif
 
 #

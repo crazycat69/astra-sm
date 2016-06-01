@@ -208,10 +208,17 @@ START_TEST(pipe_write)
 
         /* read and compare CRC */
         uint8_t buf[BUF_SIZE];
-        const ssize_t in = recv(rfd, (char *)buf, sizeof(buf), 0);
-        ck_assert(in == (ssize_t)data_size);
+        size_t rpos = 0;
+        while (rpos < data_size)
+        {
+            const size_t left = sizeof(buf) - rpos;
+            const ssize_t in = recv(rfd, (char *)&buf[rpos], left, 0);
+            ck_assert(in > 0 && (size_t)in <= left);
+            rpos += in;
+        }
+        ck_assert(rpos == data_size);
 
-        const uint32_t crc2 = au_crc32b(buf, in);
+        const uint32_t crc2 = au_crc32b(buf, rpos);
         ck_assert(crc1 == crc2);
     }
 
