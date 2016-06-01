@@ -26,6 +26,10 @@
 #include <core/thread.h>
 #include <utils/crc32b.h>
 
+#ifdef HAVE_SYS_SELECT_H
+#   include <sys/select.h>
+#endif
+
 static void pipe_check_nb(int fd, bool expect)
 {
 #ifdef _WIN32
@@ -61,12 +65,13 @@ static void pipe_open_test(unsigned int nb_side)
     int fds[2] = { -1, -1 };
     int nb_fd = -1;
 
-    const int ret = asc_pipe_open(fds, &nb_fd, nb_side);
+    int ret = asc_pipe_open(fds, &nb_fd, nb_side);
     ck_assert(ret == 0 && fds[PIPE_RD] != -1 && fds[PIPE_WR] != -1);
 
     ck_assert(pipe_get_inherit(fds[PIPE_RD]) == false);
     ck_assert(pipe_get_inherit(fds[PIPE_WR]) == false);
 
+    /* verify non-blocking flag */
     switch (nb_side)
     {
         case PIPE_RD:
@@ -93,6 +98,41 @@ static void pipe_open_test(unsigned int nb_side)
             pipe_check_nb(fds[PIPE_RD], false);
             pipe_check_nb(fds[PIPE_WR], false);
     }
+
+    /* try using pipe with select() */
+    fd_set rs, ws, es;
+
+    FD_ZERO(&rs);
+    FD_SET((unsigned)fds[PIPE_RD], &rs);
+    FD_SET((unsigned)fds[PIPE_WR], &rs);
+
+    FD_ZERO(&ws);
+    FD_SET((unsigned)fds[PIPE_RD], &ws);
+    FD_SET((unsigned)fds[PIPE_WR], &ws);
+
+    FD_ZERO(&es);
+    FD_SET((unsigned)fds[PIPE_RD], &es);
+    FD_SET((unsigned)fds[PIPE_WR], &es);
+
+    int nfds;
+    if (fds[PIPE_RD] > fds[PIPE_WR])
+        nfds = fds[PIPE_RD] + 1;
+    else
+        nfds = fds[PIPE_WR] + 1;
+
+    struct timeval tv;
+
+    memset(&tv, 0, sizeof(tv));
+    ret = select(nfds, &rs, NULL, NULL, &tv);
+    ck_assert_msg(ret == 0); /* no read events */
+
+    memset(&tv, 0, sizeof(tv));
+    ret = select(nfds, NULL, &ws, NULL, &tv);
+    ck_assert_msg(ret == 2); /* expect both ends to be writable */
+
+    memset(&tv, 0, sizeof(tv));
+    ret = select(nfds, NULL, NULL, &es, &tv);
+    ck_assert_msg(ret == 0); /* no exception events */
 
     ck_assert(asc_pipe_close(fds[PIPE_RD]) == 0);
     ck_assert(asc_pipe_close(fds[PIPE_WR]) == 0);
