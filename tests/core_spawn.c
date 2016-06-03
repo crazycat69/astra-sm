@@ -126,15 +126,15 @@ static void pipe_open_test(unsigned int nb_side)
 
     memset(&tv, 0, sizeof(tv));
     ret = select(nfds, &rs, NULL, NULL, &tv);
-    ck_assert_msg(ret == 0); /* no read events */
+    ck_assert(ret == 0); /* no read events */
 
     memset(&tv, 0, sizeof(tv));
     ret = select(nfds, NULL, &ws, NULL, &tv);
-    ck_assert_msg(ret == 2); /* expect both ends to be writable */
+    ck_assert(ret == 2); /* expect both ends to be writable */
 
     memset(&tv, 0, sizeof(tv));
     ret = select(nfds, NULL, NULL, &es, &tv);
-    ck_assert_msg(ret == 0); /* no exception events */
+    ck_assert(ret == 0); /* no exception events */
 
     ck_assert(asc_pipe_close(fds[PIPE_RD]) == 0);
     ck_assert(asc_pipe_close(fds[PIPE_WR]) == 0);

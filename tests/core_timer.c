@@ -57,7 +57,7 @@ static uint64_t run_loop(unsigned ms)
     ck_assert(again == false);
 
     const uint64_t bench = (time_stop - start) / 1000;
-    fail_unless(bench <= (ms * 1.3));
+    fail_unless(bench <= (ms * 1.3), "too slow!");
 
     return bench;
 }
@@ -105,7 +105,7 @@ START_TEST(millisecond)
     run_loop(duration);
 
     for (size_t i = 0; i < ASC_ARRAY_SIZE(data); i++)
-        fail_unless(data[i].triggered > (duration / 2));
+        fail_unless(data[i].triggered > (duration / 2), "too slow!");
 }
 END_TEST
 
