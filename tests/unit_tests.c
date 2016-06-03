@@ -75,7 +75,7 @@ int main(void)
         timeBeginPeriod(timecaps.wPeriodMin);
 #endif /* _WIN32 */
 
-    int failed = 0;
+    int failed = 0, total = 0;
 
     for (suite_func_t *p = suite_list; *p != NULL; p++)
     {
@@ -83,8 +83,11 @@ int main(void)
         can_fork = srunner_fork_status(sr);
         srunner_run_all(sr, CK_VERBOSE);
         failed += srunner_ntests_failed(sr);
+        total += srunner_ntests_run(sr);
         srunner_free(sr);
     }
+
+    printf("\n%d out of %d tests passed\n", total - failed, total);
 
     return (failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

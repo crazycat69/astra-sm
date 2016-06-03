@@ -28,16 +28,17 @@
 static BOOL WINAPI console_handler(DWORD type)
 {
     __uarg(type);
-    printf("ignored\n");
+    fprintf(stderr, "peep\n");
     return TRUE;
 }
 #else /* _WIN32 */
 #include <signal.h>
+#include <sys/socket.h>
 
 static void signal_handler(int signum)
 {
     __uarg(signum);
-    printf("ignored\n");
+    fprintf(stderr, "peep\n");
 }
 #endif /* !_WIN32 */
 
@@ -55,27 +56,53 @@ static void __dead cmd_bandit(void)
     sigaction(SIGTERM, &act, NULL);
 #endif /* !_WIN32 */
 
+    fprintf(stderr, "peep\n");
     do_nothing();
 }
 
 /* read from fd and write to another fd */
-static void cmd_cat(int rfd, int wfd)
+static void cmd_cat(int rfd, int wfd, bool stdio)
 {
+#ifdef _WIN32
+    /* NOTE: read() and write() don't work on sockets on Win32 */
+    if (!stdio)
+    {
+        WSADATA wsaData;
+        const int err = WSAStartup(MAKEWORD(2, 2), &wsaData);
+        if (err != 0)
+        {
+            fprintf(stderr, "WSAStartup() failed\n");
+            exit(EXIT_FAILURE);
+        }
+    }
+#endif
+
     while (true)
     {
         char buf[512];
-        const ssize_t in = read(rfd, buf, sizeof(buf));
+
+        ssize_t in;
+        if (stdio)
+            in = read(rfd, buf, sizeof(buf));
+        else
+            in = recv(rfd, buf, sizeof(buf), 0);
+
         if (in < 0)
         {
-            fprintf(stderr, "read(): %s\n", strerror(errno));
+            fprintf(stderr, "read from fd returned %zd!\n", in);
             exit(EXIT_FAILURE);
         }
         else if (in > 0)
         {
-            const ssize_t out = write(wfd, buf, (size_t)in);
+            ssize_t out;
+            if (stdio)
+                out = write(wfd, buf, (size_t)in);
+            else
+                out = send(wfd, buf, (size_t)in, 0);
+
             if (out != in)
             {
-                fprintf(stderr, "write(): returned %zd!\n", out);
+                fprintf(stderr, "write to fd returned %zd!\n", out);
                 exit(EXIT_FAILURE);
             }
         }
@@ -87,7 +114,6 @@ static void cmd_cat(int rfd, int wfd)
 /* close all stdio fds and do nothing */
 static void __dead cmd_close(void)
 {
-    // TODO: win32 test
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
     close(STDERR_FILENO);
@@ -104,7 +130,9 @@ static void __dead cmd_exit(int rc)
 /* report my pid to stdout and exit */
 static void cmd_pid(void)
 {
-    printf("%lld\n", (long long)getpid());
+    char buf[512] = { 0 };
+    const int len = snprintf(buf, sizeof(buf), "%lld\n", (long long)getpid());
+    write(STDOUT_FILENO, buf, len);
 }
 
 /* report current date to stdout once per second */
@@ -112,8 +140,14 @@ static void __dead cmd_ticker(void)
 {
     while (true)
     {
+        char buf[512] = { 0 };
+
         const time_t t = time(NULL);
-        printf("%s", ctime(&t));
+        const int len = snprintf(buf, sizeof(buf), "%s", ctime(&t));
+        const int ret = write(STDOUT_FILENO, buf, len);
+        if (ret <= 0)
+            exit(EXIT_FAILURE);
+
         sleep(1);
     }
 }
@@ -126,9 +160,13 @@ static void __dead usage(void)
 
 int main(int argc, const char **argv)
 {
-#ifdef _WIN32
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
+
+#ifdef _WIN32
+    setmode(STDIN_FILENO, O_BINARY);
+    setmode(STDOUT_FILENO, O_BINARY);
+    setmode(STDERR_FILENO, O_BINARY);
 #endif /* _WIN32 */
 
     if (argc <= 1)
@@ -137,7 +175,7 @@ int main(int argc, const char **argv)
     if (!strcmp(argv[1], "bandit"))
         cmd_bandit();
     else if (!strcmp(argv[1], "cat") && argc >= 3)
-        cmd_cat(STDIN_FILENO, atoi(argv[2]));
+        cmd_cat(STDIN_FILENO, atoi(argv[2]), true);
     else if (!strcmp(argv[1], "close"))
         cmd_close();
     else if (!strcmp(argv[1], "exit") && argc >= 3)
@@ -147,7 +185,7 @@ int main(int argc, const char **argv)
     else if (!strcmp(argv[1], "pipefd") && argc >= 3)
     {
         const int fd = atoi(argv[2]);
-        cmd_cat(fd, fd);
+        cmd_cat(fd, fd, false);
     }
     else if (!strcmp(argv[1], "ticker"))
         cmd_ticker();
