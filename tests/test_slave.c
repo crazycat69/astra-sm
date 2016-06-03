@@ -133,6 +133,8 @@ static void cmd_pid(void)
     char buf[512] = { 0 };
     const int len = snprintf(buf, sizeof(buf), "%lld\n", (long long)getpid());
     write(STDOUT_FILENO, buf, len);
+
+    do_nothing();
 }
 
 /* report current date to stdout once per second */

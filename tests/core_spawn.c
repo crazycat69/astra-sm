@@ -547,6 +547,7 @@ START_TEST(process_id)
     ck_assert(asc_pipe_close(sin) == 0);
     ck_assert(asc_pipe_close(sout) == 0);
     ck_assert(asc_pipe_close(serr) == 0);
+    ck_assert(asc_process_kill(&proc, false) == 0);
     ck_assert(asc_process_wait(&proc, NULL, true) == pid);
     asc_process_free(&proc);
 }
