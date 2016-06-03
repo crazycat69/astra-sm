@@ -257,6 +257,13 @@ static BOOL CALLBACK enum_proc(HWND hwnd, LPARAM lparam)
 
 int asc_process_kill(const asc_process_t *proc, bool forced)
 {
+    /* check process status before sending signals */
+    const DWORD ret = WaitForSingleObject(proc->pi.hProcess, 0);
+    if (ret == WAIT_OBJECT_0)
+        return 0; /* process dead, handle still open */
+    else if (ret == WAIT_FAILED)
+        return -1; /* invalid handle or some other error */
+
     if (forced)
     {
         if (!TerminateProcess(proc->pi.hProcess, EXIT_FAILURE))
