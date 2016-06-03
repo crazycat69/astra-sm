@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,12 +23,10 @@
 #include <core/socket.h>
 
 #ifdef _WIN32
-#   include <ws2tcpip.h>
 #   define SHUT_RD SD_RECEIVE
 #   define SHUT_WR SD_SEND
 #   define SHUT_RDWR SD_BOTH
 #else
-#   include <sys/socket.h>
 #   include <arpa/inet.h>
 #   include <netinet/in.h>
 #   include <netinet/tcp.h>
@@ -391,52 +389,13 @@ void asc_socket_listen(  asc_socket_t *sock
  *
  */
 
-#ifndef _WIN32
-#ifndef HAVE_ACCEPT4
-static inline
-int __accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
-{
-    int fd = accept(sockfd, addr, addrlen);
-    if (fd == -1)
-        return fd;
-
-    /*
-     * NOTE: if some other thread does fork-exec while we're
-     *       between accept() and fcntl(), the child still inherits
-     *       the socket.
-     */
-    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
-    {
-        close(fd);
-        fd = -1;
-    }
-
-    return fd;
-}
-#else /* !HAVE_ACCEPT4 */
-    /*
-     * NOTE: accept4() is Linux-specific, but also seems to be
-     *       present on FreeBSD 10.
-     */
-#   define __accept(__fd, __addr, __addrlen) \
-        accept4(__fd, __addr, __addrlen, SOCK_CLOEXEC)
-#endif /* !HAVE_ACCEPT4 */
-#else /* !_WIN32 */
-    /*
-     * NOTE: Windows client sockets get their no-inherit setting
-     *       from the server socket. Nothing needs to be done, we just
-     *       accept() as usual.
-     */
-#   define __accept(...) accept(__VA_ARGS__)
-#endif /* !_WIN32 */
-
 bool asc_socket_accept(asc_socket_t *sock, asc_socket_t **client_ptr
                        , void *arg)
 {
     struct sockaddr_in addr;
     socklen_t addrlen = sizeof(addr);
 
-    const int fd = __accept(sock->fd, (struct sockaddr *)&addr, &addrlen);
+    const int fd = accept(sock->fd, (struct sockaddr *)&addr, &addrlen);
     if(fd == -1)
     {
         asc_log_error(MSG("accept() failed: %s"), asc_error_msg());

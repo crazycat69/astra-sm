@@ -26,7 +26,6 @@
 #endif
 
 #ifdef ASC_SENDFILE
-#   include <sys/socket.h>
 #   ifdef __linux
 #       include <sys/sendfile.h>
 #   endif

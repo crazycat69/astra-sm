@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *               2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -49,6 +50,7 @@
 #   endif /* !_WIN32_WINNT */
 
 #   include <winsock2.h>
+#   include <ws2tcpip.h>
 #   include <windows.h>
 #endif /* _WIN32 */
 
@@ -67,6 +69,10 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
+
+#ifndef _WIN32
+#   include <sys/socket.h>
+#endif /* !_WIN32 */
 
 /*
  * common macros

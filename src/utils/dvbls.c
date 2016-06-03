@@ -22,7 +22,6 @@
 #include <luaapi/luaapi.h>
 
 #include <sys/ioctl.h>
-#include <sys/socket.h>
 #include <net/if.h>
 #include <dirent.h>
 

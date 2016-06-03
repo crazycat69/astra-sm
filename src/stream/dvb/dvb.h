@@ -27,7 +27,6 @@
 
 #include <poll.h>
 #include <sys/ioctl.h>
-#include <sys/socket.h>
 #include <pthread.h>
 
 #include <linux/dvb/version.h>

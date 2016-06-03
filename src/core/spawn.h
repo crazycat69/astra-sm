@@ -59,7 +59,6 @@ pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block);
 #else /* _WIN32 */
 
 #include <signal.h>
-#include <sys/socket.h>
 #include <sys/wait.h>
 
 typedef pid_t asc_process_t;

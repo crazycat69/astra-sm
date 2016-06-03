@@ -2,7 +2,7 @@
  * Astra Core (Compatibility library)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -125,10 +125,17 @@ size_t strnlen(const char *str, size_t max) __func_pure;
  * standard function wrappers
  */
 
+int cx_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 int cx_open(const char *path, int flags, ...);
 int cx_socket(int family, int type, int protocol);
 
 #ifndef ASC_COMPAT_NOWRAP
+    /* accept */
+#   ifdef accept
+#       undef accept
+#   endif
+#   define accept(...) cx_accept(__VA_ARGS__)
+
     /* open() */
 #   ifdef open
 #       undef open

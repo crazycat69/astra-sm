@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,12 +23,6 @@
 
 #include <astra.h>
 #include <core/compat.h>
-
-#ifdef _WIN32
-#   include <ws2tcpip.h>
-#else
-#   include <sys/socket.h>
-#endif /* _WIN32 */
 
 #ifndef HAVE_PREAD
 ssize_t pread(int fd, void *buffer, size_t size, off_t off)
@@ -61,6 +55,43 @@ size_t strnlen(const char *str, size_t max)
     return end ? (size_t)(end - str) : max;
 }
 #endif
+
+int cx_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
+{
+    int fd;
+
+#if defined(HAVE_ACCEPT4) && defined(SOCK_CLOEXEC)
+    /*
+     * NOTE: accept4() is Linux-specific, but also seems to be
+     *       present on FreeBSD starting from version 10.
+     */
+    fd = accept4(sockfd, addr, addrlen, SOCK_CLOEXEC);
+    if (fd != -1)
+        return fd;
+#endif /* HAVE_ACCEPT4 && SOCK_CLOEXEC */
+
+    fd = accept(sockfd, addr, addrlen);
+    if (fd == -1)
+        return fd;
+
+#ifdef _WIN32
+    /* older Windows versions seem to default to inheritable sockets */
+    const HANDLE sock = ASC_TO_HANDLE(fd);
+    if (!SetHandleInformation(sock, HANDLE_FLAG_INHERIT, 0))
+    {
+        closesocket(fd);
+        fd = -1;
+    }
+#else /* _WIN32 */
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
+    {
+        close(fd);
+        fd = -1;
+    }
+#endif /* !_WIN32 */
+
+    return fd;
+}
 
 int cx_open(const char *path, int flags, ...)
 {

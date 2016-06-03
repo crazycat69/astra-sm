@@ -38,7 +38,6 @@
 #include <dirent.h>
 
 #ifndef _WIN32
-#   include <sys/socket.h>
 #   include <netinet/in.h>
 #   ifndef __ANDROID__
 #       include <ifaddrs.h>

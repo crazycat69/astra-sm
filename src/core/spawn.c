@@ -391,7 +391,7 @@ int socketpipe(int fds[2])
     memcpy(&sa_client, &sa_listen, sizeof(sa_listen));
 
     /* establish listening socket */
-    listener = cx_socket(AF_INET, SOCK_STREAM, 0);
+    listener = socket(AF_INET, SOCK_STREAM, 0);
     if (listener == INVALID_SOCKET)
         goto fail;
 
@@ -408,7 +408,7 @@ int socketpipe(int fds[2])
         goto listen_fail;
 
     /* open first pipe end, connect it to listener */
-    client = cx_socket(AF_INET, SOCK_STREAM, 0);
+    client = socket(AF_INET, SOCK_STREAM, 0);
     if (client == INVALID_SOCKET)
         goto listen_fail;
 
