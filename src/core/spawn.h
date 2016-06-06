@@ -40,7 +40,7 @@ typedef struct
     HANDLE job;
 } asc_process_t;
 
-static inline
+static inline __wur
 pid_t asc_process_id(const asc_process_t *proc)
 {
     return proc->pi.dwProcessId;
@@ -54,7 +54,8 @@ void asc_process_free(asc_process_t *proc)
     ASC_FREE(proc->job, CloseHandle);
 }
 
-pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block);
+pid_t asc_process_wait(const asc_process_t *proc, int *status
+                       , bool block) __wur;
 
 #else /* _WIN32 */
 
@@ -63,7 +64,7 @@ pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block);
 
 typedef pid_t asc_process_t;
 
-static inline
+static inline __wur
 pid_t asc_process_id(const asc_process_t *proc)
 {
     return *proc;
@@ -75,7 +76,7 @@ void asc_process_free(asc_process_t *proc)
     *proc = -1;
 }
 
-static inline
+static inline __wur
 pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block)
 {
     return waitpid(*proc, status, (block ? 0 : WNOHANG));
@@ -84,11 +85,12 @@ pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block)
 #endif /* !_WIN32 */
 
 int asc_process_spawn(const char *command, asc_process_t *proc
-                      , int *parent_sin, int *parent_sout, int *parent_serr);
-int asc_process_kill(const asc_process_t *proc, bool forced);
+                      , int *parent_sin, int *parent_sout
+                      , int *parent_serr) __wur;
+int asc_process_kill(const asc_process_t *proc, bool forced) __wur;
 
-int asc_pipe_open(int fds[2], int *nb_fd, unsigned int nb_side);
-int asc_pipe_inherit(int fd, bool inherit);
+int asc_pipe_open(int fds[2], int *nb_fd, unsigned int nb_side) __wur;
+int asc_pipe_inherit(int fd, bool inherit) __wur;
 int asc_pipe_close(int fd);
 
 #endif /* _ASC_SPAWN_H_ */
