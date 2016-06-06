@@ -26,9 +26,12 @@
 #include <core/thread.h>
 #include <utils/crc32b.h>
 
-#ifdef HAVE_SYS_SELECT_H
-#   include <sys/select.h>
-#endif
+#ifndef _WIN32
+#   include <signal.h>
+#   ifdef HAVE_SYS_SELECT_H
+#       include <sys/select.h>
+#   endif /* HAVE_SYS_SELECT_H */
+#endif /* !_WIN32 */
 
 #define TEST_SLAVE "./test_slave"
 
@@ -495,8 +498,14 @@ START_TEST(process_far_close)
     }
 
     /* kill and clean up */
+    int rc = -1;
     ck_assert(asc_process_kill(&proc, false) == 0);
-    ck_assert(asc_process_wait(&proc, NULL, true) == pid);
+    ck_assert(asc_process_wait(&proc, &rc, true) == pid);
+#ifdef _WIN32
+    ck_assert(rc == (int)STATUS_CONTROL_C_EXIT);
+#else /* _WIN32 */
+    ck_assert(WIFSIGNALED(rc) && WTERMSIG(rc) == SIGTERM);
+#endif /* !_WIN32 */
     asc_process_free(&proc);
 }
 END_TEST
@@ -544,11 +553,17 @@ START_TEST(process_id)
     ck_assert(expect == pid);
 
     /* clean up */
+    int rc = -1;
     ck_assert(asc_pipe_close(sin) == 0);
     ck_assert(asc_pipe_close(sout) == 0);
     ck_assert(asc_pipe_close(serr) == 0);
     ck_assert(asc_process_kill(&proc, false) == 0);
-    ck_assert(asc_process_wait(&proc, NULL, true) == pid);
+    ck_assert(asc_process_wait(&proc, &rc, true) == pid);
+#ifdef _WIN32
+    ck_assert(rc == (int)STATUS_CONTROL_C_EXIT);
+#else /* _WIN32 */
+    ck_assert(WIFSIGNALED(rc) && WTERMSIG(rc) == SIGTERM);
+#endif /* !_WIN32 */
     asc_process_free(&proc);
 }
 END_TEST
@@ -599,8 +614,14 @@ START_TEST(process_kill)
     }
 
     /* clean up */
+    int rc = -1;
     ck_assert(asc_process_kill(&proc, true) == 0);
-    ck_assert(asc_process_wait(&proc, NULL, true) == pid);
+    ck_assert(asc_process_wait(&proc, &rc, true) == pid);
+#ifdef _WIN32
+    ck_assert(rc == EXIT_FAILURE); /* set by asc_process_kill() on Win32 */
+#else /* _WIN32 */
+    ck_assert(WIFSIGNALED(rc) && WTERMSIG(rc) == SIGKILL);
+#endif /* !_WIN32 */
     ck_assert(asc_pipe_close(sin) == 0);
     ck_assert(asc_pipe_close(sout) == 0);
     ck_assert(asc_pipe_close(serr) == 0);
@@ -629,7 +650,13 @@ START_TEST(process_zombie)
         ck_assert(asc_process_kill(&proc, force) == 0);
     }
 
-    ck_assert(asc_process_wait(&proc, NULL, false) > 0);
+    int rc = -1;
+    ck_assert(asc_process_wait(&proc, &rc, false) > 0);
+#ifndef _WIN32
+    ck_assert(WIFEXITED(rc) && !WIFSIGNALED(rc));
+    rc = WEXITSTATUS(rc);
+#endif /* !_WIN32 */
+    ck_assert(rc == 0);
     asc_process_free(&proc);
 }
 END_TEST
@@ -744,6 +771,11 @@ Suite *core_spawn(void)
 
     TCase *const tc = tcase_create("default");
     tcase_add_checked_fixture(tc, lib_setup, lib_teardown);
+
+#ifndef _WIN32
+    if (can_fork != CK_NOFORK)
+        tcase_set_timeout(tc, 10);
+#endif /* !_WIN32 */
 
     tcase_add_test(tc, pipe_open);
     tcase_add_test(tc, pipe_inherit);
