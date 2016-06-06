@@ -54,6 +54,7 @@ static void __dead cmd_bandit(void)
 
     sigaction(SIGINT, &act, NULL);
     sigaction(SIGTERM, &act, NULL);
+    signal(SIGPIPE, SIG_IGN);
 #endif /* !_WIN32 */
 
     fprintf(stderr, "peep\n");

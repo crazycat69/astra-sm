@@ -29,6 +29,7 @@ unit_tests_SOURCES = \
     unit_tests.c \
     unit_tests.h \
     core_alloc.c \
+    core_child.c \
     core_clock.c \
     core_list.c \
     core_mainloop.c \
