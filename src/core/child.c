@@ -126,6 +126,7 @@ void on_stdio_read(asc_child_t *child, child_io_t *io)
                 return;
 
             asc_log_debug(MSG("recv(): %s"), asc_error_msg());
+            /* fallthrough */
 
         case 0:
             on_stdio_close(child, io);
@@ -201,6 +202,7 @@ void on_stdio_read(asc_child_t *child, child_io_t *io)
         case CHILD_IO_RAW:
             /* pass every read to callback */
             io->on_flush(child->arg, dst, ret);
+            /* fallthrough */
 
         default:
             io->pos_write = 0;
@@ -261,6 +263,9 @@ asc_child_t *asc_child_init(const asc_child_cfg_t *cfg)
 {
     asc_child_t *const child = ASC_ALLOC(1, asc_child_t);
     child->name = cfg->name;
+
+    asc_assert(cfg->sin.on_flush == NULL && cfg->sin.ignore_read == false
+               , MSG("cannot set read callback on standard input"));
 
     /* start the process */
     asc_log_debug(MSG("attempting to execute `%s'"), cfg->command);
@@ -341,6 +346,8 @@ void asc_child_close(asc_child_t *child)
                 asc_log_error(MSG("couldn't get status: %s"), asc_error_msg());
                 break;
             }
+
+            /* fallthrough */
 
         default:
             /* process exited or killed */
@@ -447,7 +454,6 @@ void asc_child_toggle_input(asc_child_t *child, int fd, bool enable)
     const child_io_t *io;
     switch (fd)
     {
-        case STDIN_FILENO:  io = &child->sin;  break; // TODO: remove this?
         case STDOUT_FILENO: io = &child->sout; break;
         case STDERR_FILENO: io = &child->serr; break;
         default:
