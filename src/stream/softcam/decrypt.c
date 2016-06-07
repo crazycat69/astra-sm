@@ -32,15 +32,6 @@
  */
 
 #include "module_cam.h"
-
-#ifndef LIBDVBCSA
-#   define LIBDVBCSA 1
-#endif
-
-#ifndef FFDECSA
-#   define FFDECSA 0
-#endif
-
 #include <dvbcsa/dvbcsa.h>
 
 typedef struct

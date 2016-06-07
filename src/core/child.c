@@ -1,7 +1,7 @@
 /*
  * Astra Core (Child process)
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,7 +24,8 @@
 
 #define MSG(_msg) "[child/%s] " _msg, child->name
 
-#define IO_BUFFER_SIZE (32 * 1024) /* 32 KiB */
+#define IO_BUFFER_SIZE (32UL * 1024UL) /* 32 KiB */
+#define IO_BUFFER_TS_PACKETS (IO_BUFFER_SIZE / TS_PACKET_SIZE)
 
 #define KILL_TICK_MSEC 100
 #define KILL_MAX_TICKS 15
@@ -90,9 +91,6 @@ struct asc_child_t
         asc_child_t *const child = (asc_child_t *)arg; \
         on_stdio_##__event(child, &child->__io); \
     }
-
-#define asc_child_close_tick \
-    (timer_callback_t)asc_child_close
 
 /*
  * reading from child
@@ -232,19 +230,85 @@ EVENT_CALLBACK(serr, read)
 /*
  * writing to child
  */
+static
+ssize_t send_raw(int fd, const uint8_t *buf, size_t len)
+{
+    size_t written = 0;
+
+    while (len > 0)
+    {
+        const ssize_t ret = send(fd, (char *)&buf[written], len, 0);
+        if (ret < 0 || (size_t)ret > len)
+            return -1;
+
+        written += ret;
+        len -= ret;
+    }
+
+    return written;
+}
+
+static
+ssize_t send_mpegts(child_io_t *io, const uint8_t *buf, size_t npkts)
+{
+    size_t left = npkts;
+    size_t pos = 0;
+
+    while (left > 0)
+    {
+        size_t slots = (sizeof(io->data) - io->pos_write) / TS_PACKET_SIZE;
+        if (slots == 0 || (left > IO_BUFFER_TS_PACKETS && io->pos_write > 0))
+        {
+            const ssize_t ret = send_raw(io->fd, io->data, io->pos_write);
+            io->pos_write = 0;
+
+            if (ret < 0)
+                return -1;
+
+            slots = IO_BUFFER_TS_PACKETS;
+        }
+
+        size_t bytes = slots * TS_PACKET_SIZE;
+        if (left <= IO_BUFFER_TS_PACKETS)
+        {
+            if (slots > left)
+            {
+                slots = left;
+                bytes = left * TS_PACKET_SIZE;
+            }
+
+            memcpy(&io->data[io->pos_write], &buf[pos], bytes);
+            io->pos_write += bytes;
+        }
+        else
+        {
+            /* send large chunks without copying them to the buffer */
+            const ssize_t ret = send_raw(io->fd, &buf[pos], bytes);
+            if (ret < 0)
+                return -1;
+        }
+
+        pos += bytes;
+        left -= slots;
+    }
+
+    return npkts;
+}
+
 ssize_t asc_child_send(asc_child_t *child, const void *buf, size_t len)
 {
-    child_io_t *const io = &child->sin;
-
-    if (io->mode == CHILD_IO_MPEGTS)
+    switch (child->sin.mode)
     {
-        // FIXME: add write buffering
-        return send(io->fd, (char *)buf, len * TS_PACKET_SIZE, 0);
+        case CHILD_IO_MPEGTS:
+            return send_mpegts(&child->sin, (uint8_t *)buf, len);
+
+        case CHILD_IO_TEXT:
+        case CHILD_IO_RAW:
+            return send_raw(child->sin.fd, (uint8_t *)buf, len);
+
+        default:
+            return len;
     }
-    else if (io->mode == CHILD_IO_RAW)
-        return send(io->fd, (char *)buf, len, 0);
-    else
-        return 0;
 }
 
 static
@@ -295,6 +359,8 @@ asc_child_t *asc_child_init(const asc_child_cfg_t *cfg)
 
 void asc_child_close(asc_child_t *child)
 {
+    ASC_FREE(child->kill_timer, asc_timer_destroy);
+
     /* shutdown stdio pipes */
     CHILD_IO_CLEANUP(sin);
     CHILD_IO_CLEANUP(sout);
@@ -327,13 +393,14 @@ void asc_child_close(asc_child_t *child)
 
             if (child->kill_ticks <= KILL_MAX_TICKS)
             {
-                child->kill_timer = asc_timer_one_shot(KILL_TICK_MSEC
-                                                       , asc_child_close_tick
-                                                       , child);
+                /* schedule next status check and return */
+                const timer_callback_t fn = (timer_callback_t)asc_child_close;
+                child->kill_timer = asc_timer_init(KILL_TICK_MSEC, fn, child);
+
                 return;
             }
 
-            /* euthanize the bastard, wait until it dies */
+            /* time's up; euthanize the bastard, wait until it dies */
             asc_log_warning(MSG("sending kill signal"));
             if (asc_process_kill(&child->proc, true) != 0)
             {
@@ -398,7 +465,7 @@ void asc_child_destroy(asc_child_t *child)
     if (waitquit)
     {
         /* wait up to 1.5s */
-        pid_t status;
+        pid_t status = -1;
         for (size_t i = 0; i < 150; i++)
         {
             status = asc_process_wait(&child->proc, NULL, false);
@@ -407,7 +474,6 @@ void asc_child_destroy(asc_child_t *child)
 
             asc_usleep(10 * 1000);
         }
-        // TODO: check asc_utime
 
         if (status == 0)
         {

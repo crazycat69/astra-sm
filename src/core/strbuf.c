@@ -22,8 +22,6 @@
 #include <astra.h>
 #include <core/strbuf.h>
 
-#define MSG(_msg) "[core/strbuf] " _msg
-
 #define MAX_BUFFER_SIZE 4096
 
 struct string_buffer_t

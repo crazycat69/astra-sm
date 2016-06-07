@@ -43,6 +43,7 @@
 #define MSG(_msg) "[udp_output %s:%d] " _msg, mod->addr, mod->port
 
 #define UDP_BUFFER_SIZE 1460
+#define RTP_PT_MP2T 33 /* RFC2250 */
 
 struct module_data_t
 {
@@ -157,9 +158,6 @@ static void module_init(lua_State *L, module_data_t *mod)
     if(mod->is_rtp)
     {
         const uint32_t rtpssrc = (uint32_t)rand();
-
-#define RTP_PT_H261     31      /* RFC2032 */
-#define RTP_PT_MP2T     33      /* RFC2250 */
 
         mod->packet.buffer[0 ] = 0x80; // RTP version
         mod->packet.buffer[1 ] = RTP_PT_MP2T;
