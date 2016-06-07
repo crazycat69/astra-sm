@@ -474,7 +474,7 @@ int asc_pipe_close(int fd)
 
 #else /* _WIN32 */
 
-#define PIPE_BUFFER (64 * 1024) /* 64 KiB */
+#define PIPE_BUFFER (256 * 1024) /* 256 KiB */
 
 /* call socketpair(), set close-on-exec and increase buffer size */
 static
