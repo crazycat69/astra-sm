@@ -95,6 +95,62 @@ struct asc_child_t
 /*
  * reading from child
  */
+static
+void recv_text(const asc_child_t *child, child_io_t *io)
+{
+    /* line-buffered input */
+    const size_t space = sizeof(io->data) - io->pos_write - 1;
+
+    for (size_t i = io->pos_read; i < io->pos_write; i++)
+    {
+        uint8_t *const c = &io->data[i];
+        if (*c == '\n' || *c == '\r' || *c == '\0')
+        {
+            /* terminate line and feed it to callback */
+            *c = '\0';
+
+            const uint8_t *const str = &io->data[io->pos_read];
+            const size_t max = sizeof(io->data) - io->pos_read;
+            const size_t len = strnlen((char *)str, max);
+            if (len > 0)
+                io->on_flush(child->arg, str, len);
+
+            io->pos_read = i + 1;
+        }
+    }
+
+    if (space == 0 && io->pos_read == 0)
+    {
+        /* buffered line is too long; dump what we got */
+        const size_t len = strnlen((char *)io->data, sizeof(io->data));
+        if (len > 0)
+            io->on_flush(child->arg, io->data, len);
+
+        io->pos_write = 0;
+    }
+}
+
+static
+void recv_mpegts(const asc_child_t *child, child_io_t *io)
+{
+    /* 188-byte TS packets */
+    for (; io->pos_write >= io->pos_read + (TS_PACKET_SIZE * 2)
+         ; io->pos_read += TS_PACKET_SIZE)
+    {
+        /* look for sync byte */
+        for (size_t i = 0; i < TS_PACKET_SIZE; i++)
+        {
+            const uint8_t *const ts = &io->data[io->pos_read + i];
+            if (TS_IS_SYNC(ts))
+            {
+                io->pos_read += i;
+                io->on_flush(child->arg, ts, 1);
+                break;
+            }
+        }
+    }
+}
+
 static inline
 void on_stdio_close(asc_child_t *child, child_io_t *io)
 {
@@ -114,87 +170,39 @@ static
 void on_stdio_read(asc_child_t *child, child_io_t *io)
 {
     uint8_t *const dst = &io->data[io->pos_write];
-    size_t space = sizeof(io->data) - io->pos_write - 1;
+    const size_t space = sizeof(io->data) - io->pos_write - 1;
 
+    /* buffer incoming data */
     const ssize_t ret = recv(io->fd, (char *)dst, space, 0);
-    switch (ret)
+
+    if (ret == -1)
     {
-        case -1:
-            if (asc_socket_would_block())
-                return;
-
-            asc_log_debug(MSG("recv(): %s"), asc_error_msg());
-            /* fallthrough */
-
-        case 0:
-            on_stdio_close(child, io);
+        if (asc_socket_would_block())
             return;
 
-        default:
-            break;
+        asc_log_debug(MSG("recv(): %s"), asc_error_msg());
+    }
+
+    if (ret <= 0 || (size_t)ret > space)
+    {
+        on_stdio_close(child, io);
+        return;
     }
 
     if (io->on_flush == NULL)
         return;
 
-    /* buffer incoming data */
-    asc_assert(ret > 0 && ret <= (ssize_t)space, MSG("recv() went haywire!"));
-
-    space -= ret;
     io->pos_write += ret;
 
+    /* pass data to callbacks according to configured I/O mode */
     switch (io->mode)
     {
         case CHILD_IO_MPEGTS:
-            /* 188-byte TS packets */
-            for (; io->pos_write >= io->pos_read + (TS_PACKET_SIZE * 2)
-                 ; io->pos_read += TS_PACKET_SIZE)
-            {
-                /* look for sync byte */
-                for (size_t i = 0; i < TS_PACKET_SIZE; i++)
-                {
-                    const uint8_t *const ts = &io->data[io->pos_read + i];
-                    if (TS_IS_SYNC(ts))
-                    {
-                        io->pos_read += i;
-                        io->on_flush(child->arg, ts, 1);
-                        break;
-                    }
-                }
-            }
-
+            recv_mpegts(child, io);
             break;
 
         case CHILD_IO_TEXT:
-            /* line-buffered input */
-            for (size_t i = io->pos_read; i < io->pos_write; i++)
-            {
-                uint8_t *const c = &io->data[i];
-                if (*c == '\n' || *c == '\r' || *c == '\0')
-                {
-                    /* terminate line and feed it to callback */
-                    *c = '\0';
-
-                    const uint8_t *const str = &io->data[io->pos_read];
-                    const size_t max = sizeof(io->data) - io->pos_read;
-                    const size_t len = strnlen((char *)str, max);
-                    if (len > 0)
-                        io->on_flush(child->arg, str, len);
-
-                    io->pos_read = i + 1;
-                }
-            }
-
-            if (space == 0 && io->pos_read == 0)
-            {
-                /* buffered line is too long; dump what we got */
-                const size_t len = strnlen((char *)io->data, sizeof(io->data));
-                if (len > 0)
-                    io->on_flush(child->arg, io->data, len);
-
-                io->pos_write = 0;
-            }
-
+            recv_text(child, io);
             break;
 
         case CHILD_IO_RAW:
