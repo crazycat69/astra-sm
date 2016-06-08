@@ -21,6 +21,8 @@
 #include "unit_tests.h"
 #include <core/child.h>
 #include <core/mainloop.h>
+#include <core/timer.h>
+#include <utils/crc8.h>
 
 #ifndef _WIN32
 #   include <signal.h>
@@ -238,6 +240,468 @@ START_TEST(far_close)
 }
 END_TEST
 
+/* try to close child multiple times in a row */
+asc_child_t *double_child = NULL;
+
+static void double_on_read(void *arg, const void *buf, size_t len)
+{
+    __uarg(arg);
+    __uarg(buf);
+    __uarg(len);
+
+    asc_main_loop_shutdown();
+}
+
+static void double_on_close(void *arg, int status)
+{
+    __uarg(arg);
+    __uarg(status);
+
+#ifdef _WIN32
+    ck_assert(status == EXIT_FAILURE);
+#else /* _WIN32 */
+    ck_assert(status == (128 + SIGKILL));
+#endif /* !_WIN32 */
+
+    double_child = NULL;
+}
+
+START_TEST(double_kill)
+{
+    asc_child_cfg_t cfg;
+
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.name = "test_double";
+    cfg.command = TEST_SLAVE " bandit";
+    cfg.sout.mode = cfg.serr.mode = CHILD_IO_TEXT;
+    cfg.sout.on_flush = fail_on_read;
+    cfg.serr.on_flush = double_on_read;
+    cfg.on_close = double_on_close;
+
+    double_child = asc_child_init(&cfg);
+    ck_assert(double_child != NULL);
+
+    ck_assert(asc_main_loop_run() == false);
+
+    while (double_child != NULL)
+    {
+        asc_child_close(double_child);
+        asc_usleep(10 * 1000); /* 10ms */
+    }
+}
+END_TEST
+
+/* frame aligner test */
+#define ALIGNER_PID 0x100
+#define ALIGNER_LIMIT 50000
+
+static asc_child_t *aligner = NULL;
+static unsigned int aligner_cc = 15;
+static unsigned int aligner_cnt = 0;
+static bool aligner_closed = false;
+
+static void aligner_on_read(void *arg, const void *buf, size_t len)
+{
+    __uarg(arg);
+
+    const uint8_t *ts = (uint8_t *)buf;
+
+    ck_assert(len > 0);
+    while (len > 0)
+    {
+        ck_assert(TS_IS_SYNC(ts));
+        ck_assert(TS_GET_PID(ts) == ALIGNER_PID);
+
+        aligner_cc = (aligner_cc + 1) & 0xf;
+        ck_assert(TS_GET_CC(ts) == aligner_cc);
+
+        if (++aligner_cnt > ALIGNER_LIMIT && !aligner_closed)
+        {
+            aligner_closed = true;
+            asc_child_close(aligner);
+        }
+
+        ts += TS_PACKET_SIZE;
+        len--;
+    }
+}
+
+static void aligner_on_close(void *arg, int status)
+{
+    __uarg(arg);
+    __uarg(status);
+
+    asc_main_loop_shutdown();
+    aligner = NULL;
+}
+
+START_TEST(ts_aligner)
+{
+    asc_child_cfg_t cfg;
+
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.name = "test_aligner";
+    cfg.command = TEST_SLAVE " unaligned";
+    cfg.sout.mode = CHILD_IO_MPEGTS;
+    cfg.sout.on_flush = aligner_on_read;
+    cfg.serr.mode = CHILD_IO_TEXT;
+    cfg.serr.on_flush = fail_on_read;
+    cfg.on_close = aligner_on_close;
+
+    aligner = asc_child_init(&cfg);
+    ck_assert(aligner != NULL);
+
+    ck_assert(asc_main_loop_run() == false);
+    ck_assert(aligner_cnt >= ALIGNER_LIMIT);
+}
+END_TEST
+
+/* TS reassembly */
+#define ASSY_LIMIT 1000
+#define ASSY_PID 0x200
+
+static asc_child_t *assy_child = NULL;
+static unsigned int assy_rcvd = 0;
+static unsigned int assy_cc_out = 15;
+static unsigned int assy_cc_in = 15;
+
+static void assy_on_ts(void *arg, const void *buf, size_t len)
+{
+    __uarg(arg);
+
+    const uint8_t *ts = (uint8_t *)buf;
+    while (len > 0)
+    {
+        ck_assert(TS_IS_SYNC(ts));
+        ck_assert(TS_GET_PID(ts) == ASSY_PID);
+
+        assy_cc_in = (assy_cc_in + 1) & 0xf;
+        ck_assert(TS_GET_CC(ts) == assy_cc_in);
+
+        const uint8_t c8 = au_crc8(&ts[5], TS_BODY_SIZE - 1);
+        ck_assert(c8 == ts[4]);
+
+        assy_rcvd++;
+        ts += TS_PACKET_SIZE;
+        len--;
+    }
+}
+
+static void assy_on_ready(void *arg)
+{
+    __uarg(arg);
+
+    uint8_t ts[TS_PACKET_SIZE] = { 0x47 };
+    TS_SET_PID(ts, ASSY_PID);
+
+    assy_cc_out = (assy_cc_out + 1) & 0xf;
+    TS_SET_CC(ts, assy_cc_out);
+
+    for (size_t i = 5; i < TS_PACKET_SIZE; i++)
+        ts[i] = rand();
+
+    ts[4] = au_crc8(&ts[5], TS_BODY_SIZE - 1);
+
+    for (size_t i = 0; i < sizeof(ts); i++)
+    {
+        /* send TS packet one byte at a time */
+        const ssize_t ret = asc_child_send(assy_child, &ts[i], 1);
+        ck_assert(ret == 1);
+    }
+
+    if (assy_rcvd >= ASSY_LIMIT)
+    {
+        asc_child_set_on_ready(assy_child, NULL);
+        asc_child_close(assy_child);
+    }
+}
+
+static void assy_on_close(void *arg, int status)
+{
+    __uarg(arg);
+    __uarg(status);
+
+    assy_child = NULL;
+    asc_main_loop_shutdown();
+}
+
+START_TEST(ts_assembly)
+{
+    asc_child_cfg_t cfg;
+
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.name = "test_assy";
+    cfg.command = TEST_SLAVE " cat 1";
+    cfg.sin.mode = CHILD_IO_RAW;
+    cfg.sout.mode = CHILD_IO_MPEGTS;
+    cfg.sout.on_flush = assy_on_ts;
+    cfg.serr.mode = CHILD_IO_TEXT;
+    cfg.serr.on_flush = fail_on_read;
+    cfg.on_ready = assy_on_ready;
+    cfg.on_close = assy_on_close;
+
+    assy_child = asc_child_init(&cfg);
+    ck_assert(assy_child != NULL);
+
+    ck_assert(asc_main_loop_run() == false);
+    ck_assert(assy_child == NULL);
+    ck_assert(assy_rcvd >= ASSY_LIMIT);
+}
+END_TEST
+
+/* TS write buffering */
+#define PUSH_LIMIT 10000
+#define PUSH_MAX_BATCH 1000UL
+#define PUSH_INTERVAL 25 /* 25ms */
+#define PUSH_PID 0x300
+
+static asc_child_t *push_child = NULL;
+static asc_timer_t *push_timer = NULL;
+static uint8_t *push_batch = NULL;
+
+static unsigned int push_cc_out = 15;
+static unsigned int push_cc_in = 15;
+static unsigned int push_rcvd = 0;
+
+static void push_on_timer(void *arg)
+{
+    __uarg(arg);
+
+    if (push_rcvd >= PUSH_LIMIT)
+    {
+        asc_child_close(push_child);
+        return;
+    }
+
+    const size_t bsize = 1 + (rand() % PUSH_MAX_BATCH);
+    for (size_t i = 0; i < bsize; i++)
+    {
+        uint8_t *const ts = &push_batch[i * TS_PACKET_SIZE];
+
+        ts[0] = 0x47;
+        TS_SET_PID(ts, PUSH_PID);
+
+        push_cc_out = (push_cc_out + 1) & 0xf;
+        TS_SET_CC(ts, push_cc_out);
+
+        for (size_t j = 5; j < TS_PACKET_SIZE; j++)
+            ts[j] = rand();
+
+        ts[4] = au_crc8(&ts[5], TS_BODY_SIZE - 1);
+    }
+
+    const ssize_t ret = asc_child_send(push_child, push_batch, bsize);
+    ck_assert(ret == (ssize_t)bsize);
+}
+
+static void push_on_ts(void *arg, const void *buf, size_t len)
+{
+    __uarg(arg);
+
+    const uint8_t *ts = (uint8_t *)buf;
+    while (len > 0)
+    {
+        ck_assert(TS_IS_SYNC(ts));
+        ck_assert(TS_GET_PID(ts) == PUSH_PID);
+
+        push_cc_in = (push_cc_in + 1) & 0xf;
+        ck_assert(TS_GET_CC(ts) == push_cc_in);
+
+        const uint8_t c8 = au_crc8(&ts[5], TS_BODY_SIZE - 1);
+        ck_assert(c8 == ts[4]);
+
+        push_rcvd++;
+        ts += TS_PACKET_SIZE;
+        len--;
+    }
+}
+
+static void push_on_close(void *arg, int status)
+{
+    __uarg(arg);
+    __uarg(status);
+
+    asc_main_loop_shutdown();
+    push_child = NULL;
+}
+
+START_TEST(ts_push_pull)
+{
+    asc_child_cfg_t cfg;
+
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.name = "test_push";
+    cfg.command = TEST_SLAVE " cat 2"; /* echo on stderr */
+    cfg.sin.mode = CHILD_IO_MPEGTS;
+    cfg.sout.mode = CHILD_IO_TEXT;
+    cfg.sout.on_flush = fail_on_read;
+    cfg.serr.mode = CHILD_IO_MPEGTS;
+    cfg.serr.on_flush = push_on_ts;
+    cfg.on_close = push_on_close;
+
+    push_timer = asc_timer_init(PUSH_INTERVAL, push_on_timer, NULL);
+    ck_assert(push_timer != NULL);
+
+    push_child = asc_child_init(&cfg);
+    ck_assert(push_child != NULL);
+
+    push_batch = ASC_ALLOC(TS_PACKET_SIZE * PUSH_MAX_BATCH, uint8_t);
+
+    ck_assert(asc_main_loop_run() == false);
+    ck_assert(push_rcvd >= PUSH_LIMIT);
+    ck_assert(push_child == NULL);
+
+    ASC_FREE(push_timer, asc_timer_destroy);
+    ASC_FREE(push_batch, free);
+}
+END_TEST
+
+/* single character echo */
+#define RAW_LIMIT 300
+
+static asc_child_t *raw_child = NULL;
+static unsigned int raw_cnt = 0;
+static char raw_char = '\0';
+
+static void raw_on_ready(void *arg)
+{
+    __uarg(arg);
+
+    raw_char++;
+    const ssize_t ret = asc_child_send(raw_child, &raw_char, sizeof(raw_char));
+    ck_assert(ret == sizeof(raw_char));
+
+    asc_child_toggle_input(raw_child, STDOUT_FILENO, true);
+    asc_child_set_on_ready(raw_child, NULL);
+}
+
+static void raw_on_read(void *arg, const void *buf, size_t len)
+{
+    __uarg(arg);
+
+    ck_assert(len == sizeof(raw_char));
+
+    const char c = *((char *)buf);
+    ck_assert(c == raw_char);
+
+    asc_child_toggle_input(raw_child, STDOUT_FILENO, false);
+    if (++raw_cnt >= RAW_LIMIT)
+        asc_job_queue(NULL, (loop_callback_t)asc_child_close, raw_child);
+    else
+        asc_child_set_on_ready(raw_child, raw_on_ready);
+}
+
+static void raw_on_close(void *arg, int status)
+{
+    __uarg(arg);
+    __uarg(status);
+
+    asc_main_loop_shutdown();
+    raw_child = NULL;
+}
+
+START_TEST(raw_push_pull)
+{
+    asc_child_cfg_t cfg;
+
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.name = "test_raw";
+    cfg.command = TEST_SLAVE " cat 1";
+    cfg.sin.mode = CHILD_IO_RAW;
+    cfg.sout.mode = CHILD_IO_RAW;
+    cfg.sout.on_flush = raw_on_read;
+    cfg.sout.ignore_read = true;
+    cfg.serr.mode = CHILD_IO_TEXT;
+    cfg.serr.on_flush = fail_on_read;
+    cfg.on_ready = raw_on_ready;
+    cfg.on_close = raw_on_close;
+
+    raw_child = asc_child_init(&cfg);
+    ck_assert(raw_child != NULL);
+
+    ck_assert(asc_main_loop_run() == false);
+    ck_assert(raw_child == NULL);
+    ck_assert(raw_cnt >= RAW_LIMIT);
+}
+END_TEST
+
+/* test discard setting */
+static asc_child_t *discard_child = NULL;
+static asc_timer_t *discard_timer = NULL;
+static bool discard_timer_fired = false;
+
+static void discard_on_timer(void *arg)
+{
+    __uarg(arg);
+
+    discard_timer_fired = true;
+    asc_child_close(discard_child);
+}
+
+static void discard_on_ready(void *arg)
+{
+    __uarg(arg);
+
+    char buf[] = "Test";
+    const ssize_t ret = asc_child_send(discard_child, buf, sizeof(buf));
+    ck_assert(ret == sizeof(buf));
+
+    asc_child_set_on_ready(discard_child, NULL);
+    discard_timer = asc_timer_one_shot(100, discard_on_timer, NULL);
+}
+
+static void discard_on_close(void *arg, int status)
+{
+    __uarg(arg);
+    __uarg(status);
+
+    asc_main_loop_shutdown();
+    discard_child = NULL;
+}
+
+START_TEST(discard)
+{
+    asc_child_cfg_t cfg;
+
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.name = "test_discard";
+    cfg.sout.on_flush = cfg.serr.on_flush = fail_on_read;
+    cfg.on_ready = discard_on_ready;
+    cfg.on_close = discard_on_close;
+
+    /* discard on receive */
+    cfg.command = TEST_SLAVE " cat 1";
+    cfg.sin.mode = CHILD_IO_RAW;
+    cfg.sout.mode = cfg.serr.mode = CHILD_IO_NONE;
+
+    discard_child = asc_child_init(&cfg);
+    ck_assert(discard_child != NULL);
+
+    ck_assert(asc_main_loop_run() == false);
+
+    ck_assert(discard_child == NULL);
+    ck_assert(discard_timer != NULL);
+    ck_assert(discard_timer_fired == true);
+
+    /* discard on send */
+    cfg.command = TEST_SLAVE " cat 2";
+    cfg.sin.mode = CHILD_IO_NONE;
+    cfg.sout.mode = cfg.serr.mode = CHILD_IO_TEXT;
+
+    discard_timer = NULL;
+    discard_timer_fired = false;
+
+    discard_child = asc_child_init(&cfg);
+    ck_assert(discard_child != NULL);
+
+    ck_assert(asc_main_loop_run() == false);
+
+    ck_assert(discard_timer != NULL);
+    ck_assert(discard_timer_fired == true);
+    ck_assert(discard_child == NULL);
+}
+END_TEST
+
 Suite *core_child(void)
 {
     Suite *const s = suite_create("child");
@@ -247,13 +711,19 @@ Suite *core_child(void)
 
 #ifndef _WIN32
     if (can_fork != CK_NOFORK)
-        tcase_set_timeout(tc, 10);
+        tcase_set_timeout(tc, 15);
 #endif /* !_WIN32 */
 
     tcase_add_test(tc, read_pid);
     tcase_add_test(tc, bandit_no_block);
     tcase_add_test(tc, bandit_block);
     tcase_add_test(tc, far_close);
+    tcase_add_test(tc, double_kill);
+    tcase_add_test(tc, ts_aligner);
+    tcase_add_test(tc, ts_assembly);
+    tcase_add_test(tc, ts_push_pull);
+    tcase_add_test(tc, raw_push_pull);
+    tcase_add_test(tc, discard);
 
     suite_add_tcase(s, tc);
 

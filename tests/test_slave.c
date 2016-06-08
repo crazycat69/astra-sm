@@ -155,6 +155,55 @@ static void __dead cmd_ticker(void)
     }
 }
 
+/* output TS packets interspersed with some random bytes */
+static void trash(void)
+{
+    char buf[32];
+
+    const size_t writes = 1 + (rand() % 32);
+    for (size_t i = 0; i < writes; i++)
+    {
+        const size_t len = 1 + (rand() % sizeof(buf));
+        for (size_t j = 0; j < len;)
+        {
+            buf[j] = rand();
+            if (buf[j] != 0x47)
+                j++;
+        }
+
+        const int ret = write(STDOUT_FILENO, buf, len);
+        if (ret <= 0)
+            exit(EXIT_FAILURE);
+    }
+}
+
+static void cmd_unaligned(void)
+{
+    const unsigned int pid = 0x100;
+    unsigned int cc = 15;
+
+    while (true)
+    {
+        trash();
+
+        const size_t pkts = rand() % 100;
+        for (size_t i = 0; i < pkts; i++)
+        {
+            uint8_t ts[TS_PACKET_SIZE] = { 0x47 };
+
+            cc = (cc + 1) & 0xf;
+            TS_SET_PID(ts, pid);
+            TS_SET_CC(ts, cc);
+
+            const int ret = write(STDOUT_FILENO, ts, sizeof(ts));
+            if (ret <= 0)
+                exit(EXIT_FAILURE);
+        }
+
+        trash();
+    }
+}
+
 static void __dead usage(void)
 {
     fprintf(stderr, "usage: test_slave <cmd> [args]\n");
@@ -192,6 +241,8 @@ int main(int argc, const char **argv)
     }
     else if (!strcmp(argv[1], "ticker"))
         cmd_ticker();
+    else if (!strcmp(argv[1], "unaligned"))
+        cmd_unaligned();
     else
         usage();
 

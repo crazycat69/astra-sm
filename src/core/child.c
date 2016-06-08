@@ -144,15 +144,15 @@ void recv_mpegts(const asc_child_t *child, child_io_t *io)
             if (TS_IS_SYNC(ts))
             {
                 io->pos_read += i;
-                io->on_flush(child->arg, ts, 1);
+                io->on_flush(child->arg, ts, 1); // FIXME: flush more than 1
                 break;
             }
         }
     }
 }
 
-static inline
-void on_stdio_close(asc_child_t *child, child_io_t *io)
+static
+void on_stdio_close(asc_child_t *child, const child_io_t *io)
 {
     const char *name = NULL;
     if (io == &child->sin)
