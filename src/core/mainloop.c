@@ -70,6 +70,7 @@ static asc_main_loop_t *main_loop = NULL;
 /*
  * main thread wake up mechanism
  */
+
 static void on_wake_read(void *arg);
 
 static bool wake_open(void)
@@ -258,6 +259,7 @@ static void run_jobs(void)
 /*
  * event loop
  */
+
 void asc_main_loop_init(void)
 {
     main_loop = ASC_ALLOC(1, asc_main_loop_t);

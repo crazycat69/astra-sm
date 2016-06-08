@@ -281,6 +281,7 @@ struct mpegts_t2mi_t
 /*
  * bit juggling
  */
+
 static
 uint64_t read_bit_field(const uint8_t **ptr, unsigned *off, unsigned size)
 {
@@ -352,6 +353,7 @@ uint64_t read_bit_field(const uint8_t **ptr, unsigned *off, unsigned size)
 /*
  * string values for header fields
  */
+
 static inline __func_const
 const char *bb_format_name(unsigned fmt)
 {
@@ -382,6 +384,7 @@ const char *plp_type_name(unsigned type)
 /*
  * demux callback wrappers
  */
+
 static inline
 void outer_join_pid(const mpegts_t2mi_t *mi, uint16_t pid)
 {
@@ -399,6 +402,7 @@ void outer_leave_pid(const mpegts_t2mi_t *mi, uint16_t pid)
 /*
  * init/destroy
  */
+
 mpegts_t2mi_t *mpegts_t2mi_init(void)
 {
     mpegts_t2mi_t *const mi = ASC_ALLOC(1, mpegts_t2mi_t);
@@ -434,6 +438,7 @@ void mpegts_t2mi_destroy(mpegts_t2mi_t *mi)
 /*
  * setters
  */
+
 void mpegts_t2mi_set_fname(mpegts_t2mi_t *mi, const char *format, ...)
 {
     va_list ap;
@@ -521,6 +526,7 @@ void mpegts_t2mi_set_payload(mpegts_t2mi_t *mi, uint16_t pnr, uint16_t pid)
  * ===> MPEG TS             ^
  *      ...                 |
  */
+
 static
 bool bb_reassemble_up(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
 {
@@ -640,6 +646,7 @@ bool on_bbframe_ts(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
  * ===> Baseband Frames     ^
  *      ...                 |
  */
+
 static
 bool on_bbframe(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
 {
@@ -718,6 +725,7 @@ bool on_bbframe(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
  * ===> L1-current          ^
  *      ...                 |
  */
+
 static
 bool on_l1_current(mpegts_t2mi_t *mi, const t2mi_packet_t *pkt)
 {
@@ -950,6 +958,7 @@ bool on_l1_current(mpegts_t2mi_t *mi, const t2mi_packet_t *pkt)
  * ===> T2-MI Packets       ^
  *      ...                 |
  */
+
 static
 bool on_t2mi(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
 {
@@ -1031,6 +1040,7 @@ bool on_t2mi(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
  * ===> DVB Data Piping     ^
  *      ...                 |
  */
+
 static
 void on_outer_ts(mpegts_t2mi_t *mi, const uint8_t *ts)
 {
@@ -1165,6 +1175,7 @@ void on_outer_ts(mpegts_t2mi_t *mi, const uint8_t *ts)
  *          |
  *          \----- Payload (type 0x06)
  */
+
 #define psi_type \
     mpegts_type_name(psi->type)
 
@@ -1279,6 +1290,7 @@ void on_psi(void *arg, mpegts_psi_t *psi)
 /*
  * input function
  */
+
 void mpegts_t2mi_decap(mpegts_t2mi_t *mi, const uint8_t *ts)
 {
     const unsigned pid = TS_GET_PID(ts);

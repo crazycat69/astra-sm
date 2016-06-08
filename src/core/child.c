@@ -95,6 +95,7 @@ struct asc_child_t
 /*
  * reading from child
  */
+
 static
 void recv_text(const asc_child_t *child, child_io_t *io)
 {
@@ -112,7 +113,7 @@ void recv_text(const asc_child_t *child, child_io_t *io)
             const uint8_t *const str = &io->data[io->pos_read];
             const size_t max = sizeof(io->data) - io->pos_read;
             const size_t len = strnlen((char *)str, max);
-            if (len > 0)
+            if (len > 0 && io->on_flush != NULL)
                 io->on_flush(child->arg, str, len);
 
             io->pos_read = i + 1;
@@ -123,7 +124,7 @@ void recv_text(const asc_child_t *child, child_io_t *io)
     {
         /* buffered line is too long; dump what we got */
         const size_t len = strnlen((char *)io->data, sizeof(io->data));
-        if (len > 0)
+        if (len > 0 && io->on_flush != NULL)
             io->on_flush(child->arg, io->data, len);
 
         io->pos_write = 0;
@@ -144,7 +145,10 @@ void recv_mpegts(const asc_child_t *child, child_io_t *io)
             if (TS_IS_SYNC(ts))
             {
                 io->pos_read += i;
-                io->on_flush(child->arg, ts, 1); // FIXME: flush more than 1
+                if (io->on_flush != NULL)
+                    io->on_flush(child->arg, ts, 1);
+                    // FIXME: flush more than 1
+
                 break;
             }
         }
@@ -189,9 +193,6 @@ void on_stdio_read(asc_child_t *child, child_io_t *io)
         return;
     }
 
-    if (io->on_flush == NULL)
-        return;
-
     io->pos_write += ret;
 
     /* pass data to callbacks according to configured I/O mode */
@@ -207,7 +208,9 @@ void on_stdio_read(asc_child_t *child, child_io_t *io)
 
         case CHILD_IO_RAW:
             /* pass every read to callback */
-            io->on_flush(child->arg, dst, ret);
+            if (io->on_flush != NULL)
+                io->on_flush(child->arg, dst, ret);
+
             /* fallthrough */
 
         default:
@@ -238,6 +241,7 @@ EVENT_CALLBACK(serr, read)
 /*
  * writing to child
  */
+
 static
 ssize_t send_raw(int fd, const uint8_t *buf, size_t len)
 {
@@ -331,6 +335,7 @@ void on_sin_write(void *arg)
 /*
  * create and destroy
  */
+
 asc_child_t *asc_child_init(const asc_child_cfg_t *cfg)
 {
     asc_child_t *const child = ASC_ALLOC(1, asc_child_t);
@@ -451,7 +456,7 @@ void asc_child_close(asc_child_t *child)
 
 void asc_child_destroy(asc_child_t *child)
 {
-    /* `destroy' is similar to `close', except it blocks */
+    /* `destroy' is similar to `close', except it always blocks */
     ASC_FREE(child->kill_timer, asc_timer_destroy);
 
     CHILD_IO_CLEANUP(sin);
@@ -507,6 +512,7 @@ void asc_child_destroy(asc_child_t *child)
 /*
  * setters and getters
  */
+
 void asc_child_set_on_close(asc_child_t *child
                             , child_close_callback_t on_close)
 {
@@ -523,19 +529,47 @@ void asc_child_set_on_ready(asc_child_t *child, event_callback_t on_ready)
     child->on_ready = on_ready;
 }
 
-void asc_child_toggle_input(asc_child_t *child, int fd, bool enable)
+static inline
+child_io_t *get_io_by_fd(asc_child_t *child, int child_fd)
 {
-    const child_io_t *io;
-    switch (fd)
+    switch (child_fd)
     {
-        case STDOUT_FILENO: io = &child->sout; break;
-        case STDERR_FILENO: io = &child->serr; break;
-        default:
-            asc_log_error(MSG("can't switch input: unknown fd (%d)"), fd);
-            return;
+        case STDIN_FILENO:  return &child->sin;
+        case STDOUT_FILENO: return &child->sout;
+        case STDERR_FILENO: return &child->serr;
     }
 
-    asc_event_set_on_read(io->ev, (enable ? io->on_read : NULL));
+    return NULL;
+}
+
+void asc_child_set_on_flush(asc_child_t *child, int child_fd
+                            , child_io_callback_t on_flush)
+{
+    child_io_t *const io = get_io_by_fd(child, child_fd);
+    asc_assert(io != &child->sin, MSG("can't change read events on stdin"));
+
+    io->on_flush = on_flush;
+}
+
+void asc_child_set_mode(asc_child_t *child, int child_fd
+                        , child_io_mode_t mode)
+{
+    child_io_t *const io = get_io_by_fd(child, child_fd);
+
+    io->pos_read = io->pos_write = 0;
+    io->mode = mode;
+}
+
+void asc_child_toggle_input(asc_child_t *child, int child_fd
+                            , bool enable)
+{
+    const child_io_t *const io = get_io_by_fd(child, child_fd);
+    asc_assert(io != &child->sin, MSG("can't change read events on stdin"));
+
+    if (enable)
+        asc_event_set_on_read(io->ev, io->on_read);
+    else
+        asc_event_set_on_read(io->ev, NULL);
 }
 
 pid_t asc_child_pid(const asc_child_t *child)

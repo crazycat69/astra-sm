@@ -72,8 +72,12 @@ void asc_child_set_on_close(asc_child_t *child
                             , child_close_callback_t on_close);
 void asc_child_set_on_ready(asc_child_t *child
                             , event_callback_t on_ready);
-void asc_child_toggle_input(asc_child_t *child
-                            , int child_fd, bool enable);
+void asc_child_set_on_flush(asc_child_t *child, int child_fd
+                            , child_io_callback_t on_flush);
+void asc_child_set_mode(asc_child_t *child, int child_fd
+                        , child_io_mode_t mode);
+void asc_child_toggle_input(asc_child_t *child, int child_fd
+                            , bool enable);
 pid_t asc_child_pid(const asc_child_t *child) __func_pure __wur;
 
 #endif /* _ASC_CHILD_H_ */
