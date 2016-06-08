@@ -27,6 +27,7 @@
  *      command     - string, command line
  *      restart     - number, seconds before auto restart (0 to disable)
  *      stream      - boolean, read TS data from child
+ *      bypass      - boolean, pass through TS when child is unavailable
  *      sync        - boolean, buffer incoming TS
  *      sync_opts   - string, sync buffer options
  *
@@ -53,6 +54,7 @@ struct module_data_t
     asc_timer_t *sync_loop;
     ssize_t sync_feed;
 
+    bool bypass;
     bool can_send;
     size_t dropped;
 
@@ -213,15 +215,14 @@ void on_child_ready(void *arg)
 
     if (mod->dropped)
     {
-        asc_log_error(MSG("dropped %zu packets while waiting for child")
-                      , mod->dropped);
+        asc_log_error(MSG("%s %zu packets while waiting for child")
+                      , (mod->bypass ? "bypassed" : "dropped"), mod->dropped);
 
         mod->dropped = 0;
     }
 
     mod->can_send = true;
     asc_child_set_on_ready(mod->child, NULL);
-    // TODO: test me!
 }
 
 static
@@ -230,6 +231,9 @@ void on_upstream_ts(module_data_t *mod, const uint8_t *ts)
     if (!mod->can_send)
     {
         mod->dropped++;
+        if (mod->bypass)
+            module_stream_send(mod, ts);
+
         return;
     }
 
@@ -248,7 +252,6 @@ void on_upstream_ts(module_data_t *mod, const uint8_t *ts)
             asc_child_close(mod->child);
         }
     }
-    // TODO: test me!
 }
 
 /*
@@ -350,6 +353,9 @@ void module_init(lua_State *L, module_data_t *mod)
 
     mod->config.serr.mode = CHILD_IO_TEXT;
     mod->config.serr.on_flush = on_child_text;
+
+    /* transcode mode bypass */
+    module_option_boolean(L, "bypass", &mod->bypass);
 
     /* optional input buffering */
     bool sync_on = false;
