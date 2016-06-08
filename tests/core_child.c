@@ -318,7 +318,7 @@ static void aligner_on_read(void *arg, const void *buf, size_t len)
         if (++aligner_cnt > ALIGNER_LIMIT && !aligner_closed)
         {
             aligner_closed = true;
-            asc_child_close(aligner);
+            asc_job_queue(NULL, (loop_callback_t)asc_child_close, aligner);
         }
 
         ts += TS_PACKET_SIZE;

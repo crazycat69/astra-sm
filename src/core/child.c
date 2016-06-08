@@ -52,7 +52,7 @@ struct asc_child_t
     asc_process_t proc;
 
     asc_timer_t *kill_timer;
-    unsigned kill_ticks;
+    unsigned int kill_ticks;
 
     child_io_t sin;
     child_io_t sout;
@@ -73,16 +73,6 @@ struct asc_child_t
         asc_event_set_on_error(child->__io.ev, child->__io.on_close); \
         if (!cfg->__io.ignore_read) \
             asc_event_set_on_read(child->__io.ev, child->__io.on_read); \
-    } while (0)
-
-#define CHILD_IO_CLEANUP(__io) \
-    do { \
-        ASC_FREE(child->__io.ev, asc_event_close); \
-        if (child->__io.fd != -1) \
-        { \
-            asc_pipe_close(child->__io.fd); \
-            child->__io.fd = -1; \
-        } \
     } while (0)
 
 #define EVENT_CALLBACK(__io, __event) \
@@ -156,6 +146,61 @@ void recv_mpegts(const asc_child_t *child, child_io_t *io)
 }
 
 static
+ssize_t recv_buffer(asc_child_t *child, child_io_t *io)
+{
+    uint8_t *const dst = &io->data[io->pos_write];
+    const size_t space = sizeof(io->data) - io->pos_write - 1;
+
+    /* buffer incoming data */
+    const ssize_t ret = recv(io->fd, (char *)dst, space, 0);
+    if (ret <= 0)
+        return ret;
+    else if ((size_t)ret > space)
+        return 0;
+    else if (io == &child->sin)
+        return ret;
+
+    io->pos_write += ret;
+
+    /* pass data to callbacks according to configured I/O mode */
+    switch (io->mode)
+    {
+        case CHILD_IO_MPEGTS:
+            recv_mpegts(child, io);
+            break;
+
+        case CHILD_IO_TEXT:
+            recv_text(child, io);
+            break;
+
+        case CHILD_IO_RAW:
+            /* raw mode: pass every read to callback */
+            if (io->on_flush != NULL)
+                io->on_flush(child->arg, dst, ret);
+
+            /* fallthrough */
+
+        case CHILD_IO_NONE:
+        default:
+            io->pos_write = 0;
+            break;
+    }
+
+    if (io->pos_read > 0)
+    {
+        /* move remaining fragment to beginning of the buffer */
+        const size_t frag = io->pos_write - io->pos_read;
+        if (frag > 0)
+            memmove(io->data, &io->data[io->pos_read], frag);
+
+        io->pos_write = frag;
+        io->pos_read = 0;
+    }
+
+    return ret;
+}
+
+static
 void on_stdio_close(asc_child_t *child, const child_io_t *io)
 {
     const char *name = NULL;
@@ -173,12 +218,7 @@ void on_stdio_close(asc_child_t *child, const child_io_t *io)
 static
 void on_stdio_read(asc_child_t *child, child_io_t *io)
 {
-    uint8_t *const dst = &io->data[io->pos_write];
-    const size_t space = sizeof(io->data) - io->pos_write - 1;
-
-    /* buffer incoming data */
-    const ssize_t ret = recv(io->fd, (char *)dst, space, 0);
-
+    const ssize_t ret = recv_buffer(child, io);
     if (ret == -1)
     {
         if (asc_socket_would_block())
@@ -187,47 +227,8 @@ void on_stdio_read(asc_child_t *child, child_io_t *io)
         asc_log_debug(MSG("recv(): %s"), asc_error_msg());
     }
 
-    if (ret <= 0 || (size_t)ret > space)
-    {
+    if (ret <= 0)
         on_stdio_close(child, io);
-        return;
-    }
-
-    io->pos_write += ret;
-
-    /* pass data to callbacks according to configured I/O mode */
-    switch (io->mode)
-    {
-        case CHILD_IO_MPEGTS:
-            recv_mpegts(child, io);
-            break;
-
-        case CHILD_IO_TEXT:
-            recv_text(child, io);
-            break;
-
-        case CHILD_IO_RAW:
-            /* pass every read to callback */
-            if (io->on_flush != NULL)
-                io->on_flush(child->arg, dst, ret);
-
-            /* fallthrough */
-
-        default:
-            io->pos_write = 0;
-            return;
-    }
-
-    if (io->pos_read > 0)
-    {
-        /* move remaining fragment to beginning of the buffer */
-        const size_t frag = io->pos_write - io->pos_read;
-        if (frag > 0)
-            memmove(io->data, &io->data[io->pos_read], frag);
-
-        io->pos_write = frag;
-        io->pos_read = 0;
-    }
 }
 
 EVENT_CALLBACK(sin, close)
@@ -370,14 +371,45 @@ asc_child_t *asc_child_init(const asc_child_cfg_t *cfg)
     return child;
 }
 
+static
+void io_drain(asc_child_t *child)
+{
+    while (recv_buffer(child, &child->sin) > 0)
+        ; /* nothing */
+
+    while (recv_buffer(child, &child->sout) > 0)
+        ; /* nothing */
+
+    while (recv_buffer(child, &child->serr) > 0)
+        ; /* nothing */
+}
+
+static
+void io_cleanup(child_io_t *io)
+{
+    ASC_FREE(io->ev, asc_event_close);
+
+    if (io->fd != -1)
+    {
+        asc_pipe_close(io->fd);
+        io->fd = -1;
+    }
+}
+
 void asc_child_close(asc_child_t *child)
 {
     ASC_FREE(child->kill_timer, asc_timer_destroy);
+    child->kill_ticks++;
 
-    /* shutdown stdio pipes */
-    CHILD_IO_CLEANUP(sin);
-    CHILD_IO_CLEANUP(sout);
-    CHILD_IO_CLEANUP(serr);
+    /* shutdown stdio pipes on first call */
+    if (child->kill_ticks == 1)
+    {
+        io_drain(child);
+
+        io_cleanup(&child->sin);
+        io_cleanup(&child->sout);
+        io_cleanup(&child->serr);
+    }
 
     /* check process state */
     int status = -1;
@@ -392,7 +424,7 @@ void asc_child_close(asc_child_t *child)
 
         case 0:
             /* still active; give it some time to exit */
-            if (child->kill_ticks++ == 0)
+            if (child->kill_ticks == 1)
             {
                 /* ask nicely on first tick */
                 asc_log_debug(MSG("sending termination signal"));
@@ -459,14 +491,14 @@ void asc_child_destroy(asc_child_t *child)
     /* `destroy' is similar to `close', except it always blocks */
     ASC_FREE(child->kill_timer, asc_timer_destroy);
 
-    CHILD_IO_CLEANUP(sin);
-    CHILD_IO_CLEANUP(sout);
-    CHILD_IO_CLEANUP(serr);
-
     /* if close is in progress, don't resend termination signal */
     bool waitquit = true;
     if (child->kill_ticks == 0)
     {
+        io_cleanup(&child->sin);
+        io_cleanup(&child->sout);
+        io_cleanup(&child->serr);
+
         asc_log_debug(MSG("sending termination signal"));
         if (asc_process_kill(&child->proc, false) != 0)
         {
