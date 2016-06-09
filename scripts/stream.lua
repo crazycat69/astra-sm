@@ -588,6 +588,63 @@ kill_output_module.pipe = function(channel_data, output_id)
     output_data.output = nil
 end
 
+--
+-- Transform
+--
+
+init_transform_module = {}
+kill_transform_module = {}
+
+function stream_init_transform(stream_data, xfrm_id)
+    local xfrm_data = stream_data.transform[xfrm_id]
+
+    local conf = {}
+    for k, v in pairs(xfrm_data.config) do
+        conf[k] = v
+    end
+
+    conf.format = nil
+    conf.upstream = stream_data.tail:stream()
+
+    local xfrm = init_transform_module[xfrm_data.config.format](conf)
+    xfrm_data.transform = xfrm
+    stream_data.tail = xfrm
+end
+
+function stream_kill_transform(stream_data, xfrm_id)
+    local xfrm_data = stream_data.transform[xfrm_id]
+
+    kill_transform_module[xfrm_data.config.format](xfrm_data)
+    stream_data.transform[xfrm_id] = { config = xfrm_data.config }
+end
+
+--
+-- Transform: cbr
+--
+
+init_transform_module.cbr = function(conf)
+    return remux(conf)
+end
+
+kill_transform_module.cbr = function(instance)
+    --
+end
+
+--
+-- Transform: pipe
+--
+
+init_transform_module.pipe = function(conf)
+    conf.name = "pipe_xfrm " .. conf.name
+    conf.stream = true
+
+    return pipe_generic(conf)
+end
+
+kill_transform_module.pipe = function(instance)
+    --
+end
+
 --   oooooooo8 ooooo ooooo      o      oooo   oooo oooo   oooo ooooooooooo ooooo
 -- o888     88  888   888      888      8888o  88   8888o  88   888    88   888
 -- 888          888ooo888     8  88     88 888o88   88 888o88   888ooo8     888
@@ -607,6 +664,7 @@ function make_channel(channel_config)
         return nil
     end
 
+    if channel_config.transform == nil then channel_config.transform = {} end
     if channel_config.output == nil then channel_config.output = {} end
     if channel_config.timeout == nil then channel_config.timeout = 0 end
     if channel_config.enable == nil then channel_config.enable = true end
@@ -619,6 +677,7 @@ function make_channel(channel_config)
     local channel_data = {
         config = channel_config,
         input = {},
+        transform = {},
         output = {},
         delay = 3,
         clients = 0,
@@ -656,6 +715,7 @@ function make_channel(channel_config)
     end
 
     if not check_url_format("input") then return nil end
+    if not check_url_format("transform") then return nil end
     if not check_url_format("output") then return nil end
 
     if #channel_data.output == 0 then
@@ -671,6 +731,10 @@ function make_channel(channel_config)
     channel_data.active_input_id = 0
     channel_data.transmit = transmit()
     channel_data.tail = channel_data.transmit
+
+    for xfrm_id in ipairs(channel_data.transform) do
+        stream_init_transform(channel_data, xfrm_id)
+    end
 
     if channel_data.clients > 0 then
         channel_init_input(channel_data, 1)
@@ -705,6 +769,12 @@ function kill_channel(channel_data)
         table.remove(channel_data.input, 1)
     end
     channel_data.input = nil
+
+    while #channel_data.transform > 0 do
+        stream_kill_transform(channel_data, 1)
+        table.remove(channel_data.transform, 1)
+    end
+    channel_data.transform = nil
 
     while #channel_data.output > 0 do
         channel_kill_output(channel_data, 1)
