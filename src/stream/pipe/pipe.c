@@ -30,6 +30,7 @@
  *      bypass      - boolean, pass through TS when child is unavailable
  *      sync        - boolean, buffer incoming TS
  *      sync_opts   - string, sync buffer options
+ *      callback    - function, called on child output and status changes
  *
  * Module Methods:
  *      pid         - return process' pid (-1 if not running)
@@ -48,7 +49,8 @@ struct module_data_t
 {
     MODULE_STREAM_DATA();
 
-    unsigned delay;
+    unsigned int delay;
+    int idx_callback;
 
     mpegts_sync_t *sync;
     asc_timer_t *sync_loop;
@@ -63,6 +65,96 @@ struct module_data_t
 
     asc_timer_t *restart;
 };
+
+/*
+ * lua callbacks
+ */
+
+static
+void callback_started(module_data_t *mod, pid_t pid)
+{
+    if (mod->idx_callback != LUA_REFNIL)
+    {
+        lua_State *const L = MODULE_L(mod);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
+
+        /* data.started.pid */
+        lua_newtable(L);
+        lua_newtable(L);
+        lua_pushinteger(L, pid);
+        lua_setfield(L, -2, "pid");
+        lua_setfield(L, -2, "started");
+
+        lua_call(L, 1, 0);
+    }
+}
+
+static
+void callback_text(module_data_t *mod, const char *src, const char *text)
+{
+    if (mod->idx_callback != LUA_REFNIL)
+    {
+        lua_State *const L = MODULE_L(mod);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
+
+        /* data.<src> */
+        lua_newtable(L);
+        lua_pushstring(L, text);
+        lua_setfield(L, -2, src);
+
+        lua_call(L, 1, 0);
+    }
+    else
+    {
+        /* default action */
+        asc_log_warning(MSG("%s"), text);
+    }
+}
+
+static __fmt_printf(2, 0)
+void callback_error(module_data_t *mod, const char *fmt, ...)
+{
+    char buf[512] = { 0 };
+
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+
+    asc_log_error(MSG("%s"), buf);
+
+    if (mod->idx_callback != LUA_REFNIL)
+    {
+        lua_State *const L = MODULE_L(mod);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
+
+        /* data.error */
+        lua_newtable(L);
+        lua_pushstring(L, buf);
+        lua_setfield(L, -2, "error");
+
+        lua_call(L, 1, 0);
+    }
+}
+
+static
+void callback_exited(module_data_t *mod, int status)
+{
+    if (mod->idx_callback != LUA_REFNIL)
+    {
+        lua_State *const L = MODULE_L(mod);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
+
+        /* data.exited.status */
+        lua_newtable(L);
+        lua_newtable(L);
+        lua_pushinteger(L, status);
+        lua_setfield(L, -2, "status");
+        lua_setfield(L, -2, "exited");
+
+        lua_call(L, 1, 0);
+    }
+}
 
 /*
  * process launch and termination
@@ -93,12 +185,11 @@ void on_child_restart(void *arg)
     mod->child = asc_child_init(&mod->config);
     if (mod->child == NULL)
     {
-        asc_log_error(MSG("failed to create process: %s")
-                      , asc_error_msg());
+        callback_error(mod, "failed to create process: %s", asc_error_msg());
 
         if (mod->delay > 0)
         {
-            const unsigned ms = mod->delay * 1000;
+            const unsigned int ms = mod->delay * 1000;
 
             asc_log_info(MSG("retry in %u seconds"), mod->delay);
             mod->restart = asc_timer_one_shot(ms, on_child_restart, mod);
@@ -109,8 +200,9 @@ void on_child_restart(void *arg)
         return;
     }
 
-    asc_log_info(MSG("process started (pid = %lld)")
-                 , (long long)asc_child_pid(mod->child));
+    const pid_t pid = asc_child_pid(mod->child);
+    asc_log_info(MSG("process started (pid = %lld)"), (long long)pid);
+    callback_started(mod, pid);
 }
 
 static
@@ -121,7 +213,7 @@ void on_child_close(void *arg, int exit_code)
     char buf[64] = "restart disabled";
     if (mod->delay > 0)
     {
-        const unsigned ms = mod->delay * 1000;
+        const unsigned int ms = mod->delay * 1000;
 
         snprintf(buf, sizeof(buf), "restarting in %u seconds", mod->delay);
         mod->restart = asc_timer_one_shot(ms, on_child_restart, mod);
@@ -136,6 +228,8 @@ void on_child_close(void *arg, int exit_code)
 
     if (mod->sync != NULL)
         mpegts_sync_set_on_ready(mod->sync, NULL);
+
+    callback_exited(mod, exit_code);
 
     mod->can_send = false;
     mod->child = NULL;
@@ -194,14 +288,17 @@ void on_child_ts(void *arg, const void *buf, size_t packets)
 }
 
 static
-void on_child_text(void *arg, const void *buf, size_t len)
+void on_child_stdout(void *arg, const void *buf, size_t len)
 {
     __uarg(len);
+    callback_text((module_data_t *)arg, "stdout", (char *)buf);
+}
 
-    module_data_t *const mod = (module_data_t *)arg;
-    const char *const text = (char *)buf;
-
-    asc_log_warning(MSG("%s"), text);
+static
+void on_child_stderr(void *arg, const void *buf, size_t len)
+{
+    __uarg(len);
+    callback_text((module_data_t *)arg, "stderr", (char *)buf);
 }
 
 /*
@@ -248,7 +345,7 @@ void on_upstream_ts(module_data_t *mod, const uint8_t *ts)
         }
         else
         {
-            asc_log_error(MSG("send(): %s"), asc_error_msg());
+            callback_error(mod, "write failed: %s", asc_error_msg());
             asc_child_close(mod->child);
         }
     }
@@ -272,7 +369,7 @@ int method_pid(lua_State *L, module_data_t *mod)
 static
 int method_send(lua_State *L, module_data_t *mod)
 {
-    const char *str = luaL_checkstring(L, 1);
+    const char *const str = luaL_checkstring(L, 1);
     const int len = luaL_len(L, 1);
 
     if (mod->child == NULL)
@@ -285,7 +382,7 @@ int method_send(lua_State *L, module_data_t *mod)
     {
         const ssize_t ret = asc_child_send(mod->child, str, len);
         if (ret == -1)
-            luaL_error(L, MSG("send(): %s"), asc_error_msg());
+            luaL_error(L, MSG("write failed: %s"), asc_error_msg());
     }
 
     return 1;
@@ -298,6 +395,8 @@ int method_send(lua_State *L, module_data_t *mod)
 static
 void module_init(lua_State *L, module_data_t *mod)
 {
+    mod->idx_callback = LUA_REFNIL;
+
     /* identifier */
     const char *name = NULL;
     module_option_string(L, "name", &name, NULL);
@@ -348,11 +447,11 @@ void module_init(lua_State *L, module_data_t *mod)
     {
         /* output; treat child's stdout as another stderr */
         mod->config.sout.mode = CHILD_IO_TEXT;
-        mod->config.sout.on_flush = on_child_text;
+        mod->config.sout.on_flush = on_child_stdout;
     }
 
     mod->config.serr.mode = CHILD_IO_TEXT;
-    mod->config.serr.on_flush = on_child_text;
+    mod->config.serr.on_flush = on_child_stderr;
 
     /* transcode mode bypass */
     module_option_boolean(L, "bypass", &mod->bypass);
@@ -392,6 +491,12 @@ void module_init(lua_State *L, module_data_t *mod)
     mod->config.on_ready = on_child_ready;
     mod->config.arg = mod;
 
+    lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
+    if (lua_isfunction(L, -1))
+        mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
+    else
+        lua_pop(L, 1);
+
     module_stream_init(mod, on_ts);
     on_child_restart(mod);
 }
@@ -400,6 +505,12 @@ static
 void module_destroy(module_data_t *mod)
 {
     module_stream_destroy(mod);
+
+    if (mod->idx_callback != LUA_REFNIL)
+    {
+        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_callback);
+        mod->idx_callback = LUA_REFNIL;
+    }
 
     ASC_FREE(mod->restart, asc_timer_destroy);
     ASC_FREE(mod->child, asc_child_destroy);
