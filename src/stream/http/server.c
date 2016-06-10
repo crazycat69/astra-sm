@@ -1037,5 +1037,6 @@ MODULE_LUA_METHODS()
     { "data", method_data },
     { "redirect", method_redirect },
     { "abort", method_abort },
+    { NULL, NULL },
 };
 MODULE_LUA_REGISTER(http_server)

@@ -383,5 +383,6 @@ static void module_destroy(module_data_t *mod)
 MODULE_LUA_METHODS()
 {
     { "status", method_status },
+    { NULL, NULL },
 };
 MODULE_LUA_REGISTER(file_output)

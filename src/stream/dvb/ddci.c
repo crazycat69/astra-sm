@@ -337,5 +337,6 @@ MODULE_LUA_METHODS()
 {
     MODULE_STREAM_METHODS_REF(),
     { "ca_set_pnr", method_ca_set_pnr },
+    { NULL, NULL },
 };
 MODULE_LUA_REGISTER(ddci)

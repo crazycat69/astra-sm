@@ -71,5 +71,6 @@ MODULE_LUA_METHODS()
 {
     MODULE_STREAM_METHODS_REF(),
     { "set_upstream", method_set_upstream },
+    { NULL, NULL },
 };
 MODULE_LUA_REGISTER(transmit)

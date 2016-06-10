@@ -96,5 +96,6 @@ static void module_destroy(module_data_t *mod)
 MODULE_LUA_METHODS()
 {
     { "close", method_close },
+    { NULL, NULL },
 };
 MODULE_LUA_REGISTER(timer)

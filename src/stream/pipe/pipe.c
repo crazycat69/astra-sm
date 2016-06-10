@@ -524,5 +524,6 @@ MODULE_LUA_METHODS()
     MODULE_STREAM_METHODS_REF(),
     { "pid", method_pid },
     { "send", method_send },
+    { NULL, NULL },
 };
 MODULE_LUA_REGISTER(pipe_generic)

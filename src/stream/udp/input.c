@@ -188,5 +188,6 @@ MODULE_LUA_METHODS()
 {
     MODULE_STREAM_METHODS_REF(),
     { "port", method_port },
+    { NULL, NULL },
 };
 MODULE_LUA_REGISTER(udp_input)
