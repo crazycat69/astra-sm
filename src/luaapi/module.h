@@ -34,7 +34,7 @@ typedef int (*module_callback_t)(lua_State *L, module_data_t *);
 typedef struct
 {
     const char *name;
-    module_callback_t method;
+    module_callback_t func;
 } module_method_t;
 
 typedef enum

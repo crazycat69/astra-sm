@@ -47,9 +47,9 @@ static
 int callback_thunk(lua_State *L)
 {
     void *const mod = lua_touserdata(L, lua_upvalueindex(1));
-    void *const func = lua_touserdata(L, lua_upvalueindex(2));
+    void *const method = lua_touserdata(L, lua_upvalueindex(2));
 
-    return ((module_callback_t)func)(L, (module_data_t *)mod);
+    return ((module_method_t *)method)->func(L, (module_data_t *)mod);
 }
 
 static
@@ -59,7 +59,7 @@ void add_methods(lua_State *L, const module_data_t *mod
     while (list->name != NULL)
     {
         lua_pushlightuserdata(L, (void *)mod);
-        lua_pushlightuserdata(L, (void *)list->method);
+        lua_pushlightuserdata(L, (void *)list);
         lua_pushcclosure(L, callback_thunk, 2);
         lua_setfield(L, -2, list->name);
 
