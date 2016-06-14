@@ -24,7 +24,12 @@
 
 struct module_data_t
 {
-    MODULE_LUA_DATA();
+    /*
+     * NOTE: data structs in all modules MUST begin with the following
+     *       member. Use MODULE_LUA_DATA() macro when defining module
+     *       structs as the exact definition might change in the future.
+     */
+    lua_State *lua;
 };
 
 void module_register(lua_State *L, const char *name, const luaL_Reg *methods)
@@ -64,7 +69,7 @@ void module_new(lua_State *L, module_data_t *mod, const luaL_Reg *meta_methods
         lua_setfield(L, 3, "__options");
     }
 
-    mod->__lua = L;
+    mod->lua = L;
 }
 
 int module_thunk(lua_State *L)

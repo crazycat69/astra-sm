@@ -21,6 +21,18 @@
 #include <astra.h>
 #include <luaapi/stream.h>
 
+struct module_data_t
+{
+    /*
+     * NOTE: data structs in all stream modules MUST begin with the
+     *       following two members. Use MODULE_STREAM_DATA() macro when
+     *       defining stream module structs as the exact definition
+     *       might change in the future.
+     */
+    lua_State *lua;
+    module_stream_t stream;
+};
+
 static
 void stream_detach(module_stream_t *stream, module_stream_t *child)
 {
