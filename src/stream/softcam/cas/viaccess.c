@@ -22,7 +22,7 @@
 
 struct module_data_t
 {
-    MODULE_CAS_DATA();
+    CAS_MODULE_DATA();
 
     const uint8_t *ident;
     const uint8_t *sa;

@@ -147,7 +147,7 @@ struct module_cas_t
     bool (*check_keys)(module_data_t *cas_data, const uint8_t *keys);
 };
 
-#define MODULE_CAS_DATA() module_cas_t __cas
+#define CAS_MODULE_DATA() module_cas_t __cas
 
 #define module_cas_check_descriptor(_cas, _desc) _cas->check_descriptor(_cas->self, _desc)
 #define module_cas_check_em(_cas, _em) _cas->check_em(_cas->self, _em)

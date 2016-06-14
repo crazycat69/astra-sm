@@ -22,7 +22,7 @@
 
 struct module_data_t
 {
-    MODULE_CAS_DATA();
+    CAS_MODULE_DATA();
 };
 
 static bool cas_check_em(module_data_t *mod, mpegts_psi_t *em)
