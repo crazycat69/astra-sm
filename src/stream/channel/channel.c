@@ -52,7 +52,7 @@ typedef struct
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     /* Options */
     struct
@@ -968,10 +968,8 @@ static void module_destroy(module_data_t *mod)
         asc_timer_destroy(mod->si_timer);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+STREAM_MODULE_REGISTER(channel)
 {
-    MODULE_STREAM_METHODS_REF(),
-    { NULL, NULL },
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(channel)

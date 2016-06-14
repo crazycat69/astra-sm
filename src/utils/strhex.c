@@ -95,16 +95,18 @@ static int method_bin(lua_State *L)
     return 1;
 }
 
-MODULE_LUA_BINDING(str2hex)
+static void module_load(lua_State *L)
 {
+    /* <string>:hex(), bin() */
     lua_getglobal(L, "string");
-
     lua_pushcfunction(L, method_hex);
     lua_setfield(L, -2, "hex");
     lua_pushcfunction(L, method_bin);
     lua_setfield(L, -2, "bin");
-
-    lua_pop(L, 1); // string
-
-    return 0;
+    lua_pop(L, 1); /* string */
 }
+
+BINDING_REGISTER(strhex)
+{
+    .load = module_load,
+};

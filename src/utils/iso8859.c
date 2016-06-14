@@ -470,7 +470,7 @@ static int method_iso8859_encode(lua_State *L)
     return 1;
 }
 
-MODULE_LUA_BINDING(iso8859)
+static void module_load(lua_State *L)
 {
     static const luaL_Reg api[] =
     {
@@ -480,6 +480,9 @@ MODULE_LUA_BINDING(iso8859)
 
     luaL_newlib(L, api);
     lua_setglobal(L, "iso8859");
-
-    return 0;
 }
+
+BINDING_REGISTER(iso8859)
+{
+    .load = module_load,
+};

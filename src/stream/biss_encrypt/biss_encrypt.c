@@ -27,7 +27,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     mpegts_packet_type_t stream[MAX_PID];
 
@@ -195,10 +195,8 @@ static void module_destroy(module_data_t *mod)
     mpegts_psi_destroy(mod->pmt);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+STREAM_MODULE_REGISTER(biss_encrypt)
 {
-    MODULE_STREAM_METHODS_REF(),
-    { NULL, NULL },
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(biss_encrypt)

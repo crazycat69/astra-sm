@@ -33,7 +33,7 @@
 
 struct module_data_t
 {
-    MODULE_LUA_DATA();
+    MODULE_DATA();
 
     int idx_self;
 };
@@ -115,8 +115,8 @@ static void module_destroy(module_data_t *mod)
     luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_self);
 }
 
-MODULE_LUA_METHODS()
+MODULE_REGISTER(pidfile)
 {
-    { NULL, NULL },
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(pidfile)

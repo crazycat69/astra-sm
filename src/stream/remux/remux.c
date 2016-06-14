@@ -406,10 +406,8 @@ static void module_destroy(module_data_t *mod)
     mod->emms = NULL;
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+STREAM_MODULE_REGISTER(remux)
 {
-    MODULE_STREAM_METHODS_REF(),
-    { NULL, NULL },
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(remux)

@@ -119,7 +119,7 @@ static int method_log_debug(lua_State *L)
     return 0;
 }
 
-MODULE_LUA_BINDING(log)
+static void module_load(lua_State *L)
 {
     is_debug = asc_log_is_debug();
 
@@ -135,6 +135,9 @@ MODULE_LUA_BINDING(log)
 
     luaL_newlib(L, api);
     lua_setglobal(L, "log");
-
-    return 0;
 }
+
+BINDING_REGISTER(log)
+{
+    .load = module_load,
+};

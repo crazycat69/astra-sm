@@ -173,14 +173,16 @@ static int method_sha1(lua_State *L)
     return 1;
 }
 
-MODULE_LUA_BINDING(sha1)
+static void module_load(lua_State *L)
 {
+    /* <string>:sha1() */
     lua_getglobal(L, "string");
-
     lua_pushcfunction(L, method_sha1);
     lua_setfield(L, -2, "sha1");
-
-    lua_pop(L, 1); // string
-
-    return 0;
+    lua_pop(L, 1); /* string */
 }
+
+BINDING_REGISTER(sha1)
+{
+    .load = module_load,
+};

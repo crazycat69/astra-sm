@@ -55,7 +55,7 @@
 
 struct module_data_t
 {
-    MODULE_LUA_DATA();
+    MODULE_DATA();
 
     int idx_self;
 
@@ -1030,7 +1030,7 @@ static void module_destroy(module_data_t *mod)
     on_server_close(mod);
 }
 
-MODULE_LUA_METHODS()
+static const module_method_t module_methods[] =
 {
     { "send", method_send },
     { "close", method_close },
@@ -1039,4 +1039,10 @@ MODULE_LUA_METHODS()
     { "abort", method_abort },
     { NULL, NULL },
 };
-MODULE_LUA_REGISTER(http_server)
+
+MODULE_REGISTER(http_server)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

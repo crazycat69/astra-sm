@@ -52,7 +52,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     struct
     {
@@ -1156,13 +1156,17 @@ static void module_destroy(module_data_t *mod)
     on_close(mod);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+static const module_method_t module_methods[] =
 {
-    MODULE_STREAM_METHODS_REF(),
     { "send", method_send },
     { "close", method_close },
     { "set_receiver", method_set_receiver },
     { NULL, NULL },
 };
-MODULE_LUA_REGISTER(http_request)
+
+MODULE_REGISTER(http_request)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

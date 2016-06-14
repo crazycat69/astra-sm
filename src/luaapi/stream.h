@@ -161,17 +161,21 @@ void __module_stream_send(void *arg, const uint8_t *ts);
  * basic Lua methods required for every streaming module
  */
 
-#define MODULE_STREAM_DATA() \
-    MODULE_LUA_DATA(); module_stream_t __stream
+extern const module_method_t module_stream_methods[];
 
-#define MODULE_STREAM_METHODS() \
-    static int method_stream(lua_State *L, module_data_t *mod) \
+#define STREAM_MODULE_DATA() \
+    MODULE_DATA(); \
+    module_stream_t __stream
+
+#define STREAM_MODULE_REGISTER(_name) \
+    extern module_registry_t __registry_##_name; \
+    MODULE_MANIFEST_DEF(_name) = \
     { \
-        lua_pushlightuserdata(L, &mod->__stream); \
-        return 1; \
-    }
-
-#define MODULE_STREAM_METHODS_REF() \
-    { "stream", method_stream }
+        .name = #_name, \
+        .size = sizeof(module_data_t), \
+        .type = MODULE_TYPE_STREAM, \
+        .reg = &__registry_##_name, \
+    }; \
+    module_registry_t __registry_##_name =
 
 #endif /* _LUA_STREAM_H_ */

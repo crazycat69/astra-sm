@@ -50,7 +50,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     struct
     {
@@ -183,11 +183,15 @@ static void module_destroy(module_data_t *mod)
     on_close(mod);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+static const module_method_t module_methods[] =
 {
-    MODULE_STREAM_METHODS_REF(),
     { "port", method_port },
     { NULL, NULL },
 };
-MODULE_LUA_REGISTER(udp_input)
+
+STREAM_MODULE_REGISTER(udp_input)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

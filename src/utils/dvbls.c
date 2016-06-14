@@ -258,8 +258,12 @@ static int dvbls_scan(lua_State *L)
     return 1;
 }
 
-MODULE_LUA_BINDING(dvbls)
+static void module_load(lua_State *L)
 {
     lua_register(L, "dvbls", dvbls_scan);
-    return 1;
 }
+
+BINDING_REGISTER(dvbls)
+{
+    .load = module_load,
+};

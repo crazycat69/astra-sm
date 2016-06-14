@@ -37,10 +37,30 @@ typedef struct
     module_callback_t method;
 } module_method_t;
 
-void module_register(lua_State *L, const char *name, const luaL_Reg *methods);
-void module_new(lua_State *L, module_data_t *mod, const luaL_Reg *meta_methods
-                , const module_method_t *mod_methods);
-int module_thunk(lua_State *L);
+typedef enum
+{
+    MODULE_TYPE_BASIC = 0,
+    MODULE_TYPE_STREAM,
+    MODULE_TYPE_BINDING,
+} module_type_t;
+
+typedef struct
+{
+    void (*load)(lua_State *);
+    void (*init)(lua_State *, module_data_t *);
+    void (*destroy)(module_data_t *);
+    const module_method_t *methods;
+} module_registry_t;
+
+typedef struct
+{
+    const char *name;
+    size_t size;
+    module_type_t type;
+    const module_registry_t *reg;
+} module_manifest_t;
+
+void module_register(lua_State *L, const module_manifest_t *manifest);
 
 bool module_option_integer(lua_State *L, const char *name, int *integer);
 bool module_option_string(lua_State *L, const char *name, const char **string
@@ -49,58 +69,40 @@ bool module_option_boolean(lua_State *L, const char *name, bool *boolean);
 
 #define MODULE_OPTIONS_IDX 2
 
-#define MODULE_LUA_DATA() \
+#define MODULE_DATA() \
     lua_State *__lua
 
 #define MODULE_L(_mod) \
     ((_mod)->__lua)
 
-#define MODULE_LUA_BINDING(_name) \
-    LUA_API int luaopen_##_name(lua_State *L)
+#define MODULE_SYMBOL(_name) \
+    __manifest_##_name
 
-#define MODULE_LUA_METHODS() \
-    static const module_method_t __module_methods[] =
+#define MODULE_MANIFEST_DEF(_name) \
+    const module_manifest_t MODULE_SYMBOL(_name)
 
-#define MODULE_LUA_REGISTER(_name) \
-    static int __module_tostring(lua_State *L) \
-    { \
-        lua_pushstring(L, #_name); \
-        return 1; \
-    } \
-    static int __module_delete(lua_State *L) \
-    { \
-        module_data_t *const mod = \
-            (module_data_t *)lua_touserdata(L, lua_upvalueindex(1)); \
-        module_destroy(mod); \
-        free(mod); \
-        return 0; \
-    } \
-    static int __module_new(lua_State *L) \
-    { \
-        static const luaL_Reg __meta_methods[] = \
-        { \
-            { "__gc", __module_delete }, \
-            { "__tostring", __module_tostring }, \
-            { NULL, NULL }, \
-        }; \
-        lua_newtable(L); \
-        module_data_t *const mod = ASC_ALLOC(1, module_data_t); \
-        module_new(L, mod, __meta_methods, __module_methods); \
-        module_init(L, mod); \
-        return 1; \
-    } \
-    MODULE_LUA_BINDING(_name) \
-    { \
-        static const luaL_Reg __meta_methods[] = \
-        { \
-            { "__call", __module_new }, \
-            { "__tostring", __module_tostring }, \
-            { NULL, NULL }, \
-        }; \
-        module_register(L, #_name, __meta_methods); \
-        return 1; \
-    }
+#define MODULE_MANIFEST_DECL(_name) \
+    extern MODULE_MANIFEST_DEF(_name)
 
-#include <bindings.h>
+#define MODULE_REGISTER(_name) \
+    extern module_registry_t __registry_##_name; \
+    MODULE_MANIFEST_DEF(_name) = \
+    { \
+        .name = #_name, \
+        .size = sizeof(module_data_t), \
+        .type = MODULE_TYPE_BASIC, \
+        .reg = &__registry_##_name, \
+    }; \
+    module_registry_t __registry_##_name =
+
+#define BINDING_REGISTER(_name) \
+    extern module_registry_t __registry_##_name; \
+    MODULE_MANIFEST_DEF(_name) = \
+    { \
+        .name = #_name, \
+        .type = MODULE_TYPE_BINDING, \
+        .reg = &__registry_##_name, \
+    }; \
+    module_registry_t __registry_##_name =
 
 #endif /* _LUA_MODULE_H_ */

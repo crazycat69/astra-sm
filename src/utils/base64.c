@@ -168,17 +168,17 @@ static int method_base64_decode(lua_State *L)
     return 1;
 }
 
-MODULE_LUA_BINDING(base64)
+static void module_load(lua_State *L)
 {
+    /* <string>:b64e(), b64d() */
     lua_getglobal(L, "string");
-
     lua_pushcfunction(L, method_base64_encode);
     lua_setfield(L, -2, "b64e");
     lua_pushcfunction(L, method_base64_decode);
     lua_setfield(L, -2, "b64d");
+    lua_pop(L, 1); /* string */
 
-    lua_pop(L, 1); // string
-
+    /* base64.encode(s), decode(s) */
     static const luaL_Reg api[] =
     {
         { "encode", method_base64_encode },
@@ -188,6 +188,9 @@ MODULE_LUA_BINDING(base64)
 
     luaL_newlib(L, api);
     lua_setglobal(L, "base64");
-
-    return 0;
 }
+
+BINDING_REGISTER(base64)
+{
+    .load = module_load,
+};

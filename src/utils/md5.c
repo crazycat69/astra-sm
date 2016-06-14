@@ -449,14 +449,16 @@ static int method_md5(lua_State *L)
     return 1;
 }
 
-MODULE_LUA_BINDING(md5)
+static void module_load(lua_State *L)
 {
+    /* <string>:md5() */
     lua_getglobal(L, "string");
-
     lua_pushcfunction(L, method_md5);
     lua_setfield(L, -2, "md5");
-
-    lua_pop(L, 1); // string
-
-    return 0;
+    lua_pop(L, 1); /* string */
 }
+
+BINDING_REGISTER(md5)
+{
+    .load = module_load,
+};

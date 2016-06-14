@@ -25,12 +25,25 @@ struct module_data_t
 {
     /*
      * NOTE: data structs in all stream modules MUST begin with the
-     *       following two members. Use MODULE_STREAM_DATA() macro when
+     *       following two members. Use STREAM_MODULE_DATA() macro when
      *       defining stream module structs as the exact definition
      *       might change in the future.
      */
     lua_State *lua;
     module_stream_t stream;
+};
+
+static
+int method_stream(lua_State *L, module_data_t *mod)
+{
+    lua_pushlightuserdata(L, &mod->stream);
+    return 1;
+}
+
+const module_method_t module_stream_methods[] =
+{
+    { "stream", method_stream },
+    { NULL, NULL },
 };
 
 static

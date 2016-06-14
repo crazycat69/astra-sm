@@ -15,7 +15,7 @@ list_modules()
 {
     for src in $@; do
         src="$src_dir/$src"
-        list=`sed -rn -e 's/^\s*MODULE_LUA_(BINDING|REGISTER)\((.*)\)\s*$/\2/p' "$src"`
+        list=`sed -rn -e 's/^\s*(MODULE|STREAM_MODULE|BINDING)_REGISTER\((.*)\)\s*$/\2/p' "$src"`
         for mod in $list; do
             echo $mod
         done
@@ -33,7 +33,7 @@ fi
 
 echo '/* initializer prototypes */'
 for mod in $list; do
-    echo "MODULE_LUA_BINDING($mod);"
+    echo "MODULE_MANIFEST_DECL(${mod});"
 done
 echo
 
@@ -41,6 +41,6 @@ echo '/* list of pointers to init functions */'
 echo -n "#define $list_name"
 for mod in $list; do
     echo ' \'
-    echo -n "    luaopen_${mod},"
+    echo -n "    &MODULE_SYMBOL(${mod}),"
 done
 echo

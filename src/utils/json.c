@@ -578,7 +578,7 @@ static int method_json_save(lua_State *L)
     return 1;
 }
 
-MODULE_LUA_BINDING(json)
+static void module_load(lua_State *L)
 {
     static const luaL_Reg api[] =
     {
@@ -591,6 +591,9 @@ MODULE_LUA_BINDING(json)
 
     luaL_newlib(L, api);
     lua_setglobal(L, "json");
-
-    return 0;
 }
+
+BINDING_REGISTER(json)
+{
+    .load = module_load,
+};

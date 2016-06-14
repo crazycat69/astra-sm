@@ -21,64 +21,149 @@
 
 #include <astra.h>
 #include <luaapi/module.h>
+#include <luaapi/stream.h>
 
 struct module_data_t
 {
     /*
      * NOTE: data structs in all modules MUST begin with the following
-     *       member. Use MODULE_LUA_DATA() macro when defining module
+     *       member. Use MODULE_DATA() macro when defining module
      *       structs as the exact definition might change in the future.
      */
     lua_State *lua;
 };
 
-void module_register(lua_State *L, const char *name, const luaL_Reg *methods)
-{
-    lua_newtable(L);
+/*
+ * module instance init and cleanup
+ */
 
-    lua_newtable(L);
-    luaL_setfuncs(L, methods, 0);
-    lua_setmetatable(L, -2);
+#define GET_MANIFEST(_L) \
+    ((module_manifest_t *)lua_touserdata(_L, lua_upvalueindex(1)))
 
-    lua_setglobal(L, name);
-}
+#define GET_MODULE_DATA(_L) \
+    ((module_data_t *)lua_touserdata(L, lua_upvalueindex(2)))
 
-void module_new(lua_State *L, module_data_t *mod, const luaL_Reg *meta_methods
-                , const module_method_t *mod_methods)
-{
-    lua_newtable(L);
-    for (const luaL_Reg *m = meta_methods; m->name != NULL; m++)
-    {
-        lua_pushlightuserdata(L, mod);
-        lua_pushcclosure(L, m->func, 1);
-        lua_setfield(L, -2, m->name);
-    }
-    lua_setmetatable(L, -2);
-
-    for (const module_method_t *m = mod_methods; m->name != NULL; m++)
-    {
-        lua_pushlightuserdata(L, mod);
-        lua_pushlightuserdata(L, (void *)m->method);
-        lua_pushcclosure(L, module_thunk, 2);
-        lua_setfield(L, -2, m->name);
-    }
-
-    if (lua_gettop(L) == 3)
-    {
-        lua_pushvalue(L, MODULE_OPTIONS_IDX);
-        lua_setfield(L, 3, "__options");
-    }
-
-    mod->lua = L;
-}
-
-int module_thunk(lua_State *L)
+static
+int callback_thunk(lua_State *L)
 {
     void *const mod = lua_touserdata(L, lua_upvalueindex(1));
     void *const func = lua_touserdata(L, lua_upvalueindex(2));
 
     return ((module_callback_t)func)(L, (module_data_t *)mod);
 }
+
+static
+void add_methods(lua_State *L, const module_data_t *mod
+                 , const module_method_t *list)
+{
+    while (list->name != NULL)
+    {
+        lua_pushlightuserdata(L, (void *)mod);
+        lua_pushlightuserdata(L, (void *)list->method);
+        lua_pushcclosure(L, callback_thunk, 2);
+        lua_setfield(L, -2, list->name);
+
+        list++;
+    }
+}
+
+static
+int method_tostring(lua_State *L)
+{
+    lua_pushstring(L, GET_MANIFEST(L)->name);
+    return 1;
+}
+
+static
+int method_gc(lua_State *L)
+{
+    const module_manifest_t *const manifest = GET_MANIFEST(L);
+    module_data_t *const mod = GET_MODULE_DATA(L);
+
+    if (manifest->reg->destroy != NULL)
+        manifest->reg->destroy(mod);
+
+    free(mod);
+
+    return 0;
+}
+
+static
+int method_new(lua_State *L)
+{
+    const module_manifest_t *const manifest = GET_MANIFEST(L);
+
+    /* create table representing module instance */
+    module_data_t *const mod = (module_data_t *)asc_calloc(1, manifest->size);
+    lua_newtable(L);
+
+    /* set up metatable */
+    static const luaL_Reg meta_methods[] =
+    {
+        { "__gc", method_gc },
+        { "__tostring", method_tostring },
+        { NULL, NULL },
+    };
+
+    lua_newtable(L);
+    lua_pushlightuserdata(L, (void *)manifest);
+    lua_pushlightuserdata(L, mod);
+    luaL_setfuncs(L, meta_methods, 2);
+    lua_setmetatable(L, -2);
+
+    /* set up user methods */
+    if (manifest->reg->methods != NULL)
+        add_methods(L, mod, manifest->reg->methods);
+
+    if (manifest->type == MODULE_TYPE_STREAM)
+        add_methods(L, mod, module_stream_methods);
+
+    /* set up options table */
+    if (lua_gettop(L) == 3)
+    {
+        lua_pushvalue(L, MODULE_OPTIONS_IDX);
+        lua_setfield(L, 3, "__options");
+    }
+
+    /* run module-specific initialization */
+    mod->lua = L;
+
+    if (manifest->reg->init != NULL)
+        manifest->reg->init(L, mod);
+
+    /* pass new table to Lua */
+    return 1;
+}
+
+void module_register(lua_State *L, const module_manifest_t *manifest)
+{
+    if (manifest->type == MODULE_TYPE_BASIC
+        || manifest->type == MODULE_TYPE_STREAM)
+    {
+        static const luaL_Reg meta_methods[] =
+        {
+            { "__call", method_new },
+            { "__tostring", method_tostring },
+            { NULL, NULL },
+        };
+
+        lua_newtable(L);
+
+        lua_newtable(L);
+        lua_pushlightuserdata(L, (void *)manifest);
+        luaL_setfuncs(L, meta_methods, 1);
+        lua_setmetatable(L, -2);
+
+        lua_setglobal(L, manifest->name);
+    }
+
+    if (manifest->reg->load != NULL)
+        manifest->reg->load(L);
+}
+
+/*
+ * module option getters
+ */
 
 bool module_option_integer(lua_State *L, const char *name, int *integer)
 {

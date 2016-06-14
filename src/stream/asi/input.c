@@ -31,7 +31,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     int adapter;
     bool budget;
@@ -160,10 +160,8 @@ static void module_destroy(module_data_t *mod)
         close(mod->fd);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+STREAM_MODULE_REGISTER(asi_input)
 {
-    MODULE_STREAM_METHODS_REF(),
-    { NULL, NULL },
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(asi_input)

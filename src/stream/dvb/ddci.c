@@ -28,7 +28,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     int adapter;
     int device;
@@ -332,11 +332,15 @@ static void module_destroy(module_data_t *mod)
     free(mod->ca);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+static const module_method_t module_methods[] =
 {
-    MODULE_STREAM_METHODS_REF(),
     { "ca_set_pnr", method_ca_set_pnr },
     { NULL, NULL },
 };
-MODULE_LUA_REGISTER(ddci)
+
+STREAM_MODULE_REGISTER(ddci)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

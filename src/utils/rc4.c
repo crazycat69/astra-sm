@@ -83,14 +83,16 @@ static int method_rc4(lua_State *L)
     return 1;
 }
 
-MODULE_LUA_BINDING(rc4)
+static void module_load(lua_State *L)
 {
+    /* <string>:rc4() */
     lua_getglobal(L, "string");
-
     lua_pushcfunction(L, method_rc4);
     lua_setfield(L, -2, "rc4");
-
-    lua_pop(L, 1); // string
-
-    return 0;
+    lua_pop(L, 1); /* string */
 }
+
+BINDING_REGISTER(rc4)
+{
+    .load = module_load,
+};

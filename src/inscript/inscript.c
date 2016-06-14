@@ -135,10 +135,13 @@ static int fn_inscript_callback(lua_State *L)
     return 0;
 }
 
-MODULE_LUA_BINDING(inscript)
+static void module_load(lua_State *L)
 {
     lua_pushcclosure(L, fn_inscript_callback, 0);
     lua_setglobal(L, __module_name);
-
-    return 1;
 }
+
+BINDING_REGISTER(inscript)
+{
+    .load = module_load,
+};

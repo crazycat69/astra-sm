@@ -64,7 +64,7 @@ typedef struct
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     const char *name;
     bool rate_stat;
@@ -850,10 +850,8 @@ static void module_destroy(module_data_t *mod)
     free(mod->sdt_checksum_list);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+STREAM_MODULE_REGISTER(analyze)
 {
-    MODULE_STREAM_METHODS_REF(),
-    { NULL, NULL },
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(analyze)

@@ -47,7 +47,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     unsigned int delay;
     int idx_callback;
@@ -518,12 +518,17 @@ void module_destroy(module_data_t *mod)
     ASC_FREE(mod->sync, mpegts_sync_destroy);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+static
+const module_method_t module_methods[] =
 {
-    MODULE_STREAM_METHODS_REF(),
     { "pid", method_pid },
     { "send", method_send },
     { NULL, NULL },
 };
-MODULE_LUA_REGISTER(pipe_generic)
+
+STREAM_MODULE_REGISTER(pipe_generic)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

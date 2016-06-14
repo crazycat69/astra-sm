@@ -21,6 +21,7 @@
 #include <astra.h>
 #include <luaapi/state.h>
 #include <luaapi/module.h>
+#include <bindings.h>
 
 #define MSG(_msg) "[luaapi/state] " _msg
 
@@ -37,7 +38,7 @@
 /* global Lua state */
 lua_State *lua = NULL;
 
-static int (*const astra_mods[])(lua_State *) = {
+static const module_manifest_t *module_list[] = {
     LUA_CORE_BINDINGS
     LUA_STREAM_BINDINGS
     NULL
@@ -50,8 +51,8 @@ lua_State *lua_api_init(void)
     luaL_openlibs(L);
 
     /* load modules */
-    for (size_t i = 0; astra_mods[i] != NULL; i++)
-        astra_mods[i](L);
+    for (size_t i = 0; module_list[i] != NULL; i++)
+        module_register(L, module_list[i]);
 
     /* change package.path */
 #ifdef LUA_DEBUG

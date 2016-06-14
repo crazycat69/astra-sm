@@ -33,7 +33,7 @@
 
 struct module_data_t
 {
-    MODULE_LUA_DATA();
+    MODULE_DATA();
 
     int idx_self;
     int idx_callback;
@@ -93,9 +93,15 @@ static void module_destroy(module_data_t *mod)
         method_close(MODULE_L(mod), mod);
 }
 
-MODULE_LUA_METHODS()
+static const module_method_t module_methods[] =
 {
     { "close", method_close },
     { NULL, NULL },
 };
-MODULE_LUA_REGISTER(timer)
+
+MODULE_REGISTER(timer)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

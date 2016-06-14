@@ -73,7 +73,7 @@ static int method_shutdown(lua_State *L)
     return 0;
 }
 
-MODULE_LUA_BINDING(astra)
+static void module_load(lua_State *L)
 {
     static const luaL_Reg api[] =
     {
@@ -105,6 +105,9 @@ MODULE_LUA_BINDING(astra)
     lua_setfield(L, -2, "version");
 
     lua_setglobal(L, "astra");
-
-    return 1;
 }
+
+BINDING_REGISTER(astra)
+{
+    .load = module_load,
+};

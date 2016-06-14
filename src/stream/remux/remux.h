@@ -72,7 +72,7 @@ void pcr_stream_destroy(pcr_stream_t *p);
  */
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     /* module config */
     const char *name;

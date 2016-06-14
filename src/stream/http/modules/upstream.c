@@ -28,14 +28,14 @@
 
 struct module_data_t
 {
-    MODULE_LUA_DATA();
+    MODULE_DATA();
 
     int idx_callback;
 };
 
 struct http_response_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     module_data_t *mod;
 
@@ -313,8 +313,8 @@ static void module_destroy(module_data_t *mod)
     }
 }
 
-MODULE_LUA_METHODS()
+MODULE_REGISTER(http_upstream)
 {
-    { NULL, NULL },
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(http_upstream)

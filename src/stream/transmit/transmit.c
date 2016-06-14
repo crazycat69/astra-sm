@@ -35,7 +35,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 };
 
 static int method_set_upstream(lua_State *L, module_data_t *mod)
@@ -66,11 +66,15 @@ static void module_destroy(module_data_t *mod)
     module_stream_destroy(mod);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+static const module_method_t module_methods[] =
 {
-    MODULE_STREAM_METHODS_REF(),
     { "set_upstream", method_set_upstream },
     { NULL, NULL },
 };
-MODULE_LUA_REGISTER(transmit)
+
+STREAM_MODULE_REGISTER(transmit)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

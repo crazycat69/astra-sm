@@ -233,9 +233,7 @@ static int utils_readder_gc(lua_State *L)
     return 0;
 }
 
-/* utils */
-
-MODULE_LUA_BINDING(utils)
+static void module_load(lua_State *L)
 {
     static const luaL_Reg api[] =
     {
@@ -260,6 +258,9 @@ MODULE_LUA_BINDING(utils)
     lua_pushcfunction(L, utils_readdir_init);
     lua_setfield(L, table, "readdir");
     lua_pop(L, 1); // table
-
-    return 0;
 }
+
+BINDING_REGISTER(utils)
+{
+    .load = module_load,
+};

@@ -42,7 +42,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     const char *filename;
     const char *lock;
@@ -476,11 +476,15 @@ static void module_destroy(module_data_t *mod)
     module_stream_destroy(mod);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+static const module_method_t module_methods[] =
 {
-    MODULE_STREAM_METHODS_REF(),
     { "length", method_length },
     { NULL, NULL },
 };
-MODULE_LUA_REGISTER(file_input)
+
+STREAM_MODULE_REGISTER(file_input)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

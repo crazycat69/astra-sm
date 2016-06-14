@@ -53,7 +53,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     struct
     {
@@ -380,9 +380,15 @@ static void module_destroy(module_data_t *mod)
 #endif
 }
 
-MODULE_LUA_METHODS()
+static const module_method_t module_methods[] =
 {
     { "status", method_status },
     { NULL, NULL },
 };
-MODULE_LUA_REGISTER(file_output)
+
+STREAM_MODULE_REGISTER(file_output)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};
