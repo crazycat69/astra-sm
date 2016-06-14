@@ -21,7 +21,7 @@
 
 #include <astra.h>
 #include <utils/iso8859.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 
 static uint8_t *iso8859_1_decode(const uint8_t *data, size_t size)
 {

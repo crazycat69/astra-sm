@@ -62,8 +62,9 @@ libastra_la_SOURCES += \
 
 # luaapi/
 libastra_la_SOURCES += \
-    luaapi/luaapi.c \
     luaapi/luaapi.h \
+    luaapi/module.c \
+    luaapi/module.h \
     luaapi/state.c \
     luaapi/state.h \
     luaapi/stream.c \

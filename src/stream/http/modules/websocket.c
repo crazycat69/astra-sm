@@ -20,7 +20,7 @@
 
 #include <astra.h>
 #include <core/list.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 #include <utils/base64.h>
 #include <utils/sha1.h>
 

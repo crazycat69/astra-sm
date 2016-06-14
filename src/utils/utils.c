@@ -33,7 +33,7 @@
  */
 
 #include <astra.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 
 #include <dirent.h>
 

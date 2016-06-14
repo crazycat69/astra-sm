@@ -33,7 +33,7 @@
 
 #include <astra.h>
 #include <utils/md5.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 
 /*
  * The digest algorithm interprets the input message as a sequence of 32-bit

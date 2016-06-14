@@ -19,7 +19,7 @@
  */
 
 #include <astra.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 
 #include <sys/ioctl.h>
 #include <net/if.h>

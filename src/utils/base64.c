@@ -20,7 +20,7 @@
 
 #include <astra.h>
 #include <utils/base64.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 
 /*
  *      base64.encode(string)

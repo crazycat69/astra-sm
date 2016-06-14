@@ -11,7 +11,7 @@
 
 #include <astra.h>
 #include <utils/sha1.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 
 #define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
 

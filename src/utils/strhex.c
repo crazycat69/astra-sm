@@ -25,7 +25,7 @@
 
 #include <astra.h>
 #include <utils/strhex.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 
 char *au_hex2str(char *str, const uint8_t *data, int size)
 {

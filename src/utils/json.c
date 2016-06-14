@@ -20,7 +20,7 @@
 
 #include <astra.h>
 #include <core/strbuf.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 
 #define MSG(_msg) "[json] " _msg
 

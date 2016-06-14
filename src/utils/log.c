@@ -40,7 +40,7 @@
  */
 
 #include <astra.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 
 static bool is_debug = false;
 

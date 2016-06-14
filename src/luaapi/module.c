@@ -1,5 +1,5 @@
 /*
- * Astra Lua API
+ * Astra Lua API (Module)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
@@ -20,7 +20,7 @@
  */
 
 #include <astra.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 
 struct module_data_t
 {

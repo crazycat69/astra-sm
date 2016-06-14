@@ -19,7 +19,7 @@
  */
 
 #include <astra.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 
 #if defined(__linux) || defined(__APPLE__) || defined(__FreeBSD__)
 #   define ASC_SENDFILE (128 * 1024)

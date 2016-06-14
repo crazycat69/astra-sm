@@ -20,6 +20,7 @@
 
 #include <astra.h>
 #include <luaapi/state.h>
+#include <luaapi/module.h>
 
 #define MSG(_msg) "[luaapi/state] " _msg
 

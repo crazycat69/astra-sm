@@ -29,7 +29,7 @@
 
 #include <astra.h>
 #include <core/timer.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 
 struct module_data_t
 {

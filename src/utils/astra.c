@@ -43,7 +43,7 @@
 
 #include <astra.h>
 #include <core/mainloop.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 
 static int method_exit(lua_State *L)
 {

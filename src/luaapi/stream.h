@@ -26,7 +26,7 @@
 #endif /* !_ASTRA_H_ */
 
 #include <core/list.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 
 typedef struct module_stream_t module_stream_t;
 
