@@ -54,6 +54,8 @@ void __module_stream_init(module_stream_t *stream);
 void __module_stream_destroy(module_stream_t *stream);
 void __module_stream_attach(module_stream_t *stream, module_stream_t *child);
 
+void module_stream_attach(module_data_t *mod, module_data_t *child);
+
 #define module_stream_init(_mod, _on_ts) \
     do { \
         _mod->__stream.self = _mod; \
