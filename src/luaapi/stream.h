@@ -31,7 +31,7 @@
 typedef struct module_stream_t module_stream_t;
 
 typedef void (*stream_callback_t)(module_data_t *, const uint8_t *);
-typedef void (*demux_callback_t)(void *, uint16_t);
+typedef void (*demux_callback_t)(module_data_t *, uint16_t);
 
 struct module_stream_t
 {

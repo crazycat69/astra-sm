@@ -1044,17 +1044,13 @@ static int method_close(lua_State *L, module_data_t *mod)
     return 0;
 }
 
-static void join_pid(void *arg, uint16_t pid)
+static void join_pid(module_data_t *mod, uint16_t pid)
 {
-    module_data_t *const mod = (module_data_t *)arg;
-
     ++mod->__stream.pid_list[pid];
 }
 
-static void leave_pid(void *arg, uint16_t pid)
+static void leave_pid(module_data_t *mod, uint16_t pid)
 {
-    module_data_t *const mod = (module_data_t *)arg;
-
     --mod->__stream.pid_list[pid];
 }
 

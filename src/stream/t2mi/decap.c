@@ -47,15 +47,13 @@ struct module_data_t
     mpegts_t2mi_t *decap;
 };
 
-static void join_pid(void *arg, uint16_t pid)
+static void join_pid(module_data_t *mod, uint16_t pid)
 {
-    module_data_t *const mod = (module_data_t *)arg;
     module_demux_join(mod, pid);
 }
 
-static void leave_pid(void *arg, uint16_t pid)
+static void leave_pid(module_data_t *mod, uint16_t pid)
 {
-    module_data_t *const mod = (module_data_t *)arg;
     module_demux_leave(mod, pid);
 }
 
