@@ -50,7 +50,6 @@ struct module_stream_t
  * streaming module init and cleanup
  */
 
-void __module_stream_init(module_stream_t *stream);
 void __module_stream_destroy(module_stream_t *stream);
 
 void module_stream_init(module_data_t *mod, stream_callback_t on_ts);

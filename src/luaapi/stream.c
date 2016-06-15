@@ -50,7 +50,7 @@ void module_stream_init(module_data_t *mod, stream_callback_t on_ts)
 {
     mod->stream.self = mod;
     mod->stream.on_ts = on_ts;
-    __module_stream_init(&mod->stream);
+    mod->stream.children = asc_list_init();
 
     lua_State *const L = mod->lua;
     lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
@@ -104,11 +104,6 @@ void module_stream_send(void *arg, const uint8_t *ts)
     module_data_t *const mod = (module_data_t *)arg;
 
     __module_stream_send(&mod->stream, ts);
-}
-
-void __module_stream_init(module_stream_t *stream)
-{
-    stream->children = asc_list_init();
 }
 
 void __module_stream_destroy(module_stream_t *stream)
