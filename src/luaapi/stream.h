@@ -100,16 +100,8 @@ void module_stream_send(void *arg, const uint8_t *ts);
  * join/leave PID on upstream module instance
  */
 
-#define module_demux_set(_mod, _join_pid, _leave_pid) \
-    do { \
-        if(_mod->__stream.pid_list == NULL) \
-        { \
-            uint8_t *const _lst = ASC_ALLOC(MAX_PID, uint8_t); \
-            _mod->__stream.pid_list = _lst; \
-        } \
-        _mod->__stream.join_pid = _join_pid; \
-        _mod->__stream.leave_pid = _leave_pid; \
-    } while (0)
+void module_demux_set(module_data_t *mod, demux_callback_t join_pid
+                      , demux_callback_t leave_pid);
 
 bool module_demux_check(const module_data_t *mod, uint16_t pid);
 

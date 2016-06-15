@@ -105,6 +105,16 @@ void __module_stream_destroy(module_stream_t *stream)
     ASC_FREE(stream->children, asc_list_destroy);
 }
 
+void module_demux_set(module_data_t *mod, demux_callback_t join_pid
+                      , demux_callback_t leave_pid)
+{
+    if (mod->stream.pid_list == NULL)
+        mod->stream.pid_list = ASC_ALLOC(MAX_PID, uint8_t);
+
+    mod->stream.join_pid = join_pid;
+    mod->stream.leave_pid = leave_pid;
+}
+
 bool module_demux_check(const module_data_t *mod, uint16_t pid)
 {
     return (mod->stream.pid_list[pid] > 0);
