@@ -54,13 +54,18 @@ void module_stream_init(lua_State *L, module_data_t *mod
     mod->stream.on_ts = on_ts;
     mod->stream.children = asc_list_init();
 
-    lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
-    if (lua_type(L, -1) == LUA_TLIGHTUSERDATA)
+    if (on_ts != NULL)
     {
-        module_stream_t *const st = (module_stream_t *)lua_touserdata(L, -1);
-        module_stream_attach(st->self, mod);
+        lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
+        if (lua_type(L, -1) == LUA_TLIGHTUSERDATA)
+        {
+            module_stream_t *const parent_st =
+                (module_stream_t *)lua_touserdata(L, -1);
+
+            module_stream_attach(parent_st->self, mod);
+        }
+        lua_pop(L, 1);
     }
-    lua_pop(L, 1);
 }
 
 static
