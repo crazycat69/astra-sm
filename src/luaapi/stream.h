@@ -111,8 +111,7 @@ void module_stream_send(void *arg, const uint8_t *ts);
         _mod->__stream.leave_pid = _leave_pid; \
     } while (0)
 
-#define module_demux_check(_mod, _pid) \
-    (_mod->__stream.pid_list[_pid] > 0)
+bool module_demux_check(const module_data_t *mod, uint16_t pid);
 
 #define module_demux_join(_mod, _pid) \
     do { \

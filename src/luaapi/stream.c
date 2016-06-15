@@ -104,3 +104,8 @@ void __module_stream_destroy(module_stream_t *stream)
 
     ASC_FREE(stream->children, asc_list_destroy);
 }
+
+bool module_demux_check(const module_data_t *mod, uint16_t pid)
+{
+    return (mod->stream.pid_list[pid] > 0);
+}
