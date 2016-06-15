@@ -62,6 +62,7 @@ void __module_stream_attach(module_stream_t *stream, module_stream_t *child)
     asc_list_insert_tail(stream->children, child);
 }
 
+static
 void __module_stream_send(void *arg, const uint8_t *ts)
 {
     module_stream_t *const stream = (module_stream_t *)arg;

@@ -94,8 +94,6 @@ void __module_stream_attach(module_stream_t *stream, module_stream_t *child);
  * send packet to downstream modules
  */
 
-void __module_stream_send(void *arg, const uint8_t *ts);
-
 void module_stream_send(void *arg, const uint8_t *ts);
 
 /*
