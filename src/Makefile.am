@@ -112,11 +112,6 @@ libastra_la_SOURCES += \
     utils/timer.c \
     utils/utils.c
 
-if HAVE_DVBAPI
-libastra_la_SOURCES += \
-    utils/dvbls.c
-endif
-
 if HAVE_POSIX
 # no pid files on Windows
 libastra_la_SOURCES += \
@@ -160,6 +155,7 @@ libstream_la_SOURCES += \
     stream/dvb/ca.c \
     stream/dvb/ca.h \
     stream/dvb/dvb.h \
+    stream/dvb/dvbls.c \
     stream/dvb/frontend.c \
     stream/dvb/frontend.h \
     stream/dvb/ddci.c \

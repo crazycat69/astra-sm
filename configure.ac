@@ -583,8 +583,6 @@ AC_PREPROC_IFELSE([
 AS_IF([test "x${have_dvbapi}" = "xno"], [
     AC_MSG_WARN([no DVB API found; DVB functionality will be unavailable]) ])
 
-AM_CONDITIONAL([HAVE_DVBAPI], [test "x${have_dvbapi}" = "xyes"])
-
 #
 # Optional features
 #

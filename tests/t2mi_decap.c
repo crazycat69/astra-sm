@@ -19,6 +19,7 @@
 
 #include <astra.h>
 #include <mpegts/t2mi.h>
+#include <luaapi/stream.h>
 
 #define MSG(_msg) "[main] " _msg
 
@@ -34,13 +35,13 @@ static void on_ts(void *arg, const uint8_t *ts)
         fatal("fwrite: %s", strerror(errno));
 }
 
-static void join_pid(void *arg, uint16_t pid)
+static void join_pid(module_data_t *arg, uint16_t pid)
 {
     __uarg(arg);
     asc_log_info(MSG("joining pid %hu"), pid);
 }
 
-static void leave_pid(void *arg, uint16_t pid)
+static void leave_pid(module_data_t *arg, uint16_t pid)
 {
     __uarg(arg);
     asc_log_info(MSG("leaving pid %hu"), pid);
