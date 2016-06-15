@@ -23,7 +23,7 @@
 #include <luaapi/module.h>
 #include <bindings.h>
 
-#define MSG(_msg) "[luaapi/state] " _msg
+#define MSG(_msg) "[luaapi] " _msg
 
 /* search path for Lua */
 #ifdef ASC_SCRIPT_DIR
@@ -44,11 +44,23 @@ static const module_manifest_t *module_list[] = {
     NULL
 };
 
+static int panic_handler(lua_State *L) {
+    const char *const err = lua_tostring(L, -1);
+
+    asc_log_error("%s", err);
+    asc_log_error(MSG("unprotected Lua error, aborting execution"));
+    asc_lib_exit(EXIT_ABORT);
+
+    return 0;
+}
+
 lua_State *lua_api_init(void)
 {
     lua_State *const L = luaL_newstate();
     asc_assert(L != NULL, MSG("luaL_newstate() failed"));
+
     luaL_openlibs(L);
+    lua_atpanic(L, panic_handler);
 
     /* load modules */
     for (size_t i = 0; module_list[i] != NULL; i++)
