@@ -168,7 +168,7 @@ static int module_call(lua_State *L, module_data_t *mod)
     // like module_stream_init()
     client->response->__stream.self = (module_data_t *)client;
     client->response->__stream.on_ts = NULL;
-    __module_stream_init(&client->response->__stream);
+    client->response->__stream.children = asc_list_init();
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_request);
     lua_pushlightuserdata(L, &client->response->__stream);

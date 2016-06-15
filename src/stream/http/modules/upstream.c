@@ -210,7 +210,7 @@ static void on_upstream_send(void *arg)
     // like module_stream_init()
     client->response->__stream.self = (module_data_t *)client;
     client->response->__stream.on_ts = (stream_callback_t)on_ts;
-    __module_stream_init(&client->response->__stream);
+    client->response->__stream.children = asc_list_init();
     module_stream_attach(upstream->self, (module_data_t *)client->response);
 
     client->on_read = on_upstream_read;
