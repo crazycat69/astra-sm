@@ -87,8 +87,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     mpegts_t2mi_set_payload(mod->decap, mod->pnr, mod->pid);
     mpegts_t2mi_set_plp(mod->decap, mod->plp);
 
-    mpegts_t2mi_set_callback(mod->decap, __module_stream_send
-                             , &mod->__stream);
+    mpegts_t2mi_set_callback(mod->decap, module_stream_send, mod);
 }
 
 static void module_destroy(module_data_t *mod)

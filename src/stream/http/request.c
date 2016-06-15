@@ -393,7 +393,7 @@ static void on_ts_read(void *arg)
 
 static void on_sync_ready(void *arg)
 {
-    module_data_t *const mod = ((module_stream_t *)arg)->self;
+    module_data_t *const mod = (module_data_t *)arg;
 
     mpegts_sync_set_on_ready(mod->ts.sync, NULL);
     asc_socket_set_on_read(mod->sock, on_ts_read);
@@ -621,8 +621,8 @@ static void on_read(void *arg)
             {
                 mod->ts.sync = mpegts_sync_init();
 
-                mpegts_sync_set_on_write(mod->ts.sync, __module_stream_send);
-                mpegts_sync_set_arg(mod->ts.sync, &mod->__stream);
+                mpegts_sync_set_on_write(mod->ts.sync, module_stream_send);
+                mpegts_sync_set_arg(mod->ts.sync, mod);
                 mpegts_sync_set_fname(mod->ts.sync, "http_request %s:%d%s"
                                       , mod->config.host, mod->config.port
                                       , mod->config.path);

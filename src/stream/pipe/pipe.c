@@ -242,7 +242,7 @@ void on_child_close(void *arg, int exit_code)
 static
 void on_sync_ready(void *arg)
 {
-    module_data_t *const mod = ((module_stream_t *)arg)->self;
+    module_data_t *const mod = (module_data_t *)arg;
 
     mpegts_sync_set_on_ready(mod->sync, NULL);
     asc_child_toggle_input(mod->child, STDOUT_FILENO, true);
@@ -467,8 +467,8 @@ void module_init(lua_State *L, module_data_t *mod)
 
         mod->sync = mpegts_sync_init();
 
-        mpegts_sync_set_on_write(mod->sync, __module_stream_send);
-        mpegts_sync_set_arg(mod->sync, &mod->__stream);
+        mpegts_sync_set_on_write(mod->sync, module_stream_send);
+        mpegts_sync_set_arg(mod->sync, mod);
         mpegts_sync_set_fname(mod->sync, "sync/%s", mod->config.name);
 
         const char *optstr = NULL;
