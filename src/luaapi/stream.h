@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
+ *               2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,33 +47,17 @@ struct module_stream_t
     uint8_t *pid_list;
 };
 
-/*
- * streaming module init and cleanup
- */
-
 void module_stream_init(module_data_t *mod, stream_callback_t on_ts);
 void module_stream_destroy(module_data_t *mod);
+
 void module_stream_attach(module_data_t *mod, module_data_t *child);
-
-/*
- * send packet to downstream modules
- */
-
 void module_stream_send(void *arg, const uint8_t *ts);
-
-/*
- * join/leave PID on upstream module instance
- */
 
 void module_demux_set(module_data_t *mod, demux_callback_t join_pid
                       , demux_callback_t leave_pid);
 void module_demux_join(module_data_t *mod, uint16_t pid);
 void module_demux_leave(module_data_t *mod, uint16_t pid);
 bool module_demux_check(const module_data_t *mod, uint16_t pid);
-
-/*
- * basic Lua methods required for every streaming module
- */
 
 extern const module_method_t module_stream_methods[];
 
