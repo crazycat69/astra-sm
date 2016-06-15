@@ -215,7 +215,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         on_ts = on_sync_ts;
     }
 
-    module_stream_init(mod, on_ts);
+    module_stream_init(L, mod, on_ts);
 }
 
 static void module_destroy(module_data_t *mod)

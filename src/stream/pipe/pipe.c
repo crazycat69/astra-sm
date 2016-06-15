@@ -497,7 +497,7 @@ void module_init(lua_State *L, module_data_t *mod)
     else
         lua_pop(L, 1);
 
-    module_stream_init(mod, on_ts);
+    module_stream_init(L, mod, on_ts);
     on_child_restart(mod);
 }
 

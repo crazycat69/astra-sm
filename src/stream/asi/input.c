@@ -104,7 +104,7 @@ static void leave_pid(module_data_t *mod, uint16_t pid)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_stream_init(mod, NULL);
+    module_stream_init(L, mod, NULL);
     module_demux_set(mod, join_pid, leave_pid);
 
     if(!module_option_integer(L, "adapter", &mod->adapter))

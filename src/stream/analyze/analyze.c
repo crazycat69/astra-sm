@@ -789,7 +789,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_option_integer(L, "bitrate_limit", &mod->bitrate_limit);
     module_option_boolean(L, "join_pid", &mod->join_pid);
 
-    module_stream_init(mod, on_ts);
+    module_stream_init(L, mod, on_ts);
     if(mod->join_pid)
     {
         module_demux_set(mod, NULL, NULL);

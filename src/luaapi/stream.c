@@ -47,13 +47,13 @@ const module_method_t module_stream_methods[] =
     { NULL, NULL },
 };
 
-void module_stream_init(module_data_t *mod, stream_callback_t on_ts)
+void module_stream_init(lua_State *L, module_data_t *mod
+                        , stream_callback_t on_ts)
 {
     mod->stream.self = mod;
     mod->stream.on_ts = on_ts;
     mod->stream.children = asc_list_init();
 
-    lua_State *const L = mod->lua;
     lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
     if (lua_type(L, -1) == LUA_TLIGHTUSERDATA)
     {

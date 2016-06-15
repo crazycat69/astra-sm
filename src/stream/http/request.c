@@ -1107,7 +1107,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_option_boolean(L, __stream, &mod->is_stream);
     if(mod->is_stream)
     {
-        module_stream_init(mod, NULL);
+        module_stream_init(L, mod, NULL);
 
         module_option_boolean(L, "sync", &mod->config.sync);
         module_option_string(L, "sync_opts", &mod->config.sync_opts, NULL);
@@ -1120,7 +1120,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     {
         asc_assert(mod->is_stream != true, MSG("option 'upstream' is not allowed in stream mode"));
 
-        module_stream_init(mod, on_ts);
+        module_stream_init(L, mod, on_ts);
 
         int value = 1024;
         module_option_integer(L, "buffer_size", &value);

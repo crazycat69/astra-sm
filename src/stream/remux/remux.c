@@ -361,7 +361,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->stream[0x13] = MPEGTS_PACKET_DATA; /* RST */
     mod->stream[0x14] = MPEGTS_PACKET_DATA; /* TDT, TOT */
 
-    module_stream_init(mod, remux_ts_in);
+    module_stream_init(L, mod, remux_ts_in);
 }
 
 static void module_destroy(module_data_t *mod)

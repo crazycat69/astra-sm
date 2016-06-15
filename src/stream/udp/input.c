@@ -144,7 +144,7 @@ static int method_port(lua_State *L, module_data_t *mod)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_stream_init(mod, NULL);
+    module_stream_init(L, mod, NULL);
 
     module_option_string(L, "addr", &mod->config.addr, NULL);
     if(mod->config.addr == NULL)

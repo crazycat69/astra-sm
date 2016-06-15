@@ -433,7 +433,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     else
         lua_pop(L, 1);
 
-    module_stream_init(mod, NULL);
+    module_stream_init(L, mod, NULL);
 
     if(mod->lock)
     {

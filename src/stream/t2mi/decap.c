@@ -54,7 +54,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_stream_init(mod, on_ts);
+    module_stream_init(L, mod, on_ts);
     module_demux_set(mod, NULL, NULL);
 
     /* instance name */

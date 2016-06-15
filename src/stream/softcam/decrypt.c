@@ -912,7 +912,7 @@ void on_cam_response(module_data_t *mod, void *arg, const uint8_t *data)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_stream_init(mod, on_ts);
+    module_stream_init(L, mod, on_ts);
 
     mod->__decrypt.self = mod;
 

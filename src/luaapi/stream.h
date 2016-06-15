@@ -47,7 +47,8 @@ struct module_stream_t
     uint8_t *pid_list;
 };
 
-void module_stream_init(module_data_t *mod, stream_callback_t on_ts);
+void module_stream_init(lua_State *L, module_data_t *mod
+                        , stream_callback_t on_ts);
 void module_stream_destroy(module_data_t *mod);
 
 void module_stream_attach(module_data_t *mod, module_data_t *child);
