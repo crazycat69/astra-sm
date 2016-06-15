@@ -80,7 +80,8 @@ void __module_stream_attach(module_stream_t *stream, module_stream_t *child);
                 { \
                     if(_mod->__stream.pid_list[__i] > 0) \
                     { \
-                        module_demux_leave(_mod, __i); \
+                        /* FIXME */ \
+                        module_demux_leave((module_data_t *)_mod, __i); \
                     } \
                 } \
                 ASC_FREE(_mod->__stream.pid_list, free); \
@@ -102,48 +103,9 @@ void module_stream_send(void *arg, const uint8_t *ts);
 
 void module_demux_set(module_data_t *mod, demux_callback_t join_pid
                       , demux_callback_t leave_pid);
-
+void module_demux_join(module_data_t *mod, uint16_t pid);
+void module_demux_leave(module_data_t *mod, uint16_t pid);
 bool module_demux_check(const module_data_t *mod, uint16_t pid);
-
-#define module_demux_join(_mod, _pid) \
-    do { \
-        const uint16_t ___pid = _pid; \
-        asc_assert(_mod->__stream.pid_list != NULL \
-                   , "%s:%d module_demux_set() is required" \
-                   , __FILE__, __LINE__); \
-        ++_mod->__stream.pid_list[___pid]; \
-        if(_mod->__stream.pid_list[___pid] == 1 \
-           && _mod->__stream.parent != NULL \
-           && _mod->__stream.parent->join_pid != NULL) \
-        { \
-            _mod->__stream.parent->join_pid(_mod->__stream.parent->self \
-                                            , ___pid); \
-        } \
-    } while (0)
-
-#define module_demux_leave(_mod, _pid) \
-    do { \
-        const uint16_t ___pid = _pid; \
-        asc_assert(_mod->__stream.pid_list != NULL \
-                   , "%s:%d module_demux_set() is required" \
-                   , __FILE__, __LINE__); \
-        if(_mod->__stream.pid_list[___pid] > 0) \
-        { \
-            --_mod->__stream.pid_list[___pid]; \
-            if(_mod->__stream.pid_list[___pid] == 0 \
-               && _mod->__stream.parent != NULL \
-               && _mod->__stream.parent->leave_pid != NULL) \
-            { \
-                _mod->__stream.parent->leave_pid(_mod->__stream.parent->self \
-                                                 , ___pid); \
-            } \
-        } \
-        else \
-        { \
-            asc_log_error("%s:%d module_demux_leave() double call pid:%d" \
-                          , __FILE__, __LINE__, ___pid); \
-        } \
-    } while (0)
 
 /*
  * basic Lua methods required for every streaming module

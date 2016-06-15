@@ -115,6 +115,42 @@ void module_demux_set(module_data_t *mod, demux_callback_t join_pid
     mod->stream.leave_pid = leave_pid;
 }
 
+void module_demux_join(module_data_t *mod, uint16_t pid)
+{
+    asc_assert(mod->stream.pid_list != NULL
+               , "%s:%d module_demux_set() is required"
+               , __FILE__, __LINE__);
+
+    ++mod->stream.pid_list[pid];
+    if (mod->stream.pid_list[pid] == 1 && mod->stream.parent != NULL
+        && mod->stream.parent->join_pid != NULL)
+    {
+        mod->stream.parent->join_pid(mod->stream.parent->self, pid);
+    }
+}
+
+void module_demux_leave(module_data_t *mod, uint16_t pid)
+{
+    asc_assert(mod->stream.pid_list != NULL
+               , "%s:%d module_demux_set() is required"
+               , __FILE__, __LINE__);
+
+    if (mod->stream.pid_list[pid] > 0)
+    {
+        --mod->stream.pid_list[pid];
+        if (mod->stream.pid_list[pid] == 0 && mod->stream.parent != NULL
+            && mod->stream.parent->leave_pid != NULL)
+        {
+            mod->stream.parent->leave_pid(mod->stream.parent->self, pid);
+        }
+    }
+    else
+    {
+        asc_log_error("%s:%d module_demux_leave() double call pid:%d"
+                      , __FILE__, __LINE__, pid);
+    }
+}
+
 bool module_demux_check(const module_data_t *mod, uint16_t pid)
 {
     return (mod->stream.pid_list[pid] > 0);
