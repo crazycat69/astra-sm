@@ -107,7 +107,7 @@ static void stream_reload(module_data_t *mod)
 
     for(int __i = 0; __i < MAX_PID; ++__i)
     {
-        if(mod->__stream.pid_list[__i])
+        if(module_demux_check(mod, __i))
             module_demux_leave(mod, __i);
     }
 

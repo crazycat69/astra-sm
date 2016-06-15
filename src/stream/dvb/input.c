@@ -879,9 +879,9 @@ static void thread_loop(void *arg)
 
             for(int i = 0; i < MAX_PID; ++i)
             {
-                if((mod->__stream.pid_list[i] > 0) && (mod->dmx_fd_list[i] == 0))
+                if(module_demux_check(mod, i) && (mod->dmx_fd_list[i] == 0))
                     dmx_set_pid(mod, i, 1);
-                else if((mod->__stream.pid_list[i] == 0) && (mod->dmx_fd_list[i] > 0))
+                else if(!module_demux_check(mod, i) && (mod->dmx_fd_list[i] > 0))
                     dmx_set_pid(mod, i, 0);
             }
         }
@@ -958,9 +958,9 @@ static void thread_loop_slave(void *arg)
 
             for(int i = 0; i < MAX_PID; ++i)
             {
-                if((mod->__stream.pid_list[i] > 0) && (mod->dmx_fd_list[i] == 0))
+                if(module_demux_check(mod, i) && (mod->dmx_fd_list[i] == 0))
                     dmx_set_pid(mod, i, 1);
-                else if((mod->__stream.pid_list[i] == 0) && (mod->dmx_fd_list[i] > 0))
+                else if(!module_demux_check(mod, i) && (mod->dmx_fd_list[i] > 0))
                     dmx_set_pid(mod, i, 0);
             }
         }
