@@ -67,7 +67,7 @@ void module_stream_attach(module_data_t *mod, module_data_t *child);
         { \
             module_stream_t *const _stream = \
                 (module_stream_t *)lua_touserdata(_lua, -1); \
-            __module_stream_attach(_stream, &_mod->__stream); \
+            module_stream_attach(_stream->self, _mod); \
         } \
         lua_pop(_lua, 1); \
     } while (0)

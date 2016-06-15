@@ -43,7 +43,7 @@ static int method_set_upstream(lua_State *L, module_data_t *mod)
     if(lua_type(L, 2) == LUA_TLIGHTUSERDATA)
     {
         module_stream_t *const st = (module_stream_t *)lua_touserdata(L, 2);
-        __module_stream_attach(st, &mod->__stream);
+        module_stream_attach(st->self, mod);
     }
 
     return 0;
