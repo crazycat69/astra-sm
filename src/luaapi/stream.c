@@ -106,6 +106,7 @@ void module_stream_send(void *arg, const uint8_t *ts)
     __module_stream_send(&mod->stream, ts);
 }
 
+static
 void __module_stream_destroy(module_stream_t *stream)
 {
     if (stream->parent != NULL)
@@ -120,6 +121,26 @@ void __module_stream_destroy(module_stream_t *stream)
     }
 
     ASC_FREE(stream->children, asc_list_destroy);
+}
+
+void module_stream_destroy(module_data_t *mod)
+{
+    if (mod->stream.self != NULL)
+    {
+        if (mod->stream.pid_list != NULL)
+        {
+            for (unsigned int i = 0; i < MAX_PID; i++)
+            {
+                if (mod->stream.pid_list[i] > 0)
+                {
+                    module_demux_leave(mod, i);
+                }
+            }
+            ASC_FREE(mod->stream.pid_list, free);
+        }
+        __module_stream_destroy(&mod->stream);
+        mod->stream.self = NULL;
+    }
 }
 
 void module_demux_set(module_data_t *mod, demux_callback_t join_pid

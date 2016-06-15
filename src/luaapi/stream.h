@@ -50,31 +50,9 @@ struct module_stream_t
  * streaming module init and cleanup
  */
 
-void __module_stream_destroy(module_stream_t *stream);
-
 void module_stream_init(module_data_t *mod, stream_callback_t on_ts);
+void module_stream_destroy(module_data_t *mod);
 void module_stream_attach(module_data_t *mod, module_data_t *child);
-
-#define module_stream_destroy(_mod) \
-    do { \
-        if(_mod->__stream.self != NULL) \
-        { \
-            if(_mod->__stream.pid_list != NULL) \
-            { \
-                for(int __i = 0; __i < MAX_PID; ++__i) \
-                { \
-                    if(_mod->__stream.pid_list[__i] > 0) \
-                    { \
-                        /* FIXME */ \
-                        module_demux_leave((module_data_t *)_mod, __i); \
-                    } \
-                } \
-                ASC_FREE(_mod->__stream.pid_list, free); \
-            } \
-            __module_stream_destroy(&_mod->__stream); \
-            _mod->__stream.self = NULL; \
-        } \
-    } while (0)
 
 /*
  * send packet to downstream modules
