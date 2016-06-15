@@ -252,16 +252,6 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
         asc_log_error(MSG("sec write failed"));
 }
 
-static void join_pid(module_data_t *mod, uint16_t pid)
-{
-    module_demux_join(mod, pid);
-}
-
-static void leave_pid(module_data_t *mod, uint16_t pid)
-{
-    module_demux_leave(mod, pid);
-}
-
 static int method_ca_set_pnr(lua_State *L, module_data_t *mod)
 {
     if(!mod->ca || !mod->ca->ca_fd)
@@ -276,7 +266,7 @@ static int method_ca_set_pnr(lua_State *L, module_data_t *mod)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, on_ts);
-    module_demux_set(mod, join_pid, leave_pid);
+    module_demux_set(mod, module_demux_join, module_demux_leave);
 
     mod->ca = ASC_ALLOC(1, dvb_ca_t);
 

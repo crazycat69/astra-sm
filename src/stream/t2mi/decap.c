@@ -47,16 +47,6 @@ struct module_data_t
     mpegts_t2mi_t *decap;
 };
 
-static void join_pid(module_data_t *mod, uint16_t pid)
-{
-    module_demux_join(mod, pid);
-}
-
-static void leave_pid(module_data_t *mod, uint16_t pid)
-{
-    module_demux_leave(mod, pid);
-}
-
 static void on_ts(module_data_t *mod, const uint8_t *ts)
 {
     mpegts_t2mi_decap(mod->decap, ts);
@@ -83,7 +73,8 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->decap = mpegts_t2mi_init();
     mpegts_t2mi_set_fname(mod->decap, "%s", mod->name);
 
-    mpegts_t2mi_set_demux(mod->decap, mod, join_pid, leave_pid);
+    mpegts_t2mi_set_demux(mod->decap, mod, module_demux_join
+                          , module_demux_leave);
     mpegts_t2mi_set_payload(mod->decap, mod->pnr, mod->pid);
     mpegts_t2mi_set_plp(mod->decap, mod->plp);
 
