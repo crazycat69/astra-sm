@@ -53,6 +53,7 @@ void stream_detach(module_stream_t *stream, module_stream_t *child)
     child->parent = NULL;
 }
 
+static
 void __module_stream_attach(module_stream_t *stream, module_stream_t *child)
 {
     if (child->parent != NULL)

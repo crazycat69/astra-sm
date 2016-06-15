@@ -52,7 +52,6 @@ struct module_stream_t
 
 void __module_stream_init(module_stream_t *stream);
 void __module_stream_destroy(module_stream_t *stream);
-void __module_stream_attach(module_stream_t *stream, module_stream_t *child);
 
 void module_stream_attach(module_data_t *mod, module_data_t *child);
 
