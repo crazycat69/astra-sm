@@ -46,6 +46,22 @@ const module_method_t module_stream_methods[] =
     { NULL, NULL },
 };
 
+void module_stream_init(module_data_t *mod, stream_callback_t on_ts)
+{
+    mod->stream.self = mod;
+    mod->stream.on_ts = on_ts;
+    __module_stream_init(&mod->stream);
+
+    lua_State *const L = mod->lua;
+    lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
+    if (lua_type(L, -1) == LUA_TLIGHTUSERDATA)
+    {
+        module_stream_t *const st = (module_stream_t *)lua_touserdata(L, -1);
+        module_stream_attach(st->self, mod);
+    }
+    lua_pop(L, 1);
+}
+
 static
 void stream_detach(module_stream_t *stream, module_stream_t *child)
 {

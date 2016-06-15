@@ -53,23 +53,8 @@ struct module_stream_t
 void __module_stream_init(module_stream_t *stream);
 void __module_stream_destroy(module_stream_t *stream);
 
+void module_stream_init(module_data_t *mod, stream_callback_t on_ts);
 void module_stream_attach(module_data_t *mod, module_data_t *child);
-
-#define module_stream_init(_mod, _on_ts) \
-    do { \
-        _mod->__stream.self = _mod; \
-        _mod->__stream.on_ts = _on_ts; \
-        __module_stream_init(&_mod->__stream); \
-        lua_State *const _lua = _mod->__lua; \
-        lua_getfield(_lua, MODULE_OPTIONS_IDX, "upstream"); \
-        if(lua_type(_lua, -1) == LUA_TLIGHTUSERDATA) \
-        { \
-            module_stream_t *const _stream = \
-                (module_stream_t *)lua_touserdata(_lua, -1); \
-            module_stream_attach(_stream->self, _mod); \
-        } \
-        lua_pop(_lua, 1); \
-    } while (0)
 
 #define module_stream_destroy(_mod) \
     do { \
