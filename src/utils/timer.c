@@ -31,6 +31,8 @@
 #include <core/timer.h>
 #include <luaapi/module.h>
 
+#define MSG(_msg) "[timer] " _msg
+
 struct module_data_t
 {
     MODULE_DATA();
@@ -74,13 +76,16 @@ static void module_init(lua_State *L, module_data_t *mod)
 {
     int interval = 0;
     module_option_integer(L, "interval", &interval);
-    asc_assert(interval > 0, "[timer] option 'interval' must be greater than 0");
+    if (interval <= 0)
+        luaL_error(L, MSG("option 'interval' must be greater than 0"));
 
     lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
-    asc_assert(lua_isfunction(L, -1), "[timer] option 'callback' is required");
+    if (!lua_isfunction(L, -1))
+        luaL_error(L, MSG("option 'callback' is required"));
+
     mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    // store self in registry
+    /* store self in registry */
     lua_pushvalue(L, 3);
     mod->idx_self = luaL_ref(L, LUA_REGISTRYINDEX);
 
