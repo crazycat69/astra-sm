@@ -1061,7 +1061,7 @@ static void leave_pid(void *arg, uint16_t pid)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, NULL);
-    module_stream_demux_set(mod, join_pid, leave_pid);
+    module_demux_set(mod, join_pid, leave_pid);
 
     mod->fe = ASC_ALLOC(1, dvb_fe_t);
     mod->ca = ASC_ALLOC(1, dvb_ca_t);

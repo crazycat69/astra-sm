@@ -256,14 +256,14 @@ static void join_pid(void *arg, uint16_t pid)
 {
     module_data_t *const mod = (module_data_t *)arg;
 
-    module_stream_demux_join_pid(mod, pid);
+    module_demux_join(mod, pid);
 }
 
 static void leave_pid(void *arg, uint16_t pid)
 {
     module_data_t *const mod = (module_data_t *)arg;
 
-    module_stream_demux_leave_pid(mod, pid);
+    module_demux_leave(mod, pid);
 }
 
 static int method_ca_set_pnr(lua_State *L, module_data_t *mod)
@@ -280,7 +280,7 @@ static int method_ca_set_pnr(lua_State *L, module_data_t *mod)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, on_ts);
-    module_stream_demux_set(mod, join_pid, leave_pid);
+    module_demux_set(mod, join_pid, leave_pid);
 
     mod->ca = ASC_ALLOC(1, dvb_ca_t);
 

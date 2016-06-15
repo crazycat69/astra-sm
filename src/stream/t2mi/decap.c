@@ -50,13 +50,13 @@ struct module_data_t
 static void join_pid(void *arg, uint16_t pid)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    module_stream_demux_join_pid(mod, pid);
+    module_demux_join(mod, pid);
 }
 
 static void leave_pid(void *arg, uint16_t pid)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    module_stream_demux_leave_pid(mod, pid);
+    module_demux_leave(mod, pid);
 }
 
 static void on_ts(module_data_t *mod, const uint8_t *ts)
@@ -67,7 +67,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(mod, on_ts);
-    module_stream_demux_set(mod, NULL, NULL);
+    module_demux_set(mod, NULL, NULL);
 
     /* instance name */
     module_option_string(L, "name", &mod->name, NULL);

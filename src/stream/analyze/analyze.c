@@ -200,14 +200,14 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
         {
             mod->stream[pid]->type = MPEGTS_PACKET_PMT;
             if(mod->join_pid)
-                module_stream_demux_join_pid(mod, pid);
+                module_demux_join(mod, pid);
             ++ mod->pmt_count;
         }
         else
         {
             mod->stream[pid]->type = MPEGTS_PACKET_NIT;
             if(mod->join_pid)
-                module_stream_demux_join_pid(mod, pid);
+                module_demux_join(mod, pid);
         }
     }
     lua_setfield(L, -2, "programs");
@@ -792,11 +792,11 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_stream_init(mod, on_ts);
     if(mod->join_pid)
     {
-        module_stream_demux_set(mod, NULL, NULL);
-        module_stream_demux_join_pid(mod, 0x00);
-        module_stream_demux_join_pid(mod, 0x01);
-        module_stream_demux_join_pid(mod, 0x11);
-        module_stream_demux_join_pid(mod, 0x12);
+        module_demux_set(mod, NULL, NULL);
+        module_demux_join(mod, 0x00);
+        module_demux_join(mod, 0x01);
+        module_demux_join(mod, 0x11);
+        module_demux_join(mod, 0x12);
     }
 
     // PAT
