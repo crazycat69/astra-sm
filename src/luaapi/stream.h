@@ -96,8 +96,7 @@ void __module_stream_attach(module_stream_t *stream, module_stream_t *child);
 
 void __module_stream_send(void *arg, const uint8_t *ts);
 
-#define module_stream_send(_mod, _ts) \
-    __module_stream_send(&_mod->__stream, _ts)
+void module_stream_send(void *arg, const uint8_t *ts);
 
 /*
  * join/leave PID on upstream module instance

@@ -76,6 +76,13 @@ void __module_stream_send(void *arg, const uint8_t *ts)
     }
 }
 
+void module_stream_send(void *arg, const uint8_t *ts)
+{
+    module_data_t *const mod = (module_data_t *)arg;
+
+    __module_stream_send(&mod->stream, ts);
+}
+
 void __module_stream_init(module_stream_t *stream)
 {
     stream->children = asc_list_init();
