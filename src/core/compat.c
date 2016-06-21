@@ -100,11 +100,7 @@ int cx_mkstemp(char *tpl)
 #if defined(HAVE_MKOSTEMP) && defined(O_CLOEXEC)
     /* mkostemp(): best case scenario */
     fd = mkostemp(tpl, O_CLOEXEC);
-    if (fd != -1)
-        return fd;
-#endif
-
-#if defined(HAVE_MKSTEMP)
+#elif defined(HAVE_MKSTEMP)
     /* mkstemp(): non-atomic close-on-exec */
     fd = mkstemp(tpl);
     if (fd == -1)

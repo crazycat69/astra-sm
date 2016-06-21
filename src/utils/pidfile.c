@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
+ *               2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,7 +20,7 @@
  */
 
 /*
- * Not standard module. As initialize option uses string - path to the pid-file
+ * Create pid file, remove it on instance shutdown.
  *
  * Module Name:
  *      pidfile
@@ -31,6 +32,8 @@
 #include <astra.h>
 #include <luaapi/module.h>
 
+#define MSG(_msg) "[pidfile] " _msg
+
 struct module_data_t
 {
     MODULE_DATA();
@@ -38,81 +41,115 @@ struct module_data_t
     int idx_self;
 };
 
-static const char *filename = NULL;
-
-#ifndef HAVE_MKOSTEMP
-static inline int __mkstemp(char *tpl)
+static
+const char *get_pidfile(lua_State *L)
 {
-    int fd = mkstemp(tpl);
-    if (fd == -1)
-        return fd;
+    const char *filename = NULL;
 
-    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
+    lua_getglobal(L, "pidfile");
+    lua_getfield(L, -1, "path");
+    if (lua_isstring(L, -1))
+        filename = lua_tostring(L, -1);
+
+    lua_pop(L, 2); /* pidfile */
+
+    return filename;
+}
+
+static
+void set_pidfile(lua_State *L, const char *filename)
+{
+    lua_getglobal(L, "pidfile");
+    if (filename != NULL)
+        lua_pushstring(L, filename);
+    else
+        lua_pushnil(L);
+
+    lua_setfield(L, -2, "path");
+    lua_pop(L, 1); /* pidfile */
+}
+
+static
+void module_init(lua_State *L, module_data_t *mod)
+{
+    /* check if we've already been called */
+    const char *filename = get_pidfile(L);
+    if (filename != NULL)
+        luaL_error(L, MSG("already created in %s"), filename);
+
+    /* remove stale pidfile if it exists */
+    filename = luaL_checkstring(L, MODULE_OPTIONS_IDX);
+    if (access(filename, F_OK) == 0 && unlink(filename) != 0)
+        asc_log_error(MSG("unlink(): %s: %s"), filename, strerror(errno));
+
+    /* write pid to temporary file */
+    char tmp[PATH_MAX] = { 0 };
+    int size = snprintf(tmp, sizeof(tmp), "%s.XXXXXX", filename);
+    if (size <= 0)
+        luaL_error(L, MSG("snprintf() failed"));
+
+    char pid[32] = { 0 };
+    size = snprintf(pid, sizeof(pid), "%lld\n", (long long)getpid());
+    if (size <= 0)
+        luaL_error(L, MSG("snprintf() failed"));
+
+    const int fd = mkstemp(tmp);
+    if (fd == -1)
+        luaL_error(L, MSG("mkstemp(): %s: %s"), tmp, strerror(errno));
+
+    if (write(fd, pid, size) == -1)
     {
         close(fd);
-        fd = -1;
+        unlink(tmp);
+
+        luaL_error(L, MSG("write(): %s: %s"), tmp, strerror(errno));
     }
 
-    return fd;
-}
-#else /* !HAVE_MKOSTEMP */
-#   define __mkstemp(__tpl) mkostemp(__tpl, O_CLOEXEC)
-#endif /* !HAVE_MKOSTEMP */
+    if (chmod(tmp, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH) != 0)
+        asc_log_error(MSG("chmod(): %s: %s"), tmp, strerror(errno));
 
-static void module_init(lua_State *L, module_data_t *mod)
-{
-    if(filename)
-    {
-        asc_log_error("[pidfile] already created in %s", filename);
-        asc_lib_abort();
-    }
-
-    filename = luaL_checkstring(L, MODULE_OPTIONS_IDX);
-
-    if(!access(filename, W_OK))
-        unlink(filename);
-
-    static char tmp_pidfile[256];
-    snprintf(tmp_pidfile, sizeof(tmp_pidfile), "%s.XXXXXX", filename);
-    const int fd = __mkstemp(tmp_pidfile);
-    if(fd == -1)
-    {
-        asc_log_error("[pidfile %s] mkstemp() failed [%s]", filename, strerror(errno));
-        asc_lib_abort();
-    }
-
-    static char pid[8];
-    int size = snprintf(pid, sizeof(pid), "%d\n", getpid());
-    if(write(fd, pid, size) == -1)
-    {
-        fprintf(stderr, "[pidfile %s] write() failed [%s]\n", filename, strerror(errno));
-        asc_lib_abort();
-    }
-
-    fchmod(fd, 0644);
     close(fd);
 
-    const int link_ret = link(tmp_pidfile, filename);
-    unlink(tmp_pidfile);
-    if(link_ret == -1)
+    /* move pidfile into place */
+#ifdef _WIN32
+    if (!MoveFileEx(tmp, filename, MOVEFILE_REPLACE_EXISTING))
     {
-        asc_log_error("[pidfile %s] link() failed [%s]", filename, strerror(errno));
-        asc_lib_abort();
+        unlink(tmp);
+        luaL_error(L, MSG("MoveFileEx(): %s to %s: %s"), tmp, filename
+                   , asc_error_msg());
+    }
+#else /* _WIN32 */
+    if (link(tmp, filename) != 0)
+    {
+        unlink(tmp);
+        luaL_error(L, MSG("link(): %s to %s: %s"), tmp, filename
+                   , strerror(errno));
     }
 
-    // store in registry to prevent the instance destroying
+    if (unlink(tmp) != 0)
+        asc_log_error(MSG("unlink(): %s: %s"), tmp, strerror(errno));
+#endif /* !_WIN32 */
+
+    /* store in registry to prevent garbage collection */
+    set_pidfile(L, filename);
+
     lua_pushvalue(L, 3);
     mod->idx_self = luaL_ref(L, LUA_REGISTRYINDEX);
 }
 
-static void module_destroy(module_data_t *mod)
+static
+void module_destroy(module_data_t *mod)
 {
-    if(!access(filename, W_OK))
-        unlink(filename);
+    lua_State *const L = MODULE_L(mod);
+    const char *const filename = get_pidfile(L);
 
-    filename = NULL;
+    if (filename != NULL)
+    {
+        if (access(filename, F_OK) == 0 && unlink(filename) != 0)
+            asc_log_error(MSG("unlink(): %s: %s"), filename, strerror(errno));
+    }
 
-    luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_self);
+    luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_self);
 }
 
 MODULE_REGISTER(pidfile)

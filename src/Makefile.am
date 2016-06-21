@@ -104,6 +104,7 @@ libastra_la_SOURCES += \
     utils/log.c \
     utils/md5.c \
     utils/md5.h \
+    utils/pidfile.c \
     utils/rc4.c \
     utils/sha1.c \
     utils/sha1.h \
@@ -111,12 +112,6 @@ libastra_la_SOURCES += \
     utils/strhex.h \
     utils/timer.c \
     utils/utils.c
-
-if HAVE_POSIX
-# no pid files on Windows
-libastra_la_SOURCES += \
-    utils/pidfile.c
-endif
 
 if HAVE_INSCRIPT
 libastra_la_SOURCES += \
