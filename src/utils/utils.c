@@ -45,13 +45,15 @@
 #   include <netdb.h>
 #endif /* !_WIN32 */
 
+#define MSG(_msg) "[utils] " _msg
+
 /* hostname */
 
 static int method_hostname(lua_State *L)
 {
     char hostname[64];
     if(gethostname(hostname, sizeof(hostname)) != 0)
-        luaL_error(L, "failed to get hostname");
+        luaL_error(L, MSG("failed to get hostname"));
     lua_pushstring(L, hostname);
     return 1;
 }
@@ -63,7 +65,8 @@ static int method_ifaddrs(lua_State *L)
     char host[NI_MAXHOST];
 
     const int ret = getifaddrs(&ifaddr);
-    asc_assert(ret != -1, "getifaddrs() failed");
+    if (ret != 0)
+        luaL_error(L, MSG("getifaddrs() failed"));
 
     static const char __ipv4[] = "ipv4";
     static const char __ipv6[] = "ipv6";
@@ -210,7 +213,7 @@ static int utils_readdir_init(lua_State *L)
     const char *path = luaL_checkstring(L, 1);
     DIR *dirp = opendir(path);
     if(!dirp)
-        luaL_error(L, "cannot open %s: %s", path, strerror(errno));
+        luaL_error(L, MSG("opendir(): %s: %s"), path, strerror(errno));
 
     DIR **d = (DIR **)lua_newuserdata(L, sizeof(DIR *));
     *d = dirp;
