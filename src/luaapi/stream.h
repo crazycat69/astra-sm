@@ -58,7 +58,7 @@ void module_demux_set(module_data_t *mod, demux_callback_t join_pid
                       , demux_callback_t leave_pid);
 void module_demux_join(module_data_t *mod, uint16_t pid);
 void module_demux_leave(module_data_t *mod, uint16_t pid);
-bool module_demux_check(const module_data_t *mod, uint16_t pid);
+bool module_demux_check(const module_data_t *mod, uint16_t pid) __func_pure;
 
 extern const module_method_t module_stream_methods[];
 

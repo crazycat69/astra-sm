@@ -38,7 +38,7 @@ void mpegts_t2mi_set_fname(mpegts_t2mi_t *mi, const char *format, ...) __fmt_pri
 void mpegts_t2mi_set_callback(mpegts_t2mi_t *mi, ts_callback_t cb, void *arg);
 void mpegts_t2mi_set_plp(mpegts_t2mi_t *mi, unsigned plp_id);
 void mpegts_t2mi_set_payload(mpegts_t2mi_t *mi, uint16_t pnr, uint16_t pid);
-void mpegts_t2mi_set_demux(mpegts_t2mi_t *mi, void *arg
+void mpegts_t2mi_set_demux(mpegts_t2mi_t *mi, module_data_t *mod
                            , demux_callback_t join_pid
                            , demux_callback_t leave_pid);
 
