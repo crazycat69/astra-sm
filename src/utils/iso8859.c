@@ -451,6 +451,7 @@ static int method_iso8859_encode(lua_State *L)
             lua_pushstring(L, (char *)iso8859);
             free(iso8859);
             break;
+
         case 5:
             luaL_buffinit(L, &b);
             luaL_addchar(&b, 0x10);
@@ -461,10 +462,12 @@ static int method_iso8859_encode(lua_State *L)
             free(iso8859);
             luaL_pushresult(&b);
             break;
+
         default:
-            asc_log_error("[iso8859] charset %d is not supported", part);
-            lua_pushstring(L, "");
-            break;
+            lua_pushnil(L);
+            lua_pushfstring(L, "charset %d is not supported", part);
+            asc_log_error("[iso8859] %s", lua_tostring(L, -1));
+            return 2;
     }
 
     return 1;
