@@ -162,6 +162,12 @@ case "${host_os}" in
         ], [
             AC_MSG_ERROR([missing pthread support])
         ])
+
+        AC_CHECK_FUNCS([posix_memalign accept4 mkostemp mkstemp pthread_mutex_timedlock])
+
+        # getifaddrs(): used by utils.c
+        AC_CHECK_FUNCS([getifaddrs],
+            [], [ AC_MSG_WARN([no getifaddrs(); utils.ifaddrs() will be unavailable]) ])
     ;;
 esac
 
@@ -249,14 +255,8 @@ AC_CHECK_HEADERS([netinet/sctp.h sys/queue.h])
 
 # optional functions
 #   pread(), strndup(), strnlen(): replaceables
-#   posix_memalign(): used by stream/file
-#   accept4(): used by core/socket
-#   mkostemp(): used for creating pidfiles
-AC_CHECK_FUNCS([pread strndup strnlen posix_memalign accept4 mkostemp pthread_mutex_timedlock])
-
-# getifaddrs(): used by utils.c
-AC_CHECK_FUNCS([getifaddrs],
-    [], [ AC_MSG_WARN([no getifaddrs(); utils.ifaddrs() will be unavailable]) ])
+#   mktemp(): used for creating pidfiles
+AC_CHECK_FUNCS([pread strndup strnlen mktemp])
 
 # clock_gettime(): used by clock.c
 LIBRT=""

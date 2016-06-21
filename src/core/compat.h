@@ -126,15 +126,22 @@ size_t strnlen(const char *str, size_t max) __func_pure;
  */
 
 int cx_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+int cx_mkstemp(char *tpl);
 int cx_open(const char *path, int flags, ...);
 int cx_socket(int family, int type, int protocol);
 
 #ifndef ASC_COMPAT_NOWRAP
-    /* accept */
+    /* accept() */
 #   ifdef accept
 #       undef accept
 #   endif
 #   define accept(...) cx_accept(__VA_ARGS__)
+
+    /* mkstemp() */
+#   ifdef mkstemp
+#       undef mkstemp
+#   endif
+#   define mkstemp(...) cx_mkstemp(__VA_ARGS__)
 
     /* open() */
 #   ifdef open
