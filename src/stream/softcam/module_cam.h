@@ -108,14 +108,17 @@ void module_cam_queue_flush(module_cam_t *cam, module_decrypt_t *decrypt);
 
 #define module_cam_destroy(_mod) \
     do { \
-        module_cam_reset(&_mod->__cam); \
-        asc_list_till_empty(_mod->__cam.decrypt_list) \
+        if(_mod->__cam.self != NULL) \
         { \
-            asc_list_remove_current(_mod->__cam.decrypt_list); \
+            module_cam_reset(&_mod->__cam); \
+            asc_list_till_empty(_mod->__cam.decrypt_list) \
+            { \
+                asc_list_remove_current(_mod->__cam.decrypt_list); \
+            } \
+            asc_list_destroy(_mod->__cam.decrypt_list); \
+            asc_list_destroy(_mod->__cam.prov_list); \
+            asc_list_destroy(_mod->__cam.packet_queue); \
         } \
-        asc_list_destroy(_mod->__cam.decrypt_list); \
-        asc_list_destroy(_mod->__cam.prov_list); \
-        asc_list_destroy(_mod->__cam.packet_queue); \
     } while (0)
 
 #define MODULE_CAM_METHODS() \

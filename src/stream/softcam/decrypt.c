@@ -169,24 +169,31 @@ static void module_decrypt_cas_destroy(module_data_t *mod)
         mod->__decrypt.cas = NULL;
     }
 
-    asc_list_clear(mod->el_list)
+    if(mod->el_list != NULL)
     {
-        el_stream_t *el_stream = (el_stream_t *)asc_list_data(mod->el_list);
-        free(el_stream);
+        asc_list_clear(mod->el_list)
+        {
+            el_stream_t *el_stream = (el_stream_t *)asc_list_data(mod->el_list);
+            free(el_stream);
+        }
     }
 
-    if(mod->caid == BISS_CAID)
+    if(mod->ca_list != NULL)
     {
-        asc_list_first(mod->ca_list);
-        ca_stream_t *ca_stream = (ca_stream_t *)asc_list_data(mod->ca_list);
-        ca_stream->batch_skip = 0;
-        return;
-    }
+        if(mod->caid == BISS_CAID)
+        {
+            asc_list_first(mod->ca_list);
+            ca_stream_t *ca_stream = (ca_stream_t *)asc_list_data(mod->ca_list);
+            if(ca_stream != NULL)
+                ca_stream->batch_skip = 0;
+            return;
+        }
 
-    asc_list_clear(mod->ca_list)
-    {
-        ca_stream_t *ca_stream = (ca_stream_t *)asc_list_data(mod->ca_list);
-        ca_stream_destroy(ca_stream);
+        asc_list_clear(mod->ca_list)
+        {
+            ca_stream_t *ca_stream = (ca_stream_t *)asc_list_data(mod->ca_list);
+            ca_stream_destroy(ca_stream);
+        }
     }
 }
 
@@ -917,7 +924,8 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->__decrypt.self = mod;
 
     module_option_string(L, "name", &mod->name, NULL);
-    asc_assert(mod->name != NULL, "[decrypt] option 'name' is required");
+    if(mod->name == NULL)
+        luaL_error(L, "[decrypt] option 'name' is required");
 
     mod->stream[0] = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
     mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, MAX_PID);
@@ -935,7 +943,8 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_option_string(L, "biss", &biss_key, &biss_length);
     if(biss_key)
     {
-        asc_assert(biss_length == 16, MSG("biss key must be 16 char length"));
+        if(biss_length != 16)
+            luaL_error(L, MSG("biss key must be 16 char length"));
 
         mod->caid = BISS_CAID;
         mod->disable_emm = true;
@@ -952,8 +961,8 @@ static void module_init(lua_State *L, module_data_t *mod)
     lua_getfield(L, 2, "cam");
     if(!lua_isnil(L, -1))
     {
-        asc_assert(  lua_type(L, -1) == LUA_TLIGHTUSERDATA
-                   , "option 'cam' required cam-module instance");
+        if(lua_type(L, -1) != LUA_TLIGHTUSERDATA)
+            luaL_error(L, MSG("option 'cam' required cam-module instance"));
         mod->__decrypt.cam = (module_cam_t *)lua_touserdata(L, -1);
 
         int cas_pnr = 0;
@@ -999,29 +1008,27 @@ static void module_destroy(module_data_t *mod)
 
     module_decrypt_cas_destroy(mod);
 
-    if(mod->caid == BISS_CAID)
+    if(mod->ca_list != NULL && mod->caid == BISS_CAID)
     {
         asc_list_first(mod->ca_list);
         ca_stream_t *ca_stream = (ca_stream_t *)asc_list_data(mod->ca_list);
-        ca_stream_destroy(ca_stream);
-        asc_list_remove_current(mod->ca_list);
-    }
-
-    asc_list_destroy(mod->ca_list);
-    asc_list_destroy(mod->el_list);
-
-    free(mod->storage.buffer);
-    free(mod->shift.buffer);
-
-    for(int i = 0; i < MAX_PID; ++i)
-    {
-        if(mod->stream[i])
+        if(ca_stream != NULL)
         {
-            mpegts_psi_destroy(mod->stream[i]);
-            mod->stream[i] = NULL;
+            ca_stream_destroy(ca_stream);
+            asc_list_remove_current(mod->ca_list);
         }
     }
-    mpegts_psi_destroy(mod->pmt);
+
+    ASC_FREE(mod->ca_list, asc_list_destroy);
+    ASC_FREE(mod->el_list, asc_list_destroy);
+
+    ASC_FREE(mod->storage.buffer, free);
+    ASC_FREE(mod->shift.buffer, free);
+
+    for(int i = 0; i < MAX_PID; ++i)
+        ASC_FREE(mod->stream[i], mpegts_psi_destroy);
+
+    ASC_FREE(mod->pmt, mpegts_psi_destroy);
 }
 
 STREAM_MODULE_REGISTER(decrypt)
