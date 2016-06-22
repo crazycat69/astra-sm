@@ -164,8 +164,11 @@ static void module_init(lua_State *L, module_data_t *mod)
     size_t biss_length = 0;
     const char *key_value = NULL;
     module_option_string(L, "key", &key_value, &biss_length);
-    asc_assert(key_value != NULL, "[biss_encrypt] option 'key' is required");
-    asc_assert(biss_length == 16, "[biss_encrypt] key must be 16 char length");
+    if(key_value == NULL)
+        luaL_error(L, "[biss_encrypt] option 'key' is required");
+
+    if(biss_length != 16)
+        luaL_error(L, "[biss_encrypt] key must be 16 char length");
 
     uint8_t key[8];
     au_str2hex(key_value, key, 16);
@@ -189,10 +192,12 @@ static void module_destroy(module_data_t *mod)
 {
     module_stream_destroy(mod);
 
-    dvbcsa_bs_key_free(mod->key);
+    ASC_FREE(mod->batch, free);
+    ASC_FREE(mod->batch_storage_recv, free);
+    ASC_FREE(mod->key, dvbcsa_bs_key_free);
 
-    mpegts_psi_destroy(mod->pat);
-    mpegts_psi_destroy(mod->pmt);
+    ASC_FREE(mod->pat, mpegts_psi_destroy);
+    ASC_FREE(mod->pmt, mpegts_psi_destroy);
 }
 
 STREAM_MODULE_REGISTER(biss_encrypt)
