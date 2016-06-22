@@ -43,7 +43,8 @@ struct module_data_t
     asc_timer_t *timer;
 };
 
-static void timer_callback(void *arg)
+static
+void timer_callback(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
     lua_State *const L = MODULE_L(mod);
@@ -53,18 +54,19 @@ static void timer_callback(void *arg)
     lua_call(L, 1, 0);
 }
 
-static int method_close(lua_State *L, module_data_t *mod)
+static
+int method_close(lua_State *L, module_data_t *mod)
 {
-    if(mod->idx_callback)
+    if (mod->idx_callback != LUA_REFNIL)
     {
         luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_callback);
-        mod->idx_callback = 0;
+        mod->idx_callback = LUA_REFNIL;
     }
 
-    if(mod->idx_self)
+    if (mod->idx_self != LUA_REFNIL)
     {
         luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_self);
-        mod->idx_self = 0;
+        mod->idx_self = LUA_REFNIL;
     }
 
     ASC_FREE(mod->timer, asc_timer_destroy);
@@ -72,8 +74,11 @@ static int method_close(lua_State *L, module_data_t *mod)
     return 0;
 }
 
-static void module_init(lua_State *L, module_data_t *mod)
+static
+void module_init(lua_State *L, module_data_t *mod)
 {
+    mod->idx_self = mod->idx_callback = LUA_REFNIL;
+
     int interval = 0;
     module_option_integer(L, "interval", &interval);
     if (interval <= 0)
@@ -92,13 +97,14 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->timer = asc_timer_init(interval * 1000, timer_callback, mod);
 }
 
-static void module_destroy(module_data_t *mod)
+static
+void module_destroy(module_data_t *mod)
 {
-    if(mod->idx_self)
-        method_close(MODULE_L(mod), mod);
+    method_close(MODULE_L(mod), mod);
 }
 
-static const module_method_t module_methods[] =
+static
+const module_method_t module_methods[] =
 {
     { "close", method_close },
     { NULL, NULL },
