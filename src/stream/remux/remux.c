@@ -1,7 +1,7 @@
 /*
  * Astra Module: Remux
  *
- * Copyright (C) 2014-2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2014-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -311,26 +311,30 @@ static void module_init(lua_State *L, module_data_t *mod)
 {
     /* channel name */
     module_option_string(L, "name", &mod->name, NULL);
-    asc_assert(mod->name != NULL, "[remux] option 'name' is required");
+    if(mod->name == NULL)
+        luaL_error(L, "[remux] option 'name' is required");
 
     /* mux rate, bps */
     module_option_integer(L, "rate", (int *)&mod->rate);
-    asc_assert(mod->rate >= 1000000 && mod->rate <= 1000000000
-               , MSG("rate must be between 1 and 1000 mbps"));
+    if(mod->rate <= 1000)
+        mod->rate *= 1000000;
+
+    if(!(mod->rate >= 1000000 && mod->rate <= 1000000000))
+        luaL_error(L, MSG("rate must be between 1 and 1000 mbps"));
 
     /* PCR interval, ms */
     if(!module_option_integer(L, "pcr_interval", (int *)&mod->pcr_interval))
         mod->pcr_interval = PCR_INTERVAL;
 
-    asc_assert(mod->pcr_interval >= 20 && mod->pcr_interval <= 100
-               , MSG("pcr interval must be between 20 and 100 ms"));
+    if(!(mod->pcr_interval >= 20 && mod->pcr_interval <= 100))
+        luaL_error(L, MSG("pcr interval must be between 20 and 100 ms"));
 
     /* PCR delay, ms */
     if(!module_option_integer(L, "pcr_delay", &mod->pcr_delay))
         mod->pcr_delay = PCR_DELAY;
 
-    asc_assert(mod->pcr_delay >= -5000 && mod->pcr_delay <= 5000
-               , MSG("pcr delay must be between -5000 and 5000 ms"));
+    if(!(mod->pcr_delay >= -5000 && mod->pcr_delay <= 5000))
+        luaL_error(L, MSG("pcr delay must be between -5000 and 5000 ms"));
 
     mod->pcr_delay *= (PCR_TIME_BASE / 1000);
 
