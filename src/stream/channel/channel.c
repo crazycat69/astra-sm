@@ -808,7 +808,8 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_demux_set(mod, NULL, NULL);
 
     module_option_string(L, "name", &mod->config.name, NULL);
-    asc_assert(mod->config.name != NULL, "[channel] option 'name' is required");
+    if(mod->config.name == NULL)
+        luaL_error(L, "[channel] option 'name' is required");
 
     if(module_option_integer(L, "pnr", &mod->config.pnr))
     {
@@ -879,17 +880,21 @@ static void module_init(lua_State *L, module_data_t *mod)
         mod->map = asc_list_init();
         lua_foreach(L, -2)
         {
-            asc_assert((lua_type(L, -1) == LUA_TTABLE), "option 'map': wrong type");
-            asc_assert((luaL_len(L, -1) == 2), "option 'map': wrong format");
+            if(lua_type(L, -1) != LUA_TTABLE)
+                luaL_error(L, MSG("option 'map': wrong type"));
+            if(luaL_len(L, -1) != 2)
+                luaL_error(L, MSG("option 'map': wrong format"));
 
             lua_rawgeti(L, -1, 1);
             const char *key = lua_tostring(L, -1);
-            asc_assert((luaL_len(L, -1) <= 5), "option 'map': key is too large");
+            if(luaL_len(L, -1) > 5)
+                luaL_error(L, MSG("option 'map': key is too large"));
             lua_pop(L, 1);
 
             lua_rawgeti(L, -1, 2);
             int val = lua_tointeger(L, -1);
-            asc_assert((val > 0 && val < NULL_TS_PID), "option 'map': value is out of range");
+            if(!(val > 0 && val < NULL_TS_PID))
+                luaL_error(L, MSG("option 'map': value is out of range"));
             lua_pop(L, 1);
 
             map_item_t *const map_item = ASC_ALLOC(1, map_item_t);
