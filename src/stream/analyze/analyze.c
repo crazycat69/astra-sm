@@ -114,7 +114,8 @@ static const char __callback[] = "callback";
 
 static void callback(lua_State *L, module_data_t *mod)
 {
-    asc_assert((lua_type(L, -1) == LUA_TTABLE), "table required");
+    if(lua_type(L, -1) != LUA_TTABLE)
+        asc_log_error(MSG("BUG: table required for callback!"));
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
     lua_pushvalue(L, -2);
@@ -778,10 +779,13 @@ static void on_check_stat(void *arg)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     module_option_string(L, "name", &mod->name, NULL);
-    asc_assert(mod->name != NULL, "[analyze] option 'name' is required");
+    if(mod->name == NULL)
+        luaL_error(L, "[analyze] option 'name' is required");
 
     lua_getfield(L, MODULE_OPTIONS_IDX, __callback);
-    asc_assert(lua_isfunction(L, -1), MSG("option 'callback' is required"));
+    if(!lua_isfunction(L, -1))
+        luaL_error(L, MSG("option 'callback' is required"));
+
     mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     module_option_boolean(L, "rate_stat", &mod->rate_stat);
