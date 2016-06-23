@@ -6,8 +6,7 @@ AM_CFLAGS = \
 
 AM_LDADD = \
     $(CHECK_LIBS) $(LUA_LIBS) \
-    $(top_builddir)/src/libastra.la \
-    $(top_builddir)/src/libstream.la
+    $(top_builddir)/src/libastra.la
 
 #
 # Unit tests
@@ -52,5 +51,4 @@ t2mi_decap_LDADD = $(AM_LDADD)
 
 spammer_SOURCES = spammer.c
 spammer_CFLAGS = $(AM_CFLAGS)
-spammer_LDADD = \
-    $(top_builddir)/src/libastra.la
+spammer_LDADD = $(AM_LDADD)

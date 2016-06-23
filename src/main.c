@@ -22,6 +22,7 @@
 #include <astra.h>
 #include <core/mainloop.h>
 #include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 #include <luaapi/state.h>
 
 #ifdef _WIN32
@@ -29,6 +30,12 @@
 #endif
 
 #include "sighandler.h"
+#include "bindings.h"
+
+static const module_manifest_t *stream_list[] = {
+    LUA_STREAM_BINDINGS
+    NULL
+};
 
 int main(int argc, const char **argv)
 {
@@ -48,6 +55,11 @@ int main(int argc, const char **argv)
 astra_reload_entry:
     asc_srand();
     asc_lib_init();
+
+    /* load streaming modules */
+    for (size_t i = 0; stream_list[i] != NULL; i++)
+        module_register(lua, stream_list[i]);
+
     signal_enable(true);
 
     /* pass command line to lua */

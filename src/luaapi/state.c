@@ -2,7 +2,7 @@
  * Astra Lua API (State Initialization)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,7 +21,7 @@
 #include <astra.h>
 #include <luaapi/state.h>
 #include <luaapi/module.h>
-#include <bindings.h>
+#include <luaapi/lib/list.h>
 
 #define MSG(_msg) "[luaapi] " _msg
 
@@ -37,12 +37,6 @@
 
 /* global Lua state */
 lua_State *lua = NULL;
-
-static const module_manifest_t *module_list[] = {
-    LUA_CORE_BINDINGS
-    LUA_STREAM_BINDINGS
-    NULL
-};
 
 static int panic_handler(lua_State *L) {
     const char *const err = lua_tostring(L, -1);
@@ -63,8 +57,8 @@ lua_State *lua_api_init(void)
     lua_atpanic(L, panic_handler);
 
     /* load modules */
-    for (size_t i = 0; module_list[i] != NULL; i++)
-        module_register(L, module_list[i]);
+    for (size_t i = 0; lua_lib_list[i] != NULL; i++)
+        module_register(L, lua_lib_list[i]);
 
     /* change package.path */
 #ifdef LUA_DEBUG

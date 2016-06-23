@@ -273,18 +273,6 @@ BUILT_SOURCES += bindings.h
 bindings.h:
 	$(AM_V_GEN)echo "/* automatically generated file; do not edit */" >$@; \
 	echo                        >>$@; \
-	echo "/*"                   >>$@; \
-	echo " * Core library"      >>$@; \
-	echo " */"                  >>$@; \
-	echo                        >>$@; \
-	sh $(top_srcdir)/build-aux/gen-bindings-list \
-	    LUA_CORE_BINDINGS \
-	    $(srcdir) $(libastra_la_SOURCES) >>$@ || exit $$?; \
-	echo                        >>$@; \
-	echo "/*"                   >>$@; \
-	echo " * Streaming modules" >>$@; \
-	echo " */"                  >>$@; \
-	echo                        >>$@; \
 	sh $(top_srcdir)/build-aux/gen-bindings-list \
 	    LUA_STREAM_BINDINGS \
 	    $(srcdir) $(libstream_la_SOURCES) >>$@ || exit $$?
