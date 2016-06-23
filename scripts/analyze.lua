@@ -90,8 +90,12 @@ function start_analyze(instance, addr)
     if conf.pnr == 0 then conf.pnr = nil end
 
     if conf.format == "file" then
-        if utils.stat(conf.filename).type ~= "file" then
-            log.error("[analyze] file not found")
+        local stat, stat_err = utils.stat(conf.filename)
+        if not stat or stat.type ~= "file" then
+            if stat_err ~= nil then
+                log.error("[analyze] " .. stat_err)
+            end
+            log.error("[analyze] couldn't open requested file")
             astra.exit(1)
         end
 

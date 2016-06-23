@@ -70,6 +70,22 @@ libastra_la_SOURCES += \
     luaapi/stream.c \
     luaapi/stream.h
 
+# luaapi/lib/
+libastra_la_SOURCES += \
+    luaapi/lib/astra.c \
+    luaapi/lib/base64.c \
+    luaapi/lib/iso8859.c \
+    luaapi/lib/json.c \
+    luaapi/lib/log.c \
+    luaapi/lib/md5.c \
+    luaapi/lib/pidfile.c \
+    luaapi/lib/rc4.c \
+    luaapi/lib/sha1.c \
+    luaapi/lib/strhex.c \
+    luaapi/lib/timer.c \
+    luaapi/lib/utils.c \
+    luaapi/lib/list.h
+
 # mpegts/
 libastra_la_SOURCES += \
     mpegts/descriptors.c \
@@ -91,7 +107,6 @@ libastra_la_SOURCES += \
 
 # utils/
 libastra_la_SOURCES += \
-    utils/astra.c \
     utils/base64.c \
     utils/base64.h \
     utils/crc32b.c \
@@ -100,18 +115,14 @@ libastra_la_SOURCES += \
     utils/crc8.h \
     utils/iso8859.c \
     utils/iso8859.h \
-    utils/json.c \
-    utils/log.c \
     utils/md5.c \
     utils/md5.h \
-    utils/pidfile.c \
     utils/rc4.c \
+    utils/rc4.h \
     utils/sha1.c \
     utils/sha1.h \
     utils/strhex.c \
-    utils/strhex.h \
-    utils/timer.c \
-    utils/utils.c
+    utils/strhex.h
 
 if HAVE_INSCRIPT
 libastra_la_SOURCES += \

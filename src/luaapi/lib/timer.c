@@ -1,5 +1,5 @@
 /*
- * Astra Utils (Timer)
+ * Astra Lua Library (Timer)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>

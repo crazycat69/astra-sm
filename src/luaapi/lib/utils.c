@@ -1,5 +1,5 @@
 /*
- * Astra Utils
+ * Astra Lua Library (Utilities)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
@@ -19,11 +19,11 @@
  */
 
 /*
- * Set of the additional methods and classes for lua
+ * Additional methods for Lua
  *
  * Methods:
  *      utils.hostname()
- *                  - get name of the host
+ *                  - get hostname of the local machine
  *      utils.ifaddrs()
  *                  - get network interfaces list (except Win32)
  *      utils.stat(path)
@@ -39,27 +39,36 @@
 
 #ifndef _WIN32
 #   include <netinet/in.h>
-#   ifndef __ANDROID__
+#   ifdef HAVE_IFADDRS_H
 #       include <ifaddrs.h>
-#   endif
+#   endif /* HAVE_IFADDRS_H */
 #   include <netdb.h>
 #endif /* !_WIN32 */
 
 #define MSG(_msg) "[utils] " _msg
 
-/* hostname */
+/*
+ * hostname
+ */
 
-static int method_hostname(lua_State *L)
+static
+int method_hostname(lua_State *L)
 {
     char hostname[64];
-    if(gethostname(hostname, sizeof(hostname)) != 0)
+    if (gethostname(hostname, sizeof(hostname)) != 0)
         luaL_error(L, MSG("failed to get hostname"));
+
     lua_pushstring(L, hostname);
     return 1;
 }
 
+/*
+ * ifaddrs
+ */
+
 #ifdef HAVE_GETIFADDRS
-static int method_ifaddrs(lua_State *L)
+static
+int method_ifaddrs(lua_State *L)
 {
     struct ifaddrs *ifaddr;
     char host[NI_MAXHOST];
@@ -68,21 +77,15 @@ static int method_ifaddrs(lua_State *L)
     if (ret != 0)
         luaL_error(L, MSG("getifaddrs() failed"));
 
-    static const char __ipv4[] = "ipv4";
-    static const char __ipv6[] = "ipv6";
-#ifdef AF_LINK
-    static const char __link[] = "link";
-#endif /* AF_LINK */
-
     lua_newtable(L);
 
-    for(struct ifaddrs *i = ifaddr; i; i = i->ifa_next)
+    for (struct ifaddrs *i = ifaddr; i; i = i->ifa_next)
     {
-        if(!i->ifa_addr)
+        if (!i->ifa_addr)
             continue;
 
         lua_getfield(L, -1, i->ifa_name);
-        if(lua_isnil(L, -1))
+        if (lua_isnil(L, -1))
         {
             lua_pop(L, 1);
             lua_newtable(L);
@@ -94,32 +97,32 @@ static int method_ifaddrs(lua_State *L)
         const int s = getnameinfo(i->ifa_addr, sizeof(struct sockaddr_in)
                                   , host, sizeof(host), NULL, 0
                                   , NI_NUMERICHOST);
-        if(s == 0 && *host != '\0')
+        if (s == 0 && *host != '\0')
         {
             const char *ip_family = NULL;
 
-            switch(i->ifa_addr->sa_family)
+            switch (i->ifa_addr->sa_family)
             {
                 case AF_INET:
-                    ip_family = __ipv4;
+                    ip_family = "ipv4";
                     break;
                 case AF_INET6:
-                    ip_family = __ipv6;
+                    ip_family = "ipv6";
                     break;
 #ifdef AF_LINK
                 case AF_LINK:
-                    ip_family = __link;
+                    ip_family = "link";
                     break;
 #endif /* AF_LINK */
                 default:
                     break;
             }
 
-            if(ip_family)
+            if (ip_family)
             {
                 int count = 0;
                 lua_getfield(L, -1, ip_family);
-                if(lua_isnil(L, -1))
+                if (lua_isnil(L, -1))
                 {
                     lua_pop(L, 1);
                     lua_newtable(L);
@@ -146,34 +149,45 @@ static int method_ifaddrs(lua_State *L)
 }
 #endif /* HAVE_GETIFADDRS */
 
-static int method_stat(lua_State *L)
+/*
+ * stat
+ */
+
+static inline
+const char *mode_to_str(unsigned int mode)
+{
+    switch (mode & S_IFMT)
+    {
+        case S_IFBLK:   return "block";
+        case S_IFCHR:   return "character";
+        case S_IFDIR:   return "directory";
+        case S_IFIFO:   return "pipe";
+        case S_IFREG:   return "file";
+#ifndef _WIN32
+        case S_IFLNK:   return "symlink";
+        case S_IFSOCK:  return "socket";
+#endif /* _WIN32 */
+        default:        return "unknown";
+    }
+}
+
+static
+int method_stat(lua_State *L)
 {
     const char *const path = luaL_checkstring(L, 1);
 
+    struct stat sb;
+    if (stat(path, &sb) != 0)
+    {
+        lua_pushboolean(L, 0);
+        lua_pushfstring(L, "stat(): %s: %s", path, strerror(errno));
+
+        return 2;
+    }
+
     lua_newtable(L);
 
-    struct stat sb;
-    if(stat(path, &sb) != 0)
-    {
-        lua_pushstring(L, strerror(errno));
-        lua_setfield(L, -2, "error");
-
-        memset(&sb, 0, sizeof(sb));
-    }
-
-    switch(sb.st_mode & S_IFMT)
-    {
-        case S_IFBLK: lua_pushstring(L, "block"); break;
-        case S_IFCHR: lua_pushstring(L, "character"); break;
-        case S_IFDIR: lua_pushstring(L, "directory"); break;
-        case S_IFIFO: lua_pushstring(L, "pipe"); break;
-        case S_IFREG: lua_pushstring(L, "file"); break;
-#ifndef _WIN32
-        case S_IFLNK: lua_pushstring(L, "symlink"); break;
-        case S_IFSOCK: lua_pushstring(L, "socket"); break;
-#endif /* !_WIN32 */
-        default: lua_pushstring(L, "unknown"); break;
-    }
+    lua_pushstring(L, mode_to_str(sb.st_mode));
     lua_setfield(L, -2, "type");
 
     lua_pushinteger(L, sb.st_uid);
@@ -188,62 +202,70 @@ static int method_stat(lua_State *L)
     return 1;
 }
 
-/* readdir */
+/*
+ * readdir
+ */
 
-static const char __utils_readdir[] = "__utils_readdir";
-
-static int utils_readdir_iter(lua_State *L)
+static
+int utils_readdir_iter(lua_State *L)
 {
-    DIR *dirp = *(DIR **)lua_touserdata(L, lua_upvalueindex(1));
-    struct dirent *entry;
+    DIR *const dirp = *(DIR **)lua_touserdata(L, lua_upvalueindex(1));
+    const struct dirent *entry = NULL;
+
     do
     {
         entry = readdir(dirp);
-    } while(entry && entry->d_name[0] == '.');
+    } while (entry != NULL && entry->d_name[0] == '.');
 
-    if(!entry)
+    if (entry == NULL)
         return 0;
 
     lua_pushstring(L, entry->d_name);
     return 1;
 }
 
-static int utils_readdir_init(lua_State *L)
+static
+int utils_readdir_init(lua_State *L)
 {
-    const char *path = luaL_checkstring(L, 1);
-    DIR *dirp = opendir(path);
-    if(!dirp)
+    const char *const path = luaL_checkstring(L, 1);
+    DIR *const dirp = opendir(path);
+    if (dirp == NULL)
         luaL_error(L, MSG("opendir(): %s: %s"), path, strerror(errno));
 
-    DIR **d = (DIR **)lua_newuserdata(L, sizeof(DIR *));
+    DIR **const d = (DIR **)lua_newuserdata(L, sizeof(DIR *));
     *d = dirp;
 
-    luaL_getmetatable(L, __utils_readdir);
+    /* close directory when metadata is GC'd */
+    luaL_getmetatable(L, "__utils_readdir");
     lua_setmetatable(L, -2);
 
     lua_pushcclosure(L, utils_readdir_iter, 1);
     return 1;
 }
 
-static int utils_readder_gc(lua_State *L)
+static
+int utils_readdir_gc(lua_State *L)
 {
-    DIR **dirpp = (DIR **)lua_touserdata(L, 1);
-    if(*dirpp)
+    DIR **const dirpp = (DIR **)lua_touserdata(L, 1);
+
+    if (*dirpp != NULL)
     {
         closedir(*dirpp);
         *dirpp = NULL;
     }
+
     return 0;
 }
 
-static void module_load(lua_State *L)
+static
+void module_load(lua_State *L)
 {
     static const luaL_Reg api[] =
     {
         { "hostname", method_hostname },
 #ifdef HAVE_GETIFADDRS
         { "ifaddrs", method_ifaddrs },
-#endif
+#endif /* HAVE_GETIFADDRS */
         { "stat", method_stat },
         { NULL, NULL },
     };
@@ -254,13 +276,13 @@ static void module_load(lua_State *L)
 
     /* readdir */
     const int table = lua_gettop(L);
-    luaL_newmetatable(L, __utils_readdir);
-    lua_pushcfunction(L, utils_readder_gc);
+    luaL_newmetatable(L, "__utils_readdir");
+    lua_pushcfunction(L, utils_readdir_gc);
     lua_setfield(L, -2, "__gc");
-    lua_pop(L, 1); // metatable
+    lua_pop(L, 1); /* metatable */
     lua_pushcfunction(L, utils_readdir_init);
     lua_setfield(L, table, "readdir");
-    lua_pop(L, 1); // table
+    lua_pop(L, 1); /* utils */
 }
 
 BINDING_REGISTER(utils)

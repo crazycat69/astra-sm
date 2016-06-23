@@ -4,61 +4,59 @@
  * 100% Public Domain
  */
 
-/*
- *      (string):sha1()
- *                  - calculate SHA1 hash
- */
-
 #include <astra.h>
 #include <utils/sha1.h>
-#include <luaapi/module.h>
 
-#define rol(value, bits) (((value) << (bits)) | ((value) >> (32 - (bits))))
+#define rol(value, bits) \
+    (((value) << (bits)) | ((value) >> (32 - (bits))))
 
 #if defined(BYTE_ORDER) && BYTE_ORDER == LITTLE_ENDIAN
-#   define blk0(i) (block->l[i] = (rol(block->l[i],24) & 0xFF00FF00) \
-                                | (rol(block->l[i],8) & 0x00FF00FF))
+#   define blk0(i) \
+        (block->l[i] = (rol(block->l[i],24) & 0xFF00FF00) \
+                     | (rol(block->l[i],8) & 0x00FF00FF))
 #elif defined(BYTE_ORDER) && BYTE_ORDER == BIG_ENDIAN
-#   define blk0(i) block->l[i]
+#   define blk0(i) \
+        block->l[i]
 #else
 #   error "Please fix BYTE_ORDER defines"
 #endif /* BYTE_ORDER */
 
-#define blk(i) (block->l[i&15] = rol(block->l[(i+13) & 15] ^ block->l[(i+8) & 15] \
-                                     ^ block->l[(i+2) & 15] ^ block->l[i&15],1))
+#define blk(i) \
+    (block->l[i&15] = rol(block->l[(i+13) & 15] ^ block->l[(i+8) & 15] \
+                          ^ block->l[(i+2) & 15] ^ block->l[i&15],1))
 
 /* (R0+R1), R2, R3, R4 are the different operations used in SHA1 */
-#define R0(v,w,x,y,z,i) z+=((w&(x^y))^y)+blk0(i)+0x5A827999+rol(v,5);w=rol(w,30);
-#define R1(v,w,x,y,z,i) z+=((w&(x^y))^y)+blk(i)+0x5A827999+rol(v,5);w=rol(w,30);
-#define R2(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0x6ED9EBA1+rol(v,5);w=rol(w,30);
-#define R3(v,w,x,y,z,i) z+=(((w|x)&y)|(w&x))+blk(i)+0x8F1BBCDC+rol(v,5);w=rol(w,30);
-#define R4(v,w,x,y,z,i) z+=(w^x^y)+blk(i)+0xCA62C1D6+rol(v,5);w=rol(w,30);
+#define R0(v,w,x,y,z,i) \
+    z+=((w&(x^y))^y)+blk0(i)+0x5A827999+rol(v,5);w=rol(w,30);
+#define R1(v,w,x,y,z,i) \
+    z+=((w&(x^y))^y)+blk(i)+0x5A827999+rol(v,5);w=rol(w,30);
+#define R2(v,w,x,y,z,i) \
+    z+=(w^x^y)+blk(i)+0x6ED9EBA1+rol(v,5);w=rol(w,30);
+#define R3(v,w,x,y,z,i) \
+    z+=(((w|x)&y)|(w&x))+blk(i)+0x8F1BBCDC+rol(v,5);w=rol(w,30);
+#define R4(v,w,x,y,z,i) \
+    z+=(w^x^y)+blk(i)+0xCA62C1D6+rol(v,5);w=rol(w,30);
 
 /* Hash a single 512-bit block. This is the core of the algorithm. */
-static void sha1_transform(uint32_t state[5], const uint8_t buffer[64])
+static
+void sha1_transform(uint32_t state[5], const uint8_t buffer[64])
 {
-    uint32_t a, b, c, d, e;
     typedef union
     {
         uint8_t c[64];
         uint32_t l[16];
     } CHAR64LONG16;
-    CHAR64LONG16 *block;
 
-#ifdef SHA1HANDSOFF
-    static uint8_t workspace[64];
-    block = (CHAR64LONG16*)workspace;
+    uint32_t workspace[16] = { 0 };
+    CHAR64LONG16 *block = (CHAR64LONG16*)workspace;
     memcpy(block, buffer, 64);
-#else
-    block = (CHAR64LONG16*)buffer;
-#endif
 
     /* Copy context->state[] to working vars */
-    a = state[0];
-    b = state[1];
-    c = state[2];
-    d = state[3];
-    e = state[4];
+    uint32_t a = state[0];
+    uint32_t b = state[1];
+    uint32_t c = state[2];
+    uint32_t d = state[3];
+    uint32_t e = state[4];
 
     /* 4 rounds of 20 operations each. Loop unrolled. */
     R0(a,b,c,d,e, 0); R0(e,a,b,c,d, 1); R0(d,e,a,b,c, 2); R0(c,d,e,a,b, 3);
@@ -125,7 +123,6 @@ void au_sha1_update(sha1_ctx_t *context, const uint8_t* data, size_t len)
     else
         i = 0;
     memcpy(&context->buffer[j], &data[i], len - i);
-
 }
 
 /* Add padding and return the message digest. */
@@ -151,38 +148,4 @@ void au_sha1_final(sha1_ctx_t *context, uint8_t digest[SHA1_DIGEST_SIZE])
     memset(context->state, 0, 20);
     memset(context->count, 0, 8);
     memset(finalcount, 0, 8);   /* SWR */
-
-#ifdef SHA1HANDSOFF  /* make SHA1Transform overwrite its own static vars */
-    sha1_transform(context->state, context->buffer);
-#endif
 }
-
-static int method_sha1(lua_State *L)
-{
-    const char *data = luaL_checkstring(L, 1);
-    const int data_size = luaL_len(L, 1);
-
-    sha1_ctx_t ctx;
-    memset(&ctx, 0, sizeof(sha1_ctx_t));
-    au_sha1_init(&ctx);
-    au_sha1_update(&ctx, (uint8_t *)data, data_size);
-    uint8_t digest[SHA1_DIGEST_SIZE];
-    au_sha1_final(&ctx, digest);
-
-    lua_pushlstring(L, (char *)digest, sizeof(digest));
-    return 1;
-}
-
-static void module_load(lua_State *L)
-{
-    /* <string>:sha1() */
-    lua_getglobal(L, "string");
-    lua_pushcfunction(L, method_sha1);
-    lua_setfield(L, -2, "sha1");
-    lua_pop(L, 1); /* string */
-}
-
-BINDING_REGISTER(sha1)
-{
-    .load = module_load,
-};

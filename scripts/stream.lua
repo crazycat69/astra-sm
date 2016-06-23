@@ -812,9 +812,12 @@ options_usage = [[
 options = {
     ["*"] = function(idx)
         local filename = argv[idx]
-        if utils.stat(filename).type == "file" then
+        local stat, stat_err = utils.stat(filename)
+        if stat and stat.type == "file" then
             dofile(filename)
             return 0
+        else
+            if stat_err ~= nil then print(stat_err) end
         end
         return -1
     end,

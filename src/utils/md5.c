@@ -26,14 +26,8 @@
  * edited for clarity and style only.
  */
 
-/*
- *      (string):md5()
- *                  - calculate MD5 hash
- */
-
 #include <astra.h>
 #include <utils/md5.h>
-#include <luaapi/module.h>
 
 /*
  * The digest algorithm interprets the input message as a sequence of 32-bit
@@ -432,33 +426,3 @@ void au_md5_crypt(const char *pw, const char *salt, char passwd[36])
 
     memset(final, 0, sizeof(final));
 } /* au_md5_crypt */
-
-static int method_md5(lua_State *L)
-{
-    const char *data = luaL_checkstring(L, 1);
-    const int data_size = luaL_len(L, 1);
-
-    md5_ctx_t ctx;
-    memset(&ctx, 0, sizeof(md5_ctx_t));
-    au_md5_init(&ctx);
-    au_md5_update(&ctx, (uint8_t *)data, data_size);
-    uint8_t digest[MD5_DIGEST_SIZE];
-    au_md5_final(&ctx, digest);
-
-    lua_pushlstring(L, (char *)digest, sizeof(digest));
-    return 1;
-}
-
-static void module_load(lua_State *L)
-{
-    /* <string>:md5() */
-    lua_getglobal(L, "string");
-    lua_pushcfunction(L, method_md5);
-    lua_setfield(L, -2, "md5");
-    lua_pop(L, 1); /* string */
-}
-
-BINDING_REGISTER(md5)
-{
-    .load = module_load,
-};

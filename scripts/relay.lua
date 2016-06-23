@@ -418,7 +418,9 @@ options = {
     end,
     ["*"] = function(idx)
         relay_script = argv[idx]
-        if utils.stat(relay_script).type ~= 'file' then
+        local stat, stat_err = utils.stat(relay_script)
+        if not stat or stat.type ~= 'file' then
+            if stat_err ~= nil then print(stat_err) end
             return -1
         end
         on_sighup()

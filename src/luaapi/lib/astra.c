@@ -1,5 +1,5 @@
 /*
- * Astra Utils
+ * Astra Lua Library (Instance Control)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
@@ -19,7 +19,7 @@
  */
 
 /*
- * Set of the astra methods and variables for lua
+ * Set of Lua methods and variables for basic instance control
  *
  * Variables:
  *      astra.package

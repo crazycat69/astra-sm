@@ -149,12 +149,6 @@ case "${host_os}" in
     *)
         SYS=posix
 
-        AC_CHECK_DECLS([environ])
-        AC_CHECK_MEMBERS([struct sockaddr_in.sin_len], [], [], [[
-            #include <sys/types.h>
-            #include <netinet/in.h>
-        ]])
-
         AX_PTHREAD([
             LIBS="$PTHREAD_LIBS $LIBS"
             CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
@@ -163,11 +157,46 @@ case "${host_os}" in
             AC_MSG_ERROR([missing pthread support])
         ])
 
+        AC_CHECK_DECLS([environ])
+        AC_CHECK_MEMBERS([struct sockaddr_in.sin_len], [], [], [[
+            #include <sys/types.h>
+            #include <netinet/in.h>
+        ]])
+
+        AC_CHECK_HEADERS([ifaddrs.h netinet/sctp.h sys/queue.h])
         AC_CHECK_FUNCS([posix_memalign accept4 mkostemp mkstemp pthread_mutex_timedlock])
 
         # getifaddrs(): used by utils.c
         AC_CHECK_FUNCS([getifaddrs],
             [], [ AC_MSG_WARN([no getifaddrs(); utils.ifaddrs() will be unavailable]) ])
+
+        # clock_gettime(): used by clock.c
+        LIBRT=""
+        ac_cv_func_clock_gettime="no"
+        AX_SAVE_FLAGS
+        AC_SEARCH_LIBS([clock_gettime], [rt], [
+            AS_IF([test "$LIBS" != "$SAVED_LIBS"], [ LIBRT="-lrt" ])
+
+            ac_cv_func_clock_gettime="yes"
+            AC_DEFINE([HAVE_CLOCK_GETTIME],
+                [1], [Define to 1 if you have the `clock_gettime' function.])
+        ])
+        AX_RESTORE_FLAGS
+
+        # POSIX AIO: used by `file'
+        have_aio="no"
+        AX_SAVE_FLAGS
+        AC_CHECK_HEADERS([aio.h], [
+            AC_SEARCH_LIBS([aio_write], [rt], [
+                AS_IF([test "$LIBS" != "$SAVED_LIBS"], [ LIBRT="-lrt" ])
+
+                have_aio="yes"
+                AC_DEFINE([HAVE_AIO], [1],
+                    [Define to 1 if you have the POSIX AIO interface.])
+            ])
+        ])
+        AX_RESTORE_FLAGS
+        AC_SUBST(LIBRT)
     ;;
 esac
 
@@ -250,41 +279,10 @@ AC_MSG_NOTICE([using ${event_mechanism} for event notification])
 #
 # Checks for headers and functions common to all platforms
 #
-# optional headers
-AC_CHECK_HEADERS([netinet/sctp.h sys/queue.h])
-
 # optional functions
 #   pread(), strndup(), strnlen(): replaceables
 #   mktemp(): used for creating pidfiles
 AC_CHECK_FUNCS([pread strndup strnlen mktemp])
-
-# clock_gettime(): used by clock.c
-LIBRT=""
-ac_cv_func_clock_gettime="no"
-AX_SAVE_FLAGS
-AC_SEARCH_LIBS([clock_gettime], [rt], [
-    AS_IF([test "$LIBS" != "$SAVED_LIBS"], [ LIBRT="-lrt" ])
-
-    ac_cv_func_clock_gettime="yes"
-    AC_DEFINE([HAVE_CLOCK_GETTIME],
-        [1], [Define to 1 if you have the `clock_gettime' function.])
-])
-AX_RESTORE_FLAGS
-
-# POSIX AIO: used by `file'
-have_aio="no"
-AX_SAVE_FLAGS
-AC_CHECK_HEADERS([aio.h], [
-    AC_SEARCH_LIBS([aio_write], [rt], [
-        AS_IF([test "$LIBS" != "$SAVED_LIBS"], [ LIBRT="-lrt" ])
-
-        have_aio="yes"
-        AC_DEFINE([HAVE_AIO], [1],
-            [Define to 1 if you have the POSIX AIO interface.])
-    ])
-])
-AX_RESTORE_FLAGS
-AC_SUBST(LIBRT)
 
 #
 # Checks for external libraries
