@@ -124,11 +124,6 @@ libastra_la_SOURCES += \
     utils/strhex.c \
     utils/strhex.h
 
-if HAVE_INSCRIPT
-libastra_la_SOURCES += \
-    inscript/inscript.c
-endif
-
 #
 # Module library
 #
@@ -262,6 +257,11 @@ astra_SOURCES = \
     sighandler.c \
     sighandler.h
 
+if HAVE_INSCRIPT
+astra_SOURCES += \
+    inscript.c
+endif
+
 #
 # Built sources
 #
@@ -275,7 +275,7 @@ bindings.h:
 	echo                        >>$@; \
 	sh $(top_srcdir)/build-aux/gen-bindings-list \
 	    LUA_STREAM_BINDINGS \
-	    $(srcdir) $(libstream_la_SOURCES) >>$@ || exit $$?
+	    $(srcdir) $(libstream_la_SOURCES) $(astra_SOURCES) >>$@ || exit $$?
 
 # built-in script
 if HAVE_INSCRIPT
@@ -289,9 +289,9 @@ INSCRIPT_FILES = \
     $(top_builddir)/scripts/stream.luac
 
 MKSCRIPT = $(top_builddir)/tools/mkscript$(BUILD_EXEEXT)
-BUILT_SOURCES += inscript/inscript.h
+BUILT_SOURCES += inscript.h
 
-inscript/inscript.h: $(INSCRIPT_FILES)
+inscript.h: $(INSCRIPT_FILES)
 	$(AM_V_GEN)echo "/* automatically generated file; do not edit */" >$@; \
 	echo >>$@; \
 	for script in $(INSCRIPT_FILES); do \

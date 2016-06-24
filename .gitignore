@@ -10,7 +10,7 @@
 
 # generated files
 /src/bindings.h
-/src/inscript/inscript.h
+/src/inscript.h
 /testcards/*.ts
 /testcards/*.wav
 *.i

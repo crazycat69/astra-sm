@@ -40,7 +40,6 @@ MODULE_MANIFEST_DECL(sha1);
 MODULE_MANIFEST_DECL(strhex);
 MODULE_MANIFEST_DECL(timer);
 MODULE_MANIFEST_DECL(utils);
-MODULE_MANIFEST_DECL(inscript);
 
 /* manifest list */
 static const module_manifest_t *lua_lib_list[] =
@@ -57,7 +56,6 @@ static const module_manifest_t *lua_lib_list[] =
     &MODULE_SYMBOL(strhex),
     &MODULE_SYMBOL(timer),
     &MODULE_SYMBOL(utils),
-    &MODULE_SYMBOL(inscript),
     NULL,
 };
 

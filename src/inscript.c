@@ -20,7 +20,8 @@
 
 #include <astra.h>
 #include <luaapi/module.h>
-#include <inscript/inscript.h>
+
+#include "inscript.h"
 
 static const char __module_name[] = "inscript";
 
