@@ -711,7 +711,7 @@ Suite *core_child(void)
 
 #ifndef _WIN32
     if (can_fork != CK_NOFORK)
-        tcase_set_timeout(tc, 15);
+        tcase_set_timeout(tc, 30);
 #endif /* !_WIN32 */
 
     tcase_add_test(tc, read_pid);
