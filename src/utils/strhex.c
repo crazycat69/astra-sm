@@ -21,19 +21,19 @@
 #include <astra.h>
 #include <utils/strhex.h>
 
-char *au_hex2str(char *str, const uint8_t *data, int size)
+char *au_hex2str(char *dst, const uint8_t *src, size_t srclen)
 {
     static const char char_str[] = "0123456789ABCDEF";
 
-    for (int i = 0; i < size; i++)
+    for (size_t i = 0; i < srclen; i++)
     {
-        const int j = i * 2;
-        str[j + 0] = char_str[data[i] >> 4];
-        str[j + 1] = char_str[data[i] & 0x0F];
+        const size_t j = i * 2;
+        dst[j + 0] = char_str[src[i] >> 4];
+        dst[j + 1] = char_str[src[i] & 0x0f];
     }
-    str[size * 2] = '\0';
+    dst[srclen * 2] = '\0';
 
-    return str;
+    return dst;
 }
 
 static inline
@@ -55,13 +55,13 @@ uint8_t char_to_hex(const char *c)
     return (single_char_to_hex(c[0]) << 4) | single_char_to_hex(c[1]);
 }
 
-uint8_t *au_str2hex(const char *str, uint8_t *data, int size)
+uint8_t *au_str2hex(const char *src, uint8_t *dst, size_t dstlen)
 {
-    if (!size)
-        size = ~0;
+    if (dstlen == 0)
+        dstlen = ~0;
 
-    for (int i = 0; str[0] && str[1] && i < size; str += 2, ++i)
-        data[i] = char_to_hex(str);
+    for (size_t i = 0; src[0] && src[1] && i < dstlen; src += 2, ++i)
+        dst[i] = char_to_hex(src);
 
-    return data;
+    return dst;
 }
