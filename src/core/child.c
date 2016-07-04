@@ -48,7 +48,7 @@ typedef struct
 
 struct asc_child_t
 {
-    const char *name;
+    char name[128];
     asc_process_t proc;
 
     asc_timer_t *kill_timer;
@@ -340,7 +340,7 @@ void on_sin_write(void *arg)
 asc_child_t *asc_child_init(const asc_child_cfg_t *cfg)
 {
     asc_child_t *const child = ASC_ALLOC(1, asc_child_t);
-    child->name = cfg->name;
+    snprintf(child->name, sizeof(child->name), "%s", cfg->name);
 
     asc_assert(cfg->sin.on_flush == NULL && cfg->sin.ignore_read == false
                , MSG("cannot set read callback on standard input"));

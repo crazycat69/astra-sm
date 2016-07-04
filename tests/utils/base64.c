@@ -50,7 +50,7 @@ START_TEST(test_vectors)
 
         /* decode */
         out_size = 0;
-        out = au_base64_dec(b64, strlen(b64), &out_size);
+        out = (char *)au_base64_dec(b64, strlen(b64), &out_size);
         ck_assert(out != NULL);
         ck_assert(out_size == strlen(text));
         ck_assert(!strcmp(out, text));
@@ -79,7 +79,7 @@ START_TEST(random_data)
         ck_assert(b64 != NULL);
 
         out_size = 0;
-        char *const data = au_base64_dec(b64, strlen(b64), &out_size);
+        char *const data = (char *)au_base64_dec(b64, strlen(b64), &out_size);
         ck_assert(data != NULL);
         ck_assert(out_size == len);
         ck_assert(!memcmp(buf, data, len));

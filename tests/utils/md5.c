@@ -25,7 +25,7 @@
 typedef struct
 {
     const char *msg;
-    const char hash[MD5_DIGEST_SIZE];
+    const char *hash;
 } md5_test_t;
 
 static const md5_test_t test_strings[] =

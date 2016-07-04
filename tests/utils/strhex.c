@@ -205,9 +205,9 @@ START_TEST(random_s2h)
         const size_t sbsize = (hbsize * 2) + 1;
         char *const sbuf = ASC_ALLOC(sbsize, char);
 
-        static const char hexstr[16] = "0123456789abcdef";
+        static const char hexstr[] = "0123456789abcdef";
         for (size_t j = 0; j < sbsize - 1; j++)
-            sbuf[j] = hexstr[rand() % sizeof(hexstr)];
+            sbuf[j] = hexstr[rand() % (sizeof(hexstr) - 1)];
 
         ck_assert(strlen(sbuf) == sbsize - 1);
 

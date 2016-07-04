@@ -26,7 +26,7 @@ typedef struct
 {
     const char *msg;
     size_t repeat;
-    const char hash[SHA1_DIGEST_SIZE];
+    const char *hash;
 } sha1_test_t;
 
 static const sha1_test_t test_strings[] =
