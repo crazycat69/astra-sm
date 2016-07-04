@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "unit_tests.h"
+#include "test_libastra.h"
 
 #ifdef _WIN32
 #   include <mmsystem.h>

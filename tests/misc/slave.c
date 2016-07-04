@@ -206,7 +206,7 @@ static void cmd_unaligned(void)
 
 static void __dead usage(void)
 {
-    fprintf(stderr, "usage: test_slave <cmd> [args]\n");
+    fprintf(stderr, "usage: slave <cmd> [args]\n");
     exit(EXIT_FAILURE);
 }
 

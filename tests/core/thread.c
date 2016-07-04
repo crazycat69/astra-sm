@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "unit_tests.h"
+#include "../test_libastra.h"
 #include <core/list.h>
 #include <core/mainloop.h>
 #include <core/thread.h>
@@ -299,7 +299,7 @@ END_TEST
 
 Suite *core_thread(void)
 {
-    Suite *const s = suite_create("thread");
+    Suite *const s = suite_create("core/thread");
 
     TCase *const tc = tcase_create("default");
     tcase_add_checked_fixture(tc, lib_setup, lib_teardown);

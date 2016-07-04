@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "unit_tests.h"
+#include "../test_libastra.h"
 
 START_TEST(func_asc_utime)
 {
@@ -66,7 +66,7 @@ END_TEST
 
 Suite *core_clock(void)
 {
-    Suite *const s = suite_create("clock");
+    Suite *const s = suite_create("core/clock");
 
     TCase *const tc = tcase_create("default");
     tcase_add_test(tc, func_asc_utime);

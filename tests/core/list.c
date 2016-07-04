@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "unit_tests.h"
+#include "../test_libastra.h"
 #include <core/list.h>
 
 static asc_list_t *list = NULL;
@@ -209,7 +209,7 @@ END_TEST
 
 Suite *core_list(void)
 {
-    Suite *const s = suite_create("list");
+    Suite *const s = suite_create("core/list");
 
     TCase *const tc = tcase_create("default");
     tcase_add_checked_fixture(tc, setup, teardown);

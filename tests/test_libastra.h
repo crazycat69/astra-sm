@@ -40,6 +40,15 @@ Suite *core_child(void);
 Suite *core_thread(void);
 Suite *core_timer(void);
 
+/* utils */
+Suite *utils_base64(void);
+Suite *utils_crc32b(void);
+Suite *utils_crc8(void);
+Suite *utils_md5(void);
+Suite *utils_rc4(void);
+Suite *utils_sha1(void);
+Suite *utils_strhex(void);
+
 /* unit test list */
 typedef Suite (*(*const suite_func_t)(void));
 
@@ -53,6 +62,15 @@ static suite_func_t suite_list[] = {
     core_child,
     core_thread,
     core_timer,
+
+    /* utils */
+    utils_base64,
+    utils_crc32b,
+    utils_crc8,
+    utils_md5,
+    utils_rc4,
+    utils_sha1,
+    utils_strhex,
 
     NULL,
 };

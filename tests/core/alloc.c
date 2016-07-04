@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "unit_tests.h"
+#include "../test_libastra.h"
 
 #define BUF_SIZE 128
 
@@ -91,7 +91,7 @@ END_TEST
 
 Suite *core_alloc(void)
 {
-    Suite *const s = suite_create("alloc");
+    Suite *const s = suite_create("core/alloc");
 
     TCase *const tc = tcase_create("default");
     tcase_add_test(tc, func_asc_calloc);

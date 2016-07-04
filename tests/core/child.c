@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "unit_tests.h"
+#include "../test_libastra.h"
 #include <core/child.h>
 #include <core/mainloop.h>
 #include <core/timer.h>
@@ -28,7 +28,7 @@
 #   include <signal.h>
 #endif /* !_WIN32 */
 
-#define TEST_SLAVE "./test_slave"
+#define TEST_SLAVE "./misc/slave"
 
 static void fail_on_read(void *arg, const void *buf, size_t len)
 {
@@ -704,7 +704,7 @@ END_TEST
 
 Suite *core_child(void)
 {
-    Suite *const s = suite_create("child");
+    Suite *const s = suite_create("core/child");
 
     TCase *const tc = tcase_create("default");
     tcase_add_checked_fixture(tc, lib_setup, lib_teardown);

@@ -1,10 +1,10 @@
 # binaries
 /src/astra
 /lua/luac
-/tests/spammer
-/tests/t2mi_decap
-/tests/test_slave
-/tests/unit_tests
+/tests/misc/spammer
+/tests/misc/t2mi_decap
+/tests/misc/slave
+/tests/test_libastra
 /tools/mkscript
 /tools/tonegen
 

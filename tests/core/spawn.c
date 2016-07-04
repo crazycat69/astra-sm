@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "unit_tests.h"
+#include "../test_libastra.h"
 #include <core/spawn.h>
 #include <core/event.h>
 #include <core/mainloop.h>
@@ -33,7 +33,7 @@
 #   endif /* HAVE_SYS_SELECT_H */
 #endif /* !_WIN32 */
 
-#define TEST_SLAVE "./test_slave"
+#define TEST_SLAVE "./misc/slave"
 
 static void pipe_check_nb(int fd, bool expect)
 {
@@ -767,7 +767,7 @@ END_TEST
 
 Suite *core_spawn(void)
 {
-    Suite *const s = suite_create("spawn");
+    Suite *const s = suite_create("core/spawn");
 
     TCase *const tc = tcase_create("default");
     tcase_add_checked_fixture(tc, lib_setup, lib_teardown);

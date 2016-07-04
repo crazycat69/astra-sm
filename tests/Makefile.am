@@ -18,37 +18,48 @@ AM_TESTS_ENVIRONMENT = export OUTPUT_REDIRECT_FD=9;
 AM_TESTS_FD_REDIRECT = 9>&2
 endif
 
-check_PROGRAMS = unit_tests test_slave
-TESTS = unit_tests
+check_PROGRAMS = test_libastra misc/slave
+TESTS = test_libastra
 CLEANFILES = libastra.log
 
-unit_tests_LDADD = $(AM_LDADD)
-unit_tests_DEPENDENCIES = test_slave$(EXEEXT)
-unit_tests_SOURCES = \
-    unit_tests.c \
-    unit_tests.h \
-    core_alloc.c \
-    core_child.c \
-    core_clock.c \
-    core_list.c \
-    core_mainloop.c \
-    core_spawn.c \
-    core_thread.c \
-    core_timer.c
+test_libastra_LDADD = $(AM_LDADD)
+test_libastra_DEPENDENCIES = misc/slave$(EXEEXT)
+test_libastra_SOURCES = \
+    test_libastra.c \
+    test_libastra.h
 
-test_slave_SOURCES = test_slave.c
-test_slave_CFLAGS = $(AM_CFLAGS)
+test_libastra_SOURCES += \
+    core/alloc.c \
+    core/child.c \
+    core/clock.c \
+    core/list.c \
+    core/mainloop.c \
+    core/spawn.c \
+    core/thread.c \
+    core/timer.c
+
+test_libastra_SOURCES += \
+    utils/base64.c \
+    utils/crc32b.c \
+    utils/crc8.c \
+    utils/md5.c \
+    utils/rc4.c \
+    utils/sha1.c \
+    utils/strhex.c
+
+misc_slave_SOURCES = misc/slave.c
+misc_slave_CFLAGS = $(AM_CFLAGS)
 endif
 
 #
 # Test programs
 #
-noinst_PROGRAMS = t2mi_decap spammer
+noinst_PROGRAMS = misc/t2mi_decap misc/spammer
 
-t2mi_decap_SOURCES = t2mi_decap.c
-t2mi_decap_CFLAGS = $(AM_CFLAGS)
-t2mi_decap_LDADD = $(AM_LDADD)
+misc_t2mi_decap_SOURCES = misc/t2mi_decap.c
+misc_t2mi_decap_CFLAGS = $(AM_CFLAGS)
+misc_t2mi_decap_LDADD = $(AM_LDADD)
 
-spammer_SOURCES = spammer.c
-spammer_CFLAGS = $(AM_CFLAGS)
-spammer_LDADD = $(AM_LDADD)
+misc_spammer_SOURCES = misc/spammer.c
+misc_spammer_CFLAGS = $(AM_CFLAGS)
+misc_spammer_LDADD = $(AM_LDADD)
