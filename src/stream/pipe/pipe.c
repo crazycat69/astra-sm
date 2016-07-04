@@ -75,7 +75,7 @@ void callback_started(module_data_t *mod, pid_t pid)
 {
     if (mod->idx_callback != LUA_REFNIL)
     {
-        lua_State *const L = MODULE_L(mod);
+        lua_State *const L = module_lua(mod);
         lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
 
         /* data.started.pid */
@@ -94,7 +94,7 @@ void callback_text(module_data_t *mod, const char *src, const char *text)
 {
     if (mod->idx_callback != LUA_REFNIL)
     {
-        lua_State *const L = MODULE_L(mod);
+        lua_State *const L = module_lua(mod);
         lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
 
         /* data.<src> */
@@ -125,7 +125,7 @@ void callback_error(module_data_t *mod, const char *fmt, ...)
 
     if (mod->idx_callback != LUA_REFNIL)
     {
-        lua_State *const L = MODULE_L(mod);
+        lua_State *const L = module_lua(mod);
         lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
 
         /* data.error */
@@ -142,7 +142,7 @@ void callback_exited(module_data_t *mod, int status)
 {
     if (mod->idx_callback != LUA_REFNIL)
     {
-        lua_State *const L = MODULE_L(mod);
+        lua_State *const L = module_lua(mod);
         lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
 
         /* data.exited.status */
@@ -508,7 +508,7 @@ void module_destroy(module_data_t *mod)
 
     if (mod->idx_callback != LUA_REFNIL)
     {
-        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = LUA_REFNIL;
     }
 

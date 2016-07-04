@@ -349,7 +349,7 @@ static void on_thread_close(void *arg)
 
     if(mod->is_eof && mod->idx_callback)
     {
-        lua_State *const L = MODULE_L(mod);
+        lua_State *const L = module_lua(mod);
 
         lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
         lua_call(L, 0, 0);
@@ -469,7 +469,7 @@ static void module_destroy(module_data_t *mod)
 
     if(mod->idx_callback)
     {
-        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 

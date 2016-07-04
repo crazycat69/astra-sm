@@ -140,7 +140,7 @@ void module_init(lua_State *L, module_data_t *mod)
 static
 void module_destroy(module_data_t *mod)
 {
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
     const char *const filename = get_pidfile(L);
 
     if (filename != NULL)

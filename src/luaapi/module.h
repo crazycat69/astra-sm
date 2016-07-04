@@ -61,6 +61,7 @@ typedef struct
 } module_manifest_t;
 
 void module_register(lua_State *L, const module_manifest_t *manifest);
+lua_State *module_lua(const module_data_t *mod) __func_pure;
 
 bool module_option_integer(lua_State *L, const char *name, int *integer);
 bool module_option_string(lua_State *L, const char *name, const char **string
@@ -71,9 +72,6 @@ bool module_option_boolean(lua_State *L, const char *name, bool *boolean);
 
 #define MODULE_DATA() \
     lua_State *__lua
-
-#define MODULE_L(_mod) \
-    ((_mod)->__lua)
 
 #define MODULE_SYMBOL(_name) \
     __manifest_##_name

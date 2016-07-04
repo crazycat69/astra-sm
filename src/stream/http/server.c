@@ -113,7 +113,7 @@ static void on_client_close(void *arg)
 {
     http_client_t *const client = (http_client_t *)arg;
     module_data_t *const mod = client->mod;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(!client->sock)
         return;
@@ -198,7 +198,7 @@ static void on_client_read(void *arg)
 {
     http_client_t *const client = (http_client_t *)arg;
     module_data_t *const mod = client->mod;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     ssize_t size = asc_socket_recv(  client->sock
                                    , &client->buffer[client->buffer_skip]
@@ -487,7 +487,7 @@ static void on_ready_send_content(void *arg)
 {
     http_client_t *const client = (http_client_t *)arg;
     module_data_t *const mod = client->mod;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_content);
     const char *content = lua_tostring(L, -1);
@@ -731,7 +731,7 @@ void http_client_close(http_client_t *client)
 void http_client_abort(http_client_t *client, int code, const char *text)
 {
     module_data_t *const mod = client->mod;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     const char *message = http_code(code);
 
@@ -774,7 +774,7 @@ void http_client_redirect(http_client_t *client, int code, const char *location)
 
     if(client->idx_content)
     {
-        lua_State *const L = MODULE_L(client->mod);
+        lua_State *const L = module_lua(client->mod);
         luaL_unref(L, LUA_REGISTRYINDEX, client->idx_content);
         client->idx_content = 0;
     }
@@ -802,7 +802,7 @@ void http_client_redirect(http_client_t *client, int code, const char *location)
 static void on_server_close(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(!mod->sock)
         return;

@@ -136,7 +136,7 @@ static void callback(lua_State *L, module_data_t *mod)
 static void on_pat(void *arg, mpegts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(psi->buffer[0] != 0x00)
         return;
@@ -232,7 +232,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
 static void on_cat(void *arg, mpegts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(psi->buffer[0] != 0x01)
         return;
@@ -291,7 +291,7 @@ static void on_cat(void *arg, mpegts_psi_t *psi)
 static void on_pmt(void *arg, mpegts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(psi->buffer[0] != 0x02)
         return;
@@ -438,7 +438,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
 static void on_sdt(void *arg, mpegts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(psi->buffer[0] != 0x42)
         return;
@@ -545,7 +545,7 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
 
 static void append_rate(module_data_t *mod, int rate)
 {
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     mod->rate[mod->rate_count] = rate;
     ++mod->rate_count;
@@ -668,7 +668,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 static void on_check_stat(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     int items_count = 1;
     lua_newtable(L);
@@ -833,7 +833,7 @@ static void module_destroy(module_data_t *mod)
 
     if(mod->idx_callback)
     {
-        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 

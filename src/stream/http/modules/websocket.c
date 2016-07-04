@@ -102,7 +102,7 @@ static void on_websocket_send(void *arg)
 {
     http_client_t *const client = (http_client_t *)arg;
     http_response_t *const response = client->response;
-    lua_State *const L = MODULE_L(client->mod);
+    lua_State *const L = module_lua(client->mod);
 
     const char *str = lua_tostring(L, 3);
     const int str_size = luaL_len(L, 3);
@@ -155,7 +155,7 @@ static void on_websocket_read(void *arg)
 {
     http_client_t *const client = (http_client_t *)arg;
     http_response_t *const response = client->response;
-    lua_State *const L = MODULE_L(client->mod);
+    lua_State *const L = module_lua(client->mod);
 
     ssize_t size;
     uint8_t *data = (uint8_t *)client->buffer;
@@ -430,7 +430,7 @@ static void module_destroy(module_data_t *mod)
 {
     if(mod->idx_callback)
     {
-        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 }

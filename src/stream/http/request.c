@@ -168,7 +168,7 @@ static void callback(lua_State *L, module_data_t *mod)
 
 static void call_error(module_data_t *mod, const char *msg)
 {
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     lua_newtable(L);
     lua_pushinteger(L, 0);
@@ -204,7 +204,7 @@ static void timeout_callback(void *arg)
 static void on_close(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(!mod->sock)
         return;
@@ -413,7 +413,7 @@ static void on_sync_ready(void *arg)
 static void on_read(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(mod->timeout)
     {
@@ -806,7 +806,7 @@ static void on_ready_send_content(void *arg)
     {
         mod->request.buffer = NULL;
 
-        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->request.idx_body);
+        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, mod->request.idx_body);
         mod->request.idx_body = 0;
 
         mod->request.status = 3;
@@ -842,7 +842,7 @@ static void on_ready_send_request(void *arg)
 
         if(mod->request.idx_body)
         {
-            lua_State *const L = MODULE_L(mod);
+            lua_State *const L = module_lua(mod);
 
             lua_rawgeti(L, LUA_REGISTRYINDEX, mod->request.idx_body);
             mod->request.buffer = lua_tostring(L, -1);
@@ -928,7 +928,7 @@ static void lua_make_request(lua_State *L, module_data_t *mod)
 static void on_connect(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     mod->request.status = 1;
 

@@ -161,6 +161,11 @@ void module_register(lua_State *L, const module_manifest_t *manifest)
         manifest->reg->load(L);
 }
 
+lua_State *module_lua(const module_data_t *mod)
+{
+    return mod->lua;
+}
+
 /*
  * module option getters
  */

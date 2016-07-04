@@ -47,7 +47,7 @@ static
 void timer_callback(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
     lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_self);
@@ -100,7 +100,7 @@ void module_init(lua_State *L, module_data_t *mod)
 static
 void module_destroy(module_data_t *mod)
 {
-    method_close(MODULE_L(mod), mod);
+    method_close(module_lua(mod), mod);
 }
 
 static

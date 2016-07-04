@@ -100,7 +100,7 @@ static void on_downstream_read(void *arg)
 static void on_downstream_send(void *arg)
 {
     http_client_t *const client = (http_client_t *)arg;
-    lua_State *const L = MODULE_L(client->mod);
+    lua_State *const L = module_lua(client->mod);
 
     if(!lua_islightuserdata(L, 2))
     {
@@ -210,7 +210,7 @@ static void module_destroy(module_data_t *mod)
 {
     if(mod->idx_callback)
     {
-        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 }

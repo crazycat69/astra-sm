@@ -994,7 +994,7 @@ static void thread_loop_slave(void *arg)
 static void on_status_timer(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
     lua_newtable(L);
@@ -1080,7 +1080,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 
 static void module_destroy(module_data_t *mod)
 {
-    method_close(MODULE_L(mod), mod);
+    method_close(module_lua(mod), mod);
 }
 
 static const module_method_t module_methods[] =
