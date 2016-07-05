@@ -40,6 +40,9 @@ Suite *core_child(void);
 Suite *core_thread(void);
 Suite *core_timer(void);
 
+/* luaapi */
+Suite *luaapi_stream(void);
+
 /* utils */
 Suite *utils_base64(void);
 Suite *utils_crc32b(void);
@@ -62,6 +65,9 @@ static suite_func_t suite_list[] = {
     core_child,
     core_thread,
     core_timer,
+
+    /* luaapi */
+    luaapi_stream,
 
     /* utils */
     utils_base64,

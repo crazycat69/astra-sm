@@ -41,11 +41,13 @@ struct module_data_t
 void module_stream_init(lua_State *L, module_data_t *mod
                         , stream_callback_t on_ts)
 {
+    asc_assert(mod->stream.self == NULL, "module already initialized");
+
     mod->stream.self = mod;
     mod->stream.on_ts = on_ts;
     mod->stream.children = asc_list_init();
 
-    if (on_ts != NULL)
+    if (on_ts != NULL && L != NULL)
     {
         lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
         if (lua_type(L, -1) == LUA_TLIGHTUSERDATA)
