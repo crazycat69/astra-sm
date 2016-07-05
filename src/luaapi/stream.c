@@ -34,18 +34,9 @@ struct module_data_t
     module_stream_t stream;
 };
 
-static
-int method_stream(lua_State *L, module_data_t *mod)
-{
-    lua_pushlightuserdata(L, &mod->stream);
-    return 1;
-}
-
-const module_method_t module_stream_methods[] =
-{
-    { "stream", method_stream },
-    { NULL, NULL },
-};
+/*
+ * init and cleanup
+ */
 
 void module_stream_init(lua_State *L, module_data_t *mod
                         , stream_callback_t on_ts)
@@ -68,32 +59,84 @@ void module_stream_init(lua_State *L, module_data_t *mod
     }
 }
 
-static
-void stream_detach(module_stream_t *stream, module_stream_t *child)
+void module_stream_destroy(module_data_t *mod)
 {
-    asc_list_remove_item(stream->children, child);
-    child->parent = NULL;
+    module_stream_t *const st = &mod->stream;
+    if (st->self == NULL)
+        /* not initialized */
+        return;
+
+    /* leave all joined pids */
+    if (st->pid_list != NULL)
+    {
+        for (unsigned int i = 0; i < MAX_PID; i++)
+        {
+            if (st->pid_list[i] > 0)
+                module_demux_leave(mod, i);
+        }
+
+        ASC_FREE(st->pid_list, free);
+    }
+
+    /* detach from upstream */
+    module_stream_attach(NULL, mod);
+
+    /* detach children */
+    asc_list_clear(st->children)
+    {
+        module_stream_t *const i =
+            (module_stream_t *)asc_list_data(st->children);
+
+        i->parent = NULL;
+    }
+
+    ASC_FREE(st->children, asc_list_destroy);
+
+    /* reset state */
+    memset(st, 0, sizeof(*st));
 }
 
-static
-void __module_stream_attach(module_stream_t *stream, module_stream_t *child)
-{
-    if (child->parent != NULL)
-        stream_detach(child->parent, child);
+/*
+ * streaming module tree
+ */
 
-    child->parent = stream;
-    asc_list_insert_tail(stream->children, child);
+static
+int method_stream(lua_State *L, module_data_t *mod)
+{
+    lua_pushlightuserdata(L, &mod->stream);
+    return 1;
 }
+
+const module_method_t module_stream_methods[] =
+{
+    { "stream", method_stream },
+    { NULL, NULL },
+};
 
 void module_stream_attach(module_data_t *mod, module_data_t *child)
 {
-    __module_stream_attach(&mod->stream, &child->stream);
+    module_stream_t *const cs = &child->stream;
+
+    if (cs->parent != NULL)
+    {
+        asc_list_remove_item(cs->parent->children, cs);
+        cs->parent = NULL;
+    }
+
+    if (mod != NULL)
+    {
+        module_stream_t *const ps = &mod->stream;
+        asc_assert(ps->self != NULL, "attaching to uninitialized module");
+
+        cs->parent = ps;
+        asc_list_insert_tail(ps->children, cs);
+    }
 }
 
-static
-void __module_stream_send(void *arg, const uint8_t *ts)
+void module_stream_send(void *arg, const uint8_t *ts)
 {
-    module_stream_t *const stream = (module_stream_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
+    module_stream_t *const stream = &mod->stream;
 
     asc_list_for(stream->children)
     {
@@ -105,93 +148,51 @@ void __module_stream_send(void *arg, const uint8_t *ts)
     }
 }
 
-void module_stream_send(void *arg, const uint8_t *ts)
-{
-    module_data_t *const mod = (module_data_t *)arg;
-
-    __module_stream_send(&mod->stream, ts);
-}
-
-static
-void __module_stream_destroy(module_stream_t *stream)
-{
-    if (stream->parent != NULL)
-        stream_detach(stream->parent, stream);
-
-    asc_list_clear(stream->children)
-    {
-        module_stream_t *const i =
-            (module_stream_t *)asc_list_data(stream->children);
-
-        i->parent = NULL;
-    }
-
-    ASC_FREE(stream->children, asc_list_destroy);
-}
-
-void module_stream_destroy(module_data_t *mod)
-{
-    if (mod->stream.self != NULL)
-    {
-        if (mod->stream.pid_list != NULL)
-        {
-            for (unsigned int i = 0; i < MAX_PID; i++)
-            {
-                if (mod->stream.pid_list[i] > 0)
-                {
-                    module_demux_leave(mod, i);
-                }
-            }
-            ASC_FREE(mod->stream.pid_list, free);
-        }
-        __module_stream_destroy(&mod->stream);
-        mod->stream.self = NULL;
-    }
-}
+/*
+ * pid membership
+ */
 
 void module_demux_set(module_data_t *mod, demux_callback_t join_pid
                       , demux_callback_t leave_pid)
 {
-    if (mod->stream.pid_list == NULL)
-        mod->stream.pid_list = ASC_ALLOC(MAX_PID, uint8_t);
+    module_stream_t *const st = &mod->stream;
+    if (st->pid_list == NULL)
+        st->pid_list = ASC_ALLOC(MAX_PID, uint8_t);
 
-    mod->stream.join_pid = join_pid;
-    mod->stream.leave_pid = leave_pid;
+    st->join_pid = join_pid;
+    st->leave_pid = leave_pid;
 }
 
 void module_demux_join(module_data_t *mod, uint16_t pid)
 {
-    asc_assert(mod->stream.pid_list != NULL
-               , "%s:%d module_demux_set() is required"
-               , __FILE__, __LINE__);
+    module_stream_t *const st = &mod->stream;
+    asc_assert(st->pid_list != NULL, "module_demux_set() is required");
 
-    ++mod->stream.pid_list[pid];
-    if (mod->stream.pid_list[pid] == 1 && mod->stream.parent != NULL
-        && mod->stream.parent->join_pid != NULL)
+    ++st->pid_list[pid];
+    if (st->pid_list[pid] == 1 && st->parent != NULL
+        && st->parent->join_pid != NULL)
     {
-        mod->stream.parent->join_pid(mod->stream.parent->self, pid);
+        st->parent->join_pid(st->parent->self, pid);
     }
 }
 
 void module_demux_leave(module_data_t *mod, uint16_t pid)
 {
-    asc_assert(mod->stream.pid_list != NULL
-               , "%s:%d module_demux_set() is required"
-               , __FILE__, __LINE__);
+    module_stream_t *const st = &mod->stream;
+    asc_assert(st->pid_list != NULL, "module_demux_set() is required");
 
-    if (mod->stream.pid_list[pid] > 0)
+    if (st->pid_list[pid] > 0)
     {
-        --mod->stream.pid_list[pid];
-        if (mod->stream.pid_list[pid] == 0 && mod->stream.parent != NULL
-            && mod->stream.parent->leave_pid != NULL)
+        --st->pid_list[pid];
+        if (st->pid_list[pid] == 0 && st->parent != NULL
+            && st->parent->leave_pid != NULL)
         {
-            mod->stream.parent->leave_pid(mod->stream.parent->self, pid);
+            st->parent->leave_pid(st->parent->self, pid);
         }
     }
     else
     {
-        asc_log_error("%s:%d module_demux_leave() double call pid:%d"
-                      , __FILE__, __LINE__, pid);
+        asc_log_error("module_demux_leave() double call pid: %u", pid);
     }
 }
 
