@@ -103,6 +103,18 @@ void module_stream_destroy(module_data_t *mod)
  */
 
 static
+int method_set_upstream(lua_State *L, module_data_t *mod)
+{
+    if (lua_type(L, 2) == LUA_TLIGHTUSERDATA)
+    {
+        module_stream_t *const st = (module_stream_t *)lua_touserdata(L, 2);
+        module_stream_attach(st->self, mod);
+    }
+
+    return 0;
+}
+
+static
 int method_stream(lua_State *L, module_data_t *mod)
 {
     lua_pushlightuserdata(L, &mod->stream);
@@ -111,6 +123,7 @@ int method_stream(lua_State *L, module_data_t *mod)
 
 const module_method_t module_stream_methods[] =
 {
+    { "set_upstream", method_set_upstream },
     { "stream", method_stream },
     { NULL, NULL },
 };
