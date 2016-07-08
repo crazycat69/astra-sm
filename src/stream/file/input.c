@@ -22,6 +22,9 @@
  * Module Name:
  *      file_input
  *
+ * Module Role:
+ *      Source, no demux
+ *
  * Module Options:
  *      filename    - string, input file name
  *      lock        - string, lock file name (to store reading position)
@@ -434,6 +437,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         lua_pop(L, 1);
 
     module_stream_init(L, mod, NULL);
+    module_demux_set(mod, NULL, NULL);
 
     if(mod->lock)
     {

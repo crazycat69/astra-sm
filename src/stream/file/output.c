@@ -22,6 +22,9 @@
  * Module Name:
  *      file_output
  *
+ * Module Role:
+ *      Sink, no demux
+ *
  * Module Options:
  *      filename    - string, output file name
  *      m2ts        - boolean, use m2ts file format [default : false]
@@ -328,6 +331,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 #endif /* HAVE_AIO */
 
     module_stream_init(L, mod, on_ts);
+    module_demux_set(mod, NULL, NULL);
     mod->error = false;
 }
 

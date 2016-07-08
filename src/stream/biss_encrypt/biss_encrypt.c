@@ -18,6 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * Module Name:
+ *      biss_encrypt
+ *
+ * Module Role:
+ *      Output stage, no demux
+ */
+
 #include <astra.h>
 #include <utils/strhex.h>
 #include <luaapi/stream.h>
@@ -160,6 +168,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(L, mod, on_ts);
+    module_demux_set(mod, NULL, NULL);
 
     size_t biss_length = 0;
     const char *key_value = NULL;

@@ -18,6 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * Module Name:
+ *      dvb_input
+ *
+ * Module Role:
+ *      Source, demux endpoint
+ */
+
 #include "dvb.h"
 #include <core/event.h>
 #include <core/thread.h>
@@ -1044,20 +1052,9 @@ static int method_close(lua_State *L, module_data_t *mod)
     return 0;
 }
 
-static void join_pid(module_data_t *mod, uint16_t pid)
-{
-    ++mod->__stream.pid_list[pid];
-}
-
-static void leave_pid(module_data_t *mod, uint16_t pid)
-{
-    --mod->__stream.pid_list[pid];
-}
-
 static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(L, mod, NULL);
-    module_demux_set(mod, join_pid, leave_pid);
 
     mod->fe = ASC_ALLOC(1, dvb_fe_t);
     mod->ca = ASC_ALLOC(1, dvb_ca_t);

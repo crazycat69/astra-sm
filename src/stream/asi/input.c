@@ -18,6 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * Module Name:
+ *      asi_input
+ *
+ * Module Role:
+ *      Source, demux endpoint
+ */
+
 #include <astra.h>
 #include <core/event.h>
 #include <luaapi/stream.h>
@@ -94,12 +102,18 @@ static void set_pid(module_data_t *mod, uint16_t pid, int is_set)
 
 static void join_pid(module_data_t *mod, uint16_t pid)
 {
-    set_pid(mod, pid, 1);
+    if (!module_demux_check(mod, pid))
+        set_pid(mod, pid, 1);
+
+    module_demux_join(mod, pid);
 }
 
 static void leave_pid(module_data_t *mod, uint16_t pid)
 {
-    set_pid(mod, pid, 0);
+    module_demux_leave(mod, pid);
+
+    if (!module_demux_check(mod, pid))
+        set_pid(mod, pid, 0);
 }
 
 static void module_init(lua_State *L, module_data_t *mod)

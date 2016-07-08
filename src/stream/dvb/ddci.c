@@ -18,6 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * Module Name:
+ *      ddci
+ *
+ * Module Role:
+ *      Input stage, forwards pid requests
+ */
+
 #include "dvb.h"
 #include <core/mainloop.h>
 #include <core/thread.h>
@@ -266,7 +274,6 @@ static int method_ca_set_pnr(lua_State *L, module_data_t *mod)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(L, mod, on_ts);
-    module_demux_set(mod, module_demux_join, module_demux_leave);
 
     mod->ca = ASC_ALLOC(1, dvb_ca_t);
 

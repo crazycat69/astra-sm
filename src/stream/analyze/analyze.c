@@ -22,6 +22,9 @@
  * Module Name:
  *      analyze
  *
+ * Module Role:
+ *      Input stage or sink, requests pids optionally
+ *
  * Module Options:
  *      upstream    - object, stream instance returned by module_instance:stream()
  *      name        - string, analyzer name
@@ -794,9 +797,9 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_option_boolean(L, "join_pid", &mod->join_pid);
 
     module_stream_init(L, mod, on_ts);
+    module_demux_set(mod, NULL, NULL);
     if(mod->join_pid)
     {
-        module_demux_set(mod, NULL, NULL);
         module_demux_join(mod, 0x00);
         module_demux_join(mod, 0x01);
         module_demux_join(mod, 0x11);

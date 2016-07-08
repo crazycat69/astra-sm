@@ -44,7 +44,7 @@ struct module_stream_t
 
     demux_callback_t join_pid;
     demux_callback_t leave_pid;
-    uint8_t *pid_list;
+    uint8_t pid_list[MAX_PID];
 };
 
 void module_stream_init(lua_State *L, module_data_t *mod

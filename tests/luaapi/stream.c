@@ -55,7 +55,7 @@ static void ts_thunk(module_data_t *mod, const uint8_t *ts)
         st->on_ts(mod, ts);
 }
 
-static void teardown(void)
+static void stream_teardown(void)
 {
     module_stream_destroy(mod_source_a);
     module_stream_destroy(mod_source_b);
@@ -65,9 +65,16 @@ static void teardown(void)
     module_stream_destroy(mod_sink_b);
 }
 
+static void teardown(void)
+{
+    stream_teardown();
+    lib_teardown();
+}
+
 static void setup(void)
 {
-    teardown();
+    lib_setup();
+    stream_teardown(); /* try destroying uninit'd stream */
 
     /* source_a */
     memset(&st_source_a, 0, sizeof(st_source_a));
@@ -170,6 +177,380 @@ START_TEST(input_select)
 }
 END_TEST
 
+/* move pid membership between parents */
+typedef struct
+{
+    struct test_stream *st;
+    uint16_t pid;
+    bool is_member;
+} demux_test_t;
+
+static void test_demux(const demux_test_t *test)
+{
+    for (const demux_test_t *p = test; p->st != NULL; p++)
+    {
+        const module_data_t *const mod = (module_data_t *)p->st;
+        ck_assert(p->is_member == module_demux_check(mod, p->pid));
+    }
+}
+
+#define MOVE_PID_A 0x100
+#define MOVE_PID_B 0x200
+
+START_TEST(demux_move)
+{
+    /* round 1: selector is unattached */
+    module_demux_join(mod_selector, MOVE_PID_A);
+    module_demux_join(mod_foobar, MOVE_PID_A);
+    static const demux_test_t round_1[] =
+    {
+        { &st_source_a, MOVE_PID_A, false },
+        { &st_source_b, MOVE_PID_A, false },
+        { &st_selector, MOVE_PID_A, true },
+        { &st_foobar, MOVE_PID_A, true },
+        { &st_sink_a, MOVE_PID_A, false },
+        { &st_sink_b, MOVE_PID_A, false },
+        { NULL, 0, 0 },
+    };
+    test_demux(round_1);
+
+    /* round 2: attach selector to source_a */
+    module_stream_attach(mod_source_a, mod_selector);
+    static const demux_test_t round_2[] =
+    {
+        { &st_source_a, MOVE_PID_A, true },
+        { &st_source_b, MOVE_PID_A, false },
+        { NULL, 0, 0 },
+    };
+    test_demux(round_2);
+
+    module_demux_join(mod_selector, MOVE_PID_B);
+
+    /* round 3: attach selector to source_b */
+    module_stream_attach(mod_source_b, mod_selector);
+    static const demux_test_t round_3[] =
+    {
+        { &st_source_a, MOVE_PID_A, false },
+        { &st_source_a, MOVE_PID_B, false },
+        { &st_source_b, MOVE_PID_A, true },
+        { &st_source_b, MOVE_PID_B, true },
+        { NULL, 0, 0 },
+    };
+    test_demux(round_3);
+
+    /* round 4: detach */
+    module_stream_attach(NULL, mod_selector);
+    static const demux_test_t round_4[] =
+    {
+        { &st_source_a, MOVE_PID_A, false },
+        { &st_source_a, MOVE_PID_B, false },
+        { &st_source_b, MOVE_PID_A, false },
+        { &st_source_b, MOVE_PID_B, false },
+        { NULL, 0, 0 },
+    };
+    test_demux(round_4);
+
+    /* check refcounting */
+    module_demux_leave(mod_selector, MOVE_PID_A); /* still ref'd by foobar */
+    ck_assert(module_demux_check(mod_selector, MOVE_PID_A));
+    module_demux_leave(mod_foobar, MOVE_PID_A); /* remove last reference */
+    ck_assert(!module_demux_check(mod_selector, MOVE_PID_A));
+}
+END_TEST
+
+/* discard downstream pid requests */
+#define DISCARD_PID_A 0x400
+#define DISCARD_PID_B 0x200
+
+START_TEST(demux_discard)
+{
+    /* round 1: sinks attached to foobar */
+    module_demux_set(mod_foobar, NULL, NULL);
+    module_demux_set(mod_sink_a, NULL, NULL);
+    module_demux_set(mod_sink_b, NULL, NULL);
+
+    module_demux_join(mod_sink_a, DISCARD_PID_A);
+    module_demux_join(mod_sink_b, DISCARD_PID_B);
+
+    static const demux_test_t round_1[] =
+    {
+        { &st_sink_a, DISCARD_PID_A, true },
+        { &st_sink_a, DISCARD_PID_B, false },
+        { &st_sink_b, DISCARD_PID_A, false },
+        { &st_sink_b, DISCARD_PID_B, true },
+        { &st_foobar, DISCARD_PID_A, false },
+        { &st_foobar, DISCARD_PID_B, false },
+        { NULL, 0, 0 },
+    };
+
+    test_demux(round_1);
+
+    /* round 2: attach sinks to sources */
+    module_stream_attach(mod_source_a, mod_sink_a);
+    module_stream_attach(mod_source_b, mod_sink_b);
+
+    static const demux_test_t round_2[] =
+    {
+        { &st_sink_a, DISCARD_PID_A, true },
+        { &st_sink_b, DISCARD_PID_B, true },
+        { &st_source_a, DISCARD_PID_A, true },
+        { &st_source_b, DISCARD_PID_B, true },
+        { NULL, 0, 0 },
+    };
+
+    test_demux(round_2);
+
+    /* round 3: set foobar demux mode to default and reattach sinks */
+    module_demux_set(mod_foobar, module_demux_join, module_demux_leave);
+    /* NOTE: don't call this function outside of module_init() */
+
+    module_stream_attach(mod_foobar, mod_sink_a);
+    module_stream_attach(mod_foobar, mod_sink_b);
+
+    static const demux_test_t round_3[] =
+    {
+        { &st_foobar, DISCARD_PID_A, true },
+        { &st_foobar, DISCARD_PID_B, true },
+        { NULL, 0, 0 },
+    };
+
+    test_demux(round_3);
+}
+END_TEST
+
+/* make sure requested pids are flooded to all children */
+static bool flood_pids[MAX_PID];
+static unsigned int flood_sink_cnt[2][MAX_PID];
+
+static void flood_join(module_data_t *mod, uint16_t pid)
+{
+    if (!module_demux_check(mod, pid))
+        flood_pids[pid] = true;
+
+    module_demux_join(mod, pid);
+}
+
+static void flood_leave(module_data_t *mod, uint16_t pid)
+{
+    module_demux_leave(mod, pid);
+
+    if (!module_demux_check(mod, pid))
+        flood_pids[pid] = false;
+}
+
+static void flood_send(void)
+{
+    for (unsigned int i = 0; i < MAX_PID; i++)
+    {
+        if (flood_pids[i])
+        {
+            uint8_t ts[TS_PACKET_SIZE] = { 0x47 };
+            TS_SET_PID(ts, i);
+            module_stream_send(mod_foobar, ts);
+        }
+    }
+}
+
+static void flood_on_sink_ts(module_data_t *mod, const uint8_t *ts)
+{
+    const unsigned int idx = (mod == mod_sink_a ? 0 : 1);
+    const uint16_t pid = TS_GET_PID(ts);
+
+    flood_sink_cnt[idx][pid]++;
+}
+
+#define FLOOD_COMMON_PID 0x10
+#define FLOOD_PID_A 0x400
+#define FLOOD_PID_B 0x800
+
+START_TEST(demux_flood)
+{
+    /* set up pid membership */
+    memset(flood_pids, 0, sizeof(flood_pids));
+    memset(flood_sink_cnt, 0, sizeof(flood_sink_cnt));
+
+    module_demux_set(mod_foobar, flood_join, flood_leave);
+
+    st_sink_a.on_ts = flood_on_sink_ts;
+    module_demux_join(mod_sink_a, FLOOD_COMMON_PID);
+    module_demux_join(mod_sink_a, FLOOD_PID_A);
+
+    st_sink_b.on_ts = flood_on_sink_ts;
+    module_demux_join(mod_sink_b, FLOOD_COMMON_PID);
+    module_demux_join(mod_sink_b, FLOOD_PID_B);
+
+    /* send packets from foobar, make sure both sinks get them */
+    for (unsigned int i = 0; i < 1000; i++)
+        flood_send();
+
+    for (unsigned int i = 0; i <= 1; i++)
+    {
+        ck_assert(flood_sink_cnt[i][FLOOD_COMMON_PID] == 1000);
+        ck_assert(flood_sink_cnt[i][FLOOD_PID_A] == 1000);
+        ck_assert(flood_sink_cnt[i][FLOOD_PID_B] == 1000);
+    }
+
+    /* test refcounting */
+    module_demux_leave(mod_sink_a, FLOOD_COMMON_PID);
+    ck_assert(module_demux_check(mod_foobar, FLOOD_COMMON_PID));
+    module_demux_leave(mod_sink_b, FLOOD_COMMON_PID);
+    ck_assert(!module_demux_check(mod_foobar, FLOOD_COMMON_PID));
+}
+END_TEST
+
+/* stacking pid memberships */
+#define STACK_PID 0x1500
+
+START_TEST(demux_stack)
+{
+    /* make foobar and selector join pid */
+    module_demux_join(mod_foobar, STACK_PID);
+    module_demux_join(mod_selector, STACK_PID);
+    ck_assert(module_demux_check(mod_foobar, STACK_PID));
+    ck_assert(module_demux_check(mod_selector, STACK_PID));
+
+    /* attach foobar to source_a */
+    module_stream_attach(mod_source_a, mod_foobar);
+    ck_assert(module_demux_check(mod_source_a, STACK_PID));
+    ck_assert(!module_demux_check(mod_source_b, STACK_PID));
+
+    /* attach foobar to source_b */
+    module_stream_attach(mod_source_b, mod_foobar);
+    ck_assert(!module_demux_check(mod_source_a, STACK_PID));
+    ck_assert(module_demux_check(mod_source_b, STACK_PID));
+
+    /* have selector leave pid */
+    module_demux_leave(mod_selector, STACK_PID); /* only one ref */
+    ck_assert(!module_demux_check(mod_selector, STACK_PID));
+    module_demux_join(mod_selector, STACK_PID);
+
+    /* detach foobar */
+    module_stream_attach(NULL, mod_foobar);
+    ck_assert(!module_demux_check(mod_source_a, STACK_PID));
+    ck_assert(!module_demux_check(mod_source_b, STACK_PID));
+
+    /* reattach foobar to selector */
+    module_stream_attach(mod_selector, mod_foobar);
+    ck_assert(module_demux_check(mod_selector, STACK_PID));
+    module_demux_leave(mod_selector, STACK_PID); /* ref'd by foobar */
+    ck_assert(module_demux_check(mod_selector, STACK_PID));
+    module_demux_leave(mod_foobar, STACK_PID); /* last reference */
+    ck_assert(!module_demux_check(mod_selector, STACK_PID));
+}
+END_TEST
+
+/* make sure modules leave their pids when destroyed */
+#define DESTROY_PID_A 0x100
+#define DESTROY_PID_B 0x200
+#define DESTROY_PID_C 0x300
+#define DESTROY_PID_COMMON 0xff0
+
+START_TEST(demux_destroy)
+{
+    /* set up pid membership */
+    module_stream_attach(mod_source_a, mod_selector);
+
+    module_demux_join(mod_sink_a, DESTROY_PID_A);
+    module_demux_join(mod_sink_a, DESTROY_PID_COMMON);
+
+    module_demux_join(mod_sink_b, DESTROY_PID_B);
+    module_demux_join(mod_sink_b, DESTROY_PID_COMMON);
+
+    module_demux_join(mod_foobar, DESTROY_PID_C);
+    module_demux_join(mod_foobar, DESTROY_PID_COMMON);
+
+    static const demux_test_t pid_setup[] =
+    {
+        { &st_selector, DESTROY_PID_A, true },
+        { &st_selector, DESTROY_PID_B, true },
+        { &st_selector, DESTROY_PID_C, true },
+        { &st_selector, DESTROY_PID_COMMON, true },
+        { &st_source_a, DESTROY_PID_A, true },
+        { &st_source_a, DESTROY_PID_B, true },
+        { &st_source_a, DESTROY_PID_C, true },
+        { &st_source_a, DESTROY_PID_COMMON, true },
+        { NULL, 0, 0 },
+    };
+
+    test_demux(pid_setup);
+
+    /* destroy sink_a */
+    module_stream_destroy(mod_sink_a);
+
+    static const demux_test_t pid_a_gone[] =
+    {
+        { &st_foobar, DESTROY_PID_A, false },
+        { &st_foobar, DESTROY_PID_COMMON, true },
+        { &st_selector, DESTROY_PID_A, false },
+        { &st_selector, DESTROY_PID_COMMON, true },
+        { &st_source_a, DESTROY_PID_A, false },
+        { &st_source_a, DESTROY_PID_COMMON, true },
+        { NULL, 0, 0 },
+    };
+
+    test_demux(pid_a_gone);
+
+    /* attach selector to source_b */
+    module_stream_attach(mod_source_b, mod_selector);
+
+    static const demux_test_t reattached[] =
+    {
+        { &st_source_b, DESTROY_PID_B, true },
+        { &st_source_b, DESTROY_PID_C, true },
+        { &st_source_b, DESTROY_PID_COMMON, true },
+        { NULL, 0, 0 },
+    };
+
+    test_demux(reattached);
+
+    /* destroy sink_b */
+    module_stream_destroy(mod_sink_b);
+
+    static const demux_test_t pid_b_gone[] =
+    {
+        { &st_foobar, DESTROY_PID_B, false },
+        { &st_foobar, DESTROY_PID_COMMON, true },
+        { &st_selector, DESTROY_PID_B, false },
+        { &st_selector, DESTROY_PID_COMMON, true },
+        { &st_source_b, DESTROY_PID_B, false },
+        { &st_source_b, DESTROY_PID_COMMON, true },
+        { NULL, 0, 0 },
+    };
+
+    test_demux(pid_b_gone);
+
+    /* destroy foobar */
+    module_stream_destroy(mod_foobar);
+
+    static const demux_test_t foobar_gone[] =
+    {
+        { &st_foobar, DESTROY_PID_C, false },
+        { &st_foobar, DESTROY_PID_COMMON, false },
+        { &st_selector, DESTROY_PID_C, false },
+        { &st_selector, DESTROY_PID_COMMON, false },
+        { &st_source_b, DESTROY_PID_C, false },
+        { &st_source_b, DESTROY_PID_COMMON, false },
+        { NULL, 0, 0 },
+    };
+
+    test_demux(foobar_gone);
+}
+END_TEST
+
+/* make sure double leave doesn't cause refcount underflow */
+#define DOUBLE_PID 0x1000
+
+START_TEST(double_leave)
+{
+    module_demux_join(mod_selector, DOUBLE_PID);
+    ck_assert(module_demux_check(mod_selector, DOUBLE_PID));
+
+    module_demux_leave(mod_selector, DOUBLE_PID);
+    module_demux_leave(mod_selector, DOUBLE_PID);
+    ck_assert(!module_demux_check(mod_selector, DOUBLE_PID));
+}
+END_TEST
+
 /* trying to initialize twice */
 START_TEST(double_init)
 {
@@ -198,6 +579,29 @@ START_TEST(bad_attach)
 }
 END_TEST
 
+/* attach module to itself */
+static size_t loop_cnt;
+
+static void loop_on_ts(module_data_t *mod, const uint8_t *ts)
+{
+    if (++loop_cnt >= 1000)
+        asc_lib_abort();
+
+    module_stream_send(mod, ts);
+}
+
+START_TEST(ouroboros)
+{
+    loop_cnt = 0;
+
+    st_source_a.on_ts = loop_on_ts;
+    module_stream_attach(mod_source_a, mod_source_a);
+
+    static const uint8_t ts[TS_PACKET_SIZE] = { 0x47 };
+    module_stream_send(mod_source_a, ts);
+}
+END_TEST
+
 Suite *luaapi_stream(void)
 {
     Suite *const s = suite_create("luaapi/stream");
@@ -205,14 +609,21 @@ Suite *luaapi_stream(void)
     TCase *const tc = tcase_create("default");
     tcase_add_checked_fixture(tc, setup, teardown);
     tcase_add_test(tc, input_select);
+    tcase_add_test(tc, demux_move);
+    tcase_add_test(tc, demux_discard);
+    tcase_add_test(tc, demux_flood);
+    tcase_add_test(tc, demux_stack);
+    tcase_add_test(tc, demux_destroy);
+    tcase_add_test(tc, double_leave);
     suite_add_tcase(s, tc);
 
     if (can_fork != CK_NOFORK)
     {
         TCase *const tc_f = tcase_create("fail");
-        tcase_add_checked_fixture(tc_f, lib_setup, lib_teardown);
+        tcase_add_checked_fixture(tc_f, setup, teardown);
         tcase_add_exit_test(tc_f, double_init, EXIT_ABORT);
         tcase_add_exit_test(tc_f, bad_attach, EXIT_ABORT);
+        tcase_add_exit_test(tc_f, ouroboros, EXIT_ABORT);
         suite_add_tcase(s, tc_f);
     }
 

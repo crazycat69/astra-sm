@@ -22,6 +22,9 @@
  * Module Name:
  *      udp_input
  *
+ * Module Role:
+ *      Source, no demux
+ *
  * Module Options:
  *      addr        - string, source IP address
  *      port        - number, source UDP port
@@ -145,6 +148,7 @@ static int method_port(lua_State *L, module_data_t *mod)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(L, mod, NULL);
+    module_demux_set(mod, NULL, NULL);
 
     module_option_string(L, "addr", &mod->config.addr, NULL);
     if(mod->config.addr == NULL)

@@ -22,6 +22,9 @@
  * Module Name:
  *      http_request
  *
+ * Module Role (when streaming):
+ *      Source or sink, no demux
+ *
  * Module Options:
  *      host        - string, server hostname or IP address
  *      port        - number, server port (default: 80)
@@ -1108,6 +1111,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     if(mod->is_stream)
     {
         module_stream_init(L, mod, NULL);
+        module_demux_set(mod, NULL, NULL);
 
         module_option_boolean(L, "sync", &mod->config.sync);
         module_option_string(L, "sync_opts", &mod->config.sync_opts, NULL);
@@ -1121,6 +1125,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         asc_assert(mod->is_stream != true, MSG("option 'upstream' is not allowed in stream mode"));
 
         module_stream_init(L, mod, on_ts);
+        module_demux_set(mod, NULL, NULL);
 
         int value = 1024;
         module_option_integer(L, "buffer_size", &value);

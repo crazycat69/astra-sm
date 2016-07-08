@@ -21,6 +21,9 @@
  * Module Name:
  *      t2mi_decap
  *
+ * Module Role:
+ *      Input stage, requests pids
+ *
  * Module Options:
  *      upstream    - object, stream module instance
  *      name        - string, instance identifier for logging

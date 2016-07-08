@@ -42,10 +42,15 @@ void module_stream_init(lua_State *L, module_data_t *mod
                         , stream_callback_t on_ts)
 {
     asc_assert(mod->stream.self == NULL, "module already initialized");
+    module_stream_t *const st = &mod->stream;
 
-    mod->stream.self = mod;
-    mod->stream.on_ts = on_ts;
-    mod->stream.children = asc_list_init();
+    st->self = mod;
+    st->on_ts = on_ts;
+    st->children = asc_list_init();
+
+    /* demux default: forward downstream pid requests to parent */
+    st->join_pid = module_demux_join;
+    st->leave_pid = module_demux_leave;
 
     if (on_ts != NULL && L != NULL)
     {
@@ -69,15 +74,10 @@ void module_stream_destroy(module_data_t *mod)
         return;
 
     /* leave all joined pids */
-    if (st->pid_list != NULL)
+    for (unsigned int i = 0; i < MAX_PID; i++)
     {
-        for (unsigned int i = 0; i < MAX_PID; i++)
-        {
-            if (st->pid_list[i] > 0)
-                module_demux_leave(mod, i);
-        }
-
-        ASC_FREE(st->pid_list, free);
+        while (module_demux_check(mod, i))
+            module_demux_leave(mod, i);
     }
 
     /* detach from upstream */
@@ -119,6 +119,17 @@ void module_stream_attach(module_data_t *mod, module_data_t *child)
 {
     module_stream_t *const cs = &child->stream;
 
+    /* save pid membership data, leave all pids */
+    uint8_t saved_list[MAX_PID] = { 0 };
+    for (unsigned int i = 0; i < MAX_PID; i++)
+    {
+        while (module_demux_check(child, i))
+        {
+            module_demux_leave(child, i);
+            saved_list[i]++;
+        }
+    }
+
     if (cs->parent != NULL)
     {
         asc_list_remove_item(cs->parent->children, cs);
@@ -132,6 +143,13 @@ void module_stream_attach(module_data_t *mod, module_data_t *child)
 
         cs->parent = ps;
         asc_list_insert_tail(ps->children, cs);
+    }
+
+    /* re-request pids from new parent */
+    for (unsigned int i = 0; i < MAX_PID; i++)
+    {
+        while (saved_list[i]-- > 0)
+            module_demux_join(child, i);
     }
 }
 
@@ -158,8 +176,6 @@ void module_demux_set(module_data_t *mod, demux_callback_t join_pid
                       , demux_callback_t leave_pid)
 {
     module_stream_t *const st = &mod->stream;
-    if (st->pid_list == NULL)
-        st->pid_list = ASC_ALLOC(MAX_PID, uint8_t);
 
     st->join_pid = join_pid;
     st->leave_pid = leave_pid;
@@ -167,8 +183,8 @@ void module_demux_set(module_data_t *mod, demux_callback_t join_pid
 
 void module_demux_join(module_data_t *mod, uint16_t pid)
 {
+    asc_assert(pid < MAX_PID, "pid out of range");
     module_stream_t *const st = &mod->stream;
-    asc_assert(st->pid_list != NULL, "module_demux_set() is required");
 
     ++st->pid_list[pid];
     if (st->pid_list[pid] == 1 && st->parent != NULL
@@ -180,8 +196,8 @@ void module_demux_join(module_data_t *mod, uint16_t pid)
 
 void module_demux_leave(module_data_t *mod, uint16_t pid)
 {
+    asc_assert(pid < MAX_PID, "pid out of range");
     module_stream_t *const st = &mod->stream;
-    asc_assert(st->pid_list != NULL, "module_demux_set() is required");
 
     if (st->pid_list[pid] > 0)
     {
@@ -194,11 +210,12 @@ void module_demux_leave(module_data_t *mod, uint16_t pid)
     }
     else
     {
-        asc_log_error("module_demux_leave() double call pid: %u", pid);
+        asc_log_error("double leave on pid: %hu", pid);
     }
 }
 
 bool module_demux_check(const module_data_t *mod, uint16_t pid)
 {
+    asc_assert(pid < MAX_PID, "pid out of range");
     return (mod->stream.pid_list[pid] > 0);
 }

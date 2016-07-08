@@ -22,6 +22,9 @@
  * Module Name:
  *      channel
  *
+ * Module Role:
+ *      Input stage, requests pids
+ *
  * Module Options:
  *      upstream    - object, stream instance returned by module_instance:stream()
  *      name        - string, channel name

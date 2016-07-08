@@ -21,6 +21,9 @@
  * Module Name:
  *      pipe_generic
  *
+ * Module Role (when streaming):
+ *      Source, output stage or sink, forwards pid requests
+ *
  * Module Options:
  *      upstream    - object, stream module instance
  *      name        - string, instance identifier for logging

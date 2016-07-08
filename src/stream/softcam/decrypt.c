@@ -22,6 +22,9 @@
  * Module Name:
  *      decrypt
  *
+ * Module Role:
+ *      Input stage, no demux
+ *
  * Module Options:
  *      upstream    - object, stream instance returned by module_instance:stream()
  *      name        - string, channel name
@@ -920,6 +923,7 @@ void on_cam_response(module_data_t *mod, void *arg, const uint8_t *data)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     module_stream_init(L, mod, on_ts);
+    module_demux_set(mod, NULL, NULL);
 
     mod->__decrypt.self = mod;
 

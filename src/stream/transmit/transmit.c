@@ -22,8 +22,11 @@
  * Module Name:
  *      transmit
  *
+ * Module Role:
+ *      Input or output stage, forwards pid requests
+ *
  * Module Options:
- *      upstream    - object, stream instance returned by module_instance:stream()
+ *      upstream    - object, stream instance returned by mod:stream()
  *
  * Module Methods:
  *      set_upstream(object)

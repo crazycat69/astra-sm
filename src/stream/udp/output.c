@@ -22,6 +22,9 @@
  * Module Name:
  *      udp_output
  *
+ * Module Role:
+ *      Sink, no demux
+ *
  * Module Options:
  *      upstream    - object, stream instance returned by module_instance:stream()
  *      addr        - string, source IP address
@@ -216,6 +219,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     }
 
     module_stream_init(L, mod, on_ts);
+    module_demux_set(mod, NULL, NULL);
 }
 
 static void module_destroy(module_data_t *mod)

@@ -21,6 +21,9 @@
  * Module Name:
  *      remux
  *
+ * Module Role:
+ *      Output stage, no demux
+ *
  * Module Options:
  *      rate - target bitrate, bits per second
  *      pcr_interval - PCR insertion interval, ms
@@ -366,6 +369,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->stream[0x14] = MPEGTS_PACKET_DATA; /* TDT, TOT */
 
     module_stream_init(L, mod, remux_ts_in);
+    module_demux_set(mod, NULL, NULL);
 }
 
 static void module_destroy(module_data_t *mod)
