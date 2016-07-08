@@ -255,6 +255,9 @@ void asc_log_core_init(void)
 
 void asc_log_core_destroy(void)
 {
+    if (logger == NULL)
+        return;
+
     if (logger->fd != -1)
         close(logger->fd);
 

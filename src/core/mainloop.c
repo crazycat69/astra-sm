@@ -270,6 +270,9 @@ void asc_main_loop_init(void)
 
 void asc_main_loop_destroy(void)
 {
+    if (main_loop == NULL)
+        return;
+
     wake_close();
     asc_mutex_destroy(&main_loop->job_mutex);
 
