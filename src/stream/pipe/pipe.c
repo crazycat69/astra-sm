@@ -429,7 +429,7 @@ void module_init(lua_State *L, module_data_t *mod)
     mod->config.sin.mode = CHILD_IO_RAW;
 
     lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
-    if (lua_islightuserdata(L, -1))
+    if (!lua_isnil(L, -1))
     {
         /* output or transcode; relay TS from upstream module */
         mod->config.sin.mode = CHILD_IO_MPEGTS;

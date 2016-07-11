@@ -1120,7 +1120,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     }
 
     lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
-    if(lua_type(L, -1) == LUA_TLIGHTUSERDATA)
+    if(!lua_isnil(L, -1))
     {
         asc_assert(mod->is_stream != true, MSG("option 'upstream' is not allowed in stream mode"));
 
