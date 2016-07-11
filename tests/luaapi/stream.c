@@ -78,12 +78,12 @@ static void setup(void)
 
     /* source_a */
     memset(&st_source_a, 0, sizeof(st_source_a));
-    module_stream_init(NULL, mod_source_a, ts_thunk);
+    module_stream_init(NULL, mod_source_a, NULL);
     /* source module, no parent */
 
     /* source_b */
     memset(&st_source_b, 0, sizeof(st_source_b));
-    module_stream_init(NULL, mod_source_b, ts_thunk);
+    module_stream_init(NULL, mod_source_b, NULL);
     /* source module, no parent */
 
     /* selector */
@@ -602,6 +602,13 @@ START_TEST(ouroboros)
 }
 END_TEST
 
+/* try attaching a source module to parent */
+START_TEST(no_on_ts)
+{
+    module_stream_attach(mod_selector, mod_source_a);
+}
+END_TEST
+
 Suite *luaapi_stream(void)
 {
     Suite *const s = suite_create("luaapi/stream");
@@ -624,6 +631,7 @@ Suite *luaapi_stream(void)
         tcase_add_exit_test(tc_f, double_init, EXIT_ABORT);
         tcase_add_exit_test(tc_f, bad_attach, EXIT_ABORT);
         tcase_add_exit_test(tc_f, ouroboros, EXIT_ABORT);
+        tcase_add_exit_test(tc_f, no_on_ts, EXIT_ABORT);
         suite_add_tcase(s, tc_f);
     }
 

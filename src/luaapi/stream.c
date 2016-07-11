@@ -38,6 +38,9 @@ struct module_data_t
  * init and cleanup
  */
 
+static
+int method_set_upstream(lua_State *L, module_data_t *mod);
+
 void module_stream_init(lua_State *L, module_data_t *mod
                         , stream_callback_t on_ts)
 {
@@ -52,16 +55,12 @@ void module_stream_init(lua_State *L, module_data_t *mod
     st->join_pid = module_demux_join;
     st->leave_pid = module_demux_leave;
 
-    if (on_ts != NULL && L != NULL)
+    if (L != NULL)
     {
         lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
-        if (lua_type(L, -1) == LUA_TLIGHTUSERDATA)
-        {
-            module_stream_t *const parent_st =
-                (module_stream_t *)lua_touserdata(L, -1);
+        if (!lua_isnil(L, -1))
+            method_set_upstream(L, mod);
 
-            module_stream_attach(parent_st->self, mod);
-        }
         lua_pop(L, 1);
     }
 }
@@ -105,10 +104,23 @@ void module_stream_destroy(module_data_t *mod)
 static
 int method_set_upstream(lua_State *L, module_data_t *mod)
 {
-    if (lua_type(L, 2) == LUA_TLIGHTUSERDATA)
+    switch (lua_type(L, -1))
     {
-        module_stream_t *const st = (module_stream_t *)lua_touserdata(L, 2);
-        module_stream_attach(st->self, mod);
+        case LUA_TNIL:
+            module_stream_attach(NULL, mod);
+            break;
+
+        case LUA_TLIGHTUSERDATA:
+            if (mod->stream.on_ts == NULL)
+                luaL_error(L, "this module cannot receive TS");
+
+            module_stream_t *const st =
+                (module_stream_t *)lua_touserdata(L, -1);
+            module_stream_attach(st->self, mod);
+            break;
+
+        default:
+            luaL_error(L, "option 'upstream' requires a stream module");
     }
 
     return 0;
@@ -143,6 +155,7 @@ void module_stream_attach(module_data_t *mod, module_data_t *child)
         }
     }
 
+    /* switch parents */
     if (cs->parent != NULL)
     {
         asc_list_remove_item(cs->parent->children, cs);
@@ -153,6 +166,7 @@ void module_stream_attach(module_data_t *mod, module_data_t *child)
     {
         module_stream_t *const ps = &mod->stream;
         asc_assert(ps->self != NULL, "attaching to uninitialized module");
+        asc_assert(cs->on_ts != NULL, "this module cannot receive TS");
 
         cs->parent = ps;
         asc_list_insert_tail(ps->children, cs);
@@ -176,8 +190,7 @@ void module_stream_send(void *arg, const uint8_t *ts)
         module_stream_t *const i =
             (module_stream_t *)asc_list_data(stream->children);
 
-        if (i->on_ts != NULL)
-            i->on_ts(i->self, ts);
+        i->on_ts(i->self, ts);
     }
 }
 
