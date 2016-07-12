@@ -43,6 +43,9 @@ Suite *core_timer(void);
 /* luaapi */
 Suite *luaapi_stream(void);
 
+/* luaapi/lib */
+Suite *luaapi_lib_pidfile(void);
+
 /* utils */
 Suite *utils_base64(void);
 Suite *utils_crc32b(void);
@@ -68,6 +71,9 @@ static suite_func_t suite_list[] = {
 
     /* luaapi */
     luaapi_stream,
+
+    /* luaapi/lib */
+    luaapi_lib_pidfile,
 
     /* utils */
     utils_base64,

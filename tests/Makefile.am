@@ -42,6 +42,9 @@ test_libastra_SOURCES += \
     luaapi/stream.c
 
 test_libastra_SOURCES += \
+    luaapi/lib/pidfile.c
+
+test_libastra_SOURCES += \
     utils/base64.c \
     utils/crc32b.c \
     utils/crc8.c \

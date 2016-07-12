@@ -34,24 +34,19 @@
 
 #define MSG(_msg) "[pidfile] " _msg
 
-struct module_data_t
-{
-    MODULE_DATA();
-
-    int idx_self;
-};
+#define PIDFILE_KEY "pidfile.path"
 
 static
 const char *get_pidfile(lua_State *L)
 {
     const char *filename = NULL;
 
-    lua_getglobal(L, "pidfile");
-    lua_getfield(L, -1, "path");
+    lua_pushstring(L, PIDFILE_KEY);
+    lua_gettable(L, LUA_REGISTRYINDEX);
     if (lua_isstring(L, -1))
         filename = lua_tostring(L, -1);
 
-    lua_pop(L, 2); /* pidfile */
+    lua_pop(L, 1);
 
     return filename;
 }
@@ -59,18 +54,17 @@ const char *get_pidfile(lua_State *L)
 static
 void set_pidfile(lua_State *L, const char *filename)
 {
-    lua_getglobal(L, "pidfile");
+    lua_pushstring(L, PIDFILE_KEY);
     if (filename != NULL)
         lua_pushstring(L, filename);
     else
         lua_pushnil(L);
 
-    lua_setfield(L, -2, "path");
-    lua_pop(L, 1); /* pidfile */
+    lua_settable(L, LUA_REGISTRYINDEX);
 }
 
 static
-void module_init(lua_State *L, module_data_t *mod)
+int method_call(lua_State *L)
 {
     /* check if we've already been called */
     const char *filename = get_pidfile(L);
@@ -78,7 +72,7 @@ void module_init(lua_State *L, module_data_t *mod)
         luaL_error(L, MSG("already created in %s"), filename);
 
     /* remove stale pidfile if it exists */
-    filename = luaL_checkstring(L, MODULE_OPTIONS_IDX);
+    filename = luaL_checkstring(L, 2);
     if (access(filename, F_OK) == 0 && unlink(filename) != 0)
         asc_log_error(MSG("unlink(): %s: %s"), filename, strerror(errno));
 
@@ -130,30 +124,51 @@ void module_init(lua_State *L, module_data_t *mod)
         asc_log_error(MSG("unlink(): %s: %s"), tmp, strerror(errno));
 #endif /* !_WIN32 */
 
-    /* store in registry to prevent garbage collection */
     set_pidfile(L, filename);
 
-    lua_pushvalue(L, 3);
-    mod->idx_self = luaL_ref(L, LUA_REGISTRYINDEX);
+    return 0;
 }
 
 static
-void module_destroy(module_data_t *mod)
+int method_close(lua_State *L)
 {
-    lua_State *const L = module_lua(mod);
     const char *const filename = get_pidfile(L);
 
     if (filename != NULL)
     {
         if (access(filename, F_OK) == 0 && unlink(filename) != 0)
             asc_log_error(MSG("unlink(): %s: %s"), filename, strerror(errno));
+
+        set_pidfile(L, NULL);
     }
 
-    luaL_unref(L, LUA_REGISTRYINDEX, mod->idx_self);
+    return 0;
 }
 
-MODULE_REGISTER(pidfile)
+static
+void module_load(lua_State *L)
 {
-    .init = module_init,
-    .destroy = module_destroy,
+    static const luaL_Reg meta[] =
+    {
+        { "__call", method_call },
+        { "__gc", method_close },
+        { NULL, NULL },
+    };
+
+    static const luaL_Reg api[] =
+    {
+        { "close", method_close },
+        { NULL, NULL },
+    };
+
+    luaL_newlib(L, api);
+    lua_newtable(L);
+    luaL_setfuncs(L, meta, 0);
+    lua_setmetatable(L, -2);
+    lua_setglobal(L, "pidfile");
+}
+
+BINDING_REGISTER(pidfile)
+{
+    .load = module_load,
 };
