@@ -53,7 +53,7 @@ START_TEST(test_vectors)
         out = (char *)au_base64_dec(b64, strlen(b64), &out_size);
         ck_assert(out != NULL);
         ck_assert(out_size == strlen(text));
-        ck_assert(!strcmp(out, text));
+        ck_assert(!strncmp(out, text, out_size));
         free(out);
     }
 }
