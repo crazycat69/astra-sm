@@ -104,6 +104,8 @@ void module_stream_destroy(module_data_t *mod)
 static
 int method_set_upstream(lua_State *L, module_data_t *mod)
 {
+    module_stream_t *st = NULL;
+
     switch (lua_type(L, -1))
     {
         case LUA_TNIL:
@@ -114,8 +116,7 @@ int method_set_upstream(lua_State *L, module_data_t *mod)
             if (mod->stream.on_ts == NULL)
                 luaL_error(L, "this module cannot receive TS");
 
-            module_stream_t *const st =
-                (module_stream_t *)lua_touserdata(L, -1);
+            st = (module_stream_t *)lua_touserdata(L, -1);
             module_stream_attach(st->self, mod);
             break;
 
