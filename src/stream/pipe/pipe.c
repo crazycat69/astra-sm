@@ -372,8 +372,8 @@ int method_pid(lua_State *L, module_data_t *mod)
 static
 int method_send(lua_State *L, module_data_t *mod)
 {
-    const char *const str = luaL_checkstring(L, 1);
-    const int len = luaL_len(L, 1);
+    const char *const str = luaL_checkstring(L, 2);
+    const int len = luaL_len(L, 2);
 
     if (mod->child == NULL)
         luaL_error(L, MSG("process is not running"));
