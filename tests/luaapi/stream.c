@@ -524,8 +524,6 @@ START_TEST(demux_destroy)
 
     static const demux_test_t foobar_gone[] =
     {
-        { &st_foobar, DESTROY_PID_C, false },
-        { &st_foobar, DESTROY_PID_COMMON, false },
         { &st_selector, DESTROY_PID_C, false },
         { &st_selector, DESTROY_PID_COMMON, false },
         { &st_source_b, DESTROY_PID_C, false },
