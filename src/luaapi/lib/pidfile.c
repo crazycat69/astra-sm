@@ -72,7 +72,7 @@ int method_call(lua_State *L)
         luaL_error(L, MSG("already created in %s"), filename);
 
     /* remove stale pidfile if it exists */
-    filename = luaL_checkstring(L, 2);
+    filename = luaL_checkstring(L, MODULE_OPTIONS_IDX);
     if (access(filename, F_OK) == 0 && unlink(filename) != 0)
         asc_log_error(MSG("unlink(): %s: %s"), filename, strerror(errno));
 

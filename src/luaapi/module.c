@@ -210,11 +210,17 @@ bool module_option_string(lua_State *L, const char *name, const char **string
     const int type = lua_type(L, -1);
     bool result = false;
 
-    if (type == LUA_TSTRING)
+    if (type == LUA_TSTRING || type == LUA_TNUMBER)
     {
-        if (length)
-            *length = luaL_len(L, -1);
-        *string = lua_tostring(L, -1);
+        *string = lua_tolstring(L, -1, length);
+        result = true;
+    }
+    else if (type == LUA_TBOOLEAN)
+    {
+        /* convert to string */
+        lua_pushstring(L, (lua_toboolean(L, -1) ? "true" : "false"));
+        *string = lua_tolstring(L, -1, length);
+        lua_setfield(L, MODULE_OPTIONS_IDX, name);
         result = true;
     }
 

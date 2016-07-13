@@ -41,6 +41,7 @@ Suite *core_thread(void);
 Suite *core_timer(void);
 
 /* luaapi */
+Suite *luaapi_module(void);
 Suite *luaapi_stream(void);
 
 /* luaapi/lib */
@@ -77,6 +78,7 @@ static suite_func_t suite_list[] = {
     core_timer,
 
     /* luaapi */
+    luaapi_module,
     luaapi_stream,
 
     /* luaapi/lib */
