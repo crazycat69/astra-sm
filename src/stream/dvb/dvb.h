@@ -23,6 +23,7 @@
 
 #include <astra.h>
 #include <luaapi/stream.h>
+#include <core/list.h>
 #include <mpegts/psi.h>
 
 #include <poll.h>

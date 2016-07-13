@@ -41,6 +41,7 @@
  */
 
 #include <astra.h>
+#include <core/list.h>
 #include <core/timer.h>
 #include <luaapi/stream.h>
 #include <mpegts/psi.h>

@@ -22,6 +22,7 @@
 #define _MODULE_CAM_H_ 1
 
 #include <astra.h>
+#include <core/list.h>
 #include <utils/strhex.h>
 #include <luaapi/stream.h>
 #include <mpegts/psi.h>
