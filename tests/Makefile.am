@@ -42,7 +42,14 @@ test_libastra_SOURCES += \
     luaapi/stream.c
 
 test_libastra_SOURCES += \
-    luaapi/lib/pidfile.c
+    luaapi/lib/astra.c \
+    luaapi/lib/base64.c \
+    luaapi/lib/md5.c \
+    luaapi/lib/pidfile.c \
+    luaapi/lib/rc4.c \
+    luaapi/lib/sha1.c \
+    luaapi/lib/strhex.c \
+    luaapi/lib/utils.c
 
 test_libastra_SOURCES += \
     utils/base64.c \

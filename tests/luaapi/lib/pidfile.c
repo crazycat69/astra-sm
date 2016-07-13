@@ -61,8 +61,8 @@ END_TEST
 START_TEST(no_arg_lua)
 {
     static const char *const script =
-        "local ret = pcall(pidfile)\n"
-        "if ret ~= false then error('expected failure') end";
+        "local ret = pcall(pidfile)" "\n"
+        "if ret ~= false then error('expected failure') end" "\n";
 
     ck_assert_msg(luaL_dostring(L, script) == 0, lua_tostring(L, -1));
 }
@@ -86,10 +86,10 @@ END_TEST
 START_TEST(twice_lua)
 {
     static const char *const script =
-        "local ret = pcall(pidfile, 'test.pid')\n"
-        "assert(ret == true)\n"
-        "ret = pcall(pidfile, 'test2.pid')\n"
-        "assert(ret == false)\n";
+        "local ret = pcall(pidfile, 'test.pid')" "\n"
+        "assert(ret == true)" "\n"
+        "ret = pcall(pidfile, 'test2.pid')" "\n"
+        "assert(ret == false)" "\n";
 
     ck_assert_msg(luaL_dostring(L, script) == 0, lua_tostring(L, -1));
 
@@ -117,12 +117,12 @@ END_TEST
 START_TEST(gc_lua)
 {
     static const char *const script =
-        "local ret = pcall(pidfile, 'test.pid')\n"
-        "assert(ret == true)\n"
-        "local f = assert(io.open('test.pid'))\n"
-        "f:close()\n"
-        "pidfile = nil\n"
-        "collectgarbage()\n";
+        "local ret = pcall(pidfile, 'test.pid')" "\n"
+        "assert(ret == true)" "\n"
+        "local f = assert(io.open('test.pid'))" "\n"
+        "f:close()" "\n"
+        "pidfile = nil" "\n"
+        "collectgarbage()" "\n";
 
     ck_assert_msg(luaL_dostring(L, script) == 0, lua_tostring(L, -1));
     check_no_pid("test.pid");
@@ -156,12 +156,12 @@ END_TEST
 START_TEST(close_lua)
 {
     static const char *const script =
-        "assert(pcall(pidfile, 'test.pid') == true)\n"
-        "assert(io.open('test.pid')):close()\n"
-        "pidfile.close()\n"
-        "assert(io.open('test.pid') == nil)\n"
-        "assert(pcall(pidfile, 'test2.pid') == true)\n"
-        "assert(io.open('test2.pid')):close()\n";
+        "assert(pcall(pidfile, 'test.pid') == true)" "\n"
+        "assert(io.open('test.pid')):close()" "\n"
+        "pidfile.close()" "\n"
+        "assert(io.open('test.pid') == nil)" "\n"
+        "assert(pcall(pidfile, 'test2.pid') == true)" "\n"
+        "assert(io.open('test2.pid')):close()" "\n";
 
     ck_assert_msg(luaL_dostring(L, script) == 0, lua_tostring(L, -1));
     check_pid("test2.pid");
@@ -198,7 +198,7 @@ Suite *luaapi_lib_pidfile(void)
     tcase_add_test(tc_c, overwrite);
     suite_add_tcase(s, tc_c);
 
-    TCase *const tc_lua = tcase_create("from_c");
+    TCase *const tc_lua = tcase_create("from_lua");
     tcase_add_checked_fixture(tc_lua, lib_setup, lib_teardown);
     tcase_add_test(tc_lua, no_arg_lua);
     tcase_add_test(tc_lua, twice_lua);

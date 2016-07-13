@@ -44,7 +44,14 @@ Suite *core_timer(void);
 Suite *luaapi_stream(void);
 
 /* luaapi/lib */
+Suite *luaapi_lib_astra(void);
+Suite *luaapi_lib_base64(void);
+Suite *luaapi_lib_md5(void);
 Suite *luaapi_lib_pidfile(void);
+Suite *luaapi_lib_rc4(void);
+Suite *luaapi_lib_sha1(void);
+Suite *luaapi_lib_strhex(void);
+Suite *luaapi_lib_utils(void);
 
 /* utils */
 Suite *utils_base64(void);
@@ -73,7 +80,14 @@ static suite_func_t suite_list[] = {
     luaapi_stream,
 
     /* luaapi/lib */
+    luaapi_lib_astra,
+    luaapi_lib_base64,
+    luaapi_lib_md5,
     luaapi_lib_pidfile,
+    luaapi_lib_rc4,
+    luaapi_lib_sha1,
+    luaapi_lib_strhex,
+    luaapi_lib_utils,
 
     /* utils */
     utils_base64,
