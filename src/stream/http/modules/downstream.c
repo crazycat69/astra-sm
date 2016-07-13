@@ -165,13 +165,11 @@ static int module_call(lua_State *L, module_data_t *mod)
 
     client->on_send = on_downstream_send;
 
-    // like module_stream_init()
-    client->response->__stream.self = (module_data_t *)client;
-    client->response->__stream.on_ts = NULL;
-    client->response->__stream.children = asc_list_init();
+    module_stream_init(NULL, (module_data_t *)client->response, NULL);
+    module_demux_set((module_data_t *)client->response, NULL, NULL);
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_request);
-    lua_pushlightuserdata(L, &client->response->__stream);
+    lua_pushlightuserdata(L, client->response);
     lua_setfield(L, -2, "stream");
     lua_pop(L, 1); // request
 

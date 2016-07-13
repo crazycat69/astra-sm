@@ -38,6 +38,7 @@ struct http_response_t
     STREAM_MODULE_DATA();
 
     module_data_t *mod;
+    http_client_t *client;
 
     uint8_t *buffer;
     size_t buffer_count;
@@ -98,8 +99,8 @@ static void on_upstream_ready(void *arg)
 
 static void on_ts(void *arg, const uint8_t *ts)
 {
-    http_client_t *const client = (http_client_t *)arg;
-    http_response_t *const response = client->response;
+    http_response_t *const response = (http_response_t *)arg;
+    http_client_t *const client = response->client;
 
     if(response->buffer_count + TS_PACKET_SIZE >= response->buffer_size)
     {
@@ -157,7 +158,7 @@ static void on_upstream_send(void *arg)
     http_client_t *const client = (http_client_t *)arg;
     lua_State *const L = module_lua(client->mod);
 
-    module_stream_t *upstream = NULL;
+    module_data_t *upstream = NULL;
 
     client->response->buffer_size = DEFAULT_BUFFER_SIZE;
     client->response->buffer_fill = DEFAULT_BUFFER_FILL;
@@ -166,7 +167,7 @@ static void on_upstream_send(void *arg)
     {
         lua_getfield(L, 3, "upstream");
         if(lua_islightuserdata(L, -1))
-            upstream = (module_stream_t *)lua_touserdata(L, -1);
+            upstream = (module_data_t *)lua_touserdata(L, -1);
         lua_pop(L, 1);
 
         lua_getfield(L, 3, "buffer_size");
@@ -196,7 +197,7 @@ static void on_upstream_send(void *arg)
     }
     else if(lua_islightuserdata(L, 3))
     {
-        upstream = (module_stream_t *)lua_touserdata(L, 3);
+        upstream = (module_data_t *)lua_touserdata(L, 3);
     }
 
     if(!upstream)
@@ -207,11 +208,10 @@ static void on_upstream_send(void *arg)
 
     client->response->buffer = ASC_ALLOC(client->response->buffer_size, uint8_t);
 
-    // like module_stream_init()
-    client->response->__stream.self = (module_data_t *)client;
-    client->response->__stream.on_ts = (stream_callback_t)on_ts;
-    client->response->__stream.children = asc_list_init();
-    module_stream_attach(upstream->self, (module_data_t *)client->response);
+    module_data_t *const mod = (module_data_t *)client->response;
+    module_stream_init(NULL, mod, (stream_callback_t)on_ts);
+    module_demux_set(mod, NULL, NULL);
+    module_stream_attach(upstream, mod);
 
     client->on_read = on_upstream_read;
     client->on_ready = NULL;
@@ -252,6 +252,7 @@ static int module_call(lua_State *L, module_data_t *mod)
     }
 
     client->response = ASC_ALLOC(1, http_response_t);
+    client->response->client = client;
     client->response->mod = mod;
 
     client->on_send = on_upstream_send;
