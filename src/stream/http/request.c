@@ -1171,7 +1171,7 @@ static const module_method_t module_methods[] =
     { NULL, NULL },
 };
 
-MODULE_REGISTER(http_request)
+STREAM_MODULE_REGISTER(http_request)
 {
     .init = module_init,
     .destroy = module_destroy,
