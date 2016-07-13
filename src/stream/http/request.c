@@ -68,6 +68,7 @@ struct module_data_t
 
     int timeout_ms;
     bool is_stream;
+    bool stream_inited;
 
     int idx_self;
 
@@ -143,7 +144,6 @@ static const char __version[] = "version";
 static const char __headers[] = "headers";
 static const char __content[] = "content";
 static const char __callback[] = "callback";
-static const char __stream[] = "stream";
 static const char __code[] = "code";
 static const char __message[] = "message";
 
@@ -261,7 +261,7 @@ static void on_close(void *arg)
         callback(L, mod);
     }
 
-    if(mod->__stream.self)
+    if(mod->stream_inited)
     {
         module_stream_destroy(mod);
 
@@ -611,7 +611,7 @@ static void on_read(void *arg)
 
             lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_response);
             lua_pushboolean(L, mod->is_stream);
-            lua_setfield(L, -2, __stream);
+            lua_setfield(L, -2, "stream");
             callback(L, mod);
 
             mod->ts.buf = ASC_ALLOC(mod->ts.buf_size, uint8_t);
@@ -1107,11 +1107,12 @@ static void module_init(lua_State *L, module_data_t *mod)
     lua_pushvalue(L, 3);
     mod->idx_self = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    module_option_boolean(L, __stream, &mod->is_stream);
+    module_option_boolean(L, "stream", &mod->is_stream);
     if(mod->is_stream)
     {
         module_stream_init(L, mod, NULL);
         module_demux_set(mod, NULL, NULL);
+        mod->stream_inited = true;
 
         module_option_boolean(L, "sync", &mod->config.sync);
         module_option_string(L, "sync_opts", &mod->config.sync_opts, NULL);
@@ -1126,6 +1127,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 
         module_stream_init(L, mod, on_ts);
         module_demux_set(mod, NULL, NULL);
+        mod->stream_inited = true;
 
         int value = 1024;
         module_option_integer(L, "buffer_size", &value);
