@@ -28,7 +28,7 @@ struct module_data_t
     /*
      * NOTE: data structs in all modules MUST begin with the following
      *       member. Use MODULE_DATA() macro when defining module
-     *       structs as the exact definition might change in the future.
+     *       structs to add appropriate size padding.
      */
     lua_State *lua;
 };

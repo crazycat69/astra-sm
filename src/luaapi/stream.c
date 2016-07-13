@@ -21,18 +21,36 @@
 
 #include <astra.h>
 #include <luaapi/stream.h>
+#include <core/list.h>
+
+typedef struct module_stream_t module_stream_t;
+
+struct module_stream_t
+{
+    module_data_t *self;
+    module_stream_t *parent;
+
+    stream_callback_t on_ts;
+    asc_list_t *children;
+
+    demux_callback_t join_pid;
+    demux_callback_t leave_pid;
+    uint8_t pid_list[MAX_PID];
+};
 
 struct module_data_t
 {
     /*
      * NOTE: data structs in all stream modules MUST begin with the
-     *       following two members. Use STREAM_MODULE_DATA() macro when
-     *       defining stream module structs as the exact definition
-     *       might change in the future.
+     *       following members. Use STREAM_MODULE_DATA() macro when
+     *       defining stream module structs to add appropriate size
+     *       padding.
      */
     lua_State *lua;
     module_stream_t stream;
 };
+
+ASC_STATIC_ASSERT(sizeof(module_data_t) <= STREAM_MODULE_DATA_SIZE);
 
 /*
  * init and cleanup

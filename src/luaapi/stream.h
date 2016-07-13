@@ -26,26 +26,10 @@
 #   error "Please include <astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-#include <core/list.h>
 #include <luaapi/module.h>
-
-typedef struct module_stream_t module_stream_t;
 
 typedef void (*stream_callback_t)(module_data_t *, const uint8_t *);
 typedef void (*demux_callback_t)(module_data_t *, uint16_t);
-
-struct module_stream_t
-{
-    module_data_t *self;
-    module_stream_t *parent;
-
-    stream_callback_t on_ts;
-    asc_list_t *children;
-
-    demux_callback_t join_pid;
-    demux_callback_t leave_pid;
-    uint8_t pid_list[MAX_PID];
-};
 
 void module_stream_init(lua_State *L, module_data_t *mod
                         , stream_callback_t on_ts);
@@ -62,9 +46,11 @@ bool module_demux_check(const module_data_t *mod, uint16_t pid) __func_pure;
 
 extern const module_method_t module_stream_methods[];
 
+#define STREAM_MODULE_DATA_SIZE \
+    MODULE_DATA_SIZE
+
 #define STREAM_MODULE_DATA() \
-    MODULE_DATA(); \
-    module_stream_t __stream
+    MODULE_DATA()
 
 #define STREAM_MODULE_REGISTER(_name) \
     extern module_registry_t __registry_##_name; \
