@@ -35,8 +35,11 @@
 #endif /* !__cplusplus */
 
 int lua_tr_call(lua_State *L, int nargs, int nresults);
+void lua_err_log(lua_State *L);
 
 #define lua_foreach(_lua, _idx) \
-    for(lua_pushnil(_lua); lua_next(_lua, _idx); lua_pop(_lua, 1))
+    for (lua_pushnil(_lua) \
+         ; lua_next(_lua, _idx) \
+         ; lua_pop(_lua, 1))
 
 #endif /* _LUA_API_H_ */

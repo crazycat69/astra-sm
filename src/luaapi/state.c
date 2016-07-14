@@ -23,7 +23,7 @@
 #include <luaapi/module.h>
 #include <luaapi/lib/list.h>
 
-#define MSG(_msg) "[luaapi] " _msg
+#define MSG(_msg) "[lua] " _msg
 
 /* search path for Lua */
 #ifdef ASC_SCRIPT_DIR
