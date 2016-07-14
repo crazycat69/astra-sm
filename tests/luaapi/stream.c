@@ -607,6 +607,29 @@ START_TEST(no_on_ts)
 }
 END_TEST
 
+/* demux calls with invalid pids */
+START_TEST(range_join)
+{
+    module_demux_join(mod_foobar, 0x2000);
+}
+END_TEST
+
+START_TEST(range_leave)
+{
+    module_demux_leave(mod_foobar, 0x2000);
+}
+END_TEST
+
+START_TEST(range_check)
+{
+    const bool ret = module_demux_check(mod_foobar, 0x2000);
+
+    /* should be unreachable */
+    ck_assert(ret == false);
+    ck_abort_msg("didn't expect to reach this code");
+}
+END_TEST
+
 Suite *luaapi_stream(void)
 {
     Suite *const s = suite_create("luaapi/stream");
@@ -630,6 +653,9 @@ Suite *luaapi_stream(void)
         tcase_add_exit_test(tc_f, bad_attach, EXIT_ABORT);
         tcase_add_exit_test(tc_f, ouroboros, EXIT_ABORT);
         tcase_add_exit_test(tc_f, no_on_ts, EXIT_ABORT);
+        tcase_add_exit_test(tc_f, range_join, EXIT_ABORT);
+        tcase_add_exit_test(tc_f, range_leave, EXIT_ABORT);
+        tcase_add_exit_test(tc_f, range_check, EXIT_ABORT);
         suite_add_tcase(s, tc_f);
     }
 

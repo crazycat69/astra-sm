@@ -23,6 +23,9 @@
 #include <luaapi/stream.h>
 #include <core/list.h>
 
+#define MSG(_msg) "[stream %s] " _msg, \
+    (mod->manifest != NULL ? mod->manifest->name : NULL)
+
 typedef struct module_stream_t module_stream_t;
 
 struct module_stream_t
@@ -46,6 +49,7 @@ struct module_data_t
      *       defining stream module structs to add appropriate size
      *       padding.
      */
+    const module_manifest_t *manifest;
     lua_State *lua;
     module_stream_t *stream;
 };
@@ -62,7 +66,7 @@ int method_set_upstream(lua_State *L, module_data_t *mod);
 void module_stream_init(lua_State *L, module_data_t *mod
                         , stream_callback_t on_ts)
 {
-    asc_assert(mod->stream == NULL, "module already initialized");
+    asc_assert(mod->stream == NULL, MSG("module already initialized"));
     module_stream_t *const st = ASC_ALLOC(1, module_stream_t);
 
     st->self = mod;
@@ -131,14 +135,14 @@ int method_set_upstream(lua_State *L, module_data_t *mod)
 
         case LUA_TLIGHTUSERDATA:
             if (mod->stream->on_ts == NULL)
-                luaL_error(L, "this module cannot receive TS");
+                luaL_error(L, MSG("this module cannot receive TS"));
 
             up = (module_data_t *)lua_touserdata(L, -1);
             module_stream_attach(up, mod);
             break;
 
         default:
-            luaL_error(L, "option 'upstream' requires a stream module");
+            luaL_error(L, MSG("option 'upstream' requires a stream module"));
     }
 
     return 0;
@@ -183,8 +187,8 @@ void module_stream_attach(module_data_t *mod, module_data_t *child)
     if (mod != NULL)
     {
         module_stream_t *const ps = mod->stream;
-        asc_assert(ps != NULL, "attaching to uninitialized module");
-        asc_assert(cs->on_ts != NULL, "this module cannot receive TS");
+        asc_assert(ps != NULL, MSG("attaching to uninitialized module"));
+        asc_assert(cs->on_ts != NULL, MSG("this module cannot receive TS"));
 
         cs->parent = ps;
         asc_list_insert_tail(ps->children, cs);
@@ -224,7 +228,7 @@ void module_demux_set(module_data_t *mod, demux_callback_t join_pid
 
 void module_demux_join(module_data_t *mod, uint16_t pid)
 {
-    asc_assert(pid < MAX_PID, "pid out of range");
+    asc_assert(pid < MAX_PID, MSG("join: pid %hu out of range"), pid);
     module_stream_t *const st = mod->stream;
 
     ++st->pid_list[pid];
@@ -237,7 +241,7 @@ void module_demux_join(module_data_t *mod, uint16_t pid)
 
 void module_demux_leave(module_data_t *mod, uint16_t pid)
 {
-    asc_assert(pid < MAX_PID, "pid out of range");
+    asc_assert(pid < MAX_PID, MSG("leave: pid %hu out of range"), pid);
     module_stream_t *const st = mod->stream;
 
     if (st->pid_list[pid] > 0)
@@ -251,12 +255,12 @@ void module_demux_leave(module_data_t *mod, uint16_t pid)
     }
     else
     {
-        asc_log_error("double leave on pid: %hu", pid);
+        asc_log_error(MSG("double leave on pid %hu"), pid);
     }
 }
 
 bool module_demux_check(const module_data_t *mod, uint16_t pid)
 {
-    asc_assert(pid < MAX_PID, "pid out of range");
+    asc_assert(pid < MAX_PID, MSG("check: pid %hu out of range"), pid);
     return (mod->stream->pid_list[pid] > 0);
 }

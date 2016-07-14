@@ -27,9 +27,10 @@ struct module_data_t
 {
     /*
      * NOTE: data structs in all modules MUST begin with the following
-     *       member. Use MODULE_DATA() macro when defining module
+     *       members. Use MODULE_DATA() macro when defining module
      *       structs to add appropriate size padding.
      */
+    const module_manifest_t *manifest;
     lua_State *lua;
 };
 
@@ -126,6 +127,7 @@ int method_new(lua_State *L)
     }
 
     /* run module-specific initialization */
+    mod->manifest = manifest;
     mod->lua = L;
 
     if (manifest->reg->init != NULL)
