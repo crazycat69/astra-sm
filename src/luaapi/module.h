@@ -71,7 +71,7 @@ bool module_option_boolean(lua_State *L, const char *name, bool *boolean);
 #define MODULE_OPTIONS_IDX 2
 
 #define MODULE_DATA_SIZE \
-    (sizeof(void *) * 4096) /* FIXME: decrease padding size */
+    (sizeof(void *) * 64)
 
 #define MODULE_DATA() \
     char __padding[MODULE_DATA_SIZE]

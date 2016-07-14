@@ -47,7 +47,7 @@ struct module_data_t
      *       padding.
      */
     lua_State *lua;
-    module_stream_t stream;
+    module_stream_t *stream;
 };
 
 ASC_STATIC_ASSERT(sizeof(module_data_t) <= STREAM_MODULE_DATA_SIZE);
@@ -62,8 +62,8 @@ int method_set_upstream(lua_State *L, module_data_t *mod);
 void module_stream_init(lua_State *L, module_data_t *mod
                         , stream_callback_t on_ts)
 {
-    asc_assert(mod->stream.self == NULL, "module already initialized");
-    module_stream_t *const st = &mod->stream;
+    asc_assert(mod->stream == NULL, "module already initialized");
+    module_stream_t *const st = ASC_ALLOC(1, module_stream_t);
 
     st->self = mod;
     st->on_ts = on_ts;
@@ -72,6 +72,8 @@ void module_stream_init(lua_State *L, module_data_t *mod
     /* demux default: forward downstream pid requests to parent */
     st->join_pid = module_demux_join;
     st->leave_pid = module_demux_leave;
+
+    mod->stream = st;
 
     if (L != NULL)
     {
@@ -85,8 +87,7 @@ void module_stream_init(lua_State *L, module_data_t *mod
 
 void module_stream_destroy(module_data_t *mod)
 {
-    module_stream_t *const st = &mod->stream;
-    if (st->self == NULL)
+    if (mod->stream == NULL)
         /* not initialized */
         return;
 
@@ -101,18 +102,16 @@ void module_stream_destroy(module_data_t *mod)
     module_stream_attach(NULL, mod);
 
     /* detach children */
-    asc_list_clear(st->children)
+    asc_list_clear(mod->stream->children)
     {
         module_stream_t *const i =
-            (module_stream_t *)asc_list_data(st->children);
+            (module_stream_t *)asc_list_data(mod->stream->children);
 
         i->parent = NULL;
     }
 
-    ASC_FREE(st->children, asc_list_destroy);
-
-    /* reset state */
-    memset(st, 0, sizeof(*st));
+    ASC_FREE(mod->stream->children, asc_list_destroy);
+    ASC_FREE(mod->stream, free);
 }
 
 /*
@@ -131,7 +130,7 @@ int method_set_upstream(lua_State *L, module_data_t *mod)
             break;
 
         case LUA_TLIGHTUSERDATA:
-            if (mod->stream.on_ts == NULL)
+            if (mod->stream->on_ts == NULL)
                 luaL_error(L, "this module cannot receive TS");
 
             up = (module_data_t *)lua_touserdata(L, -1);
@@ -161,8 +160,6 @@ const module_method_t module_stream_methods[] =
 
 void module_stream_attach(module_data_t *mod, module_data_t *child)
 {
-    module_stream_t *const cs = &child->stream;
-
     /* save pid membership data, leave all pids */
     uint8_t saved_list[MAX_PID] = { 0 };
     for (unsigned int i = 0; i < MAX_PID; i++)
@@ -175,6 +172,8 @@ void module_stream_attach(module_data_t *mod, module_data_t *child)
     }
 
     /* switch parents */
+    module_stream_t *const cs = child->stream;
+
     if (cs->parent != NULL)
     {
         asc_list_remove_item(cs->parent->children, cs);
@@ -183,8 +182,8 @@ void module_stream_attach(module_data_t *mod, module_data_t *child)
 
     if (mod != NULL)
     {
-        module_stream_t *const ps = &mod->stream;
-        asc_assert(ps->self != NULL, "attaching to uninitialized module");
+        module_stream_t *const ps = mod->stream;
+        asc_assert(ps != NULL, "attaching to uninitialized module");
         asc_assert(cs->on_ts != NULL, "this module cannot receive TS");
 
         cs->parent = ps;
@@ -202,12 +201,11 @@ void module_stream_attach(module_data_t *mod, module_data_t *child)
 void module_stream_send(void *arg, const uint8_t *ts)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    module_stream_t *const stream = &mod->stream;
 
-    asc_list_for(stream->children)
+    asc_list_for(mod->stream->children)
     {
         module_stream_t *const i =
-            (module_stream_t *)asc_list_data(stream->children);
+            (module_stream_t *)asc_list_data(mod->stream->children);
 
         i->on_ts(i->self, ts);
     }
@@ -220,16 +218,14 @@ void module_stream_send(void *arg, const uint8_t *ts)
 void module_demux_set(module_data_t *mod, demux_callback_t join_pid
                       , demux_callback_t leave_pid)
 {
-    module_stream_t *const st = &mod->stream;
-
-    st->join_pid = join_pid;
-    st->leave_pid = leave_pid;
+    mod->stream->join_pid = join_pid;
+    mod->stream->leave_pid = leave_pid;
 }
 
 void module_demux_join(module_data_t *mod, uint16_t pid)
 {
     asc_assert(pid < MAX_PID, "pid out of range");
-    module_stream_t *const st = &mod->stream;
+    module_stream_t *const st = mod->stream;
 
     ++st->pid_list[pid];
     if (st->pid_list[pid] == 1 && st->parent != NULL
@@ -242,7 +238,7 @@ void module_demux_join(module_data_t *mod, uint16_t pid)
 void module_demux_leave(module_data_t *mod, uint16_t pid)
 {
     asc_assert(pid < MAX_PID, "pid out of range");
-    module_stream_t *const st = &mod->stream;
+    module_stream_t *const st = mod->stream;
 
     if (st->pid_list[pid] > 0)
     {
@@ -262,5 +258,5 @@ void module_demux_leave(module_data_t *mod, uint16_t pid)
 bool module_demux_check(const module_data_t *mod, uint16_t pid)
 {
     asc_assert(pid < MAX_PID, "pid out of range");
-    return (mod->stream.pid_list[pid] > 0);
+    return (mod->stream->pid_list[pid] > 0);
 }
