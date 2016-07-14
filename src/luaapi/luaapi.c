@@ -19,24 +19,39 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _LUA_API_H_
-#define _LUA_API_H_ 1
+#include <astra.h>
+#include <luaapi/luaapi.h>
 
-#ifndef _ASTRA_H_
-#   error "Please include <astra.h> first"
-#endif /* !_ASTRA_H_ */
+#define MSG(_msg) "[luaapi] " _msg
 
-#ifndef __cplusplus
-#   include <lua.h>
-#   include <lualib.h>
-#   include <lauxlib.h>
-#else
-#   include <lua.hpp>
-#endif /* !__cplusplus */
+static
+int errfunc(lua_State *L)
+{
+    int level = 0;
+    lua_Debug ar;
 
-int lua_tr_call(lua_State *L, int nargs, int nresults);
+    asc_log_error(MSG("unhandled Lua error"));
+    asc_log_error("%s", lua_tostring(L, -1));
 
-#define lua_foreach(_lua, _idx) \
-    for(lua_pushnil(_lua); lua_next(_lua, _idx); lua_pop(_lua, 1))
+    while (lua_getstack(L, level, &ar))
+    {
+        lua_getinfo(L, "nSl", &ar);
+        asc_log_error("%d: %s:%d -- %s [%s]", ++level, ar.short_src
+                      , ar.currentline, (ar.name) ? ar.name : "<unknown>"
+                      , ar.what);
+    }
 
-#endif /* _LUA_API_H_ */
+    return 1;
+}
+
+int lua_tr_call(lua_State *L, int nargs, int nresults)
+{
+    const int erridx = lua_gettop(L) - nargs;
+    lua_pushcfunction(L, errfunc);
+    lua_insert(L, erridx);
+
+    const int ret = lua_pcall(L, nargs, nresults, erridx);
+    lua_remove(L, erridx);
+
+    return ret;
+}

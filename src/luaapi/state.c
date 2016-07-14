@@ -38,7 +38,9 @@
 /* global Lua state */
 lua_State *lua = NULL;
 
-static int panic_handler(lua_State *L) {
+static
+int panic_handler(lua_State *L)
+{
     const char *const err = lua_tostring(L, -1);
 
     asc_log_error("%s", err);
