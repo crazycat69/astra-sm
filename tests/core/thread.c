@@ -131,7 +131,7 @@ START_TEST(producers)
 
     /* check item order */
     unsigned int counts[PRODUCER_THREADS] = { 0 };
-    asc_list_for(list)
+    asc_list_clear(list)
     {
         void *const ptr = asc_list_data(list);
         const unsigned int data = (unsigned)((intptr_t)ptr);
@@ -141,6 +141,8 @@ START_TEST(producers)
 
         ck_assert(counts[id]++ == value);
     }
+
+    asc_list_destroy(list);
 }
 END_TEST
 
