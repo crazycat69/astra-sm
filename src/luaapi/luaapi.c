@@ -75,15 +75,20 @@ int lua_tr_call(lua_State *L, int nargs, int nresults)
 /* pop table from stack and send contents to error log */
 void lua_err_log(lua_State *L)
 {
+    asc_log_error(MSG("unhandled Lua error"));
+
     if (lua_istable(L, -1))
     {
-        asc_log_error(MSG("unhandled Lua error"));
         lua_foreach(L, -2)
             asc_log_error(MSG("%s"), lua_tostring(L, -1));
     }
+    else if (lua_isstring(L, -1))
+    {
+        asc_log_error(MSG("%s"), lua_tostring(L, -1));
+    }
     else
     {
-        asc_log_error(MSG("BUG: lua_err_log(): expected table, got %s")
+        asc_log_error(MSG("BUG: lua_err_log(): expected table/string, got %s")
                       , lua_typename(L, lua_type(L, -1)));
     }
 

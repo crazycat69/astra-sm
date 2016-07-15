@@ -39,6 +39,7 @@ test_libastra_SOURCES += \
     core/timer.c
 
 test_libastra_SOURCES += \
+    luaapi/luaapi.c \
     luaapi/module.c \
     luaapi/stream.c
 
