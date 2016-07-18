@@ -871,6 +871,9 @@ static void module_init(lua_State *L, module_data_t *mod)
             lua_foreach(L, -2)
             {
                 const int pid = lua_tointeger(L, -1);
+                if(!(pid >= 0 && pid < MAX_PID))
+                    luaL_error(L, MSG("option 'pid': pid is out of range"));
+
                 mod->stream[pid] = MPEGTS_PACKET_PES;
                 module_demux_join(mod, pid);
             }
@@ -918,6 +921,9 @@ static void module_init(lua_State *L, module_data_t *mod)
         lua_foreach(L, -2)
         {
             const int pid = lua_tointeger(L, -1);
+            if(!(pid >= 0 && pid < MAX_PID))
+                luaL_error(L, MSG("option 'filter': pid is out of range"));
+
             mod->pid_map[pid] = MAX_PID;
         }
     }
@@ -932,6 +938,9 @@ static void module_init(lua_State *L, module_data_t *mod)
         lua_foreach(L, -2)
         {
             const int pid = lua_tointeger(L, -1);
+            if(!(pid >= 0 && pid < MAX_PID))
+                luaL_error(L, MSG("option 'filter~': pid is out of range"));
+
             mod->pid_map[pid] = 0;
         }
     }
