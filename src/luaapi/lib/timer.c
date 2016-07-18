@@ -51,7 +51,8 @@ void timer_callback(void *arg)
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
     lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_self);
-    lua_call(L, 1, 0);
+    if (lua_tr_call(L, 1, 0) != 0)
+        lua_err_log(L);
 }
 
 static
