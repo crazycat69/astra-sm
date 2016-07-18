@@ -1,5 +1,5 @@
 SCRIPT_FILES = analyze.lua base.lua dvbls.lua dvbwrite.lua femon.lua relay.lua stream.lua
-EXTRA_DIST = examples $(SCRIPT_FILES)
+EXTRA_DIST = $(SCRIPT_FILES)
 scriptdir = $(sysconfdir)/astra/scripts
 
 if HAVE_INSCRIPT

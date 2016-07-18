@@ -5,7 +5,8 @@ EXTRA_DIST = \
     autogen.sh \
     version.txt \
     build-aux/gen-bindings-list \
-    build-aux/git-version-gen
+    build-aux/git-version-gen \
+    doc
 
 dist-hook:
 	chmod u+w $(distdir)/version.txt; \
