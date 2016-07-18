@@ -187,10 +187,15 @@ START_TEST(error_logger)
     ck_assert(lua_gettop(L) == 0);
 
     /* string */
+    lua_pushinteger(L, 1000); /* pre-existing elements */
+    lua_pushinteger(L, 2000);
     lua_pushstring(L, "lua string");
-    ck_assert(lua_gettop(L) == 1);
+    ck_assert(lua_gettop(L) == 3);
     lua_err_log(L);
-    ck_assert(lua_gettop(L) == 0);
+    ck_assert(lua_gettop(L) == 2);
+    ck_assert(lua_isnumber(L, -1) && lua_isnumber(L, -2));
+    ck_assert(lua_tointeger(L, -1) == 2000 && lua_tointeger(L, -2) == 1000);
+    lua_pop(L, 2);
 
     /* nil */
     lua_pushnil(L);
@@ -199,10 +204,13 @@ START_TEST(error_logger)
     ck_assert(lua_gettop(L) == 0);
 
     /* lightuserdata */
+    lua_pushboolean(L, 1); /* pre-existing element */
     lua_pushlightuserdata(L, NULL);
-    ck_assert(lua_gettop(L) == 1);
+    ck_assert(lua_gettop(L) == 2);
     lua_err_log(L);
-    ck_assert(lua_gettop(L) == 0);
+    ck_assert(lua_gettop(L) == 1);
+    ck_assert(lua_isboolean(L, -1) && lua_toboolean(L, -1) == 1);
+    lua_pop(L, 1);
 }
 END_TEST
 

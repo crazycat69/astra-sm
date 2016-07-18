@@ -92,5 +92,6 @@ void lua_err_log(lua_State *L)
                       , lua_typename(L, lua_type(L, -1)));
     }
 
-    lua_pop(L, -1);
+    if (lua_gettop(L) > 0)
+        lua_pop(L, 1);
 }
