@@ -962,7 +962,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         ca_stream_set_keys(biss, key, key);
     }
 
-    lua_getfield(L, 2, "cam");
+    lua_getfield(L, MODULE_OPTIONS_IDX, "cam");
     if(!lua_isnil(L, -1))
     {
         if(lua_type(L, -1) != LUA_TLIGHTUSERDATA)

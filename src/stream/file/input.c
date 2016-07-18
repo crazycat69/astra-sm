@@ -431,7 +431,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_option_boolean(L, "loop", &mod->loop);
 
     // store callback in registry
-    lua_getfield(L, 2, "callback");
+    lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
     if(lua_type(L, -1) == LUA_TFUNCTION)
         mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
     else

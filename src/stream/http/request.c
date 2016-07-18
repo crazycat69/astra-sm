@@ -1100,7 +1100,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->config.path = __default_path;
     module_option_string(L, __path, &mod->config.path, NULL);
 
-    lua_getfield(L, 2, __callback);
+    lua_getfield(L, MODULE_OPTIONS_IDX, __callback);
     asc_assert(lua_isfunction(L, -1), MSG("option 'callback' is required"));
     lua_pop(L, 1); // callback
 
