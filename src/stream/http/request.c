@@ -1105,7 +1105,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     lua_pop(L, 1); // callback
 
     // store self in registry
-    lua_pushvalue(L, 3);
+    lua_pushvalue(L, -1);
     mod->idx_self = luaL_ref(L, LUA_REGISTRYINDEX);
 
     module_option_boolean(L, "stream", &mod->is_stream);

@@ -92,7 +92,7 @@ void module_init(lua_State *L, module_data_t *mod)
     mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     /* store self in registry */
-    lua_pushvalue(L, 3);
+    lua_pushvalue(L, -1);
     mod->idx_self = luaL_ref(L, LUA_REGISTRYINDEX);
 
     mod->timer = asc_timer_init(interval * 1000, timer_callback, mod);
