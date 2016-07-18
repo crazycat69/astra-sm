@@ -23,6 +23,9 @@
 #include <luaapi/module.h>
 #include <luaapi/stream.h>
 
+#define MSG(_msg) "[module %s] " _msg, \
+    (mod->manifest != NULL ? mod->manifest->name : NULL)
+
 struct module_data_t
 {
     /*
@@ -94,6 +97,12 @@ int method_new(lua_State *L)
 {
     const module_manifest_t *const manifest = GET_MANIFEST(L);
 
+    if (lua_gettop(L) == 1)
+    {
+        /* no args; add padding so that option getters don't get confused */
+        lua_pushnil(L);
+    }
+
     /* create table representing module instance */
     module_data_t *const mod = (module_data_t *)asc_calloc(1, manifest->size);
     lua_newtable(L);
@@ -120,10 +129,10 @@ int method_new(lua_State *L)
         add_methods(L, mod, module_stream_methods);
 
     /* set up options table */
-    if (lua_gettop(L) == 3)
+    if (lua_gettop(L) >= 3)
     {
         lua_pushvalue(L, MODULE_OPTIONS_IDX);
-        lua_setfield(L, 3, "__options");
+        lua_setfield(L, -2, "__options");
     }
 
     /* run module-specific initialization */
@@ -131,7 +140,12 @@ int method_new(lua_State *L)
     mod->lua = L;
 
     if (manifest->reg->init != NULL)
+    {
+        const int stack = lua_gettop(L);
         manifest->reg->init(L, mod);
+        if (lua_gettop(L) != stack || !lua_istable(L, -1))
+            luaL_error(L, MSG("BUG: module init corrupted Lua stack!"));
+    }
 
     /* pass new table to Lua */
     return 1;

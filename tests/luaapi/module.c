@@ -48,7 +48,11 @@ static void module_load(lua_State *L)
 {
     lua_getglobal(L, "my_module");
     ck_assert(lua_istable(L, -1));
-    ck_assert(!strcmp(luaL_tolstring(L, -1, NULL), "my_module"));
+
+    const char *const str = luaL_tolstring(L, -1, NULL);
+    ck_assert(str != NULL && !strcmp(str, "my_module"));
+
+    lua_pop(L, 2);
 }
 
 static bool basic_inited;
@@ -56,10 +60,21 @@ static bool basic_inited;
 static void module_init(lua_State *L, module_data_t *mod)
 {
     ck_assert(module_lua(mod) == L);
+    ck_assert(lua_istable(L, -1));
+
+    if (!lua_istable(L, MODULE_OPTIONS_IDX))
+        return;
 
     bool error = false;
     if (module_option_boolean(L, "error", &error) && error)
         luaL_error(L, "init error");
+
+    bool stack = false;
+    if (module_option_boolean(L, "stack", &stack) && stack)
+    {
+        lua_settop(L, 0);
+        return;
+    }
 
     int opt_int = 0;
     const char *opt_str = NULL;
@@ -96,6 +111,17 @@ static void module_init(lua_State *L, module_data_t *mod)
     ck_assert(module_option_string(L, "str_5", &opt_str, &len)
               && !strcmp(opt_str, "true") && len == strlen(opt_str));
 
+    /* check __options */
+    ck_assert(lua_gettop(L) == 3);
+    /*
+     * 1 = parent table
+     * 2 = module options
+     * 3 = new instance
+     */
+    lua_getfield(L, -1, "__options");
+    ck_assert(lua_istable(L, -1));
+    lua_pop(L, 1);
+
     mod->data = ASC_ALLOC(128, uint8_t);
     basic_inited = true;
 }
@@ -128,6 +154,7 @@ START_TEST(basic)
     lua_State *const L = lua;
 
     module_register(L, &MODULE_SYMBOL(my_module));
+    ck_assert(lua_gettop(L) == 0);
 
     /* create module instance */
     basic_inited = false;
@@ -229,18 +256,88 @@ START_TEST(basic_error)
     lua_State *const L = lua;
 
     module_register(L, &MODULE_SYMBOL(my_module));
+    ck_assert(lua_gettop(L) == 0);
 
-    basic_inited = false;
-    basic_destroyed = false;
+    /* lua error */
+    basic_inited = basic_destroyed = false;
     lua_getglobal(L, "my_module");
+    ck_assert(lua_gettop(L) == 1);
 
     lua_newtable(L);
     lua_pushboolean(L, 1);
     lua_setfield(L, -2, "error");
+    ck_assert(lua_gettop(L) == 2);
 
     ck_assert(lua_pcall(L, 1, 1, 0) != 0);
+    ck_assert(lua_gettop(L) == 1);
+    ck_assert(lua_isstring(L, -1));
     lua_gc(L, LUA_GCCOLLECT, 0);
     ck_assert(basic_inited == false);
+    ck_assert(basic_destroyed == true);
+    lua_pop(L, 1);
+
+    /* kill stack on init */
+    basic_inited = basic_destroyed = false;
+    lua_getglobal(L, "my_module");
+    ck_assert(lua_gettop(L) == 1);
+
+    lua_newtable(L);
+    lua_pushboolean(L, 1);
+    lua_setfield(L, -2, "stack");
+    ck_assert(lua_gettop(L) == 2);
+
+    ck_assert(lua_pcall(L, 1, 1, 0) != 0);
+    ck_assert(lua_gettop(L) == 1);
+    ck_assert(lua_isstring(L, -1));
+    lua_gc(L, LUA_GCCOLLECT, 0);
+    ck_assert(basic_inited == false);
+    ck_assert(basic_destroyed == true);
+    lua_pop(L, 1);
+}
+END_TEST
+
+/* pass none or more than one argument to constructor */
+START_TEST(basic_extra)
+{
+    lua_State *const L = lua;
+
+    module_register(L, &MODULE_SYMBOL(my_module));
+    ck_assert(lua_gettop(L) == 0);
+
+    /* three args */
+    basic_destroyed = false;
+    lua_getglobal(L, "my_module");
+    ck_assert(lua_gettop(L) == 1);
+    lua_pushstring(L, "test option");
+    lua_pushnil(L);
+    lua_pushboolean(L, 0);
+    ck_assert(lua_gettop(L) == 4);
+    ck_assert(lua_pcall(L, 3, 1, 0) == 0);
+    ck_assert(lua_gettop(L) == 1);
+    ck_assert(lua_istable(L, -1));
+
+    lua_getfield(L, -1, "__options");
+    ck_assert(lua_isstring(L, -1));
+    ck_assert(!strcmp(lua_tostring(L, -1), "test option"));
+
+    lua_pop(L, 2);
+    lua_gc(L, LUA_GCCOLLECT, 0);
+    ck_assert(basic_destroyed == true);
+
+    /* zero args */
+    basic_destroyed = false;
+    lua_getglobal(L, "my_module");
+    ck_assert(lua_gettop(L) == 1);
+    ck_assert(lua_pcall(L, 0, 1, 0) == 0);
+    ck_assert(lua_gettop(L) == 1);
+    ck_assert(lua_istable(L, -1));
+
+    /* NOTE: no args = no __options */
+    lua_getfield(L, -1, "__options");
+    ck_assert(lua_isnil(L, -1));
+
+    lua_pop(L, 2);
+    lua_gc(L, LUA_GCCOLLECT, 0);
     ck_assert(basic_destroyed == true);
 }
 END_TEST
@@ -281,6 +378,7 @@ Suite *luaapi_module(void)
     tcase_add_checked_fixture(tc, lib_setup, lib_teardown);
     tcase_add_test(tc, basic);
     tcase_add_test(tc, basic_error);
+    tcase_add_test(tc, basic_extra);
     tcase_add_test(tc, binding);
     suite_add_tcase(s, tc);
 

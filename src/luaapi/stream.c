@@ -79,7 +79,7 @@ void module_stream_init(lua_State *L, module_data_t *mod
 
     mod->stream = st;
 
-    if (L != NULL)
+    if (L != NULL && lua_istable(L, MODULE_OPTIONS_IDX))
     {
         lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
         if (!lua_isnil(L, -1))
