@@ -280,7 +280,8 @@ static void on_websocket_read(void *arg)
             lua_pushlstring(L, (const char *)data, response->data_size);
         }
 
-        lua_call(L, 3, 0);
+        if (lua_tr_call(L, 3, 0) != 0)
+            lua_err_log(L);
 
         response->header_size = 0;
         response->data_size = 0;
@@ -301,7 +302,8 @@ static void on_websocket_read(void *arg)
             lua_pushlightuserdata(L, client);
             string_buffer_push(L, client->content);
             client->content = NULL;
-            lua_call(L, 3, 0);
+            if (lua_tr_call(L, 3, 0) != 0)
+                lua_err_log(L);
 
             response->header_size = 0;
             response->data_size = 0;
@@ -321,7 +323,8 @@ static int module_call(lua_State *L, module_data_t *mod)
             lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_server);
             lua_pushlightuserdata(L, client);
             lua_pushnil(L);
-            lua_call(L, 3, 0);
+            if (lua_tr_call(L, 3, 0) != 0)
+                lua_err_log(L);
 
             if(client->content)
             {

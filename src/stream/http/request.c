@@ -165,7 +165,8 @@ static void callback(lua_State *L, module_data_t *mod)
     lua_getfield(L, -1, "callback");
     lua_pushvalue(L, -3);
     lua_pushvalue(L, response);
-    lua_call(L, 2, 0);
+    if (lua_tr_call(L, 2, 0) != 0)
+        lua_err_log(L);
     lua_pop(L, 3); // self + options + response
 }
 

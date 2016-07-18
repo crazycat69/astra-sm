@@ -355,7 +355,8 @@ static void on_thread_close(void *arg)
         lua_State *const L = module_lua(mod);
 
         lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
-        lua_call(L, 0, 0);
+        if (lua_tr_call(L, 0, 0) != 0)
+            lua_err_log(L);
     }
 }
 

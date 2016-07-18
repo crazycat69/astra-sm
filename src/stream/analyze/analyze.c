@@ -121,10 +121,9 @@ static void callback(lua_State *L, module_data_t *mod)
         asc_log_error(MSG("BUG: table required for callback!"));
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
-    lua_pushvalue(L, -2);
-    lua_call(L, 1, 0);
-
-    lua_pop(L, 1); // data
+    lua_insert(L, -2);
+    if (lua_tr_call(L, 1, 0) != 0)
+        lua_err_log(L);
 }
 
 /*

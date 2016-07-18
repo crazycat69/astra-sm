@@ -88,7 +88,8 @@ void callback_started(module_data_t *mod, pid_t pid)
         lua_setfield(L, -2, "pid");
         lua_setfield(L, -2, "started");
 
-        lua_call(L, 1, 0);
+        if (lua_tr_call(L, 1, 0) != 0)
+            lua_err_log(L);
     }
 }
 
@@ -105,7 +106,8 @@ void callback_text(module_data_t *mod, const char *src, const char *text)
         lua_pushstring(L, text);
         lua_setfield(L, -2, src);
 
-        lua_call(L, 1, 0);
+        if (lua_tr_call(L, 1, 0) != 0)
+            lua_err_log(L);
     }
     else
     {
@@ -136,7 +138,8 @@ void callback_error(module_data_t *mod, const char *fmt, ...)
         lua_pushstring(L, buf);
         lua_setfield(L, -2, "error");
 
-        lua_call(L, 1, 0);
+        if (lua_tr_call(L, 1, 0) != 0)
+            lua_err_log(L);
     }
 }
 
@@ -155,7 +158,8 @@ void callback_exited(module_data_t *mod, int status)
         lua_setfield(L, -2, "status");
         lua_setfield(L, -2, "exited");
 
-        lua_call(L, 1, 0);
+        if (lua_tr_call(L, 1, 0) != 0)
+            lua_err_log(L);
     }
 }
 

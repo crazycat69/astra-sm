@@ -240,7 +240,8 @@ static int module_call(lua_State *L, module_data_t *mod)
             lua_pushvalue(L, 2);
             lua_pushvalue(L, 3);
             lua_pushvalue(L, 4);
-            lua_call(L, 3, 0);
+            if (lua_tr_call(L, 3, 0) != 0)
+                lua_err_log(L);
 
             module_stream_destroy((module_data_t *)client->response);
 
@@ -261,7 +262,8 @@ static int module_call(lua_State *L, module_data_t *mod)
     lua_pushvalue(L, 2);
     lua_pushvalue(L, 3);
     lua_pushvalue(L, 4);
-    lua_call(L, 3, 0);
+    if (lua_tr_call(L, 3, 0) != 0)
+        lua_err_log(L);
 
     return 0;
 }

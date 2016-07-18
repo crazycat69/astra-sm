@@ -1016,7 +1016,8 @@ static void on_status_timer(void *arg)
     lua_setfield(L, -2, "ber");
     lua_pushinteger(L, mod->fe->unc);
     lua_setfield(L, -2, "unc");
-    lua_call(L, 1, 0);
+    if (lua_tr_call(L, 1, 0) != 0)
+        lua_err_log(L);
 }
 
 static int method_ca_set_pnr(lua_State *L, module_data_t *mod)

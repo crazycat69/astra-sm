@@ -104,10 +104,15 @@ static void callback(lua_State *L, http_client_t *client)
     lua_rawgeti(L, LUA_REGISTRYINDEX, client->mod->idx_self);
     lua_pushlightuserdata(L, client);
     if(client->status == 3)
+    {
         lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_request);
+    }
     else
+    {
         lua_pushnil(L);
-    lua_call(L, 3, 0);
+    }
+    if (lua_tr_call(L, 3, 0) != 0)
+        lua_err_log(L);
 }
 
 static void on_client_close(void *arg)
