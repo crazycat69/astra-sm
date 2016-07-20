@@ -2,16 +2,16 @@ SCRIPT_FILES =
 
 # common libraries
 SCRIPT_FILES += \
-    base.lua
+    common/base.lua
 
 # applications
 SCRIPT_FILES += \
-    analyze.lua \
-    dvbls.lua \
-    dvbwrite.lua \
-    femon.lua \
-    relay.lua \
-    stream.lua
+    apps/analyze.lua \
+    apps/dvbls.lua \
+    apps/dvbwrite.lua \
+    apps/femon.lua \
+    apps/relay.lua \
+    apps/stream.lua
 
 EXTRA_DIST = $(SCRIPT_FILES)
 

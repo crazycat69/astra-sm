@@ -45,7 +45,8 @@ static int fn_inscript_callback(lua_State *L)
 {
     int load;
 
-    load = load_inscript(L, (const char *)base, sizeof(base), "=base");
+    load = load_inscript(L, (const char *)__script_common_base
+                         , sizeof(__script_common_base), "=base");
     if(load != 0)
         luaL_error(L, "[main] %s", lua_tostring(L, -1));
 
@@ -70,7 +71,8 @@ static int fn_inscript_callback(lua_State *L)
     const char *script = luaL_checkstring(L, -1);
     lua_pop(L, 2); // script + argv
 
-    load = load_inscript(L, (const char *)stream, sizeof(stream), "=stream");
+    load = load_inscript(L, (const char *)__script_apps_stream
+                         , sizeof(__script_apps_stream), "=stream");
     if(load != 0)
         luaL_error(L, "[main] %s", lua_tostring(L, -1));
 
@@ -86,32 +88,38 @@ static int fn_inscript_callback(lua_State *L)
     }
     else if(!strcmp(script, "--analyze"))
     {
-        load = load_inscript(L, (const char *)analyze, sizeof(analyze), app);
+        load = load_inscript(L, (const char *)__script_apps_analyze
+                             , sizeof(__script_apps_analyze), app);
         argv_idx += 1;
     }
     else if(!strcmp(script, "--xproxy"))
     {
-        load = load_inscript(L, (const char *)relay, sizeof(relay), app);
+        load = load_inscript(L, (const char *)__script_apps_relay
+                             , sizeof(__script_apps_relay), app);
         argv_idx += 1;
     }
     else if(!strcmp(script, "--relay"))
     {
-        load = load_inscript(L, (const char *)relay, sizeof(relay), app);
+        load = load_inscript(L, (const char *)__script_apps_relay
+                             , sizeof(__script_apps_relay), app);
         argv_idx += 1;
     }
     else if(!strcmp(script, "--dvbls"))
     {
-        load = load_inscript(L, (const char *)dvbls, sizeof(dvbls), app);
+        load = load_inscript(L, (const char *)__script_apps_dvbls
+                             , sizeof(__script_apps_dvbls), app);
         argv_idx += 1;
     }
     else if(!strcmp(script, "--dvbwrite"))
     {
-        load = load_inscript(L, (const char *)dvbwrite, sizeof(dvbwrite), app);
+        load = load_inscript(L, (const char *)__script_apps_dvbwrite
+                             , sizeof(__script_apps_dvbwrite), app);
         argv_idx += 1;
     }
     else if(!strcmp(script, "--femon"))
     {
-        load = load_inscript(L, (const char *)femon, sizeof(femon), app);
+        load = load_inscript(L, (const char *)__script_apps_femon
+                             , sizeof(__script_apps_femon), app);
         argv_idx += 1;
     }
     else if(!access(script, R_OK))

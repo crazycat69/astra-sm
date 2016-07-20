@@ -31,6 +31,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <errno.h>
+#include <ctype.h>
 
 #ifndef O_BINARY
 #   ifdef _O_BINARY
@@ -244,6 +245,10 @@ void print_block(const char *block, size_t len)
 #define fatal(...) \
     do { \
         fprintf(stderr, __VA_ARGS__); \
+        if (pkgname != NULL) \
+            free(pkgname); \
+        if (cname != NULL) \
+            free(cname); \
         if (script != NULL) \
             free(script); \
         if (buffer != NULL) \
@@ -253,10 +258,24 @@ void print_block(const char *block, size_t len)
         exit(EXIT_FAILURE); \
     } while (0)
 
+typedef struct
+{
+    char *pkgname;
+    char *cname;
+    size_t size;
+} item_t;
+
 int main(int argc, const char *argv[])
 {
     char *script = NULL;
+    char *pkgname = NULL, *cname = NULL;
     int fd = -1;
+
+#ifdef _WIN32
+    setmode(STDIN_FILENO, O_BINARY);
+    setmode(STDOUT_FILENO, O_BINARY);
+    setmode(STDERR_FILENO, O_BINARY);
+#endif /* _WIN32 */
 
     if (argc < 3)
         fatal("usage: %s <dir> <file...>\n", argv[0]);
@@ -265,6 +284,9 @@ int main(int argc, const char *argv[])
         fatal("chdir(): %s: %s\n", argv[1], strerror(errno));
 
     bool first = true;
+
+    const size_t cnt = (unsigned)argc - 2;
+    item_t *const list = (item_t *)calloc(cnt, sizeof(item_t));
 
     for (int i = 2; i < argc; i++)
     {
@@ -275,6 +297,21 @@ int main(int argc, const char *argv[])
         const size_t slen = strlen(FILE_EXT);
         if (plen < (slen + 1) || strcmp(&path[plen - slen], FILE_EXT) != 0)
             fatal("wrong file extension (expected %s): %s\n", FILE_EXT, path);
+
+        pkgname = strdup(path);
+        if (pkgname == NULL)
+            fatal("strdup() failed\n");
+        pkgname[plen - slen] = '\0';
+
+        cname = strdup(pkgname);
+        if (cname == NULL)
+            fatal("strdup() failed\n");
+
+        for (size_t j = 0; cname[j] != '\0'; j++)
+        {
+            if (!isalnum(cname[j]))
+                cname[j] = '_';
+        }
 
         /* read source file */
         fd = open(path, O_RDONLY | O_BINARY);
@@ -323,14 +360,22 @@ int main(int argc, const char *argv[])
         /* dump output to stdout */
         if (first)
         {
-            printf("/* automatically generated file; do not edit */\n");
+            printf(
+                "/* automatically generated file; do not edit */\n\n"
+                "#ifndef _SCRIPTS_PREPARED_H_\n"
+                "#define _SCRIPTS_PREPARED_H_ 1\n\n"
+                "#include <stddef.h>\n"
+                "#include <stdint.h>\n"
+            );
             first = false;
         }
 
-        char *const name = strdup(path);
-        name[plen - slen] = '\0';
-        printf("\nstatic const uint8_t %s[] = {\n", name);
-        free(name);
+        printf("\n/* package: %s */\n", pkgname);
+        printf("static const uint8_t __script_%s[] =\n{\n", cname);
+        list[i - 2].pkgname = pkgname;
+        list[i - 2].cname = cname;
+        list[i - 2].size = buffer_skip;
+        pkgname = cname = NULL;
 
         const size_t tail = buffer_skip % BYTES_PER_ROW;
         const size_t limit = buffer_skip - tail;
@@ -344,6 +389,28 @@ int main(int argc, const char *argv[])
         free(script);
         script = NULL;
     }
+
+    printf(
+        "\n/* package list */\n"
+        "typedef struct\n{\n"
+        "    const char *name;\n"
+        "    const uint8_t *data;\n"
+        "    size_t size;\n"
+        "} script_pkg_t;\n"
+    );
+
+    printf("\nstatic script_pkg_t script_list[] =\n{\n");
+    for (size_t i = 0; i < cnt; i++)
+    {
+        printf("    { \"%s\", __script_%s, %zuULL },\n"
+               , list[i].pkgname, list[i].cname, list[i].size);
+
+        free(list[i].pkgname);
+        free(list[i].cname);
+    }
+    printf("    { NULL, NULL, 0 },\n};\n");
+    printf("\n#endif /* _SCRIPTS_PREPARED_H_ */\n");
+    free(list);
 
     return 0;
 }
