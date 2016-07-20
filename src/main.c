@@ -30,7 +30,7 @@
 #endif
 
 #include "sighandler.h"
-#include "bindings.h"
+#include "stream/list.h"
 
 static const module_manifest_t *stream_list[] = {
     LUA_STREAM_BINDINGS

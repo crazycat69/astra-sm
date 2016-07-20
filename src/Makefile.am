@@ -269,9 +269,9 @@ endif
 BUILT_SOURCES =
 
 # lua initializer lists
-BUILT_SOURCES += bindings.h
+BUILT_SOURCES += stream/list.h
 
-bindings.h:
+stream/list.h:
 	$(AM_V_GEN)echo "/* automatically generated file; do not edit */" >$@; \
 	echo                        >>$@; \
 	sh $(top_srcdir)/build-aux/gen-bindings-list \

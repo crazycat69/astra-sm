@@ -9,7 +9,7 @@
 /tools/tonegen
 
 # generated files
-/src/bindings.h
+/src/stream/list.h
 /src/inscript.h
 /testcards/*.ts
 /testcards/*.wav
@@ -64,6 +64,3 @@ Makefile.in
 
 # autosave files
 *~
-
-# cat porn
-/private/
