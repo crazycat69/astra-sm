@@ -278,28 +278,6 @@ stream/list.h:
 	    LUA_STREAM_BINDINGS \
 	    $(srcdir) $(libstream_la_SOURCES) $(astra_SOURCES) >>$@ || exit $$?
 
-# built-in script
-if HAVE_INSCRIPT
-INSCRIPT_FILES = \
-    $(top_builddir)/scripts/analyze.luac \
-    $(top_builddir)/scripts/base.luac \
-    $(top_builddir)/scripts/dvbls.luac \
-    $(top_builddir)/scripts/dvbwrite.luac \
-    $(top_builddir)/scripts/femon.luac \
-    $(top_builddir)/scripts/relay.luac \
-    $(top_builddir)/scripts/stream.luac
-
-MKSCRIPT = $(top_builddir)/tools/mkscript$(BUILD_EXEEXT)
-BUILT_SOURCES += inscript.h
-
-inscript.h: $(INSCRIPT_FILES)
-	$(AM_V_GEN)echo "/* automatically generated file; do not edit */" >$@; \
-	echo >>$@; \
-	for script in $(INSCRIPT_FILES); do \
-	    $(MKSCRIPT) `basename $$script .luac` "$$script" >>$@ || exit $$?; \
-	done
-endif
-
 # preprocessed source code
 if HAVE_PREPROCESSED
 PP_CFLAGS = $(DEFS) \

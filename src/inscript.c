@@ -21,7 +21,7 @@
 #include <astra.h>
 #include <luaapi/module.h>
 
-#include "inscript.h"
+#include "../scripts/prepared.h"
 
 static const char __module_name[] = "inscript";
 

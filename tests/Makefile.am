@@ -59,6 +59,7 @@ test_libastra_SOURCES += \
     utils/crc8.c \
     utils/md5.c \
     utils/rc4.c \
+    utils/rc4_vectors.h \
     utils/sha1.c \
     utils/strhex.c
 

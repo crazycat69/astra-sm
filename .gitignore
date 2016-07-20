@@ -9,8 +9,8 @@
 /tools/tonegen
 
 # generated files
+/scripts/prepared.h
 /src/stream/list.h
-/src/inscript.h
 /testcards/*.ts
 /testcards/*.wav
 *.i
@@ -21,7 +21,6 @@
 *.dll
 *.la
 *.lo
-*.luac
 *.o
 *.so*
 

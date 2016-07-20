@@ -3,6 +3,7 @@
  * https://cesbo.com/astra
  *
  * Copyright (C) 2014-2015, Andrey Dyldin <and@cesbo.com>
+ *                    2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,6 +19,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifndef _GNU_SOURCE
+#   define _GNU_SOURCE 1
+#endif
+
 #include <stdio.h>
 #include <stdint.h>
 #include <stdbool.h>
@@ -25,11 +30,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
-
-#include <lua.h>
-
-#define MAX_BUFFER_SIZE 4096
-#define BYTES_PER_ROW 10
+#include <errno.h>
 
 #ifndef O_BINARY
 #   ifdef _O_BINARY
@@ -39,52 +40,42 @@
 #   endif
 #endif
 
-#define __func_pure __attribute__((__pure__))
+static char *buffer = NULL;
+static size_t buffer_skip = 0;
+static size_t buffer_size = 0;
 
-typedef struct string_buffer_t string_buffer_t;
-
-struct string_buffer_t
+static inline
+void addchar(char c)
 {
-    char buffer[MAX_BUFFER_SIZE];
-    int size;
-
-    string_buffer_t *last;
-    string_buffer_t *next;
-};
-
-static void string_buffer_addchar(string_buffer_t *buffer, char c)
-{
-    string_buffer_t *last = buffer->last;
-    if(last->size >= MAX_BUFFER_SIZE)
+    if (buffer_skip >= buffer_size)
     {
-        last->next = (string_buffer_t *)malloc(sizeof(string_buffer_t));
-        last = last->next;
-        last->size = 0;
-        last->last = NULL;
-        last->next = NULL;
-        buffer->last = last;
+        /* shouldn't happen */
+        fprintf(stderr, "buffer overrun\n");
+        exit(EXIT_FAILURE);
     }
 
-    last->buffer[last->size] = c;
-    ++last->size;
+    buffer[buffer_skip++] = c;
 }
 
-static __func_pure const char * skip_sp(const char *source)
+static __attribute__((__pure__))
+const char *skip_sp(const char *source)
 {
-    if(!source)
+    if (source == NULL)
         return NULL;
 
-    while(*source)
+    while (*source != '\0')
     {
-        switch(*source)
+        switch (*source)
         {
             case '\0':
                 return NULL;
+
             case '\t':
             case ' ':
             case '\r':
                 ++source;
                 break;
+
             default:
                 return source;
         }
@@ -93,239 +84,266 @@ static __func_pure const char * skip_sp(const char *source)
     return NULL;
 }
 
-static bool check_string_tail(const char *source, int l)
+static
+bool check_string_tail(const char *source, size_t len)
 {
-    if(source[0] != ']' || source[l + 1] != ']')
-    {
+    if (source[0] != ']' || source[len + 1] != ']')
         return false;
-    }
 
-    for(int i = 0; i < l; ++i)
+    for (size_t i = 0; i < len; ++i)
     {
-        if(source[i + 1] != '=')
+        if (source[i + 1] != '=')
             return false;
     }
 
     return true;
 }
 
-static const char * skip_comment(const char *source, string_buffer_t *buffer)
+static
+const char *skip_comment(const char *source)
 {
-    if(*source == '[')
+    if (*source == '[')
     {
         ++source;
-        int l = 0;
-        for(; *source == '='; ++source, ++l)
+        size_t len = 0;
+        for (; *source == '='; ++source, ++len)
             ;
 
-        if(*source == '[')
+        if (*source == '[')
         {
             ++source;
-            for(; *source; ++source)
+            for (; *source != '\0'; ++source)
             {
-                if(*source == ']' && check_string_tail(source, l))
-                    return source + l + 2;
+                if (*source == ']' && check_string_tail(source, len))
+                    return source + len + 2;
 
-                if(*source == '\n')
-                    string_buffer_addchar(buffer, '\n');
+                if (*source == '\n')
+                    addchar('\n');
             }
         }
     }
     else
     {
-        for(; *source && *source != '\n'; ++source)
+        for (; *source != '\0' && *source != '\n'; ++source)
             ;
-        if(*source == '\n')
+
+        if (*source == '\n')
             return source;
     }
 
-    printf("Wrong comment format\n");
-    abort();
+    fprintf(stderr, "wrong comment format\n");
+    exit(EXIT_FAILURE);
+
     return NULL;
 }
 
-static const char * parse_string(const char *source, string_buffer_t *buffer)
+static
+const char *parse_string(const char *source)
 {
-    if(*source == '[')
+    if (*source == '[')
     {
-        string_buffer_addchar(buffer, '[');
+        addchar('[');
         ++source;
-        int l = 0;
-        for(; *source == '='; ++source, ++l)
-            string_buffer_addchar(buffer, '=');
+        size_t len = 0;
+        for (; *source == '='; ++source, ++len)
+            addchar('=');
 
-        if(*source == '[')
+        if (*source == '[')
         {
-            string_buffer_addchar(buffer, '[');
+            addchar('[');
             ++source;
 
-            for(; *source; ++source)
+            for (; *source != '\0'; ++source)
             {
-                if(*source == ']' && check_string_tail(source, l))
+                if (*source == ']' && check_string_tail(source, len))
                 {
-                    string_buffer_addchar(buffer, ']');
-                    for(int i = 0; i < l; ++i)
-                        string_buffer_addchar(buffer, '=');
-                    string_buffer_addchar(buffer, ']');
-                    return source + l + 2;
+                    addchar(']');
+                    for (size_t i = 0; i < len; ++i)
+                        addchar('=');
+                    addchar(']');
+                    return source + len + 2;
                 }
 
-                string_buffer_addchar(buffer, *source);
+                addchar(*source);
             }
         }
     }
     else
     {
-        char c = *source;
-        string_buffer_addchar(buffer, c);
+        const char c = *source;
+        addchar(c);
         ++source;
 
-        for(; *source; ++source)
+        for (; *source != '\0'; ++source)
         {
-            string_buffer_addchar(buffer, *source);
+            addchar(*source);
 
-            if(*source == c)
+            if (*source == c)
                 return source + 1;
 
-            if(source[0] == '\\' && source[1] == c)
+            if (source[0] == '\\' && source[1] == c)
             {
-                string_buffer_addchar(buffer, c);
+                addchar(c);
                 ++source;
             }
         }
     }
 
-    printf("Wrong string format\n");
-    abort();
+    fprintf(stderr, "wrong string format\n");
+    exit(EXIT_FAILURE);
+
     return NULL;
 }
 
-static string_buffer_t * parse(const char *source)
+static
+void parse(const char *source)
 {
-    string_buffer_t *buffer = (string_buffer_t *)malloc(sizeof(string_buffer_t));
-    buffer->size = 0;
-    buffer->last = buffer;
-    buffer->next = NULL;
-
     bool is_new_line = true;
 
-    for(; source && *source; ++source)
+    for (; source != NULL && *source != '\0'; ++source)
     {
-        if(is_new_line)
+        if (is_new_line)
         {
             is_new_line = false;
             source = skip_sp(source);
-            if(!source)
+            if (source == NULL)
                 break;
         }
 
-        if(source[0] == '-' && source[1] == '-')
-            source = skip_comment(&source[2], buffer);
+        if (source[0] == '-' && source[1] == '-')
+            source = skip_comment(&source[2]);
 
-        if(source[0] == '\'' || source[0] == '"')
-            source = parse_string(source, buffer);
+        if (source[0] == '\'' || source[0] == '"')
+            source = parse_string(source);
 
-        if(source[0] == '[' && (source[1] == '=' || source[1] == '['))
-            source = parse_string(source, buffer);
+        if (source[0] == '[' && (source[1] == '=' || source[1] == '['))
+            source = parse_string(source);
 
-        if(source[0] == '\r')
+        if (source[0] == '\r')
             continue;
 
-        string_buffer_addchar(buffer, source[0]);
+        addchar(source[0]);
 
-        if(source[0] == '\n')
+        if (source[0] == '\n')
             is_new_line = true;
     }
-
-    return buffer;
 }
 
-static void print_block(uint8_t *block, size_t len)
+static
+void print_block(const char *block, size_t len)
 {
-    printf("  ");
-    for(size_t i = 0; i < len; ++i)
-        printf("  0x%02X,", block[i]);
+    printf("   ");
+    for (size_t i = 0; i < len; ++i)
+        printf(" 0x%02X,", block[i]);
     printf("\n");
 }
 
-int main(int argc, char const *argv[])
+#define BYTES_PER_ROW 12
+#define FILE_EXT ".lua"
+
+#define fatal(...) \
+    do { \
+        fprintf(stderr, __VA_ARGS__); \
+        if (script != NULL) \
+            free(script); \
+        if (buffer != NULL) \
+            free(buffer); \
+        if (fd != -1) \
+            close(fd); \
+        exit(EXIT_FAILURE); \
+    } while (0)
+
+int main(int argc, const char *argv[])
 {
-    if(argc != 3)
-    {
-        fprintf(stderr, "Usage: %s <name> <file>\n", argv[0]);
-        return 1;
-    }
+    char *script = NULL;
+    int fd = -1;
 
-    int fd = open(argv[2], O_RDONLY | O_BINARY);
-    if(fd == -1)
-    {
-        fprintf(stderr, "Failed to open file: %s\n", argv[1]);
-        return 1;
-    }
-    int filesize = lseek(fd, 0, SEEK_END);
-    lseek(fd, 0, SEEK_SET);
+    if (argc < 3)
+        fatal("usage: %s <dir> <file...>\n", argv[0]);
 
-    char *script = (char *)malloc(filesize + 1);
-    if(read(fd, script, filesize) != filesize)
+    if (chdir(argv[1]) != 0)
+        fatal("chdir(): %s: %s\n", argv[1], strerror(errno));
+
+    bool first = true;
+
+    for (int i = 2; i < argc; i++)
     {
-        fprintf(stderr, "Failed to read file\n");
-        free(script);
+        const char *const path = argv[i];
+
+        /* check extension */
+        const size_t plen = strlen(path);
+        const size_t slen = strlen(FILE_EXT);
+        if (plen < (slen + 1) || strcmp(&path[plen - slen], FILE_EXT) != 0)
+            fatal("wrong file extension (expected %s): %s\n", FILE_EXT, path);
+
+        /* read source file */
+        fd = open(path, O_RDONLY | O_BINARY);
+        if (fd == -1)
+            fatal("open(): %s: %s\n", path, strerror(errno));
+
+        ssize_t ret = lseek(fd, 0, SEEK_END);
+        if (ret == -1 || lseek(fd, 0, SEEK_SET) == -1)
+            fatal("lseek(): %s: %s\n", path, strerror(errno));
+
+        if (ret <= 0)
+            fatal("%s: file is empty\n", path);
+
+        const size_t filesize = (size_t)ret;
+        script = (char *)calloc(1, filesize + 1);
+        if (script == NULL)
+            fatal("calloc() failed\n");
+
+        ret = read(fd, script, filesize);
+        if (ret == -1)
+            fatal("read(): %s: %s\n", path, strerror(errno));
+
+        if (filesize != (size_t)ret)
+            fatal("read(): %s: short read\n", path);
+
         close(fd);
-        return 1;
-    }
-    script[filesize] = '\0';
-    close(fd);
+        fd = -1;
 
-    bool compiled = false;
-    if(filesize >= (int)sizeof(LUA_SIGNATURE) &&
-       !strncmp(&script[0], LUA_SIGNATURE, sizeof(LUA_SIGNATURE) - 1))
-    {
-        compiled = true;
-    }
+        /* remove whitespace and comments */
+        buffer_size = filesize;
+        buffer = (char *)calloc(1, buffer_size);
+        if (buffer == NULL)
+            fatal("calloc() failed\n");
 
-    size_t skip = filesize;
-    if(!compiled)
-    {
-        string_buffer_t *buffer;
-        string_buffer_t *next_next;
-
-        // first clean
-        buffer = parse(script);
-        skip = 0;
-        for(string_buffer_t *next = buffer
-            ; next && (next_next = next->next, 1)
-            ; next = next_next)
+        for (size_t j = 0; j < 2; j++)
         {
-            memcpy(&script[skip], next->buffer, next->size);
-            skip += next->size;
-            free(next);
+            buffer_skip = 0;
+            parse(script);
+            memcpy(script, buffer, buffer_skip);
+            script[buffer_skip] = '\0';
         }
-        script[skip] = 0;
 
-        // second clean
-        buffer = parse(script);
-        skip = 0;
-        for(string_buffer_t *next = buffer
-            ; next && (next_next = next->next, 1)
-            ; next = next_next)
+        free(buffer);
+        buffer = NULL;
+
+        /* dump output to stdout */
+        if (first)
         {
-            memcpy(&script[skip], next->buffer, next->size);
-            skip += next->size;
-            free(next);
+            printf("/* automatically generated file; do not edit */\n");
+            first = false;
         }
-        script[skip] = 0;
+
+        char *const name = strdup(path);
+        name[plen - slen] = '\0';
+        printf("\nstatic const uint8_t %s[] = {\n", name);
+        free(name);
+
+        const size_t tail = buffer_skip % BYTES_PER_ROW;
+        const size_t limit = buffer_skip - tail;
+        for (size_t j = 0; j < limit; j += BYTES_PER_ROW)
+            print_block(&script[j], BYTES_PER_ROW);
+        if (limit < buffer_skip)
+            print_block(&script[limit], tail);
+
+        printf("};\n");
+
+        free(script);
+        script = NULL;
     }
-
-    printf("static const uint8_t %s[] = {\n", argv[1]);
-    const size_t tail = skip % BYTES_PER_ROW;
-    const size_t limit = skip - tail;
-    for(size_t i = 0; i < limit; i += BYTES_PER_ROW)
-        print_block((uint8_t *)&script[i], BYTES_PER_ROW);
-    if(limit < skip)
-        print_block((uint8_t *)&script[limit], tail);
-    printf("};\n");
-
-    free(script);
 
     return 0;
 }
