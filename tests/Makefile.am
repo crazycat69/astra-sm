@@ -78,4 +78,3 @@ misc_t2mi_decap_LDADD = $(AM_LDADD)
 
 misc_spammer_SOURCES = misc/spammer.c
 misc_spammer_CFLAGS = $(AM_CFLAGS)
-misc_spammer_LDADD = $(AM_LDADD)

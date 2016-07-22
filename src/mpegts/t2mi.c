@@ -576,7 +576,7 @@ static inline
 void bb_reinsert_null(mpegts_t2mi_t *mi, size_t dnp)
 {
     for (size_t i = 0; i < dnp; i++)
-        mi->on_ts(mi->arg, null_ts);
+        mi->on_ts(mi->arg, ts_null_pkt);
 }
 
 static
