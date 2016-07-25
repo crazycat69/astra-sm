@@ -20,7 +20,8 @@ libastra_la_SOURCES = \
 # add Lua script path
 if HAVE_POSIX
 libastra_la_CFLAGS += \
-    -DASC_SCRIPT_DIR='"$(sysconfdir)/astra/scripts"'
+    -DASC_SCRIPTDIR='"$(sysconfdir)/astra/scripts"' \
+    -DASC_DATADIR='"$(datadir)/astra"'
 endif
 
 # core/

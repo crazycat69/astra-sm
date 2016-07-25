@@ -1,5 +1,5 @@
 /*
- * Astra Main App (OS signal handling)
+ * Astra (OS signal handling)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
