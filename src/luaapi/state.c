@@ -62,7 +62,7 @@ lua_State *lua_api_init(void)
 #ifdef _WIN32
     char buf[MAX_PATH] = { 0 };
     char *sl = NULL;
-    const DWORD ret = GetModuleFileNameA(NULL, buf, sizeof(buf));
+    const DWORD ret = GetModuleFileName(NULL, buf, sizeof(buf));
 
     if (ret > 0 && ret < sizeof(buf) && (sl = strrchr(buf, '\\')) != NULL)
     {

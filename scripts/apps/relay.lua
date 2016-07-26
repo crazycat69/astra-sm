@@ -1,4 +1,4 @@
--- Astra Relay
+-- Astra Applications (Relay)
 -- https://cesbo.com/astra/
 --
 -- Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>

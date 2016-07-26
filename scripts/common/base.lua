@@ -1082,7 +1082,7 @@ astra_options = {
         log.set({ stdout = false })
         return 0
     end,
-    ["--color"] = function(udx)
+    ["--color"] = function(idx)
         log.set({ color = true })
         return 0
     end,

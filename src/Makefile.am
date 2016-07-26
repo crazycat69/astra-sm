@@ -261,7 +261,8 @@ astra_SOURCES = \
 
 if HAVE_INSCRIPT
 astra_SOURCES += \
-    inscript.c
+    inscript.c \
+    inscript.h
 endif
 
 #
@@ -277,7 +278,7 @@ stream/list.h:
 	echo                        >>$@; \
 	sh $(top_srcdir)/build-aux/gen-bindings-list \
 	    LUA_STREAM_BINDINGS \
-	    $(srcdir) $(libstream_la_SOURCES) $(astra_SOURCES) >>$@ || exit $$?
+	    $(srcdir) $(libstream_la_SOURCES) >>$@ || exit $$?
 
 # preprocessed source code
 if HAVE_PREPROCESSED

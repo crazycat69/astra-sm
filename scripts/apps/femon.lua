@@ -1,4 +1,4 @@
--- Astra DVB frontend monitor
+-- Astra Applications (DVB frontend monitor)
 -- https://cesbo.com/astra/
 --
 -- Copyright (C) 2015, Andrey Dyldin <and@cesbo.com>

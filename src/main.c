@@ -1,9 +1,9 @@
 /*
- * Astra Main App
+ * Astra (Main binary)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,12 +32,89 @@
 #include "sighandler.h"
 #include "stream/list.h"
 
-static const module_manifest_t *stream_list[] = {
-    LUA_STREAM_BINDINGS
-    NULL
-};
+#ifdef HAVE_INSCRIPT
+#   include "inscript.h"
+#endif
 
-int main(int argc, const char **argv)
+#define MSG(_msg) "[main] " _msg
+
+static
+void bootstrap(lua_State *L, int argc, const char *argv[])
+{
+    bool dumb = false;
+
+    /* pass command line to Lua */
+    lua_newtable(L);
+    for (int i = 1; i < argc; i++)
+    {
+        if (!strcmp(argv[i], "--dumb"))
+            dumb = true;
+
+        lua_pushstring(L, argv[i]);
+        lua_rawseti(L, -2, i);
+    }
+    lua_setglobal(L, "argv");
+
+    /* load built-in streaming modules */
+    static const module_manifest_t *stream_list[] = {
+        LUA_STREAM_BINDINGS
+        NULL
+    };
+
+    for (size_t i = 0; stream_list[i] != NULL; i++)
+        module_register(L, stream_list[i]);
+
+#ifdef HAVE_INSCRIPT
+    /* add package searcher so that require() works on built-in scripts */
+    inscript_init(L);
+#endif
+
+    if (dumb)
+    {
+        /* run scripts without loading Lua libraries */
+        unsigned int cnt = 0;
+        for (int i = 1; i < argc; i++)
+        {
+            const char *filename = argv[i];
+            if (!strcmp(filename, "-")) /* stdin */
+                filename = NULL;
+            else if (strstr(filename, "-") == filename) /* option */
+                continue;
+
+            if (luaL_loadfile(L, filename) != 0
+                || lua_tr_call(L, 0, 0) != 0)
+            {
+                lua_err_log(L);
+                asc_lib_exit(EXIT_ABORT);
+            }
+
+            cnt++;
+        }
+
+        if (cnt == 0)
+        {
+            printf("%s (interpreter mode)\n\n"
+                   "Usage: %s --dumb [OPTIONS] FILE...\n"
+                   , PACKAGE_STRING, argv[0]);
+
+            asc_lib_exit(EXIT_FAILURE);
+        }
+
+        return;
+    }
+
+    /* normal startup */
+    lua_getglobal(L, "require");
+    lua_pushstring(L, "autoexec");
+
+    if (lua_tr_call(L, 1, 0) != 0)
+    {
+        lua_err_log(L);
+        asc_lib_exit(EXIT_ABORT);
+    }
+}
+
+int main(int argc, const char *argv[])
 {
 #ifdef _WIN32
     /* line buffering is not supported on win32 */
@@ -50,70 +127,24 @@ int main(int argc, const char **argv)
         timeBeginPeriod(timecaps.wPeriodMin);
 #endif /* _WIN32 */
 
+    asc_srand();
     signal_setup();
 
-astra_reload_entry:
-    asc_srand();
-    asc_lib_init();
-
-    /* load streaming modules */
-    for (size_t i = 0; stream_list[i] != NULL; i++)
-        module_register(lua, stream_list[i]);
-
-    signal_enable(true);
-
-    /* pass command line to lua */
-    lua_newtable(lua);
-    for(int i = 1; i < argc; ++i)
+    bool again = false;
+    do
     {
-        lua_pushinteger(lua, i);
-        lua_pushstring(lua, argv[i]);
-        lua_settable(lua, -3);
-    }
-    lua_setglobal(lua, "argv");
+        asc_lib_init();
+        signal_enable(true);
 
-    /* run built-in script */
-    lua_getglobal(lua, "inscript");
-    if(lua_isfunction(lua, -1))
-    {
-        lua_call(lua, 0, 0);
-    }
-    else
-    {
-        lua_pop(lua, 1);
+        /* initialize and run astra instance */
+        bootstrap(lua, argc, argv);
 
-        if(argc < 2)
-        {
-            printf(PACKAGE_STRING "\n");
-            printf("Usage: %s script.lua [OPTIONS]\n", argv[0]);
-            asc_lib_exit(EXIT_FAILURE);
-        }
+        again = asc_main_loop_run();
+        asc_log_info("[main] %s", again ? "restarting" : "shutting down");
 
-        int ret = -1;
-
-        if(argv[1][0] == '-' && argv[1][1] == 0)
-            ret = luaL_dofile(lua, NULL);
-        else if(!access(argv[1], R_OK))
-            ret = luaL_dofile(lua, argv[1]);
-        else
-        {
-            printf("Error: initial script isn't found\n");
-            asc_lib_exit(EXIT_FAILURE);
-        }
-
-        if(ret != 0)
-            luaL_error(lua, "[main] %s", lua_tostring(lua, -1));
-    }
-
-    /* start main loop */
-    const bool again = asc_main_loop_run();
-    asc_log_info("[main] %s", again ? "restarting" : "shutting down");
-
-    signal_enable(false);
-    asc_lib_destroy();
-
-    if (again)
-        goto astra_reload_entry;
+        signal_enable(false);
+        asc_lib_destroy();
+    } while (again);
 
     return 0;
 }

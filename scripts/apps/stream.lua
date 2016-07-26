@@ -1,4 +1,4 @@
--- Astra Stream
+-- Astra Applications (Streaming)
 -- https://cesbo.com/astra/
 --
 -- Copyright (C) 2013-2015, Andrey Dyldin <and@cesbo.com>

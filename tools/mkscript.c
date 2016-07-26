@@ -371,7 +371,7 @@ int main(int argc, const char *argv[])
         }
 
         printf("\n/* package: %s */\n", pkgname);
-        printf("static const uint8_t __script_%s[] =\n{\n", cname);
+        printf("static const char __script_%s[] =\n{\n", cname);
         list[i - 2].pkgname = pkgname;
         list[i - 2].cname = cname;
         list[i - 2].size = buffer_skip;
@@ -394,7 +394,8 @@ int main(int argc, const char *argv[])
         "\n/* package list */\n"
         "typedef struct\n{\n"
         "    const char *name;\n"
-        "    const uint8_t *data;\n"
+        "    const char *chunk;\n"
+        "    const char *data;\n"
         "    size_t size;\n"
         "} script_pkg_t;\n"
     );
@@ -402,13 +403,14 @@ int main(int argc, const char *argv[])
     printf("\nstatic script_pkg_t script_list[] =\n{\n");
     for (size_t i = 0; i < cnt; i++)
     {
-        printf("    { \"%s\", __script_%s, %zuULL },\n"
-               , list[i].pkgname, list[i].cname, list[i].size);
+        printf("    { \"%s\", \"=%s.lua\", __script_%s, %lluULL },\n"
+               , list[i].pkgname, list[i].pkgname, list[i].cname
+               , (unsigned long long)list[i].size);
 
         free(list[i].pkgname);
         free(list[i].cname);
     }
-    printf("    { NULL, NULL, 0 },\n};\n");
+    printf("    { NULL, NULL, NULL, 0 },\n};\n");
     printf("\n#endif /* _SCRIPTS_PREPARED_H_ */\n");
     free(list);
 

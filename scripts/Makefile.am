@@ -1,4 +1,6 @@
-SCRIPT_FILES =
+SCRIPT_FILES = \
+    applist.lua \
+    autoexec.lua
 
 # common libraries
 SCRIPT_FILES += \
