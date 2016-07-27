@@ -10,7 +10,6 @@ SCRIPT_FILES += \
 SCRIPT_FILES += \
     apps/analyze.lua \
     apps/dvbls.lua \
-    apps/dvbwrite.lua \
     apps/femon.lua \
     apps/relay.lua \
     apps/stream.lua
