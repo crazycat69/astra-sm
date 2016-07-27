@@ -4,7 +4,8 @@ SCRIPT_FILES = \
 
 # common libraries
 SCRIPT_FILES += \
-    common/base.lua
+    common/base.lua \
+    common/stream.lua
 
 # applications
 SCRIPT_FILES += \

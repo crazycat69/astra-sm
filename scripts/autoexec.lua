@@ -17,6 +17,7 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 require("common/base")
+require("common/stream")
 
 -- load scripts in autoexec.d
 -- TODO
@@ -25,9 +26,6 @@ require("common/base")
 if #argv == 0 then
     astra_usage()
 end
-
--- FIXME: move into common/
-require("apps/stream")
 
 local app_list = require("applist")
 local app_pkg = app_list[1].pkg
