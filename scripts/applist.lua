@@ -16,7 +16,7 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-return {
+local list = {
     {
         pkg = "apps/stream",
         arg = "--stream",
@@ -32,19 +32,28 @@ return {
         arg = "--analyze",
         txt = "command line MPEG TS analyzer",
     },
-    {
+}
+
+if dvbls ~= nil then
+    table.insert(list, {
         pkg = "apps/dvbls",
         arg = "--dvbls",
         txt = "list installed DVB adapters",
-    },
-    {
+    })
+end
+
+if dvb_input ~= nil then
+    table.insert(list, {
         pkg = "apps/femon",
         arg = "--femon",
         txt = "monitor DVB adapter status",
-    },
-    {
-        pkg = nil, -- hardcoded in main.c
-        arg = "--dumb",
-        txt = "run scripts without loading Lua libraries",
-    },
-}
+    })
+end
+
+table.insert(list, {
+    pkg = nil, -- hardcoded in main.c
+    arg = "--dumb",
+    txt = "run scripts without loading Lua libraries",
+})
+
+return list
