@@ -1010,22 +1010,28 @@ end
 -- o888ooooo88   88ooo88 o88o  o888o o888ooo88
 
 function astra_usage()
-    print([[
-Usage: astra APP [OPTIONS]
+    print("Usage: " .. argv0 .. " [APP] [OPTIONS]")
+    print("\nAvailable Applications:")
 
-Available Applications:
-    --stream            Astra Stream is a main application for
-                        the digital television streaming
-    --relay             Astra Relay  is an application for
-                        the digital television relaying
-                        via the HTTP protocol
-    --analyze           Astra Analyze is a MPEG-TS stream analyzer
-    --dvbls             DVB Adapters information list
-    --dvbwrite          Write out script containing adapter list
-    --femon             DVB frontend monitor
-    SCRIPT              launch Astra script
+    local function spaces(num)
+        local sp = ""
+        for i = 1, num, 1 do
+            sp = sp .. " "
+        end
+        return sp
+    end
+    for _, app in pairs(require("applist")) do
+        local txt = string.gsub(app.txt, "\n", "\n" .. spaces(24))
+        local splen = 20 - #app.arg
+        if splen < 0 then splen = 1 end
 
-Astra Options:
+        print("    " .. app.arg .. spaces(splen) .. txt)
+    end
+
+print([[
+    SCRIPT              launch Astra script (implies --stream)
+
+Common Options:
     -h, --help          command line arguments
     -v, --version       version number
     --pid FILE          create PID-file
