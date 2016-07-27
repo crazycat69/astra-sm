@@ -39,6 +39,9 @@ void bootstrap(lua_State *L, int argc, const char *argv[])
     bool dumb = false;
 
     /* pass command line to Lua */
+    lua_pushstring(L, argv[0]);
+    lua_setglobal(L, "argv0");
+
     lua_newtable(L);
     for (int i = 1; i < argc; i++)
     {
