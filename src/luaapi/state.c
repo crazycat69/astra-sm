@@ -48,6 +48,12 @@ lua_State *lua_api_init(void)
     luaL_openlibs(L);
     lua_atpanic(L, panic_handler);
 
+    /* add os.dirsep for convenience */
+    lua_getglobal(L, "os");
+    lua_pushstring(L, LUA_DIRSEP);
+    lua_setfield(L, -2, "dirsep");
+    lua_pop(L, 1);
+
     /* set package search path */
     luaL_Buffer b;
     luaL_buffinit(L, &b);

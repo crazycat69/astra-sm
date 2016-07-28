@@ -16,11 +16,52 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+-- load common libraries needed by most applications
+--
+-- packages are searched in the following order:
+--   1. 'ASC_SCRIPTDIR' environment variable (if set)
+--   2. local script directory (e.g. /etc/astra/scripts)
+--   3. data directory (e.g. /usr/share/astra)
+--   4. built-in scripts (if enabled at compile time)
+--
 require("common/base")
 require("common/stream")
 
--- load scripts in autoexec.d
--- TODO
+-- scan package path for autoexec directories
+local auto_files = {}
+local auto_keys = {}
+
+local pkgpath = package.path:split(";")
+for k = #pkgpath, 1, -1 do
+    local dirname, nsub = pkgpath[k]:gsub("?.lua$", "autoexec.d")
+    if nsub ~= 1 then
+        goto continue
+    end
+    local stat = utils.stat(dirname)
+    if not stat or stat.type ~= "directory" then
+        goto continue
+    end
+
+    local ret, err = pcall(function()
+        for name in utils.readdir(dirname) do
+            if auto_files[name] == nil then
+                table.insert(auto_keys, name)
+            end
+            auto_files[name] = dirname .. os.dirsep .. name
+        end
+        return true
+    end)
+    if ret == false then
+        log.error(err)
+    end
+
+    ::continue::
+end
+
+table.sort(auto_keys)
+for _, k in ipairs(auto_keys) do
+    dofile(auto_files[k])
+end
 
 -- parse command line
 if #argv == 0 then

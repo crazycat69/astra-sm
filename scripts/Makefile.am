@@ -15,10 +15,14 @@ SCRIPT_FILES += \
     apps/relay.lua \
     apps/stream.lua
 
-EXTRA_DIST = $(SCRIPT_FILES)
-
 # script packaging
-scriptdir = $(sysconfdir)/astra/scripts
+script_sysconfdir = $(sysconfdir)/astra/scripts
+script_datadir = $(datadir)/astra
+
+install-data-local:
+	$(MKDIR_P) \
+	    $(DESTDIR)$(script_sysconfdir)/autoexec.d \
+	    $(DESTDIR)$(script_datadir)/autoexec.d
 
 if HAVE_INSCRIPT
 MKSCRIPT = $(top_builddir)/tools/mkscript$(BUILD_EXEEXT)
@@ -37,10 +41,6 @@ prepared.h: $(MKSCRIPT) $(SCRIPT_FILES)
 	done; \
 	$(MKSCRIPT) $(srcdir) $(SCRIPT_FILES) >"$@" || \
 	    { rc=$$?; rm -f "$@"; exit $$rc; }
-
-# add empty script directory
-install-data-local:
-	$(MKDIR_P) $(DESTDIR)$(scriptdir)
 else
-script_DATA = $(SCRIPT_FILES)
+nobase_dist_script_data_DATA = $(SCRIPT_FILES)
 endif
