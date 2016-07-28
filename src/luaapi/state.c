@@ -52,11 +52,20 @@ lua_State *lua_api_init(void)
     luaL_Buffer b;
     luaL_buffinit(L, &b);
 
-    const char *const dir = getenv("ASC_SCRIPTDIR");
-    if (dir != NULL)
+    const char *const envvar = getenv("ASC_SCRIPTDIR");
+    if (envvar != NULL)
     {
-        luaL_addstring(&b, dir);
-        luaL_addstring(&b, LUA_DIRSEP "?.lua;");
+        char *const tmp = strdup(envvar);
+        asc_assert(tmp != NULL, MSG("strdup() failed"));
+
+        for (char *ptr = NULL, *tok = strtok_r(tmp, ";", &ptr)
+             ; tok != NULL; tok = strtok_r(NULL, ";", &ptr))
+        {
+            luaL_addstring(&b, tok);
+            luaL_addstring(&b, LUA_DIRSEP "?.lua;");
+        }
+
+        free(tmp);
     }
 
 #ifdef _WIN32
