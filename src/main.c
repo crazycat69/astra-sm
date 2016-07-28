@@ -54,13 +54,8 @@ void bootstrap(lua_State *L, int argc, const char *argv[])
     lua_setglobal(L, "argv");
 
     /* load built-in streaming modules */
-    static const module_manifest_t *stream_list[] = {
-        LUA_STREAM_BINDINGS
-        NULL
-    };
-
-    for (size_t i = 0; stream_list[i] != NULL; i++)
-        module_register(L, stream_list[i]);
+    for (size_t i = 0; manifest_list[i] != NULL; i++)
+        module_register(L, manifest_list[i]);
 
 #ifdef HAVE_INSCRIPT
     /* add package searcher so that require() works on built-in scripts */

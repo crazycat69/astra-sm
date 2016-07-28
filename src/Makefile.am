@@ -4,6 +4,7 @@ AM_CFLAGS = \
     -I$(builddir) -I$(srcdir)
 
 EXTRA_DIST =
+BUILT_SOURCES =
 noinst_LTLIBRARIES =
 bin_PROGRAMS =
 
@@ -127,7 +128,7 @@ libastra_la_SOURCES += \
     utils/strhex.h
 
 #
-# Module library
+# Streaming library
 #
 noinst_LTLIBRARIES += libstream.la
 libstream_la_CFLAGS = $(AM_CFLAGS)
@@ -246,6 +247,14 @@ libstream_la_SOURCES += \
     stream/udp/output.c
 endif
 
+# manifest list
+BUILT_SOURCES += stream/list.h
+GEN_MANIFEST_LIST = $(top_srcdir)/build-aux/gen-manifest-list
+
+stream/list.h: $(GEN_MANIFEST_LIST)
+	$(AM_V_GEN)$(GEN_MANIFEST_LIST) $(srcdir) $(libstream_la_SOURCES) \
+	    >$@ || exit $$?
+
 #
 # Main binary
 #
@@ -268,18 +277,6 @@ endif
 #
 # Built sources
 #
-BUILT_SOURCES =
-
-# lua initializer lists
-BUILT_SOURCES += stream/list.h
-
-stream/list.h:
-	$(AM_V_GEN)echo "/* automatically generated file; do not edit */" >$@; \
-	echo                        >>$@; \
-	sh $(top_srcdir)/build-aux/gen-bindings-list \
-	    LUA_STREAM_BINDINGS \
-	    $(srcdir) $(libstream_la_SOURCES) >>$@ || exit $$?
-
 # preprocessed source code
 if HAVE_PREPROCESSED
 PP_CFLAGS = $(DEFS) \

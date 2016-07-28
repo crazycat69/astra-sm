@@ -4,7 +4,7 @@ ACLOCAL_AMFLAGS = -I build-aux/m4
 EXTRA_DIST = \
     autogen.sh \
     version.txt \
-    build-aux/gen-bindings-list \
+    build-aux/gen-manifest-list \
     build-aux/git-version-gen \
     doc
 
