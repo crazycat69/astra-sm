@@ -905,7 +905,7 @@ static void module_init(lua_State *L, module_data_t *mod)
             lua_pop(L, 1);
 
             map_item_t *const map_item = ASC_ALLOC(1, map_item_t);
-            strncpy(map_item->type, key, sizeof(map_item->type));
+            snprintf(map_item->type, sizeof(map_item->type), "%s", key);
 
             if(key[0] >= '1' && key[0] <= '9')
                 map_item->origin_pid = atoi(key);
