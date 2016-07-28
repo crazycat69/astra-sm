@@ -1067,14 +1067,26 @@ astra_options = {
         return 0
     end,
     ["--pid"] = function(idx)
+        if argv[idx + 1] == nil then
+            print("--pid: this option requires an argument")
+            astra.exit(1)
+        end
         pidfile(argv[idx + 1])
         return 1
     end,
     ["--syslog"] = function(idx)
+        if argv[idx + 1] == nil then
+            print("--syslog: this option requires an argument")
+            astra.exit(1)
+        end
         log.set({ syslog = argv[idx + 1] })
         return 1
     end,
     ["--log"] = function(idx)
+        if argv[idx + 1] == nil then
+            print("--log: this option requires an argument")
+            astra.exit(1)
+        end
         log.set({ filename = argv[idx + 1] })
         return 1
     end,
