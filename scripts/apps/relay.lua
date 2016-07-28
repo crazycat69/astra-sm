@@ -378,8 +378,8 @@ options = {
     ["-p"] = function(idx)
         relay_port = tonumber(argv[idx + 1])
         if not relay_port then
-            log.error("[relay] wrong port value")
-            astra.abort()
+            print("wrong port value")
+            astra.exit(1)
         end
         return 1
     end,

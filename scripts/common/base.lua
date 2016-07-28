@@ -1,4 +1,4 @@
--- Astra Base Script
+-- Astra Lua Library (Basic functionality)
 -- https://cesbo.com/astra/
 --
 -- Copyright (C) 2014-2015, Andrey Dyldin <and@cesbo.com>
@@ -47,15 +47,17 @@ string.split = function(s, d)
     elseif type(s) == "number" then
         s = tostring(s)
     else
-        log.error("[split] string required")
-        astra.abort()
+        error("[split] string required")
     end
 
     local p = 1
     local t = {}
     while true do
         b = s:find(d, p)
-        if not b then table.insert(t, s:sub(p)) return t end
+        if not b then
+            table.insert(t, s:sub(p))
+            return t
+        end
         table.insert(t, s:sub(p, b - 1))
         p = b + 1
     end
@@ -374,13 +376,11 @@ function init_input(conf)
     local instance = { config = conf, }
 
     if not conf.name then
-        log.error("[init_input] option 'name' is required")
-        astra.abort()
+        error("[init_input] option 'name' is required")
     end
 
     if not init_input_module[conf.format] then
-        log.error("[" .. conf.name .. "] unknown input format")
-        astra.abort()
+        error("[init_input " .. conf.name .. "] unknown input format")
     end
     instance.input = init_input_module[conf.format](conf)
     instance.tail = instance.input
@@ -707,13 +707,11 @@ function dvb_tune(conf)
         end
 
         if conf.adapter == nil then
-            log.error("[dvb_tune] failed to get an adapter. MAC address: " .. mac)
-            astra.abort()
+            error("[dvb_tune] failed to get an adapter. MAC address: " .. mac)
         end
     else
         if conf.adapter == nil then
-            log.error("[dvb_tune] option 'adapter' or 'mac' is required")
-            astra.abort()
+            error("[dvb_tune] option 'adapter' or 'mac' is required")
         end
 
         local a = string.split(tostring(conf.adapter), "%.")
@@ -738,8 +736,7 @@ function dvb_tune(conf)
         if conf.tp then
             local a = string.split(conf.tp, ":")
             if #a ~= 3 then
-                log.error("[dvb_tune " .. instance_id .. "] option 'tp' has wrong format")
-                astra.abort()
+                error("[dvb_tune " .. instance_id .. "] option 'tp' has wrong format")
             end
             conf.frequency, conf.polarization, conf.symbolrate = a[1], a[2], a[3]
         end
@@ -747,8 +744,7 @@ function dvb_tune(conf)
         if conf.lnb then
             local a = string.split(conf.lnb, ":")
             if #a ~= 3 then
-                log.error("[dvb_tune " .. instance_id .. "] option 'lnb' has wrong format")
-                astra.abort()
+                error("[dvb_tune " .. instance_id .. "] option 'lnb' has wrong format")
             end
             conf.lof1, conf.lof2, conf.slof = a[1], a[2], a[3]
         end
@@ -756,8 +752,7 @@ function dvb_tune(conf)
         if conf.unicable then
             local a = string.split(conf.unicable, ":")
             if #a ~= 2 then
-                log.error("[dvb_tune " .. instance_id .. "] option 'unicable' has wrong format")
-                astra.abort()
+                error("[dvb_tune " .. instance_id .. "] option 'unicable' has wrong format")
             end
             conf.uni_scr, conf.uni_frequency = a[1], a[2]
         end
@@ -801,8 +796,7 @@ init_input_module.dvb = function(conf)
             then
                 return i
             end
-            log.error("[" .. conf.name .. "] dvb is not found")
-            astra.abort()
+            error("[" .. conf.name .. "] dvb is not found")
         end
         instance = get_dvb_tune()
     end
