@@ -72,9 +72,9 @@ local app_list = require("applist")
 local app_pkg = app_list[1].pkg
 local arg_idx = 0
 
-for idx, arg in pairs(argv) do
+for idx, arg in ipairs(argv) do
     local found = false
-    for _, app in pairs(app_list) do
+    for _, app in ipairs(app_list) do
         if app.arg == arg then
             found = true
             app_pkg = app.pkg
