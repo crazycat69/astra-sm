@@ -47,7 +47,7 @@ void sha1_transform(uint32_t state[5], const uint8_t buffer[64])
         uint32_t l[16];
     } CHAR64LONG16;
 
-    uint32_t workspace[16] = { 0 };
+    uint8_t workspace[64] = { 0 };
     CHAR64LONG16 *block = (CHAR64LONG16*)workspace;
     memcpy(block, buffer, 64);
 
