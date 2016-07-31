@@ -40,10 +40,7 @@ END_TEST
 START_TEST(func_asc_usleep)
 {
     static const unsigned intervals[] = {
-#ifndef _WIN32
-        1000,
-#endif
-        2500, 5000, 10000, 25000, 50000, 100000, 250000
+        5000, 10000, 25000, 50000, 100000, 250000
     };
 
     for (size_t i = 0; i < ASC_ARRAY_SIZE(intervals); i++)

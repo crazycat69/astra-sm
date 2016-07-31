@@ -72,8 +72,8 @@ START_TEST(empty_loop)
 }
 END_TEST
 
-/* bunch of 1ms timers */
-static void on_millisecond(void *arg)
+/* bunch of 3ms timers */
+static void on_three_ms(void *arg)
 {
     timer_test_t *const timer = (timer_test_t *)arg;
 
@@ -89,14 +89,14 @@ static void on_millisecond(void *arg)
     timer->triggered++;
 }
 
-START_TEST(millisecond)
+START_TEST(three_ms)
 {
     timer_test_t data[100] = { { NULL, 0, 0, 0 } };
 
     for (size_t i = 0; i < ASC_ARRAY_SIZE(data); i++)
     {
-        const unsigned ms = 1;
-        data[i].timer = asc_timer_init(ms, on_millisecond, &data[i]);
+        const unsigned ms = 3;
+        data[i].timer = asc_timer_init(ms, on_three_ms, &data[i]);
         data[i].interval = ms * 1000;
     }
 
@@ -105,7 +105,7 @@ START_TEST(millisecond)
     run_loop(duration);
 
     for (size_t i = 0; i < ASC_ARRAY_SIZE(data); i++)
-        fail_unless(data[i].triggered > (duration / 2), "too slow!");
+        fail_unless(data[i].triggered > (duration / 5), "too slow!");
 }
 END_TEST
 
@@ -216,7 +216,7 @@ Suite *core_timer(void)
         tcase_set_timeout(tc, 5);
 
     tcase_add_test(tc, empty_loop);
-    tcase_add_test(tc, millisecond);
+    tcase_add_test(tc, three_ms);
     tcase_add_test(tc, single_timer);
     tcase_add_test(tc, single_one_shot);
     tcase_add_test(tc, cancel_one_shot);

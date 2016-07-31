@@ -78,7 +78,7 @@ START_TEST(twice_c)
 
     lua_getglobal(L, "pidfile");
     lua_pushstring(L, "test2.pid");
-    ck_assert_msg(lua_pcall(L, 1, 0, 0) != 0);
+    ck_assert(lua_pcall(L, 1, 0, 0) != 0);
     check_no_pid("test2.pid");
 }
 END_TEST
