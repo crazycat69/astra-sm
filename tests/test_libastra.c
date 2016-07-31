@@ -20,10 +20,6 @@
 
 #include "test_libastra.h"
 
-#ifdef _WIN32
-#   include <mmsystem.h>
-#endif
-
 enum fork_status can_fork;
 
 void lib_setup(void)
@@ -69,14 +65,7 @@ int main(void)
 {
     redirect_output();
 
-#ifdef _WIN32
-    TIMECAPS timecaps = { 0, 0 };
-    if (timeGetDevCaps(&timecaps, sizeof(timecaps)) == TIMERR_NOERROR)
-        timeBeginPeriod(timecaps.wPeriodMin);
-#endif /* _WIN32 */
-
     int failed = 0, total = 0;
-
     for (suite_func_t *p = suite_list; *p != NULL; p++)
     {
         SRunner *const sr = srunner_create((*p)());

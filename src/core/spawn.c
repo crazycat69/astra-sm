@@ -74,6 +74,8 @@ int create_redirected(const char *command
     si.hStdError = serr;
 
     char *const buf = strdup(command);
+    asc_assert(buf != NULL, "[core/spawn] strdup() failed");
+
     const bool ret = CreateProcess(NULL, buf, NULL, NULL, true
                                    , (CREATE_NEW_PROCESS_GROUP
                                       /*

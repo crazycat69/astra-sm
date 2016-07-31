@@ -22,14 +22,6 @@
 #include <astra.h>
 #include <mpegts/types.h>
 
-const uint8_t null_ts[TS_PACKET_SIZE] = {
-    /*
-     * pid 0x1fff, cc 0
-     * payload all zeroes
-     */
-    0x47, 0x1f, 0xff, 0x10
-};
-
 static const stream_type_t stream_types[256] = {
     /* 0x00 */ { MPEGTS_PACKET_UNKNOWN, NULL },
     /* 0x01 */ { MPEGTS_PACKET_VIDEO,   "MPEG-1 video, ISO/IEC 11172-2" },

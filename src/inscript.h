@@ -1,8 +1,9 @@
 /*
- * Astra (OS signal handling)
- * http://cesbo.com/astra
+ * Astra (Built-in script)
+ * https://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2014-2015, Andrey Dyldin <and@cesbo.com>
+ *                    2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,10 +19,9 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _SIGHANDLER_H_
-#define _SIGHANDLER_H_ 1
+#ifndef _INSCRIPT_H_
+#define _INSCRIPT_H_ 1
 
-void signal_setup(void);
-void signal_enable(bool running);
+void inscript_init(lua_State *L);
 
-#endif /* _SIGHANDLER_H_ */
+#endif /* _INSCRIPT_H_ */

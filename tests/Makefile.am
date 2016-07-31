@@ -59,6 +59,7 @@ test_libastra_SOURCES += \
     utils/crc8.c \
     utils/md5.c \
     utils/rc4.c \
+    utils/rc4_vectors.h \
     utils/sha1.c \
     utils/strhex.c
 
@@ -77,4 +78,3 @@ misc_t2mi_decap_LDADD = $(AM_LDADD)
 
 misc_spammer_SOURCES = misc/spammer.c
 misc_spammer_CFLAGS = $(AM_CFLAGS)
-misc_spammer_LDADD = $(AM_LDADD)

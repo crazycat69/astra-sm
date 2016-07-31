@@ -408,7 +408,7 @@ mpegts_t2mi_t *mpegts_t2mi_init(void)
     mpegts_t2mi_t *const mi = ASC_ALLOC(1, mpegts_t2mi_t);
 
     static const char def_name[] = "t2mi";
-    strncpy(mi->name, def_name, sizeof(def_name));
+    memcpy(mi->name, def_name, sizeof(def_name));
 
     mi->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
     mi->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, 0);
@@ -576,7 +576,7 @@ static inline
 void bb_reinsert_null(mpegts_t2mi_t *mi, size_t dnp)
 {
     for (size_t i = 0; i < dnp; i++)
-        mi->on_ts(mi->arg, null_ts);
+        mi->on_ts(mi->arg, ts_null_pkt);
 }
 
 static

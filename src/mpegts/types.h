@@ -56,7 +56,13 @@ typedef struct
     const char *description;
 } stream_type_t;
 
-extern const uint8_t null_ts[TS_PACKET_SIZE];
+static const uint8_t ts_null_pkt[TS_PACKET_SIZE] = {
+    /*
+     * pid 0x1fff, cc 0
+     * payload all zeroes
+     */
+    0x47, 0x1f, 0xff, 0x10
+};
 
 const stream_type_t *mpegts_stream_type(uint8_t type_id) __func_pure __wur;
 mpegts_packet_type_t mpegts_priv_type(uint8_t desc_type) __func_const __wur;

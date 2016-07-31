@@ -1,7 +1,8 @@
--- Astra Stream
+-- Astra Lua Library (Streaming)
 -- https://cesbo.com/astra/
 --
 -- Copyright (C) 2013-2015, Andrey Dyldin <and@cesbo.com>
+--               2015-2016, Artem Kharitonov <artem@3phase.pw>
 --
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -797,32 +798,4 @@ function find_channel(key, value)
         end
     end
     return nil
-end
-
---  oooooooo8 ooooooooooo oooooooooo  ooooooooooo      o      oooo     oooo
--- 888        88  888  88  888    888  888    88      888      8888o   888
---  888oooooo     888      888oooo88   888ooo8       8  88     88 888o8 88
---         888    888      888  88o    888    oo    8oooo88    88  888  88
--- o88oooo888    o888o    o888o  88o8 o888ooo8888 o88o  o888o o88o  8  o88o
-
-options_usage = [[
-    FILE                Astra script
-]]
-
-options = {
-    ["*"] = function(idx)
-        local filename = argv[idx]
-        local stat, stat_err = utils.stat(filename)
-        if stat and stat.type == "file" then
-            dofile(filename)
-            return 0
-        else
-            if stat_err ~= nil then print(stat_err) end
-        end
-        return -1
-    end,
-}
-
-function main()
-    log.info("Starting " .. astra.fullname)
 end

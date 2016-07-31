@@ -352,7 +352,7 @@ AS_IF([test "x${have_lua}" = "xno"], [
 
 AS_IF([test "x${cross_compiling}" = "xyes" -a -n "${LUAC}"], [
     AS_IF([test -z "${with_lua_compiler}"], [
-        AC_MSG_WARN([Cross compilation detected; disabling Lua compiler])
+        AC_MSG_WARN([Cross compilation detected; disabling Lua syntax checking])
         LUAC=""
     ], [
         AC_MSG_ERROR([Cannot cross-compile Lua scripts; pass --without-lua-compiler to disable this check])
@@ -865,12 +865,7 @@ AS_IF([test "x${have_dvbapi}" = "xyes"], [
 
 # inscript
 echo -n "Built-in scripts:      "
-AS_IF([test "x${enable_inscript}" != "xno"], [
-    AS_IF([test -n "${LUAC}"],
-        [ echo "yes (compiled)" ], [ echo "yes (plaintext)" ])
-], [
-    echo "no"
-])
+AS_IF([test "x${enable_inscript}" != "xno"], [echo "yes"], [echo "no"])
 
 # igmp emulation
 echo -n "IGMP emulation:        "

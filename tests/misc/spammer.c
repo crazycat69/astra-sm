@@ -34,7 +34,7 @@ int main(void)
     /* prepare null packets */
     uint8_t buffer[WRITE_PKTS][TS_PACKET_SIZE];
     for (size_t i = 0; i < ASC_ARRAY_SIZE(buffer); i++)
-        memcpy(buffer[i], null_ts, TS_PACKET_SIZE);
+        memcpy(buffer[i], ts_null_pkt, TS_PACKET_SIZE);
 
     /* spam them until we get an error */
     size_t written = 0;

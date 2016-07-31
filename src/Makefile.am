@@ -4,6 +4,7 @@ AM_CFLAGS = \
     -I$(builddir) -I$(srcdir)
 
 EXTRA_DIST =
+BUILT_SOURCES =
 noinst_LTLIBRARIES =
 bin_PROGRAMS =
 
@@ -20,7 +21,8 @@ libastra_la_SOURCES = \
 # add Lua script path
 if HAVE_POSIX
 libastra_la_CFLAGS += \
-    -DASC_SCRIPT_DIR='"$(sysconfdir)/astra/scripts"'
+    -DASC_SCRIPTDIR='"$(sysconfdir)/astra/scripts"' \
+    -DASC_DATADIR='"$(datadir)/astra"'
 endif
 
 # core/
@@ -126,7 +128,7 @@ libastra_la_SOURCES += \
     utils/strhex.h
 
 #
-# Module library
+# Streaming library
 #
 noinst_LTLIBRARIES += libstream.la
 libstream_la_CFLAGS = $(AM_CFLAGS)
@@ -245,6 +247,14 @@ libstream_la_SOURCES += \
     stream/udp/output.c
 endif
 
+# manifest list
+BUILT_SOURCES += stream/list.h
+GEN_MANIFEST_LIST = $(top_srcdir)/build-aux/gen-manifest-list
+
+stream/list.h: $(GEN_MANIFEST_LIST)
+	$(AM_V_GEN)$(GEN_MANIFEST_LIST) $(srcdir) $(libstream_la_SOURCES) \
+	    >$@ || exit $$?
+
 #
 # Main binary
 #
@@ -260,46 +270,13 @@ astra_SOURCES = \
 
 if HAVE_INSCRIPT
 astra_SOURCES += \
-    inscript.c
+    inscript.c \
+    inscript.h
 endif
 
 #
 # Built sources
 #
-BUILT_SOURCES =
-
-# lua initializer lists
-BUILT_SOURCES += bindings.h
-
-bindings.h:
-	$(AM_V_GEN)echo "/* automatically generated file; do not edit */" >$@; \
-	echo                        >>$@; \
-	sh $(top_srcdir)/build-aux/gen-bindings-list \
-	    LUA_STREAM_BINDINGS \
-	    $(srcdir) $(libstream_la_SOURCES) $(astra_SOURCES) >>$@ || exit $$?
-
-# built-in script
-if HAVE_INSCRIPT
-INSCRIPT_FILES = \
-    $(top_builddir)/scripts/analyze.luac \
-    $(top_builddir)/scripts/base.luac \
-    $(top_builddir)/scripts/dvbls.luac \
-    $(top_builddir)/scripts/dvbwrite.luac \
-    $(top_builddir)/scripts/femon.luac \
-    $(top_builddir)/scripts/relay.luac \
-    $(top_builddir)/scripts/stream.luac
-
-MKSCRIPT = $(top_builddir)/tools/mkscript$(BUILD_EXEEXT)
-BUILT_SOURCES += inscript.h
-
-inscript.h: $(INSCRIPT_FILES)
-	$(AM_V_GEN)echo "/* automatically generated file; do not edit */" >$@; \
-	echo >>$@; \
-	for script in $(INSCRIPT_FILES); do \
-	    $(MKSCRIPT) `basename $$script .luac` "$$script" >>$@ || exit $$?; \
-	done
-endif
-
 # preprocessed source code
 if HAVE_PREPROCESSED
 PP_CFLAGS = $(DEFS) \

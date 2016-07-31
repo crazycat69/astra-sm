@@ -1,4 +1,4 @@
--- Astra Base Script
+-- Astra Lua Library (Basic functionality)
 -- https://cesbo.com/astra/
 --
 -- Copyright (C) 2014-2015, Andrey Dyldin <and@cesbo.com>
@@ -47,15 +47,17 @@ string.split = function(s, d)
     elseif type(s) == "number" then
         s = tostring(s)
     else
-        log.error("[split] string required")
-        astra.abort()
+        error("[split] string required")
     end
 
     local p = 1
     local t = {}
     while true do
         b = s:find(d, p)
-        if not b then table.insert(t, s:sub(p)) return t end
+        if not b then
+            table.insert(t, s:sub(p))
+            return t
+        end
         table.insert(t, s:sub(p, b - 1))
         p = b + 1
     end
@@ -374,13 +376,11 @@ function init_input(conf)
     local instance = { config = conf, }
 
     if not conf.name then
-        log.error("[init_input] option 'name' is required")
-        astra.abort()
+        error("[init_input] option 'name' is required")
     end
 
     if not init_input_module[conf.format] then
-        log.error("[" .. conf.name .. "] unknown input format")
-        astra.abort()
+        error("[init_input " .. conf.name .. "] unknown input format")
     end
     instance.input = init_input_module[conf.format](conf)
     instance.tail = instance.input
@@ -707,13 +707,11 @@ function dvb_tune(conf)
         end
 
         if conf.adapter == nil then
-            log.error("[dvb_tune] failed to get an adapter. MAC address: " .. mac)
-            astra.abort()
+            error("[dvb_tune] failed to get an adapter. MAC address: " .. mac)
         end
     else
         if conf.adapter == nil then
-            log.error("[dvb_tune] option 'adapter' or 'mac' is required")
-            astra.abort()
+            error("[dvb_tune] option 'adapter' or 'mac' is required")
         end
 
         local a = string.split(tostring(conf.adapter), "%.")
@@ -738,8 +736,7 @@ function dvb_tune(conf)
         if conf.tp then
             local a = string.split(conf.tp, ":")
             if #a ~= 3 then
-                log.error("[dvb_tune " .. instance_id .. "] option 'tp' has wrong format")
-                astra.abort()
+                error("[dvb_tune " .. instance_id .. "] option 'tp' has wrong format")
             end
             conf.frequency, conf.polarization, conf.symbolrate = a[1], a[2], a[3]
         end
@@ -747,8 +744,7 @@ function dvb_tune(conf)
         if conf.lnb then
             local a = string.split(conf.lnb, ":")
             if #a ~= 3 then
-                log.error("[dvb_tune " .. instance_id .. "] option 'lnb' has wrong format")
-                astra.abort()
+                error("[dvb_tune " .. instance_id .. "] option 'lnb' has wrong format")
             end
             conf.lof1, conf.lof2, conf.slof = a[1], a[2], a[3]
         end
@@ -756,8 +752,7 @@ function dvb_tune(conf)
         if conf.unicable then
             local a = string.split(conf.unicable, ":")
             if #a ~= 2 then
-                log.error("[dvb_tune " .. instance_id .. "] option 'unicable' has wrong format")
-                astra.abort()
+                error("[dvb_tune " .. instance_id .. "] option 'unicable' has wrong format")
             end
             conf.uni_scr, conf.uni_frequency = a[1], a[2]
         end
@@ -801,8 +796,7 @@ init_input_module.dvb = function(conf)
             then
                 return i
             end
-            log.error("[" .. conf.name .. "] dvb is not found")
-            astra.abort()
+            error("[" .. conf.name .. "] dvb is not found")
         end
         instance = get_dvb_tune()
     end
@@ -1010,22 +1004,28 @@ end
 -- o888ooooo88   88ooo88 o88o  o888o o888ooo88
 
 function astra_usage()
-    print([[
-Usage: astra APP [OPTIONS]
+    print("Usage: " .. argv0 .. " [APP] [OPTIONS]")
+    print("\nAvailable Applications:")
 
-Available Applications:
-    --stream            Astra Stream is a main application for
-                        the digital television streaming
-    --relay             Astra Relay  is an application for
-                        the digital television relaying
-                        via the HTTP protocol
-    --analyze           Astra Analyze is a MPEG-TS stream analyzer
-    --dvbls             DVB Adapters information list
-    --dvbwrite          Write out script containing adapter list
-    --femon             DVB frontend monitor
-    SCRIPT              launch Astra script
+    local function spaces(num)
+        local sp = ""
+        for i = 1, num, 1 do
+            sp = sp .. " "
+        end
+        return sp
+    end
+    for _, app in pairs(require("applist")) do
+        local txt = string.gsub(app.txt, "\n", "\n" .. spaces(24))
+        local splen = 20 - #app.arg
+        if splen < 0 then splen = 1 end
 
-Astra Options:
+        print("    " .. app.arg .. spaces(splen) .. txt)
+    end
+
+print([[
+    SCRIPT              launch Astra script (implies --stream)
+
+Common Options:
     -h, --help          command line arguments
     -v, --version       version number
     --pid FILE          create PID-file
@@ -1067,14 +1067,26 @@ astra_options = {
         return 0
     end,
     ["--pid"] = function(idx)
+        if argv[idx + 1] == nil then
+            print("--pid: this option requires an argument")
+            astra.exit(1)
+        end
         pidfile(argv[idx + 1])
         return 1
     end,
     ["--syslog"] = function(idx)
+        if argv[idx + 1] == nil then
+            print("--syslog: this option requires an argument")
+            astra.exit(1)
+        end
         log.set({ syslog = argv[idx + 1] })
         return 1
     end,
     ["--log"] = function(idx)
+        if argv[idx + 1] == nil then
+            print("--log: this option requires an argument")
+            astra.exit(1)
+        end
         log.set({ filename = argv[idx + 1] })
         return 1
     end,
@@ -1082,7 +1094,7 @@ astra_options = {
         log.set({ stdout = false })
         return 0
     end,
-    ["--color"] = function(udx)
+    ["--color"] = function(idx)
         log.set({ color = true })
         return 0
     end,

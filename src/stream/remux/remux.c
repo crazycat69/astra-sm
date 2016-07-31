@@ -81,7 +81,7 @@ static inline void insert_pcr_packet(module_data_t *mod
 static inline void insert_null_packet(module_data_t *mod
                                       , ts_callback_t callback)
 {
-    callback(mod, null_ts);
+    callback(mod, ts_null_pkt);
 }
 
 static inline unsigned msecs_to_pkts(unsigned rate, unsigned msec)
