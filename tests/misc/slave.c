@@ -177,12 +177,12 @@ static void trash(void)
     }
 }
 
-static void cmd_unaligned(void)
+static void cmd_unaligned(unsigned int cnt)
 {
     const unsigned int pid = 0x100;
     unsigned int cc = 15;
 
-    while (true)
+    while (cnt-- > 0)
     {
         trash();
 
@@ -241,8 +241,8 @@ int main(int argc, const char **argv)
     }
     else if (!strcmp(argv[1], "ticker"))
         cmd_ticker();
-    else if (!strcmp(argv[1], "unaligned"))
-        cmd_unaligned();
+    else if (!strcmp(argv[1], "unaligned") && argc >= 3)
+        cmd_unaligned(atoi(argv[2]));
     else
         usage();
 

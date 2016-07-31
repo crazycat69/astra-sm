@@ -293,7 +293,8 @@ END_TEST
 
 /* frame aligner test */
 #define ALIGNER_PID 0x100
-#define ALIGNER_LIMIT 50000
+#define ALIGNER_LIMIT 2500
+#define ALIGNER_LIMIT_STR "2500"
 
 static asc_child_t *aligner = NULL;
 static unsigned int aligner_cc = 15;
@@ -341,7 +342,7 @@ START_TEST(ts_aligner)
 
     memset(&cfg, 0, sizeof(cfg));
     cfg.name = "test_aligner";
-    cfg.command = TEST_SLAVE " unaligned";
+    cfg.command = TEST_SLAVE " unaligned " ALIGNER_LIMIT_STR;
     cfg.sout.mode = CHILD_IO_MPEGTS;
     cfg.sout.on_flush = aligner_on_read;
     cfg.serr.mode = CHILD_IO_TEXT;
