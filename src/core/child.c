@@ -511,13 +511,21 @@ void asc_child_destroy(asc_child_t *child)
     {
         /* wait up to 1.5s */
         pid_t status = -1;
-        for (size_t i = 0; i < 150; i++)
+
+        uint64_t elapsed = 0;
+        uint64_t last_time = asc_utime();
+
+        for (unsigned int i = 0; i < 1500; i++)
         {
             status = asc_process_wait(&child->proc, NULL, false);
-            if (status != 0)
+            if (status != 0 || elapsed > 1500000)
                 break;
 
-            asc_usleep(10 * 1000);
+            const uint64_t now = asc_utime();
+            elapsed += (now - last_time);
+            last_time = now;
+
+            asc_usleep(1000);
         }
 
         if (status == 0)
