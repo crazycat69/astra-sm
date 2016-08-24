@@ -20,7 +20,7 @@ AC_CONFIG_MACRO_DIR([build-aux/m4])
 AC_CANONICAL_SYSTEM
 AC_USE_SYSTEM_EXTENSIONS
 
-AM_INIT_AUTOMAKE([1.11 foreign dist-xz no-dist-gzip subdir-objects nostdinc -Wall -Werror])
+AM_INIT_AUTOMAKE([1.11 foreign dist-xz subdir-objects nostdinc -Wall -Werror])
 AM_MAINTAINER_MODE([enable])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_PRESERVE_HELP_ORDER
