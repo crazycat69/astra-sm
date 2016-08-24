@@ -2,7 +2,7 @@
  * Astra: Unit tests
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,32 @@
 #include "test_libastra.h"
 
 enum fork_status can_fork;
+
+#define TIME_SAMPLE_COUNT 50
+#define TIME_RES_MINIMUM 25000 /* 25ms (less is higher) */
+
+unsigned int get_timer_res(void)
+{
+    uint64_t total = 0;
+
+    for (unsigned int i = 0; i < TIME_SAMPLE_COUNT; i++)
+    {
+        const uint64_t time_a = asc_utime();
+        asc_usleep(2000);
+
+        const uint64_t time_b = asc_utime();
+        ck_assert_msg(time_b > time_a, "Time did not increase");
+
+        const uint64_t duration = time_b - time_a;
+        total += duration;
+    }
+
+    const uint64_t mean = (total / TIME_SAMPLE_COUNT);
+    ck_assert_msg(mean > 1000 && mean < TIME_RES_MINIMUM
+                  , "System timer resolution is too low");
+
+    return mean;
+}
 
 void lib_setup(void)
 {

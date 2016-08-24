@@ -309,7 +309,7 @@ int main(int argc, const char *argv[])
 
         for (size_t j = 0; cname[j] != '\0'; j++)
         {
-            if (!isalnum(cname[j]))
+            if (!isalnum((int)cname[j]))
                 cname[j] = '_';
         }
 

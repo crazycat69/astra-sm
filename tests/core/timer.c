@@ -2,7 +2,7 @@
  * Astra: Unit tests
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -72,40 +72,51 @@ START_TEST(empty_loop)
 }
 END_TEST
 
-/* bunch of 3ms timers */
-static void on_three_ms(void *arg)
+/* hundred timers with the same interval */
+static void on_hundred(void *arg)
 {
     timer_test_t *const timer = (timer_test_t *)arg;
 
     const uint64_t now = asc_utime();
     if (timer->last_run)
     {
-        const unsigned diff = now - timer->last_run;
+        const unsigned diff = (now - timer->last_run) / 1000;
         ck_assert_msg(diff >= timer->interval
-                      , "timer interval too short: %uus", diff);
+                      , "timer interval too short: %ums", diff);
     }
 
     timer->last_run = now;
     timer->triggered++;
 }
 
-START_TEST(three_ms)
+START_TEST(hundred_timers)
 {
     timer_test_t data[100] = { { NULL, 0, 0, 0 } };
 
+    const unsigned ms = get_timer_res() / 1000;
+    const unsigned expect_max = 1000 / ms;
+    const unsigned expect_min = expect_max / 3;
+    asc_log_info("timer resolution: %ums, expecting %u to %u events per timer"
+                 , ms, expect_min, expect_max);
+
     for (size_t i = 0; i < ASC_ARRAY_SIZE(data); i++)
     {
-        const unsigned ms = 3;
-        data[i].timer = asc_timer_init(ms, on_three_ms, &data[i]);
-        data[i].interval = ms * 1000;
+        data[i].timer = asc_timer_init(ms, on_hundred, &data[i]);
+        data[i].interval = ms;
     }
 
     /* run for 1 second */
     const unsigned duration = 1000;
     run_loop(duration);
+    ck_assert(timed_out == true);
 
     for (size_t i = 0; i < ASC_ARRAY_SIZE(data); i++)
-        fail_unless(data[i].triggered > (duration / 5), "too slow!");
+    {
+        fail_unless(data[i].triggered > expect_min
+                    && data[i].triggered <= expect_max
+                    , "missed event count (wanted from %u to %u, got %u)"
+                    , expect_min, expect_max, data[i].triggered);
+    }
 }
 END_TEST
 
@@ -126,8 +137,8 @@ START_TEST(single_timer)
         asc_timer_init(40, on_single_timer, &triggered);
     ck_assert(timer != NULL);
 
-    const uint64_t bench = run_loop(500);
-    ck_assert(bench >= 400);
+    const uint64_t bench = run_loop(800);
+    ck_assert(bench >= 400 - 50); /* 40ms * 10 events before shutdown */
     ck_assert(timed_out == false);
     ck_assert(triggered == 10);
 }
@@ -146,14 +157,15 @@ START_TEST(single_one_shot)
     asc_timer_t *const timer =
         asc_timer_one_shot(50, on_single_one_shot, &triggered);
     ck_assert(timer != NULL);
-    run_loop(150);
 
+    run_loop(150);
+    ck_assert(timed_out == true);
     ck_assert(triggered == 1);
 }
 END_TEST
 
 /* cancel one shot timer */
-static void __func_pure on_cancel_failed(void *arg)
+static __func_pure void on_cancel_failed(void *arg)
 {
     __uarg(arg);
     fail("timer did not get cancelled");
@@ -175,6 +187,7 @@ START_TEST(cancel_one_shot)
     ck_assert(timer2 != NULL);
 
     run_loop(300);
+    ck_assert(timed_out == true);
 }
 END_TEST
 
@@ -201,7 +214,8 @@ START_TEST(blocked_thread)
     timer_test_t timer = { NULL, 0, 0, ms * 1000 };
     timer.timer = asc_timer_init(ms, on_block_thread, &timer);
 
-    run_loop(200);
+    run_loop(500);
+    ck_assert(timed_out == true);
 }
 END_TEST
 
@@ -216,7 +230,7 @@ Suite *core_timer(void)
         tcase_set_timeout(tc, 5);
 
     tcase_add_test(tc, empty_loop);
-    tcase_add_test(tc, three_ms);
+    tcase_add_test(tc, hundred_timers);
     tcase_add_test(tc, single_timer);
     tcase_add_test(tc, single_one_shot);
     tcase_add_test(tc, cancel_one_shot);

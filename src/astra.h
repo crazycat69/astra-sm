@@ -106,15 +106,7 @@
 /*
  * public interface
  */
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #include "core/core.h"
 #include "mpegts/mpegts.h"
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 
 #endif /* _ASTRA_H_ */

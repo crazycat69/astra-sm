@@ -2,7 +2,7 @@
  * Astra: Unit tests
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,13 +39,11 @@ END_TEST
 
 START_TEST(func_asc_usleep)
 {
-    static const unsigned intervals[] = {
-        5000, 10000, 25000, 50000, 100000, 250000
-    };
+    const unsigned res = get_timer_res();
 
-    for (size_t i = 0; i < ASC_ARRAY_SIZE(intervals); i++)
+    for (size_t i = 1; i <= 5; i++)
     {
-        const unsigned usecs = intervals[i];
+        const uint64_t usecs = i * res;
 
         const uint64_t time_a = asc_utime();
         asc_usleep(usecs);
@@ -54,7 +52,7 @@ START_TEST(func_asc_usleep)
         ck_assert_msg(time_b > time_a, "Time did not increase");
 
         const uint64_t duration = time_b - time_a;
-        ck_assert_msg(duration >= (usecs * 0.9) && duration <= (usecs * 1.3)
+        ck_assert_msg(duration >= (usecs * 0.9) && duration <= (usecs * 2.1)
                       , "Requested %uus sleep, got %" PRIu64 "us"
                       , usecs, duration);
     }

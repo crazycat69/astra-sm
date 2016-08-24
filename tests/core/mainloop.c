@@ -2,7 +2,7 @@
  * Astra: Unit tests
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,8 +63,8 @@ START_TEST(exit_status)
 }
 END_TEST
 
-/* shutdown after 1000 iterations of a 1ms timer */
-#define ITERATIONS 1000
+/* shutdown after 100 iterations of a 1ms timer */
+#define ITERATIONS 100
 
 static void on_iteration(void *arg)
 {

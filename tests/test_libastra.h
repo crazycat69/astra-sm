@@ -2,7 +2,7 @@
  * Astra: Unit tests
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +27,7 @@
 extern enum fork_status can_fork;
 
 /* test setup and teardown */
+unsigned int get_timer_res(void);
 void lib_setup(void);
 void lib_teardown(void);
 
