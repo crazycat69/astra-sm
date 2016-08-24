@@ -169,8 +169,19 @@ static
 int fork_and_exec(const char *command, pid_t *out_pid
                   , int sin, int sout, int serr)
 {
-    const pid_t pid = fork();
-    if (pid == 0)
+    static const char pfx[] = "exec ";
+    const size_t bufsiz = sizeof(pfx) + strlen(command);
+    char *const buf = (char *)calloc(1, bufsiz);
+
+    if (buf != NULL)
+    {
+        memcpy(buf, pfx, sizeof(pfx));
+        strncat(buf, command, bufsiz - 1 - strlen(buf));
+        command = buf;
+    }
+
+    *out_pid = fork();
+    if (*out_pid == 0)
     {
         /* we're the child; redirect stdio */
         dup2(sin, STDIN_FILENO);
@@ -202,14 +213,9 @@ int fork_and_exec(const char *command, pid_t *out_pid
         perror_s("execle()");
         _exit(127);
     }
-    else if (pid > 0)
-    {
-        /* we're the parent */
-        *out_pid = pid;
-        return 0;
-    }
 
-    return -1;
+    free(buf);
+    return (*out_pid > 0) ? 0 : -1;
 }
 
 #endif /* !_WIN32 */
