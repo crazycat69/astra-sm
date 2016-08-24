@@ -502,14 +502,18 @@ int socketpipe(int fds[2])
         int val = 0;
         socklen_t len = sizeof(val);
 
-        const int ret = getsockopt(fds[i], SOL_SOCKET, SO_SNDBUF
-                                   , (char *)&val, &len);
+        int ret = getsockopt(fds[i], SOL_SOCKET, SO_SNDBUF
+                             , (char *)&val, &len);
 
         if (ret == 0 && val < PIPE_BUFFER)
         {
             val = PIPE_BUFFER;
-            setsockopt(fds[i], SOL_SOCKET, SO_SNDBUF
-                       , (char *)&val, sizeof(val));
+            if (setsockopt(fds[i], SOL_SOCKET, SO_SNDBUF
+                           , (char *)&val, sizeof(val)) != 0)
+            {
+                closeall(fds, 2);
+                return -1;
+            }
         }
     }
 

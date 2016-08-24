@@ -48,6 +48,30 @@ static void pipe_check_nb(int fd, bool expect)
 #endif /* !_WIN32 */
 }
 
+#define MIN_BUF_SIZE (64 * 1024) /* 64 KiB */
+
+static void pipe_check_buf(int fd)
+{
+    static const int optlist[] =
+    {
+        SO_SNDBUF,
+#ifdef _WIN32
+        SO_RCVBUF,
+#endif
+    };
+
+    for (size_t i = 0; i < ASC_ARRAY_SIZE(optlist); i++)
+    {
+        int val = 0;
+        socklen_t optlen = sizeof(val);
+
+        const int ret = getsockopt(fd, SOL_SOCKET, optlist[i]
+                                   , (char *)&val, &optlen);
+        ck_assert(ret == 0);
+        ck_assert(val >= MIN_BUF_SIZE);
+    }
+}
+
 static bool pipe_get_inherit(int fd)
 {
 #ifdef _WIN32
@@ -73,8 +97,11 @@ static void pipe_open_test(unsigned int nb_side)
     int ret = asc_pipe_open(fds, &nb_fd, nb_side);
     ck_assert(ret == 0 && fds[PIPE_RD] != -1 && fds[PIPE_WR] != -1);
 
+    /* check inheritability and socket buffers */
     ck_assert(pipe_get_inherit(fds[PIPE_RD]) == false);
     ck_assert(pipe_get_inherit(fds[PIPE_WR]) == false);
+    pipe_check_buf(fds[PIPE_RD]);
+    pipe_check_buf(fds[PIPE_WR]);
 
     /* verify non-blocking flag */
     switch (nb_side)
@@ -161,9 +188,11 @@ START_TEST(pipe_inherit)
     const int ret = asc_pipe_open(fds, NULL, PIPE_NONE);
     ck_assert(ret == 0 && fds[0] != -1 && fds[1] != -1);
 
-    /* both ends must be non-inheritable by default */
+    /* check inheritability and socket buffers */
     ck_assert(pipe_get_inherit(fds[0]) == false);
     ck_assert(pipe_get_inherit(fds[1]) == false);
+    pipe_check_buf(fds[0]);
+    pipe_check_buf(fds[1]);
 
     for (unsigned int i = 0; i < ASC_ARRAY_SIZE(fds); i++)
     {
@@ -194,6 +223,8 @@ START_TEST(pipe_write)
     ck_assert(pipe_get_inherit(fds[1]) == false);
     pipe_check_nb(fds[0], false);
     pipe_check_nb(fds[1], false);
+    pipe_check_buf(fds[0]);
+    pipe_check_buf(fds[1]);
 
     for (unsigned int i = 0; i < 1000; i++)
     {
@@ -310,6 +341,10 @@ START_TEST(pipe_event)
     /* verify our end is non-blocking */
     pipe_check_nb(fds[PIPE_RD], true);
     pipe_check_nb(fds[PIPE_WR], false);
+
+    /* check socket buffers */
+    pipe_check_buf(fds[0]);
+    pipe_check_buf(fds[1]);
 
     /* set up event handler */
     asc_event_t *const ev = asc_event_init(fds[PIPE_RD], &fds[PIPE_RD]);
