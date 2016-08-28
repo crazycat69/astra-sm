@@ -268,7 +268,7 @@ endif
 BUILT_SOURCES += stream/list.h
 GEN_MANIFEST_LIST = $(top_srcdir)/build-aux/gen-manifest-list
 
-stream/list.h: $(GEN_MANIFEST_LIST)
+stream/list.h: $(GEN_MANIFEST_LIST) config.h
 	$(AM_V_GEN)$(GEN_MANIFEST_LIST) $(srcdir) $(libstream_la_SOURCES) \
 	    >$@ || exit $$?
 
