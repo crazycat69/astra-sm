@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
+ *               2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,12 +23,11 @@
  * Module Name:
  *      transmit
  *
- * Module Options:
- *      upstream    - object, stream instance returned by module_instance:stream()
+ * Module Role:
+ *      Input or output stage, forwards pid requests
  *
- * Module Methods:
- *      set_upstream(object)
- *                  - set upstream module instance
+ * Module Options:
+ *      upstream    - object, stream instance returned by mod:stream()
  */
 
 #include <astra.h>
@@ -35,41 +35,29 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 };
 
-static int method_set_upstream(lua_State *L, module_data_t *mod)
-{
-    if(lua_type(L, 2) == LUA_TLIGHTUSERDATA)
-    {
-        module_stream_t *const st = (module_stream_t *)lua_touserdata(L, 2);
-        __module_stream_attach(st, &mod->__stream);
-    }
-
-    return 0;
-}
-
-static void on_ts(module_data_t *mod, const uint8_t *ts)
+static
+void on_ts(module_data_t *mod, const uint8_t *ts)
 {
     module_stream_send(mod, ts);
 }
 
-static void module_init(lua_State *L, module_data_t *mod)
+static
+void module_init(lua_State *L, module_data_t *mod)
 {
-    __uarg(L);
-
-    module_stream_init(mod, on_ts);
+    module_stream_init(L, mod, on_ts);
 }
 
-static void module_destroy(module_data_t *mod)
+static
+void module_destroy(module_data_t *mod)
 {
     module_stream_destroy(mod);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+STREAM_MODULE_REGISTER(transmit)
 {
-    MODULE_STREAM_METHODS_REF(),
-    { "set_upstream", method_set_upstream },
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(transmit)

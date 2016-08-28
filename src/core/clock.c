@@ -25,7 +25,7 @@
 uint64_t asc_utime(void)
 {
 #ifdef _WIN32
-    FILETIME systime;
+    FILETIME systime = { 0, 0 };
     GetSystemTimeAsFileTime(&systime);
 
     ULARGE_INTEGER large;
@@ -34,14 +34,14 @@ uint64_t asc_utime(void)
 
     return large.QuadPart / 10;
 #elif defined(HAVE_CLOCK_GETTIME)
-    struct timespec ts;
+    struct timespec ts = { 0, 0 };
 
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) == EINVAL)
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) == -1)
         clock_gettime(CLOCK_REALTIME, &ts);
 
     return (ts.tv_sec * 1000000ULL) + (ts.tv_nsec / 1000ULL);
 #else
-    struct timeval tv;
+    struct timeval tv = { 0, 0 };
 
     gettimeofday(&tv, NULL);
     return (tv.tv_sec * 1000000ULL) + tv.tv_usec;
@@ -52,12 +52,12 @@ void asc_usleep(uint64_t usec)
 {
 #ifndef _WIN32
     struct timespec ts = {
-        /* tv_sec  */ usec / 1000000,
-        /* tv_nsec */ (usec % 1000000) * 1000,
+        .tv_sec = usec / 1000000,
+        .tv_nsec = (usec % 1000000) * 1000,
     };
 
     while (nanosleep(&ts, &ts) == -1 && errno == EINTR)
-        ;
+        ; /* nothing */
 #else
     LARGE_INTEGER ft;
     ft.QuadPart = -(usec * 10);

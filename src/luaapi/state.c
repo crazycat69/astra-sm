@@ -2,7 +2,7 @@
  * Astra Lua API (State Initialization)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,49 +20,90 @@
 
 #include <astra.h>
 #include <luaapi/state.h>
+#include <luaapi/module.h>
+#include <luaapi/lib/list.h>
 
-#define MSG(_msg) "[luaapi/state] " _msg
-
-/* search path for Lua */
-#ifdef ASC_SCRIPT_DIR
-#   define __SCRIPT_DIR ";" ASC_SCRIPT_DIR ASC_PATH_SEPARATOR "?.lua"
-#else
-#   define __SCRIPT_DIR
-#endif
-
-#define PACKAGE_PATH \
-    "." ASC_PATH_SEPARATOR "?.lua" __SCRIPT_DIR
+#define MSG(_msg) "[lua] " _msg
 
 /* global Lua state */
 lua_State *lua = NULL;
 
-static int (*const astra_mods[])(lua_State *) = {
-    LUA_CORE_BINDINGS
-    LUA_STREAM_BINDINGS
-    NULL
-};
+static
+int panic_handler(lua_State *L)
+{
+    const char *const err = lua_tostring(L, -1);
+
+    asc_log_error("%s", err);
+    asc_log_error(MSG("unprotected Lua error, aborting execution"));
+    asc_lib_exit(EXIT_ABORT);
+
+    return 0;
+}
 
 lua_State *lua_api_init(void)
 {
     lua_State *const L = luaL_newstate();
     asc_assert(L != NULL, MSG("luaL_newstate() failed"));
+
     luaL_openlibs(L);
+    lua_atpanic(L, panic_handler);
 
-    /* load modules */
-    for (size_t i = 0; astra_mods[i] != NULL; i++)
-        astra_mods[i](L);
+    /* add os.dirsep for convenience */
+    lua_getglobal(L, "os");
+    lua_pushstring(L, LUA_DIRSEP);
+    lua_setfield(L, -2, "dirsep");
+    lua_pop(L, 1);
 
-    /* change package.path */
-#ifdef LUA_DEBUG
-    asc_log_debug(MSG("setting package.path to '%s'"), PACKAGE_PATH);
-#endif
+    /* set package search path */
+    luaL_Buffer b;
+    luaL_buffinit(L, &b);
+
+    const char *const envvar = getenv("ASC_SCRIPTDIR");
+    if (envvar != NULL)
+    {
+        char *const tmp = strdup(envvar);
+        asc_assert(tmp != NULL, MSG("strdup() failed"));
+
+        for (char *ptr = NULL, *tok = strtok_r(tmp, ";", &ptr)
+             ; tok != NULL; tok = strtok_r(NULL, ";", &ptr))
+        {
+            luaL_addstring(&b, tok);
+            luaL_addstring(&b, LUA_DIRSEP "?.lua;");
+        }
+
+        free(tmp);
+    }
+
+#ifdef _WIN32
+    char buf[MAX_PATH] = { 0 };
+    char *sl = NULL;
+    const DWORD ret = GetModuleFileName(NULL, buf, sizeof(buf));
+
+    if (ret > 0 && ret < sizeof(buf) && (sl = strrchr(buf, '\\')) != NULL)
+    {
+        *sl = '\0';
+
+        luaL_addstring(&b, buf); /* <exe path>\scripts\?.lua */
+        luaL_addstring(&b, LUA_DIRSEP "scripts" LUA_DIRSEP "?.lua;");
+
+        luaL_addstring(&b, buf); /* <exe>\data\?.lua */
+        luaL_addstring(&b, LUA_DIRSEP "data" LUA_DIRSEP "?.lua");
+    }
+#else /* _WIN32 */
+    luaL_addstring(&b, ASC_SCRIPTDIR LUA_DIRSEP "?.lua;");
+    luaL_addstring(&b, ASC_DATADIR LUA_DIRSEP "?.lua");
+#endif /* !_WIN32 */
 
     lua_getglobal(L, "package");
-    lua_pushstring(L, PACKAGE_PATH);
+    luaL_pushresult(&b);
     lua_setfield(L, -2, "path");
     lua_pushstring(L, "");
     lua_setfield(L, -2, "cpath");
     lua_pop(L, 1);
+
+    /* load libraries */
+    for (size_t i = 0; lua_lib_list[i] != NULL; i++)
+        module_register(L, lua_lib_list[i]);
 
     return L;
 }

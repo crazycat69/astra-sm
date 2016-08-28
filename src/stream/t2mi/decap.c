@@ -21,6 +21,9 @@
  * Module Name:
  *      t2mi_decap
  *
+ * Module Role:
+ *      Input stage, requests pids
+ *
  * Module Options:
  *      upstream    - object, stream module instance
  *      name        - string, instance identifier for logging
@@ -35,7 +38,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     /* module configuration */
     const char *name;
@@ -47,18 +50,6 @@ struct module_data_t
     mpegts_t2mi_t *decap;
 };
 
-static void join_pid(void *arg, uint16_t pid)
-{
-    module_data_t *const mod = (module_data_t *)arg;
-    module_stream_demux_join_pid(mod, pid);
-}
-
-static void leave_pid(void *arg, uint16_t pid)
-{
-    module_data_t *const mod = (module_data_t *)arg;
-    module_stream_demux_leave_pid(mod, pid);
-}
-
 static void on_ts(module_data_t *mod, const uint8_t *ts)
 {
     mpegts_t2mi_decap(mod->decap, ts);
@@ -66,8 +57,8 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_stream_init(mod, on_ts);
-    module_stream_demux_set(mod, NULL, NULL);
+    module_stream_init(L, mod, on_ts);
+    module_demux_set(mod, NULL, NULL);
 
     /* instance name */
     module_option_string(L, "name", &mod->name, NULL);
@@ -85,12 +76,12 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->decap = mpegts_t2mi_init();
     mpegts_t2mi_set_fname(mod->decap, "%s", mod->name);
 
-    mpegts_t2mi_set_demux(mod->decap, mod, join_pid, leave_pid);
+    mpegts_t2mi_set_demux(mod->decap, mod, module_demux_join
+                          , module_demux_leave);
     mpegts_t2mi_set_payload(mod->decap, mod->pnr, mod->pid);
     mpegts_t2mi_set_plp(mod->decap, mod->plp);
 
-    mpegts_t2mi_set_callback(mod->decap, __module_stream_send
-                             , &mod->__stream);
+    mpegts_t2mi_set_callback(mod->decap, module_stream_send, mod);
 }
 
 static void module_destroy(module_data_t *mod)
@@ -99,9 +90,8 @@ static void module_destroy(module_data_t *mod)
     module_stream_destroy(mod);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+STREAM_MODULE_REGISTER(t2mi_decap)
 {
-    MODULE_STREAM_METHODS_REF(),
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(t2mi_decap)

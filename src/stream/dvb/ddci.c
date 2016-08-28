@@ -18,6 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * Module Name:
+ *      ddci
+ *
+ * Module Role:
+ *      Input stage, forwards pid requests
+ */
+
 #include "dvb.h"
 #include <core/mainloop.h>
 #include <core/thread.h>
@@ -28,7 +36,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     int adapter;
     int device;
@@ -252,20 +260,6 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
         asc_log_error(MSG("sec write failed"));
 }
 
-static void join_pid(void *arg, uint16_t pid)
-{
-    module_data_t *const mod = (module_data_t *)arg;
-
-    module_stream_demux_join_pid(mod, pid);
-}
-
-static void leave_pid(void *arg, uint16_t pid)
-{
-    module_data_t *const mod = (module_data_t *)arg;
-
-    module_stream_demux_leave_pid(mod, pid);
-}
-
 static int method_ca_set_pnr(lua_State *L, module_data_t *mod)
 {
     if(!mod->ca || !mod->ca->ca_fd)
@@ -279,8 +273,7 @@ static int method_ca_set_pnr(lua_State *L, module_data_t *mod)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_stream_init(mod, on_ts);
-    module_stream_demux_set(mod, join_pid, leave_pid);
+    module_stream_init(L, mod, on_ts);
 
     mod->ca = ASC_ALLOC(1, dvb_ca_t);
 
@@ -332,10 +325,15 @@ static void module_destroy(module_data_t *mod)
     free(mod->ca);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+static const module_method_t module_methods[] =
 {
-    MODULE_STREAM_METHODS_REF(),
     { "ca_set_pnr", method_ca_set_pnr },
+    { NULL, NULL },
 };
-MODULE_LUA_REGISTER(ddci)
+
+STREAM_MODULE_REGISTER(ddci)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

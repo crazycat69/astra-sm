@@ -109,26 +109,6 @@ void asc_lib_exit(int status)
 
 void asc_lib_abort(void)
 {
-    int level = 0;
-    if (lua != NULL)
-    {
-        lua_Debug ar;
-        while (lua_getstack(lua, level, &ar))
-        {
-            if (++level == 1)
-                asc_log_error(MSG("abort execution. lua backtrace:"));
-
-            lua_getinfo(lua, "nSl", &ar);
-            asc_log_error(MSG("%d: %s:%d -- %s [%s]")
-                          , level, ar.short_src, ar.currentline
-                          , (ar.name) ? ar.name : "<unknown>"
-                          , ar.what);
-        }
-    }
-
-    if (level == 0)
-        asc_log_error(MSG("abort execution"));
-
     asc_exit_status = EXIT_ABORT;
     exit(EXIT_ABORT);
 }

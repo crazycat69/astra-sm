@@ -69,6 +69,9 @@ void asc_thread_core_init(void)
 
 void asc_thread_core_destroy(void)
 {
+    if (thread_mgr == NULL)
+        return;
+
     asc_thread_t *thr, *prev = NULL;
 
     asc_list_till_empty(thread_mgr->list)

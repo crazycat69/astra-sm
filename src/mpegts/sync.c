@@ -99,7 +99,7 @@ mpegts_sync_t *mpegts_sync_init(void)
     sx->max_size = MAX_BUFFER_SIZE;
 
     static const char def_name[] = "sync";
-    strncpy(sx->name, def_name, sizeof(def_name));
+    memcpy(sx->name, def_name, sizeof(def_name));
 
     sx->pcr_last = XTS_NONE;
     sx->pcr_cur = XTS_NONE;

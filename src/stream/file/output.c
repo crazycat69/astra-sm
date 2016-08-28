@@ -22,6 +22,9 @@
  * Module Name:
  *      file_output
  *
+ * Module Role:
+ *      Sink, no demux
+ *
  * Module Options:
  *      filename    - string, output file name
  *      m2ts        - boolean, use m2ts file format [default : false]
@@ -53,7 +56,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     struct
     {
@@ -235,12 +238,11 @@ static int method_status(lua_State *L, module_data_t *mod)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
+    mod->error = true;
+
     module_option_string(L, "filename", &mod->config.filename, NULL);
     if(!mod->config.filename)
-    {
-        asc_log_error("[file_output] option 'filename' is required");
-        asc_lib_abort();
-    }
+        luaL_error(L, "[file_output] option 'filename' is required");
 
     bool m2ts = 0;
     module_option_boolean(L, "m2ts", &m2ts);
@@ -270,10 +272,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 #endif
     {
         if(posix_memalign((void **)&mod->buffer, ALIGN, mod->buffer_size))
-        {
-            asc_log_error(MSG("cannot malloc aligned memory"));
-            asc_lib_abort();
-        }
+            luaL_error(L, MSG("cannot malloc aligned memory"));
     }
     else
 #endif
@@ -295,10 +294,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 
     mod->fd = open(mod->config.filename, flags, mode);
     if(mod->fd <= 0)
-    {
-        asc_log_error(MSG("failed to open file [%s]"), strerror(errno));
-        asc_lib_abort();
-    }
+        luaL_error(L, MSG("failed to open file [%s]"), strerror(errno));
 
     struct stat st;
     fstat(mod->fd, &st);
@@ -312,10 +308,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         {
 #ifdef HAVE_POSIX_MEMALIGN
             if(posix_memalign(&mod->buffer_aio, ALIGN, mod->buffer_size))
-            {
-                asc_log_error(MSG("cannot malloc aligned memory"));
-                asc_lib_abort();
-            }
+                luaL_error(L, MSG("cannot malloc aligned memory"));
 #else /* !HAVE_POSIX_MEMALIGN */
             mod->buffer_aio = ASC_ALLOC(mod->buffer_size, uint8_t);
 #endif /* HAVE_POSIX_MEMALIGN */
@@ -337,7 +330,9 @@ static void module_init(lua_State *L, module_data_t *mod)
     } /* mod->aio */
 #endif /* HAVE_AIO */
 
-    module_stream_init(mod, on_ts);
+    module_stream_init(L, mod, on_ts);
+    module_demux_set(mod, NULL, NULL);
+    mod->error = false;
 }
 
 static void module_destroy(module_data_t *mod)
@@ -380,8 +375,15 @@ static void module_destroy(module_data_t *mod)
 #endif
 }
 
-MODULE_LUA_METHODS()
+static const module_method_t module_methods[] =
 {
     { "status", method_status },
+    { NULL, NULL },
 };
-MODULE_LUA_REGISTER(file_output)
+
+STREAM_MODULE_REGISTER(file_output)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

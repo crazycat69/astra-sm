@@ -83,12 +83,6 @@
 #define __uarg(_x) \
     do { (void)_x; } while (0)
 
-#ifndef _WIN32
-#   define ASC_PATH_SEPARATOR "/"
-#else
-#   define ASC_PATH_SEPARATOR "\\"
-#endif /* _WIN32 */
-
 /* function attributes */
 #ifndef __wur
 #   define __wur __attribute__((__warn_unused_result__))
@@ -105,22 +99,14 @@
 #define __func_const __attribute__((__const__))
 
 /* additional exit codes */
-#define EXIT_ABORT      2   /* asc_lib_abort() */
+#define EXIT_ABORT      2   /* abnormal termination */
 #define EXIT_SIGHANDLER 101 /* signal handling error */
 #define EXIT_MAINLOOP   102 /* main loop blocked */
 
 /*
  * public interface
  */
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
-
 #include "core/core.h"
 #include "mpegts/mpegts.h"
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 
 #endif /* _ASTRA_H_ */

@@ -22,6 +22,9 @@
  * Module Name:
  *      analyze
  *
+ * Module Role:
+ *      Input stage or sink, requests pids optionally
+ *
  * Module Options:
  *      upstream    - object, stream instance returned by module_instance:stream()
  *      name        - string, analyzer name
@@ -64,7 +67,7 @@ typedef struct
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     const char *name;
     bool rate_stat;
@@ -114,13 +117,13 @@ static const char __callback[] = "callback";
 
 static void callback(lua_State *L, module_data_t *mod)
 {
-    asc_assert((lua_type(L, -1) == LUA_TTABLE), "table required");
+    if(lua_type(L, -1) != LUA_TTABLE)
+        asc_log_error(MSG("BUG: table required for callback!"));
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
-    lua_pushvalue(L, -2);
-    lua_call(L, 1, 0);
-
-    lua_pop(L, 1); // data
+    lua_insert(L, -2);
+    if (lua_tr_call(L, 1, 0) != 0)
+        lua_err_log(L);
 }
 
 /*
@@ -135,7 +138,7 @@ static void callback(lua_State *L, module_data_t *mod)
 static void on_pat(void *arg, mpegts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(psi->buffer[0] != 0x00)
         return;
@@ -200,14 +203,14 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
         {
             mod->stream[pid]->type = MPEGTS_PACKET_PMT;
             if(mod->join_pid)
-                module_stream_demux_join_pid(mod, pid);
+                module_demux_join(mod, pid);
             ++ mod->pmt_count;
         }
         else
         {
             mod->stream[pid]->type = MPEGTS_PACKET_NIT;
             if(mod->join_pid)
-                module_stream_demux_join_pid(mod, pid);
+                module_demux_join(mod, pid);
         }
     }
     lua_setfield(L, -2, "programs");
@@ -231,7 +234,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
 static void on_cat(void *arg, mpegts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(psi->buffer[0] != 0x01)
         return;
@@ -290,7 +293,7 @@ static void on_cat(void *arg, mpegts_psi_t *psi)
 static void on_pmt(void *arg, mpegts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(psi->buffer[0] != 0x02)
         return;
@@ -437,7 +440,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
 static void on_sdt(void *arg, mpegts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(psi->buffer[0] != 0x42)
         return;
@@ -544,7 +547,7 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
 
 static void append_rate(module_data_t *mod, int rate)
 {
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     mod->rate[mod->rate_count] = rate;
     ++mod->rate_count;
@@ -667,7 +670,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 static void on_check_stat(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     int items_count = 1;
     lua_newtable(L);
@@ -778,10 +781,13 @@ static void on_check_stat(void *arg)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     module_option_string(L, "name", &mod->name, NULL);
-    asc_assert(mod->name != NULL, "[analyze] option 'name' is required");
+    if(mod->name == NULL)
+        luaL_error(L, "[analyze] option 'name' is required");
 
     lua_getfield(L, MODULE_OPTIONS_IDX, __callback);
-    asc_assert(lua_isfunction(L, -1), MSG("option 'callback' is required"));
+    if(!lua_isfunction(L, -1))
+        luaL_error(L, MSG("option 'callback' is required"));
+
     mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     module_option_boolean(L, "rate_stat", &mod->rate_stat);
@@ -789,14 +795,14 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_option_integer(L, "bitrate_limit", &mod->bitrate_limit);
     module_option_boolean(L, "join_pid", &mod->join_pid);
 
-    module_stream_init(mod, on_ts);
+    module_stream_init(L, mod, on_ts);
+    module_demux_set(mod, NULL, NULL);
     if(mod->join_pid)
     {
-        module_stream_demux_set(mod, NULL, NULL);
-        module_stream_demux_join_pid(mod, 0x00);
-        module_stream_demux_join_pid(mod, 0x01);
-        module_stream_demux_join_pid(mod, 0x11);
-        module_stream_demux_join_pid(mod, 0x12);
+        module_demux_join(mod, 0x00);
+        module_demux_join(mod, 0x01);
+        module_demux_join(mod, 0x11);
+        module_demux_join(mod, 0x12);
     }
 
     // PAT
@@ -829,7 +835,7 @@ static void module_destroy(module_data_t *mod)
 
     if(mod->idx_callback)
     {
-        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 
@@ -850,9 +856,8 @@ static void module_destroy(module_data_t *mod)
     free(mod->sdt_checksum_list);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+STREAM_MODULE_REGISTER(analyze)
 {
-    MODULE_STREAM_METHODS_REF(),
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(analyze)

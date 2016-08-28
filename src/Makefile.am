@@ -4,6 +4,7 @@ AM_CFLAGS = \
     -I$(builddir) -I$(srcdir)
 
 EXTRA_DIST =
+BUILT_SOURCES =
 noinst_LTLIBRARIES =
 bin_PROGRAMS =
 
@@ -20,7 +21,8 @@ libastra_la_SOURCES = \
 # add Lua script path
 if HAVE_POSIX
 libastra_la_CFLAGS += \
-    -DASC_SCRIPT_DIR='"$(sysconfdir)/astra/scripts"'
+    -DASC_SCRIPTDIR='"$(sysconfdir)/astra/scripts"' \
+    -DASC_DATADIR='"$(datadir)/astra"'
 endif
 
 # core/
@@ -64,10 +66,28 @@ libastra_la_SOURCES += \
 libastra_la_SOURCES += \
     luaapi/luaapi.c \
     luaapi/luaapi.h \
+    luaapi/module.c \
+    luaapi/module.h \
     luaapi/state.c \
     luaapi/state.h \
     luaapi/stream.c \
     luaapi/stream.h
+
+# luaapi/lib/
+libastra_la_SOURCES += \
+    luaapi/lib/astra.c \
+    luaapi/lib/base64.c \
+    luaapi/lib/iso8859.c \
+    luaapi/lib/json.c \
+    luaapi/lib/log.c \
+    luaapi/lib/md5.c \
+    luaapi/lib/pidfile.c \
+    luaapi/lib/rc4.c \
+    luaapi/lib/sha1.c \
+    luaapi/lib/strhex.c \
+    luaapi/lib/timer.c \
+    luaapi/lib/utils.c \
+    luaapi/lib/list.h
 
 # mpegts/
 libastra_la_SOURCES += \
@@ -90,7 +110,6 @@ libastra_la_SOURCES += \
 
 # utils/
 libastra_la_SOURCES += \
-    utils/astra.c \
     utils/base64.c \
     utils/base64.h \
     utils/crc32b.c \
@@ -99,36 +118,17 @@ libastra_la_SOURCES += \
     utils/crc8.h \
     utils/iso8859.c \
     utils/iso8859.h \
-    utils/json.c \
-    utils/log.c \
     utils/md5.c \
     utils/md5.h \
     utils/rc4.c \
+    utils/rc4.h \
     utils/sha1.c \
     utils/sha1.h \
     utils/strhex.c \
-    utils/strhex.h \
-    utils/timer.c \
-    utils/utils.c
-
-if HAVE_DVBAPI
-libastra_la_SOURCES += \
-    utils/dvbls.c
-endif
-
-if HAVE_POSIX
-# no pid files on Windows
-libastra_la_SOURCES += \
-    utils/pidfile.c
-endif
-
-if HAVE_INSCRIPT
-libastra_la_SOURCES += \
-    inscript/inscript.c
-endif
+    utils/strhex.h
 
 #
-# Module library
+# Streaming library
 #
 noinst_LTLIBRARIES += libstream.la
 libstream_la_CFLAGS = $(AM_CFLAGS)
@@ -159,6 +159,7 @@ libstream_la_SOURCES += \
     stream/dvb/ca.c \
     stream/dvb/ca.h \
     stream/dvb/dvb.h \
+    stream/dvb/dvbls.c \
     stream/dvb/frontend.c \
     stream/dvb/frontend.h \
     stream/dvb/ddci.c \
@@ -246,6 +247,14 @@ libstream_la_SOURCES += \
     stream/udp/output.c
 endif
 
+# manifest list
+BUILT_SOURCES += stream/list.h
+GEN_MANIFEST_LIST = $(top_srcdir)/build-aux/gen-manifest-list
+
+stream/list.h: $(GEN_MANIFEST_LIST)
+	$(AM_V_GEN)$(GEN_MANIFEST_LIST) $(srcdir) $(libstream_la_SOURCES) \
+	    >$@ || exit $$?
+
 #
 # Main binary
 #
@@ -259,55 +268,15 @@ astra_SOURCES = \
     sighandler.c \
     sighandler.h
 
+if HAVE_INSCRIPT
+astra_SOURCES += \
+    inscript.c \
+    inscript.h
+endif
+
 #
 # Built sources
 #
-BUILT_SOURCES =
-
-# lua initializer lists
-BUILT_SOURCES += bindings.h
-
-bindings.h:
-	$(AM_V_GEN)echo "/* automatically generated file; do not edit */" >$@; \
-	echo                        >>$@; \
-	echo "/*"                   >>$@; \
-	echo " * Core library"      >>$@; \
-	echo " */"                  >>$@; \
-	echo                        >>$@; \
-	sh $(top_srcdir)/build-aux/gen-bindings-list \
-	    LUA_CORE_BINDINGS \
-	    $(srcdir) $(libastra_la_SOURCES) >>$@ || exit $$?; \
-	echo                        >>$@; \
-	echo "/*"                   >>$@; \
-	echo " * Streaming modules" >>$@; \
-	echo " */"                  >>$@; \
-	echo                        >>$@; \
-	sh $(top_srcdir)/build-aux/gen-bindings-list \
-	    LUA_STREAM_BINDINGS \
-	    $(srcdir) $(libstream_la_SOURCES) >>$@ || exit $$?
-
-# built-in script
-if HAVE_INSCRIPT
-INSCRIPT_FILES = \
-    $(top_builddir)/scripts/analyze.luac \
-    $(top_builddir)/scripts/base.luac \
-    $(top_builddir)/scripts/dvbls.luac \
-    $(top_builddir)/scripts/dvbwrite.luac \
-    $(top_builddir)/scripts/femon.luac \
-    $(top_builddir)/scripts/relay.luac \
-    $(top_builddir)/scripts/stream.luac
-
-MKSCRIPT = $(top_builddir)/tools/mkscript$(BUILD_EXEEXT)
-BUILT_SOURCES += inscript/inscript.h
-
-inscript/inscript.h: $(INSCRIPT_FILES)
-	$(AM_V_GEN)echo "/* automatically generated file; do not edit */" >$@; \
-	echo >>$@; \
-	for script in $(INSCRIPT_FILES); do \
-	    $(MKSCRIPT) `basename $$script .luac` "$$script" >>$@ || exit $$?; \
-	done
-endif
-
 # preprocessed source code
 if HAVE_PREPROCESSED
 PP_CFLAGS = $(DEFS) \

@@ -1,16 +1,16 @@
 # binaries
 /src/astra
 /lua/luac
-/tests/spammer
-/tests/t2mi_decap
-/tests/test_slave
-/tests/unit_tests
+/tests/misc/spammer
+/tests/misc/t2mi_decap
+/tests/misc/slave
+/tests/test_libastra
 /tools/mkscript
 /tools/tonegen
 
 # generated files
-/src/bindings.h
-/src/inscript/inscript.h
+/scripts/prepared.h
+/src/stream/list.h
 /testcards/*.ts
 /testcards/*.wav
 *.i
@@ -21,7 +21,6 @@
 *.dll
 *.la
 *.lo
-*.luac
 *.o
 *.so*
 
@@ -64,6 +63,3 @@ Makefile.in
 
 # autosave files
 *~
-
-# cat porn
-/private/

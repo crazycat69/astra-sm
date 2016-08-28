@@ -2,8 +2,8 @@
  * Astra Lua API
  * http://cesbo.com/astra
  *
- * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
+ *               2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,86 +22,76 @@
 #include <astra.h>
 #include <luaapi/luaapi.h>
 
-bool module_option_integer(lua_State *L, const char *name, int *integer)
+#define MSG(_msg) "[lua] " _msg
+
+/* custom error handler; returns table containing Lua stack trace */
+#define ERR_ADDSTR(...) \
+    do { \
+        const int __idx = luaL_len(L, -1) + 1; \
+        lua_pushinteger(L, __idx); \
+        lua_pushfstring(L, __VA_ARGS__); \
+        lua_settable(L, -3); \
+    } while (0)
+
+static
+int err_func(lua_State *L)
 {
-    if (lua_type(L, MODULE_OPTIONS_IDX) != LUA_TTABLE)
-        return false;
-
-    lua_getfield(L, MODULE_OPTIONS_IDX, name);
-    const int type = lua_type(L, -1);
-    bool result = false;
-
-    if (type == LUA_TNUMBER)
-    {
-        *integer = lua_tointeger(L, -1);
-        result = true;
-    }
-    else if (type == LUA_TSTRING)
-    {
-        const char *str = lua_tostring(L, -1);
-        *integer = atoi(str);
-        result = true;
-    }
-    else if (type == LUA_TBOOLEAN)
-    {
-        *integer = lua_toboolean(L, -1);
-        result = true;
-    }
-
+    const char *const err_str = lua_tostring(L, -1);
     lua_pop(L, 1);
-    return result;
+
+    lua_newtable(L);
+    ERR_ADDSTR("%s", err_str);
+
+    int level = 0;
+    lua_Debug ar;
+
+    while (lua_getstack(L, ++level, &ar))
+    {
+        lua_getinfo(L, "nSl", &ar);
+        ERR_ADDSTR("%d: %s:%d -- %s [%s]", level, ar.short_src
+                   , ar.currentline, (ar.name) ? ar.name : "<unknown>"
+                   , ar.what);
+    }
+
+    if (level > 1)
+        ERR_ADDSTR("end stack trace");
+
+    return 1;
 }
 
-bool module_option_string(lua_State *L, const char *name, const char **string
-                          , size_t *length)
+/* lua_pcall() wrapper that uses the error handler above */
+int lua_tr_call(lua_State *L, int nargs, int nresults)
 {
-    if (lua_type(L, MODULE_OPTIONS_IDX) != LUA_TTABLE)
-        return false;
+    const int erridx = lua_gettop(L) - nargs;
+    lua_pushcfunction(L, err_func);
+    lua_insert(L, erridx);
 
-    lua_getfield(L, MODULE_OPTIONS_IDX, name);
-    const int type = lua_type(L, -1);
-    bool result = false;
+    const int ret = lua_pcall(L, nargs, nresults, erridx);
+    lua_remove(L, erridx);
 
-    if (type == LUA_TSTRING)
-    {
-        if (length)
-            *length = luaL_len(L, -1);
-        *string = lua_tostring(L, -1);
-        result = true;
-    }
-
-    lua_pop(L, 1);
-    return result;
+    return ret;
 }
 
-bool module_option_boolean(lua_State *L, const char *name, bool *boolean)
+/* pop table from stack and send contents to error log */
+void lua_err_log(lua_State *L)
 {
-    if (lua_type(L, MODULE_OPTIONS_IDX) != LUA_TTABLE)
-        return false;
+    asc_log_error(MSG("unhandled Lua error"));
 
-    lua_getfield(L, MODULE_OPTIONS_IDX, name);
-    const int type = lua_type(L, -1);
-    bool result = false;
-
-    if (type == LUA_TNUMBER)
+    if (lua_istable(L, -1))
     {
-        *boolean = (lua_tointeger(L, -1) != 0) ? true : false;
-        result = true;
+        lua_foreach(L, -2)
+            asc_log_error(MSG("%s"), lua_tostring(L, -1));
     }
-    else if (type == LUA_TSTRING)
+    else if (lua_isstring(L, -1))
     {
-        const char *str = lua_tostring(L, -1);
-        *boolean = (!strcmp(str, "true")
-                    || !strcmp(str, "on")
-                    || !strcmp(str, "1"));
-        result = true;
+        asc_log_error(MSG("%s"), lua_tostring(L, -1));
     }
-    else if (type == LUA_TBOOLEAN)
+    else
     {
-        *boolean = lua_toboolean(L, -1);
-        result = true;
+        asc_log_error(MSG("BUG: lua_err_log(): expected table/string, got %s")
+                      , lua_typename(L, lua_type(L, -1)));
     }
 
-    lua_pop(L, 1);
-    return result;
+    if (lua_gettop(L) > 0)
+        lua_pop(L, 1);
 }

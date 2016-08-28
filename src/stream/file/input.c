@@ -22,6 +22,9 @@
  * Module Name:
  *      file_input
  *
+ * Module Role:
+ *      Source, no demux
+ *
  * Module Options:
  *      filename    - string, input file name
  *      lock        - string, lock file name (to store reading position)
@@ -42,7 +45,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     const char *filename;
     const char *lock;
@@ -349,10 +352,11 @@ static void on_thread_close(void *arg)
 
     if(mod->is_eof && mod->idx_callback)
     {
-        lua_State *const L = MODULE_L(mod);
+        lua_State *const L = module_lua(mod);
 
         lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
-        lua_call(L, 0, 0);
+        if (lua_tr_call(L, 0, 0) != 0)
+            lua_err_log(L);
     }
 }
 
@@ -427,13 +431,14 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_option_boolean(L, "loop", &mod->loop);
 
     // store callback in registry
-    lua_getfield(L, 2, "callback");
+    lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
     if(lua_type(L, -1) == LUA_TFUNCTION)
         mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
     else
         lua_pop(L, 1);
 
-    module_stream_init(mod, NULL);
+    module_stream_init(L, mod, NULL);
+    module_demux_set(mod, NULL, NULL);
 
     if(mod->lock)
     {
@@ -469,17 +474,22 @@ static void module_destroy(module_data_t *mod)
 
     if(mod->idx_callback)
     {
-        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 
     module_stream_destroy(mod);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+static const module_method_t module_methods[] =
 {
-    MODULE_STREAM_METHODS_REF(),
     { "length", method_length },
+    { NULL, NULL },
 };
-MODULE_LUA_REGISTER(file_input)
+
+STREAM_MODULE_REGISTER(file_input)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

@@ -1,11 +1,12 @@
-SUBDIRS = lua scripts tools src . tests testcards
+SUBDIRS = lua tools scripts src . tests testcards
 DIST_SUBDIRS = $(SUBDIRS)
 ACLOCAL_AMFLAGS = -I build-aux/m4
 EXTRA_DIST = \
     autogen.sh \
     version.txt \
-    build-aux/gen-bindings-list \
-    build-aux/git-version-gen
+    build-aux/gen-manifest-list \
+    build-aux/git-version-gen \
+    doc
 
 dist-hook:
 	chmod u+w $(distdir)/version.txt; \

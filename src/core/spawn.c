@@ -74,6 +74,8 @@ int create_redirected(const char *command
     si.hStdError = serr;
 
     char *const buf = strdup(command);
+    asc_assert(buf != NULL, "[core/spawn] strdup() failed");
+
     const bool ret = CreateProcess(NULL, buf, NULL, NULL, true
                                    , (CREATE_NEW_PROCESS_GROUP
                                       /*
@@ -169,8 +171,19 @@ static
 int fork_and_exec(const char *command, pid_t *out_pid
                   , int sin, int sout, int serr)
 {
-    const pid_t pid = fork();
-    if (pid == 0)
+    static const char pfx[] = "exec ";
+    const size_t bufsiz = sizeof(pfx) + strlen(command);
+    char *const buf = (char *)calloc(1, bufsiz);
+
+    if (buf != NULL)
+    {
+        memcpy(buf, pfx, sizeof(pfx));
+        strncat(buf, command, bufsiz - 1 - strlen(buf));
+        command = buf;
+    }
+
+    *out_pid = fork();
+    if (*out_pid == 0)
     {
         /* we're the child; redirect stdio */
         dup2(sin, STDIN_FILENO);
@@ -202,14 +215,9 @@ int fork_and_exec(const char *command, pid_t *out_pid
         perror_s("execle()");
         _exit(127);
     }
-    else if (pid > 0)
-    {
-        /* we're the parent */
-        *out_pid = pid;
-        return 0;
-    }
 
-    return -1;
+    free(buf);
+    return (*out_pid > 0) ? 0 : -1;
 }
 
 #endif /* !_WIN32 */
@@ -500,14 +508,18 @@ int socketpipe(int fds[2])
         int val = 0;
         socklen_t len = sizeof(val);
 
-        const int ret = getsockopt(fds[i], SOL_SOCKET, SO_SNDBUF
-                                   , (char *)&val, &len);
+        int ret = getsockopt(fds[i], SOL_SOCKET, SO_SNDBUF
+                             , (char *)&val, &len);
 
         if (ret == 0 && val < PIPE_BUFFER)
         {
             val = PIPE_BUFFER;
-            setsockopt(fds[i], SOL_SOCKET, SO_SNDBUF
-                       , (char *)&val, sizeof(val));
+            if (setsockopt(fds[i], SOL_SOCKET, SO_SNDBUF
+                           , (char *)&val, sizeof(val)) != 0)
+            {
+                closeall(fds, 2);
+                return -1;
+            }
         }
     }
 

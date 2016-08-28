@@ -20,7 +20,7 @@
 
 #include <astra.h>
 #include <core/list.h>
-#include <luaapi/luaapi.h>
+#include <luaapi/module.h>
 #include <utils/base64.h>
 #include <utils/sha1.h>
 
@@ -35,7 +35,7 @@
 
 struct module_data_t
 {
-    MODULE_LUA_DATA();
+    MODULE_DATA();
 
     int idx_callback;
 };
@@ -102,7 +102,7 @@ static void on_websocket_send(void *arg)
 {
     http_client_t *const client = (http_client_t *)arg;
     http_response_t *const response = client->response;
-    lua_State *const L = MODULE_L(client->mod);
+    lua_State *const L = module_lua(client->mod);
 
     const char *str = lua_tostring(L, 3);
     const int str_size = luaL_len(L, 3);
@@ -155,7 +155,7 @@ static void on_websocket_read(void *arg)
 {
     http_client_t *const client = (http_client_t *)arg;
     http_response_t *const response = client->response;
-    lua_State *const L = MODULE_L(client->mod);
+    lua_State *const L = module_lua(client->mod);
 
     ssize_t size;
     uint8_t *data = (uint8_t *)client->buffer;
@@ -280,7 +280,8 @@ static void on_websocket_read(void *arg)
             lua_pushlstring(L, (const char *)data, response->data_size);
         }
 
-        lua_call(L, 3, 0);
+        if (lua_tr_call(L, 3, 0) != 0)
+            lua_err_log(L);
 
         response->header_size = 0;
         response->data_size = 0;
@@ -301,7 +302,8 @@ static void on_websocket_read(void *arg)
             lua_pushlightuserdata(L, client);
             string_buffer_push(L, client->content);
             client->content = NULL;
-            lua_call(L, 3, 0);
+            if (lua_tr_call(L, 3, 0) != 0)
+                lua_err_log(L);
 
             response->header_size = 0;
             response->data_size = 0;
@@ -321,7 +323,8 @@ static int module_call(lua_State *L, module_data_t *mod)
             lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_server);
             lua_pushlightuserdata(L, client);
             lua_pushnil(L);
-            lua_call(L, 3, 0);
+            if (lua_tr_call(L, 3, 0) != 0)
+                lua_err_log(L);
 
             if(client->content)
             {
@@ -430,13 +433,13 @@ static void module_destroy(module_data_t *mod)
 {
     if(mod->idx_callback)
     {
-        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 }
 
-MODULE_LUA_METHODS()
+MODULE_REGISTER(http_websocket)
 {
-    { NULL, NULL },
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(http_websocket)

@@ -22,6 +22,9 @@
  * Module Name:
  *      udp_output
  *
+ * Module Role:
+ *      Sink, no demux
+ *
  * Module Options:
  *      upstream    - object, stream instance returned by module_instance:stream()
  *      addr        - string, source IP address
@@ -47,7 +50,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     const char *addr;
     int port;
@@ -215,7 +218,8 @@ static void module_init(lua_State *L, module_data_t *mod)
         on_ts = on_sync_ts;
     }
 
-    module_stream_init(mod, on_ts);
+    module_stream_init(L, mod, on_ts);
+    module_demux_set(mod, NULL, NULL);
 }
 
 static void module_destroy(module_data_t *mod)
@@ -227,9 +231,8 @@ static void module_destroy(module_data_t *mod)
     ASC_FREE(mod->sock, asc_socket_close);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+STREAM_MODULE_REGISTER(udp_output)
 {
-    MODULE_STREAM_METHODS_REF(),
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(udp_output)

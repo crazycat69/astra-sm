@@ -1,23 +1,46 @@
-SCRIPT_FILES = analyze.lua base.lua dvbls.lua dvbwrite.lua femon.lua relay.lua stream.lua
-EXTRA_DIST = examples $(SCRIPT_FILES)
-scriptdir = $(sysconfdir)/astra/scripts
+SCRIPT_FILES = \
+    applist.lua \
+    autoexec.lua
+
+# common libraries
+SCRIPT_FILES += \
+    common/base.lua \
+    common/stream.lua
+
+# applications
+SCRIPT_FILES += \
+    apps/analyze.lua \
+    apps/dvbls.lua \
+    apps/femon.lua \
+    apps/relay.lua \
+    apps/stream.lua
+
+# script packaging
+script_sysconfdir = $(sysconfdir)/astra/scripts
+script_datadir = $(datadir)/astra
+
+install-data-local:
+	$(MKDIR_P) \
+	    $(DESTDIR)$(script_sysconfdir)/autoexec.d \
+	    $(DESTDIR)$(script_datadir)/autoexec.d
 
 if HAVE_INSCRIPT
-SUFFIXES: .luac
-BUILT_SOURCES = $(SCRIPT_FILES:.lua=.luac)
+MKSCRIPT = $(top_builddir)/tools/mkscript$(BUILD_EXEEXT)
+BUILT_SOURCES = prepared.h
 CLEANFILES = $(BUILT_SOURCES)
 
 if HAVE_LUA_COMPILER
-.lua.luac: $*.lua
-	$(AM_V_GEN)$(LUAC) -s -o $@ -- $<
+CHKSCRIPT = $(LUAC) -p --
 else
-.lua.luac:
-	$(AM_V_GEN)$(LN_S) -f $< $@
+CHKSCRIPT = true
 endif
 
-# add empty script directory
-install-data-local:
-	$(MKDIR_P) $(DESTDIR)$(scriptdir)
+prepared.h: $(MKSCRIPT) $(SCRIPT_FILES)
+	$(AM_V_GEN)for script in $(SCRIPT_FILES); do \
+	    $(CHKSCRIPT) "$(srcdir)/$$script" || exit $$?; \
+	done; \
+	$(MKSCRIPT) $(srcdir) $(SCRIPT_FILES) >"$@" || \
+	    { rc=$$?; rm -f "$@"; exit $$rc; }
 else
-script_DATA = $(SCRIPT_FILES)
+nobase_dist_script_data_DATA = $(SCRIPT_FILES)
 endif

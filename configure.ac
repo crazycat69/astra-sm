@@ -20,7 +20,7 @@ AC_CONFIG_MACRO_DIR([build-aux/m4])
 AC_CANONICAL_SYSTEM
 AC_USE_SYSTEM_EXTENSIONS
 
-AM_INIT_AUTOMAKE([1.11 foreign dist-xz no-dist-gzip subdir-objects nostdinc -Wall -Werror])
+AM_INIT_AUTOMAKE([1.11 foreign dist-xz subdir-objects nostdinc -Wall -Werror])
 AM_MAINTAINER_MODE([enable])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 AC_PRESERVE_HELP_ORDER
@@ -149,12 +149,6 @@ case "${host_os}" in
     *)
         SYS=posix
 
-        AC_CHECK_DECLS([environ])
-        AC_CHECK_MEMBERS([struct sockaddr_in.sin_len], [], [], [[
-            #include <sys/types.h>
-            #include <netinet/in.h>
-        ]])
-
         AX_PTHREAD([
             LIBS="$PTHREAD_LIBS $LIBS"
             CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
@@ -162,6 +156,47 @@ case "${host_os}" in
         ], [
             AC_MSG_ERROR([missing pthread support])
         ])
+
+        AC_CHECK_DECLS([environ])
+        AC_CHECK_MEMBERS([struct sockaddr_in.sin_len], [], [], [[
+            #include <sys/types.h>
+            #include <netinet/in.h>
+        ]])
+
+        AC_CHECK_HEADERS([ifaddrs.h netinet/sctp.h sys/queue.h])
+        AC_CHECK_FUNCS([posix_memalign accept4 mkostemp mkstemp pthread_mutex_timedlock])
+
+        # getifaddrs(): used by utils.c
+        AC_CHECK_FUNCS([getifaddrs],
+            [], [ AC_MSG_WARN([no getifaddrs(); utils.ifaddrs() will be unavailable]) ])
+
+        # clock_gettime(): used by clock.c
+        LIBRT=""
+        ac_cv_func_clock_gettime="no"
+        AX_SAVE_FLAGS
+        AC_SEARCH_LIBS([clock_gettime], [rt], [
+            AS_IF([test "$LIBS" != "$SAVED_LIBS"], [ LIBRT="-lrt" ])
+
+            ac_cv_func_clock_gettime="yes"
+            AC_DEFINE([HAVE_CLOCK_GETTIME],
+                [1], [Define to 1 if you have the `clock_gettime' function.])
+        ])
+        AX_RESTORE_FLAGS
+
+        # POSIX AIO: used by `file'
+        have_aio="no"
+        AX_SAVE_FLAGS
+        AC_CHECK_HEADERS([aio.h], [
+            AC_SEARCH_LIBS([aio_write], [rt], [
+                AS_IF([test "$LIBS" != "$SAVED_LIBS"], [ LIBRT="-lrt" ])
+
+                have_aio="yes"
+                AC_DEFINE([HAVE_AIO], [1],
+                    [Define to 1 if you have the POSIX AIO interface.])
+            ])
+        ])
+        AX_RESTORE_FLAGS
+        AC_SUBST(LIBRT)
     ;;
 esac
 
@@ -244,47 +279,10 @@ AC_MSG_NOTICE([using ${event_mechanism} for event notification])
 #
 # Checks for headers and functions common to all platforms
 #
-# optional headers
-AC_CHECK_HEADERS([netinet/sctp.h sys/queue.h])
-
 # optional functions
 #   pread(), strndup(), strnlen(): replaceables
-#   posix_memalign(): used by stream/file
-#   accept4(): used by core/socket
-#   mkostemp(): used for creating pidfiles
-AC_CHECK_FUNCS([pread strndup strnlen posix_memalign accept4 mkostemp pthread_mutex_timedlock])
-
-# getifaddrs(): used by utils.c
-AC_CHECK_FUNCS([getifaddrs],
-    [], [ AC_MSG_WARN([no getifaddrs(); utils.ifaddrs() will be unavailable]) ])
-
-# clock_gettime(): used by clock.c
-LIBRT=""
-ac_cv_func_clock_gettime="no"
-AX_SAVE_FLAGS
-AC_SEARCH_LIBS([clock_gettime], [rt], [
-    AS_IF([test "$LIBS" != "$SAVED_LIBS"], [ LIBRT="-lrt" ])
-
-    ac_cv_func_clock_gettime="yes"
-    AC_DEFINE([HAVE_CLOCK_GETTIME],
-        [1], [Define to 1 if you have the `clock_gettime' function.])
-])
-AX_RESTORE_FLAGS
-
-# POSIX AIO: used by `file'
-have_aio="no"
-AX_SAVE_FLAGS
-AC_CHECK_HEADERS([aio.h], [
-    AC_SEARCH_LIBS([aio_write], [rt], [
-        AS_IF([test "$LIBS" != "$SAVED_LIBS"], [ LIBRT="-lrt" ])
-
-        have_aio="yes"
-        AC_DEFINE([HAVE_AIO], [1],
-            [Define to 1 if you have the POSIX AIO interface.])
-    ])
-])
-AX_RESTORE_FLAGS
-AC_SUBST(LIBRT)
+#   mktemp(): used for creating pidfiles
+AC_CHECK_FUNCS([pread strndup strnlen mktemp])
 
 #
 # Checks for external libraries
@@ -354,7 +352,7 @@ AS_IF([test "x${have_lua}" = "xno"], [
 
 AS_IF([test "x${cross_compiling}" = "xyes" -a -n "${LUAC}"], [
     AS_IF([test -z "${with_lua_compiler}"], [
-        AC_MSG_WARN([Cross compilation detected; disabling Lua compiler])
+        AC_MSG_WARN([Cross compilation detected; disabling Lua syntax checking])
         LUAC=""
     ], [
         AC_MSG_ERROR([Cannot cross-compile Lua scripts; pass --without-lua-compiler to disable this check])
@@ -582,8 +580,6 @@ AC_PREPROC_IFELSE([
 ])
 AS_IF([test "x${have_dvbapi}" = "xno"], [
     AC_MSG_WARN([no DVB API found; DVB functionality will be unavailable]) ])
-
-AM_CONDITIONAL([HAVE_DVBAPI], [test "x${have_dvbapi}" = "xyes"])
 
 #
 # Optional features
@@ -869,12 +865,7 @@ AS_IF([test "x${have_dvbapi}" = "xyes"], [
 
 # inscript
 echo -n "Built-in scripts:      "
-AS_IF([test "x${enable_inscript}" != "xno"], [
-    AS_IF([test -n "${LUAC}"],
-        [ echo "yes (compiled)" ], [ echo "yes (plaintext)" ])
-], [
-    echo "no"
-])
+AS_IF([test "x${enable_inscript}" != "xno"], [echo "yes"], [echo "no"])
 
 # igmp emulation
 echo -n "IGMP emulation:        "

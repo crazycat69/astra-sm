@@ -18,6 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * Module Name:
+ *      dvb_input
+ *
+ * Module Role:
+ *      Source, demux endpoint
+ */
+
 #include "dvb.h"
 #include <core/event.h>
 #include <core/thread.h>
@@ -29,7 +37,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     int adapter;
     int device;
@@ -879,9 +887,9 @@ static void thread_loop(void *arg)
 
             for(int i = 0; i < MAX_PID; ++i)
             {
-                if((mod->__stream.pid_list[i] > 0) && (mod->dmx_fd_list[i] == 0))
+                if(module_demux_check(mod, i) && (mod->dmx_fd_list[i] == 0))
                     dmx_set_pid(mod, i, 1);
-                else if((mod->__stream.pid_list[i] == 0) && (mod->dmx_fd_list[i] > 0))
+                else if(!module_demux_check(mod, i) && (mod->dmx_fd_list[i] > 0))
                     dmx_set_pid(mod, i, 0);
             }
         }
@@ -958,9 +966,9 @@ static void thread_loop_slave(void *arg)
 
             for(int i = 0; i < MAX_PID; ++i)
             {
-                if((mod->__stream.pid_list[i] > 0) && (mod->dmx_fd_list[i] == 0))
+                if(module_demux_check(mod, i) && (mod->dmx_fd_list[i] == 0))
                     dmx_set_pid(mod, i, 1);
-                else if((mod->__stream.pid_list[i] == 0) && (mod->dmx_fd_list[i] > 0))
+                else if(!module_demux_check(mod, i) && (mod->dmx_fd_list[i] > 0))
                     dmx_set_pid(mod, i, 0);
             }
         }
@@ -994,7 +1002,7 @@ static void thread_loop_slave(void *arg)
 static void on_status_timer(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
     lua_newtable(L);
@@ -1008,7 +1016,8 @@ static void on_status_timer(void *arg)
     lua_setfield(L, -2, "ber");
     lua_pushinteger(L, mod->fe->unc);
     lua_setfield(L, -2, "unc");
-    lua_call(L, 1, 0);
+    if (lua_tr_call(L, 1, 0) != 0)
+        lua_err_log(L);
 }
 
 static int method_ca_set_pnr(lua_State *L, module_data_t *mod)
@@ -1044,24 +1053,9 @@ static int method_close(lua_State *L, module_data_t *mod)
     return 0;
 }
 
-static void join_pid(void *arg, uint16_t pid)
-{
-    module_data_t *const mod = (module_data_t *)arg;
-
-    ++mod->__stream.pid_list[pid];
-}
-
-static void leave_pid(void *arg, uint16_t pid)
-{
-    module_data_t *const mod = (module_data_t *)arg;
-
-    --mod->__stream.pid_list[pid];
-}
-
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_stream_init(mod, NULL);
-    module_stream_demux_set(mod, join_pid, leave_pid);
+    module_stream_init(L, mod, NULL);
 
     mod->fe = ASC_ALLOC(1, dvb_fe_t);
     mod->ca = ASC_ALLOC(1, dvb_ca_t);
@@ -1084,14 +1078,19 @@ static void module_init(lua_State *L, module_data_t *mod)
 
 static void module_destroy(module_data_t *mod)
 {
-    method_close(MODULE_L(mod), mod);
+    method_close(module_lua(mod), mod);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+static const module_method_t module_methods[] =
 {
-    MODULE_STREAM_METHODS_REF(),
     { "ca_set_pnr", method_ca_set_pnr },
     { "close", method_close },
+    { NULL, NULL },
 };
-MODULE_LUA_REGISTER(dvb_input)
+
+STREAM_MODULE_REGISTER(dvb_input)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

@@ -268,7 +268,7 @@ struct mpegts_t2mi_t
 
     demux_callback_t join_pid;
     demux_callback_t leave_pid;
-    void *demux_arg;
+    module_data_t *demux_mod;
 
     ts_callback_t on_ts;
     void *arg;
@@ -389,14 +389,14 @@ static inline
 void outer_join_pid(const mpegts_t2mi_t *mi, uint16_t pid)
 {
     if (mi->join_pid != NULL)
-        mi->join_pid(mi->demux_arg, pid);
+        mi->join_pid(mi->demux_mod, pid);
 }
 
 static inline
 void outer_leave_pid(const mpegts_t2mi_t *mi, uint16_t pid)
 {
     if (mi->leave_pid != NULL)
-        mi->leave_pid(mi->demux_arg, pid);
+        mi->leave_pid(mi->demux_mod, pid);
 }
 
 /*
@@ -408,7 +408,7 @@ mpegts_t2mi_t *mpegts_t2mi_init(void)
     mpegts_t2mi_t *const mi = ASC_ALLOC(1, mpegts_t2mi_t);
 
     static const char def_name[] = "t2mi";
-    strncpy(mi->name, def_name, sizeof(def_name));
+    memcpy(mi->name, def_name, sizeof(def_name));
 
     mi->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
     mi->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, 0);
@@ -464,11 +464,11 @@ void mpegts_t2mi_set_plp(mpegts_t2mi_t *mi, unsigned plp_id)
     mi->l1_current.cksum = 0;
 }
 
-void mpegts_t2mi_set_demux(mpegts_t2mi_t *mi, void *arg
+void mpegts_t2mi_set_demux(mpegts_t2mi_t *mi, module_data_t *mod
                            , demux_callback_t join_pid
                            , demux_callback_t leave_pid)
 {
-    mi->demux_arg = arg;
+    mi->demux_mod = mod;
     mi->join_pid = join_pid;
     mi->leave_pid = leave_pid;
 }
@@ -576,7 +576,7 @@ static inline
 void bb_reinsert_null(mpegts_t2mi_t *mi, size_t dnp)
 {
     for (size_t i = 0; i < dnp; i++)
-        mi->on_ts(mi->arg, null_ts);
+        mi->on_ts(mi->arg, ts_null_pkt);
 }
 
 static

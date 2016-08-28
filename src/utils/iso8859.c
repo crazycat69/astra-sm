@@ -21,9 +21,9 @@
 
 #include <astra.h>
 #include <utils/iso8859.h>
-#include <luaapi/luaapi.h>
 
-static uint8_t *iso8859_1_decode(const uint8_t *data, size_t size)
+static
+uint8_t *iso8859_1_decode(const uint8_t *data, size_t size)
 {
     uint8_t *const text = ASC_ALLOC(size * 2 + 1, uint8_t);
     uint8_t c;
@@ -48,31 +48,8 @@ static uint8_t *iso8859_1_decode(const uint8_t *data, size_t size)
     return text;
 }
 
-static uint8_t *iso8859_1_encode(const uint8_t *data, size_t size)
-{
-    uint8_t *const text = ASC_ALLOC(size + 1, uint8_t);
-    uint8_t c;
-    size_t i = 0, j = 0;
-
-    while(i < size)
-    {
-        c = data[i++];
-        if(c < 0x80)
-        {
-            if(!c) break;
-            text[j++] = c;
-        }
-        else
-        {
-            text[j++] = ((c & 0x03) << 6) | (data[i++] & 0x3F);
-        }
-    }
-
-    text[j] = '\0';
-    return text;
-}
-
-static uint8_t *iso8859_2_decode(const uint8_t *data, size_t size)
+static
+uint8_t *iso8859_2_decode(const uint8_t *data, size_t size)
 {
     uint8_t *const text = ASC_ALLOC(size * 2 + 1, uint8_t);
     uint8_t c;
@@ -128,7 +105,8 @@ static uint8_t *iso8859_2_decode(const uint8_t *data, size_t size)
     return text;
 }
 
-static uint8_t *iso8859_4_decode(const uint8_t *data, size_t size)
+static
+uint8_t *iso8859_4_decode(const uint8_t *data, size_t size)
 {
     uint8_t *const text = ASC_ALLOC(size * 2 + 1, uint8_t);
     uint8_t c;
@@ -184,7 +162,8 @@ static uint8_t *iso8859_4_decode(const uint8_t *data, size_t size)
     return text;
 }
 
-static uint8_t *iso8859_5_decode(const uint8_t *data, size_t size)
+static
+uint8_t *iso8859_5_decode(const uint8_t *data, size_t size)
 {
     uint8_t *const text = ASC_ALLOC(size * 2 + 1, uint8_t);
     uint8_t c, u1, u2;
@@ -217,40 +196,8 @@ static uint8_t *iso8859_5_decode(const uint8_t *data, size_t size)
     return text;
 }
 
-static uint8_t *iso8859_5_encode(const uint8_t *data, size_t size)
-{
-    uint8_t *const text = ASC_ALLOC(size + 1, uint8_t);
-    uint8_t c;
-    size_t i = 0, j = 0;
-
-    while(i < size)
-    {
-        c = data[i++];
-
-        if(c < 0x80)
-        {
-            if(!c) break;
-            text[j++] = c;
-        }
-        else if(c == 0xD1)
-        {
-            text[j++] = 0xE0 | data[i++];
-        }
-        else if(c == 0xD0)
-        {
-            c = data[i++];
-            if(c & 0x20)
-                text[j++] = 0xC0 | (c & 0x1F);
-            else
-                text[j++] = 0xA0 | (c & 0x1F);
-        }
-    }
-
-    text[j] = '\0';
-    return text;
-}
-
-static uint8_t *iso8859_7_decode(const uint8_t *data, size_t size)
+static
+uint8_t *iso8859_7_decode(const uint8_t *data, size_t size)
 {
     uint8_t *const text = ASC_ALLOC(size * 2 + 1, uint8_t);
     uint8_t c, u1, u2;
@@ -285,7 +232,8 @@ static uint8_t *iso8859_7_decode(const uint8_t *data, size_t size)
     return text;
 }
 
-static uint8_t *iso8859_8_decode(const uint8_t *data, size_t size)
+static
+uint8_t *iso8859_8_decode(const uint8_t *data, size_t size)
 {
     uint8_t *const text = ASC_ALLOC(size * 2 + 1, uint8_t);
     uint8_t c;
@@ -317,7 +265,8 @@ static uint8_t *iso8859_8_decode(const uint8_t *data, size_t size)
     return text;
 }
 
-static uint8_t *iso8859_9_decode(const uint8_t *data, size_t size)
+static
+uint8_t *iso8859_9_decode(const uint8_t *data, size_t size)
 {
     uint8_t *const text = ASC_ALLOC(size * 2 + 1, uint8_t);
     uint8_t c;
@@ -433,53 +382,4 @@ char *au_iso8859_dec(const uint8_t *data, size_t size)
         skip += snprintf(&text[skip], buf_size - skip, "%02X", data[i]);
 
     return text;
-}
-
-static int method_iso8859_encode(lua_State *L)
-{
-    const int part = luaL_checkinteger(L, 1);
-    const uint8_t *data = (const uint8_t *)luaL_checkstring(L, 2);
-    const size_t data_size = luaL_len(L, 2);
-
-    uint8_t *iso8859;
-    luaL_Buffer b;
-
-    switch(part)
-    {
-        case 1:
-            iso8859 = iso8859_1_encode(data, data_size);
-            lua_pushstring(L, (char *)iso8859);
-            free(iso8859);
-            break;
-        case 5:
-            luaL_buffinit(L, &b);
-            luaL_addchar(&b, 0x10);
-            luaL_addchar(&b, 0x00);
-            luaL_addchar(&b, 0x05);
-            iso8859 = iso8859_5_encode(data, data_size);
-            luaL_addstring(&b, (const char *)iso8859);
-            free(iso8859);
-            luaL_pushresult(&b);
-            break;
-        default:
-            asc_log_error("[iso8859] charset %d is not supported", part);
-            lua_pushstring(L, "");
-            break;
-    }
-
-    return 1;
-}
-
-MODULE_LUA_BINDING(iso8859)
-{
-    static const luaL_Reg api[] =
-    {
-        { "encode", method_iso8859_encode },
-        { NULL, NULL },
-    };
-
-    luaL_newlib(L, api);
-    lua_setglobal(L, "iso8859");
-
-    return 0;
 }

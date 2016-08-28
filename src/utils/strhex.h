@@ -25,7 +25,7 @@
 #   error "Please include <astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-char *au_hex2str(char *str, const uint8_t *hex, int len);
-uint8_t *au_str2hex(const char *str, uint8_t *hex, int len);
+char *au_hex2str(char *dst, const uint8_t *src, size_t srclen);
+uint8_t *au_str2hex(const char *src, uint8_t *dst, size_t dstlen);
 
 #endif /* _AU_STRHEX_H_ */

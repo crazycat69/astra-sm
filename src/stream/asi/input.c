@@ -18,6 +18,14 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * Module Name:
+ *      asi_input
+ *
+ * Module Role:
+ *      Source, demux endpoint
+ */
+
 #include <astra.h>
 #include <core/event.h>
 #include <luaapi/stream.h>
@@ -31,7 +39,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     int adapter;
     bool budget;
@@ -92,24 +100,26 @@ static void set_pid(module_data_t *mod, uint16_t pid, int is_set)
     }
 }
 
-static void join_pid(void *arg, uint16_t pid)
+static void join_pid(module_data_t *mod, uint16_t pid)
 {
-    module_data_t *const mod = (module_data_t *)arg;
+    if (!module_demux_check(mod, pid))
+        set_pid(mod, pid, 1);
 
-    set_pid(mod, pid, 1);
+    module_demux_join(mod, pid);
 }
 
-static void leave_pid(void *arg, uint16_t pid)
+static void leave_pid(module_data_t *mod, uint16_t pid)
 {
-    module_data_t *const mod = (module_data_t *)arg;
+    module_demux_leave(mod, pid);
 
-    set_pid(mod, pid, 0);
+    if (!module_demux_check(mod, pid))
+        set_pid(mod, pid, 0);
 }
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_stream_init(mod, NULL);
-    module_stream_demux_set(mod, join_pid, leave_pid);
+    module_stream_init(L, mod, NULL);
+    module_demux_set(mod, join_pid, leave_pid);
 
     if(!module_option_integer(L, "adapter", &mod->adapter))
     {
@@ -160,9 +170,8 @@ static void module_destroy(module_data_t *mod)
         close(mod->fd);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+STREAM_MODULE_REGISTER(asi_input)
 {
-    MODULE_STREAM_METHODS_REF(),
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(asi_input)

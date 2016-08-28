@@ -22,6 +22,7 @@
 #define _MODULE_CAM_H_ 1
 
 #include <astra.h>
+#include <core/list.h>
 #include <utils/strhex.h>
 #include <luaapi/stream.h>
 #include <mpegts/psi.h>
@@ -83,8 +84,8 @@ struct module_cam_t
                     , const uint8_t *buffer, uint16_t size);
 };
 
-#define MODULE_CAM_DATA() \
-    MODULE_LUA_DATA(); module_cam_t __cam
+#define CAM_MODULE_DATA() \
+    MODULE_DATA(); module_cam_t __cam
 
 void module_cam_attach_decrypt(module_cam_t *cam, module_decrypt_t *decrypt);
 void module_cam_detach_decrypt(module_cam_t *cam, module_decrypt_t *decrypt);
@@ -108,14 +109,17 @@ void module_cam_queue_flush(module_cam_t *cam, module_decrypt_t *decrypt);
 
 #define module_cam_destroy(_mod) \
     do { \
-        module_cam_reset(&_mod->__cam); \
-        asc_list_till_empty(_mod->__cam.decrypt_list) \
+        if(_mod->__cam.self != NULL) \
         { \
-            asc_list_remove_current(_mod->__cam.decrypt_list); \
+            module_cam_reset(&_mod->__cam); \
+            asc_list_till_empty(_mod->__cam.decrypt_list) \
+            { \
+                asc_list_remove_current(_mod->__cam.decrypt_list); \
+            } \
+            asc_list_destroy(_mod->__cam.decrypt_list); \
+            asc_list_destroy(_mod->__cam.prov_list); \
+            asc_list_destroy(_mod->__cam.packet_queue); \
         } \
-        asc_list_destroy(_mod->__cam.decrypt_list); \
-        asc_list_destroy(_mod->__cam.prov_list); \
-        asc_list_destroy(_mod->__cam.packet_queue); \
     } while (0)
 
 #define MODULE_CAM_METHODS() \
@@ -147,7 +151,7 @@ struct module_cas_t
     bool (*check_keys)(module_data_t *cas_data, const uint8_t *keys);
 };
 
-#define MODULE_CAS_DATA() module_cas_t __cas
+#define CAS_MODULE_DATA() module_cas_t __cas
 
 #define module_cas_check_descriptor(_cas, _desc) _cas->check_descriptor(_cas->self, _desc)
 #define module_cas_check_em(_cas, _em) _cas->check_em(_cas->self, _em)
@@ -223,7 +227,7 @@ struct module_decrypt_t
     module_cas_t *cas;
 };
 
-#define MODULE_DECRYPT_DATA() module_decrypt_t __decrypt
+#define DECRYPT_MODULE_DATA() module_decrypt_t __decrypt
 
 void on_cam_ready(module_data_t *mod);
 void on_cam_error(module_data_t *mod);

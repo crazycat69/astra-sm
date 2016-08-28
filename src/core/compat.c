@@ -93,6 +93,44 @@ int cx_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
     return fd;
 }
 
+int cx_mkstemp(char *tpl)
+{
+    int fd = -1;
+
+#if defined(HAVE_MKOSTEMP) && defined(O_CLOEXEC)
+    /* mkostemp(): best case scenario */
+    fd = mkostemp(tpl, O_CLOEXEC);
+#elif defined(HAVE_MKSTEMP)
+    /* mkstemp(): non-atomic close-on-exec */
+    fd = mkstemp(tpl);
+    if (fd == -1)
+        return -1;
+
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
+    {
+        close(fd);
+        fd = -1;
+    }
+#elif defined(HAVE_MKTEMP)
+    /* mktemp(): non-atomic file open */
+    const char *const tmp = mktemp(tpl);
+    if (tmp == NULL)
+        return -1;
+
+    static const int flags = O_CREAT | O_WRONLY | O_TRUNC;
+    static const mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+    fd = cx_open(tmp, flags, mode);
+    if (fd == -1)
+        return -1;
+#else
+    /* shouldn't happen */
+    __uarg(tpl);
+    errno = ENOTSUP;
+#endif
+
+    return fd;
+}
+
 int cx_open(const char *path, int flags, ...)
 {
     mode_t mode = 0;

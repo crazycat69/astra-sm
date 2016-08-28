@@ -22,6 +22,10 @@
 #include <core/timer.h>
 #include <core/list.h>
 
+#ifdef _WIN32
+#   include <mmsystem.h>
+#endif
+
 #define TIMER_DELAY_MIN 1000 /* 1ms */
 #define TIMER_DELAY_MAX 100000 /* 100ms */
 
@@ -35,9 +39,21 @@ struct asc_timer_t
 };
 
 static asc_list_t *timer_list = NULL;
+#ifdef _WIN32
+static unsigned int timer_period = 0;
+#endif
 
 void asc_timer_core_init(void)
 {
+#ifdef _WIN32
+    TIMECAPS tc;
+    if (timeGetDevCaps(&tc, sizeof(tc)) == MMSYSERR_NOERROR)
+    {
+        if (timeBeginPeriod(tc.wPeriodMin) == TIMERR_NOERROR)
+            timer_period = tc.wPeriodMin;
+    }
+#endif /* _WIN32 */
+
     timer_list = asc_list_init();
 }
 
@@ -52,6 +68,14 @@ void asc_timer_core_destroy(void)
     }
 
     ASC_FREE(timer_list, asc_list_destroy);
+
+#ifdef _WIN32
+    if (timer_period > 0)
+    {
+        timeEndPeriod(timer_period);
+        timer_period = 0;
+    }
+#endif /* _WIN32 */
 }
 
 unsigned int asc_timer_core_loop(void)

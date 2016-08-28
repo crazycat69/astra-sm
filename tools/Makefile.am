@@ -4,7 +4,7 @@ BUILT_SOURCES =
 if HAVE_INSCRIPT
 BUILT_SOURCES += mkscript$(BUILD_EXEEXT)
 mkscript$(BUILD_EXEEXT): mkscript.c
-	$(AM_V_GEN)$(CC_FOR_BUILD) $(WARN_CFLAGS) $(LUA_CFLAGS) $(CFLAGS) \
+	$(AM_V_GEN)$(CC_FOR_BUILD) $(WARN_CFLAGS) $(CFLAGS) \
 	    -o $@ $(srcdir)/mkscript.c
 endif
 

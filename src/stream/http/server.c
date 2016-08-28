@@ -46,6 +46,7 @@
  */
 
 #include <astra.h>
+#include <core/list.h>
 #include <core/timer.h>
 #include <luaapi/stream.h>
 
@@ -55,7 +56,7 @@
 
 struct module_data_t
 {
-    MODULE_LUA_DATA();
+    MODULE_DATA();
 
     int idx_self;
 
@@ -103,17 +104,22 @@ static void callback(lua_State *L, http_client_t *client)
     lua_rawgeti(L, LUA_REGISTRYINDEX, client->mod->idx_self);
     lua_pushlightuserdata(L, client);
     if(client->status == 3)
+    {
         lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_request);
+    }
     else
+    {
         lua_pushnil(L);
-    lua_call(L, 3, 0);
+    }
+    if (lua_tr_call(L, 3, 0) != 0)
+        lua_err_log(L);
 }
 
 static void on_client_close(void *arg)
 {
     http_client_t *const client = (http_client_t *)arg;
     module_data_t *const mod = client->mod;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(!client->sock)
         return;
@@ -198,7 +204,7 @@ static void on_client_read(void *arg)
 {
     http_client_t *const client = (http_client_t *)arg;
     module_data_t *const mod = client->mod;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     ssize_t size = asc_socket_recv(  client->sock
                                    , &client->buffer[client->buffer_skip]
@@ -487,7 +493,7 @@ static void on_ready_send_content(void *arg)
 {
     http_client_t *const client = (http_client_t *)arg;
     module_data_t *const mod = client->mod;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_content);
     const char *content = lua_tostring(L, -1);
@@ -731,7 +737,7 @@ void http_client_close(http_client_t *client)
 void http_client_abort(http_client_t *client, int code, const char *text)
 {
     module_data_t *const mod = client->mod;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     const char *message = http_code(code);
 
@@ -774,7 +780,7 @@ void http_client_redirect(http_client_t *client, int code, const char *location)
 
     if(client->idx_content)
     {
-        lua_State *const L = MODULE_L(client->mod);
+        lua_State *const L = module_lua(client->mod);
         luaL_unref(L, LUA_REGISTRYINDEX, client->idx_content);
         client->idx_content = 0;
     }
@@ -802,7 +808,7 @@ void http_client_redirect(http_client_t *client, int code, const char *location)
 static void on_server_close(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(!mod->sock)
         return;
@@ -1001,7 +1007,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     lua_pop(L, 1); // route
 
     // store self in registry
-    lua_pushvalue(L, 3);
+    lua_pushvalue(L, -1);
     mod->idx_self = luaL_ref(L, LUA_REGISTRYINDEX);
 
     mod->clients = asc_list_init();
@@ -1030,12 +1036,19 @@ static void module_destroy(module_data_t *mod)
     on_server_close(mod);
 }
 
-MODULE_LUA_METHODS()
+static const module_method_t module_methods[] =
 {
     { "send", method_send },
     { "close", method_close },
     { "data", method_data },
     { "redirect", method_redirect },
     { "abort", method_abort },
+    { NULL, NULL },
 };
-MODULE_LUA_REGISTER(http_server)
+
+MODULE_REGISTER(http_server)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

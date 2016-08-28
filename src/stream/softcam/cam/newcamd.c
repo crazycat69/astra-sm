@@ -43,7 +43,7 @@ typedef union {
 
 struct module_data_t
 {
-    MODULE_CAM_DATA();
+    CAM_MODULE_DATA();
 
     struct
     {
@@ -678,25 +678,32 @@ static void newcamd_send_em(  module_data_t *mod
 static void module_init(lua_State *L, module_data_t *mod)
 {
     module_option_string(L, "name", &mod->config.name, NULL);
-    asc_assert(mod->config.name != NULL, "[newcamd] option 'name' is required");
+    if(mod->config.name == NULL)
+        luaL_error(L, "[newcamd] option 'name' is required");
 
     module_option_string(L, "host", &mod->config.host, NULL);
-    asc_assert(mod->config.host != NULL, MSG("option 'host' is required"));
+    if(mod->config.host == NULL)
+        luaL_error(L, MSG("option 'host' is required"));
+
     module_option_integer(L, "port", &mod->config.port);
-    asc_assert(mod->config.port != 0, MSG("option 'port' is required"));
+    if(mod->config.port == 0)
+        luaL_error(L, MSG("option 'port' is required"));
 
     module_option_string(L, "user", &mod->config.user, NULL);
-    asc_assert(mod->config.user != NULL, MSG("option 'user' is required"));
+    if(mod->config.user == NULL)
+        luaL_error(L, MSG("option 'user' is required"));
 
     const char *pass = NULL;
     module_option_string(L, "pass", &pass, NULL);
-    asc_assert(pass != NULL, MSG("option 'pass' is required"));
+    if(pass == NULL)
+        luaL_error(L, MSG("option 'pass' is required"));
     au_md5_crypt(pass, "$1$abcdefgh$", mod->config.pass);
 
     const char *key = "0102030405060708091011121314";
     size_t key_size = 28;
     module_option_string(L, "key", &key, &key_size);
-    asc_assert(key_size == 28, MSG("option 'key' must be 28 chars length"));
+    if(key_size != 28)
+        luaL_error(L, MSG("option 'key' must be 28 chars length"));
     au_str2hex(key, mod->config.key, sizeof(mod->config.key));
 
     module_option_boolean(L, "disable_emm", &mod->config.disable_emm);
@@ -718,8 +725,16 @@ static void module_destroy(module_data_t *mod)
 }
 
 MODULE_CAM_METHODS()
-MODULE_LUA_METHODS()
+
+static const module_method_t module_methods[] =
 {
     MODULE_CAM_METHODS_REF(),
+    { NULL, NULL },
 };
-MODULE_LUA_REGISTER(newcamd)
+
+MODULE_REGISTER(newcamd)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

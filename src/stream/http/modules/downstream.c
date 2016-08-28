@@ -25,14 +25,14 @@
 
 struct module_data_t
 {
-    MODULE_LUA_DATA();
+    MODULE_DATA();
 
     int idx_callback;
 };
 
 struct http_response_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     module_data_t *mod;
 
@@ -100,7 +100,7 @@ static void on_downstream_read(void *arg)
 static void on_downstream_send(void *arg)
 {
     http_client_t *const client = (http_client_t *)arg;
-    lua_State *const L = MODULE_L(client->mod);
+    lua_State *const L = module_lua(client->mod);
 
     if(!lua_islightuserdata(L, 2))
     {
@@ -150,9 +150,10 @@ static int module_call(lua_State *L, module_data_t *mod)
             lua_pushvalue(L, 2);
             lua_pushvalue(L, 3);
             lua_pushvalue(L, 4);
-            lua_call(L, 3, 0);
+            if (lua_tr_call(L, 3, 0) != 0)
+                lua_err_log(L);
 
-            module_stream_destroy(client->response);
+            module_stream_destroy((module_data_t *)client->response);
 
             free(client->response);
             client->response = NULL;
@@ -165,13 +166,11 @@ static int module_call(lua_State *L, module_data_t *mod)
 
     client->on_send = on_downstream_send;
 
-    // like module_stream_init()
-    client->response->__stream.self = (module_data_t *)client;
-    client->response->__stream.on_ts = NULL;
-    __module_stream_init(&client->response->__stream);
+    module_stream_init(NULL, (module_data_t *)client->response, NULL);
+    module_demux_set((module_data_t *)client->response, NULL, NULL);
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, client->idx_request);
-    lua_pushlightuserdata(L, &client->response->__stream);
+    lua_pushlightuserdata(L, client->response);
     lua_setfield(L, -2, "stream");
     lua_pop(L, 1); // request
 
@@ -179,7 +178,8 @@ static int module_call(lua_State *L, module_data_t *mod)
     lua_pushvalue(L, 2);
     lua_pushvalue(L, 3);
     lua_pushvalue(L, 4);
-    lua_call(L, 3, 0);
+    if (lua_tr_call(L, 3, 0) != 0)
+        lua_err_log(L);
 
     return 0;
 }
@@ -210,13 +210,13 @@ static void module_destroy(module_data_t *mod)
 {
     if(mod->idx_callback)
     {
-        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = 0;
     }
 }
 
-MODULE_LUA_METHODS()
+MODULE_REGISTER(http_downstream)
 {
-    { NULL, NULL },
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(http_downstream)

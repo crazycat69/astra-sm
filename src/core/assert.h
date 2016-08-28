@@ -39,4 +39,7 @@
         } \
     } while (0)
 
+#define ASC_STATIC_ASSERT(_cond) \
+    extern int __asc_static_assert[((_cond) ? 1 : -1)]
+
 #endif /* _ASC_ASSERT_H_ */

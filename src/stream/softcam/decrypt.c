@@ -22,6 +22,9 @@
  * Module Name:
  *      decrypt
  *
+ * Module Role:
+ *      Input stage, no demux
+ *
  * Module Options:
  *      upstream    - object, stream instance returned by module_instance:stream()
  *      name        - string, channel name
@@ -63,8 +66,8 @@ typedef struct
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
-    MODULE_DECRYPT_DATA();
+    STREAM_MODULE_DATA();
+    DECRYPT_MODULE_DATA();
 
     /* Config */
     const char *name;
@@ -169,24 +172,31 @@ static void module_decrypt_cas_destroy(module_data_t *mod)
         mod->__decrypt.cas = NULL;
     }
 
-    asc_list_clear(mod->el_list)
+    if(mod->el_list != NULL)
     {
-        el_stream_t *el_stream = (el_stream_t *)asc_list_data(mod->el_list);
-        free(el_stream);
+        asc_list_clear(mod->el_list)
+        {
+            el_stream_t *el_stream = (el_stream_t *)asc_list_data(mod->el_list);
+            free(el_stream);
+        }
     }
 
-    if(mod->caid == BISS_CAID)
+    if(mod->ca_list != NULL)
     {
-        asc_list_first(mod->ca_list);
-        ca_stream_t *ca_stream = (ca_stream_t *)asc_list_data(mod->ca_list);
-        ca_stream->batch_skip = 0;
-        return;
-    }
+        if(mod->caid == BISS_CAID)
+        {
+            asc_list_first(mod->ca_list);
+            ca_stream_t *ca_stream = (ca_stream_t *)asc_list_data(mod->ca_list);
+            if(ca_stream != NULL)
+                ca_stream->batch_skip = 0;
+            return;
+        }
 
-    asc_list_clear(mod->ca_list)
-    {
-        ca_stream_t *ca_stream = (ca_stream_t *)asc_list_data(mod->ca_list);
-        ca_stream_destroy(ca_stream);
+        asc_list_clear(mod->ca_list)
+        {
+            ca_stream_t *ca_stream = (ca_stream_t *)asc_list_data(mod->ca_list);
+            ca_stream_destroy(ca_stream);
+        }
     }
 }
 
@@ -439,7 +449,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     const uint32_t crc32 = PSI_GET_CRC32(psi);
     if(crc32 == psi->crc32)
     {
-        mpegts_psi_demux(mod->pmt, __module_stream_send, &mod->__stream);
+        mpegts_psi_demux(mod->pmt, module_stream_send, mod);
         return;
     }
 
@@ -539,7 +549,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     PSI_SET_SIZE(mod->pmt);
     PSI_SET_CRC32(mod->pmt);
 
-    mpegts_psi_demux(mod->pmt, __module_stream_send, &mod->__stream);
+    mpegts_psi_demux(mod->pmt, module_stream_send, mod);
 }
 
 /*
@@ -912,12 +922,14 @@ void on_cam_response(module_data_t *mod, void *arg, const uint8_t *data)
 
 static void module_init(lua_State *L, module_data_t *mod)
 {
-    module_stream_init(mod, on_ts);
+    module_stream_init(L, mod, on_ts);
+    module_demux_set(mod, NULL, NULL);
 
     mod->__decrypt.self = mod;
 
     module_option_string(L, "name", &mod->name, NULL);
-    asc_assert(mod->name != NULL, "[decrypt] option 'name' is required");
+    if(mod->name == NULL)
+        luaL_error(L, "[decrypt] option 'name' is required");
 
     mod->stream[0] = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
     mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, MAX_PID);
@@ -935,7 +947,8 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_option_string(L, "biss", &biss_key, &biss_length);
     if(biss_key)
     {
-        asc_assert(biss_length == 16, MSG("biss key must be 16 char length"));
+        if(biss_length != 16)
+            luaL_error(L, MSG("biss key must be 16 char length"));
 
         mod->caid = BISS_CAID;
         mod->disable_emm = true;
@@ -949,11 +962,11 @@ static void module_init(lua_State *L, module_data_t *mod)
         ca_stream_set_keys(biss, key, key);
     }
 
-    lua_getfield(L, 2, "cam");
+    lua_getfield(L, MODULE_OPTIONS_IDX, "cam");
     if(!lua_isnil(L, -1))
     {
-        asc_assert(  lua_type(L, -1) == LUA_TLIGHTUSERDATA
-                   , "option 'cam' required cam-module instance");
+        if(lua_type(L, -1) != LUA_TLIGHTUSERDATA)
+            luaL_error(L, MSG("option 'cam' required cam-module instance"));
         mod->__decrypt.cam = (module_cam_t *)lua_touserdata(L, -1);
 
         int cas_pnr = 0;
@@ -999,34 +1012,31 @@ static void module_destroy(module_data_t *mod)
 
     module_decrypt_cas_destroy(mod);
 
-    if(mod->caid == BISS_CAID)
+    if(mod->ca_list != NULL && mod->caid == BISS_CAID)
     {
         asc_list_first(mod->ca_list);
         ca_stream_t *ca_stream = (ca_stream_t *)asc_list_data(mod->ca_list);
-        ca_stream_destroy(ca_stream);
-        asc_list_remove_current(mod->ca_list);
-    }
-
-    asc_list_destroy(mod->ca_list);
-    asc_list_destroy(mod->el_list);
-
-    free(mod->storage.buffer);
-    free(mod->shift.buffer);
-
-    for(int i = 0; i < MAX_PID; ++i)
-    {
-        if(mod->stream[i])
+        if(ca_stream != NULL)
         {
-            mpegts_psi_destroy(mod->stream[i]);
-            mod->stream[i] = NULL;
+            ca_stream_destroy(ca_stream);
+            asc_list_remove_current(mod->ca_list);
         }
     }
-    mpegts_psi_destroy(mod->pmt);
+
+    ASC_FREE(mod->ca_list, asc_list_destroy);
+    ASC_FREE(mod->el_list, asc_list_destroy);
+
+    ASC_FREE(mod->storage.buffer, free);
+    ASC_FREE(mod->shift.buffer, free);
+
+    for(int i = 0; i < MAX_PID; ++i)
+        ASC_FREE(mod->stream[i], mpegts_psi_destroy);
+
+    ASC_FREE(mod->pmt, mpegts_psi_destroy);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+STREAM_MODULE_REGISTER(decrypt)
 {
-    MODULE_STREAM_METHODS_REF(),
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(decrypt)

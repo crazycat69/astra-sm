@@ -1,7 +1,7 @@
 /*
  * Astra Module: Remux
  *
- * Copyright (C) 2014-2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2014-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -20,6 +20,9 @@
 /*
  * Module Name:
  *      remux
+ *
+ * Module Role:
+ *      Output stage, no demux
  *
  * Module Options:
  *      rate - target bitrate, bits per second
@@ -78,7 +81,7 @@ static inline void insert_pcr_packet(module_data_t *mod
 static inline void insert_null_packet(module_data_t *mod
                                       , ts_callback_t callback)
 {
-    callback(mod, null_ts);
+    callback(mod, ts_null_pkt);
 }
 
 static inline unsigned msecs_to_pkts(unsigned rate, unsigned msec)
@@ -311,26 +314,30 @@ static void module_init(lua_State *L, module_data_t *mod)
 {
     /* channel name */
     module_option_string(L, "name", &mod->name, NULL);
-    asc_assert(mod->name != NULL, "[remux] option 'name' is required");
+    if(mod->name == NULL)
+        luaL_error(L, "[remux] option 'name' is required");
 
     /* mux rate, bps */
     module_option_integer(L, "rate", (int *)&mod->rate);
-    asc_assert(mod->rate >= 1000000 && mod->rate <= 1000000000
-               , MSG("rate must be between 1 and 1000 mbps"));
+    if(mod->rate <= 1000)
+        mod->rate *= 1000000;
+
+    if(!(mod->rate >= 1000000 && mod->rate <= 1000000000))
+        luaL_error(L, MSG("rate must be between 1 and 1000 mbps"));
 
     /* PCR interval, ms */
     if(!module_option_integer(L, "pcr_interval", (int *)&mod->pcr_interval))
         mod->pcr_interval = PCR_INTERVAL;
 
-    asc_assert(mod->pcr_interval >= 20 && mod->pcr_interval <= 100
-               , MSG("pcr interval must be between 20 and 100 ms"));
+    if(!(mod->pcr_interval >= 20 && mod->pcr_interval <= 100))
+        luaL_error(L, MSG("pcr interval must be between 20 and 100 ms"));
 
     /* PCR delay, ms */
     if(!module_option_integer(L, "pcr_delay", &mod->pcr_delay))
         mod->pcr_delay = PCR_DELAY;
 
-    asc_assert(mod->pcr_delay >= -5000 && mod->pcr_delay <= 5000
-               , MSG("pcr delay must be between -5000 and 5000 ms"));
+    if(!(mod->pcr_delay >= -5000 && mod->pcr_delay <= 5000))
+        luaL_error(L, MSG("pcr delay must be between -5000 and 5000 ms"));
 
     mod->pcr_delay *= (PCR_TIME_BASE / 1000);
 
@@ -361,7 +368,8 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->stream[0x13] = MPEGTS_PACKET_DATA; /* RST */
     mod->stream[0x14] = MPEGTS_PACKET_DATA; /* TDT, TOT */
 
-    module_stream_init(mod, remux_ts_in);
+    module_stream_init(L, mod, remux_ts_in);
+    module_demux_set(mod, NULL, NULL);
 }
 
 static void module_destroy(module_data_t *mod)
@@ -406,9 +414,8 @@ static void module_destroy(module_data_t *mod)
     mod->emms = NULL;
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+STREAM_MODULE_REGISTER(remux)
 {
-    MODULE_STREAM_METHODS_REF(),
+    .init = module_init,
+    .destroy = module_destroy,
 };
-MODULE_LUA_REGISTER(remux)

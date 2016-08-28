@@ -1,8 +1,8 @@
 /*
- * Astra Main App (OS signal handling)
+ * Astra (OS signal handling)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -259,7 +259,7 @@ static void redirect_stdio(void)
 {
     static const char logfile[] = "\\stdio.log";
 
-    char buf[MAX_PATH];
+    char buf[MAX_PATH] = { 0 };
     if (!GetModuleFileName(NULL, buf, sizeof(buf)))
         perror_exit(GetLastError(), "GetModuleFileName()");
 
@@ -267,7 +267,7 @@ static void redirect_stdio(void)
     if (p != NULL)
         *p = '\0';
     else
-        strncpy(buf, ".", sizeof("."));
+        memcpy(buf, ".", sizeof("."));
 
     strncat(buf, logfile, sizeof(buf) - strlen(buf) - 1);
 

@@ -22,6 +22,9 @@
  * Module Name:
  *      http_request
  *
+ * Module Role (when streaming):
+ *      Source or sink, no demux
+ *
  * Module Options:
  *      host        - string, server hostname or IP address
  *      port        - number, server port (default: 80)
@@ -52,7 +55,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     struct
     {
@@ -65,6 +68,7 @@ struct module_data_t
 
     int timeout_ms;
     bool is_stream;
+    bool stream_inited;
 
     int idx_self;
 
@@ -140,7 +144,6 @@ static const char __version[] = "version";
 static const char __headers[] = "headers";
 static const char __content[] = "content";
 static const char __callback[] = "callback";
-static const char __stream[] = "stream";
 static const char __code[] = "code";
 static const char __message[] = "message";
 
@@ -162,13 +165,14 @@ static void callback(lua_State *L, module_data_t *mod)
     lua_getfield(L, -1, "callback");
     lua_pushvalue(L, -3);
     lua_pushvalue(L, response);
-    lua_call(L, 2, 0);
+    if (lua_tr_call(L, 2, 0) != 0)
+        lua_err_log(L);
     lua_pop(L, 3); // self + options + response
 }
 
 static void call_error(module_data_t *mod, const char *msg)
 {
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     lua_newtable(L);
     lua_pushinteger(L, 0);
@@ -204,7 +208,7 @@ static void timeout_callback(void *arg)
 static void on_close(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(!mod->sock)
         return;
@@ -258,7 +262,7 @@ static void on_close(void *arg)
         callback(L, mod);
     }
 
-    if(mod->__stream.self)
+    if(mod->stream_inited)
     {
         module_stream_destroy(mod);
 
@@ -393,7 +397,7 @@ static void on_ts_read(void *arg)
 
 static void on_sync_ready(void *arg)
 {
-    module_data_t *const mod = ((module_stream_t *)arg)->self;
+    module_data_t *const mod = (module_data_t *)arg;
 
     mpegts_sync_set_on_ready(mod->ts.sync, NULL);
     asc_socket_set_on_read(mod->sock, on_ts_read);
@@ -413,7 +417,7 @@ static void on_sync_ready(void *arg)
 static void on_read(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     if(mod->timeout)
     {
@@ -608,7 +612,7 @@ static void on_read(void *arg)
 
             lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_response);
             lua_pushboolean(L, mod->is_stream);
-            lua_setfield(L, -2, __stream);
+            lua_setfield(L, -2, "stream");
             callback(L, mod);
 
             mod->ts.buf = ASC_ALLOC(mod->ts.buf_size, uint8_t);
@@ -621,8 +625,8 @@ static void on_read(void *arg)
             {
                 mod->ts.sync = mpegts_sync_init();
 
-                mpegts_sync_set_on_write(mod->ts.sync, __module_stream_send);
-                mpegts_sync_set_arg(mod->ts.sync, &mod->__stream);
+                mpegts_sync_set_on_write(mod->ts.sync, module_stream_send);
+                mpegts_sync_set_arg(mod->ts.sync, mod);
                 mpegts_sync_set_fname(mod->ts.sync, "http_request %s:%d%s"
                                       , mod->config.host, mod->config.port
                                       , mod->config.path);
@@ -806,7 +810,7 @@ static void on_ready_send_content(void *arg)
     {
         mod->request.buffer = NULL;
 
-        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->request.idx_body);
+        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, mod->request.idx_body);
         mod->request.idx_body = 0;
 
         mod->request.status = 3;
@@ -842,7 +846,7 @@ static void on_ready_send_request(void *arg)
 
         if(mod->request.idx_body)
         {
-            lua_State *const L = MODULE_L(mod);
+            lua_State *const L = module_lua(mod);
 
             lua_rawgeti(L, LUA_REGISTRYINDEX, mod->request.idx_body);
             mod->request.buffer = lua_tostring(L, -1);
@@ -928,7 +932,7 @@ static void lua_make_request(lua_State *L, module_data_t *mod)
 static void on_connect(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    lua_State *const L = MODULE_L(mod);
+    lua_State *const L = module_lua(mod);
 
     mod->request.status = 1;
 
@@ -1096,18 +1100,20 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->config.path = __default_path;
     module_option_string(L, __path, &mod->config.path, NULL);
 
-    lua_getfield(L, 2, __callback);
+    lua_getfield(L, MODULE_OPTIONS_IDX, __callback);
     asc_assert(lua_isfunction(L, -1), MSG("option 'callback' is required"));
     lua_pop(L, 1); // callback
 
     // store self in registry
-    lua_pushvalue(L, 3);
+    lua_pushvalue(L, -1);
     mod->idx_self = luaL_ref(L, LUA_REGISTRYINDEX);
 
-    module_option_boolean(L, __stream, &mod->is_stream);
+    module_option_boolean(L, "stream", &mod->is_stream);
     if(mod->is_stream)
     {
-        module_stream_init(mod, NULL);
+        module_stream_init(L, mod, NULL);
+        module_demux_set(mod, NULL, NULL);
+        mod->stream_inited = true;
 
         module_option_boolean(L, "sync", &mod->config.sync);
         module_option_string(L, "sync_opts", &mod->config.sync_opts, NULL);
@@ -1116,11 +1122,13 @@ static void module_init(lua_State *L, module_data_t *mod)
     }
 
     lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
-    if(lua_type(L, -1) == LUA_TLIGHTUSERDATA)
+    if(!lua_isnil(L, -1))
     {
         asc_assert(mod->is_stream != true, MSG("option 'upstream' is not allowed in stream mode"));
 
-        module_stream_init(mod, on_ts);
+        module_stream_init(L, mod, on_ts);
+        module_demux_set(mod, NULL, NULL);
+        mod->stream_inited = true;
 
         int value = 1024;
         module_option_integer(L, "buffer_size", &value);
@@ -1156,12 +1164,17 @@ static void module_destroy(module_data_t *mod)
     on_close(mod);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+static const module_method_t module_methods[] =
 {
-    MODULE_STREAM_METHODS_REF(),
     { "send", method_send },
     { "close", method_close },
     { "set_receiver", method_set_receiver },
+    { NULL, NULL },
 };
-MODULE_LUA_REGISTER(http_request)
+
+STREAM_MODULE_REGISTER(http_request)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

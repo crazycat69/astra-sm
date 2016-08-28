@@ -21,6 +21,9 @@
  * Module Name:
  *      pipe_generic
  *
+ * Module Role (when streaming):
+ *      Source, output stage or sink, forwards pid requests
+ *
  * Module Options:
  *      upstream    - object, stream module instance
  *      name        - string, instance identifier for logging
@@ -47,7 +50,7 @@
 
 struct module_data_t
 {
-    MODULE_STREAM_DATA();
+    STREAM_MODULE_DATA();
 
     unsigned int delay;
     int idx_callback;
@@ -75,7 +78,7 @@ void callback_started(module_data_t *mod, pid_t pid)
 {
     if (mod->idx_callback != LUA_REFNIL)
     {
-        lua_State *const L = MODULE_L(mod);
+        lua_State *const L = module_lua(mod);
         lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
 
         /* data.started.pid */
@@ -85,7 +88,8 @@ void callback_started(module_data_t *mod, pid_t pid)
         lua_setfield(L, -2, "pid");
         lua_setfield(L, -2, "started");
 
-        lua_call(L, 1, 0);
+        if (lua_tr_call(L, 1, 0) != 0)
+            lua_err_log(L);
     }
 }
 
@@ -94,7 +98,7 @@ void callback_text(module_data_t *mod, const char *src, const char *text)
 {
     if (mod->idx_callback != LUA_REFNIL)
     {
-        lua_State *const L = MODULE_L(mod);
+        lua_State *const L = module_lua(mod);
         lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
 
         /* data.<src> */
@@ -102,7 +106,8 @@ void callback_text(module_data_t *mod, const char *src, const char *text)
         lua_pushstring(L, text);
         lua_setfield(L, -2, src);
 
-        lua_call(L, 1, 0);
+        if (lua_tr_call(L, 1, 0) != 0)
+            lua_err_log(L);
     }
     else
     {
@@ -125,7 +130,7 @@ void callback_error(module_data_t *mod, const char *fmt, ...)
 
     if (mod->idx_callback != LUA_REFNIL)
     {
-        lua_State *const L = MODULE_L(mod);
+        lua_State *const L = module_lua(mod);
         lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
 
         /* data.error */
@@ -133,7 +138,8 @@ void callback_error(module_data_t *mod, const char *fmt, ...)
         lua_pushstring(L, buf);
         lua_setfield(L, -2, "error");
 
-        lua_call(L, 1, 0);
+        if (lua_tr_call(L, 1, 0) != 0)
+            lua_err_log(L);
     }
 }
 
@@ -142,7 +148,7 @@ void callback_exited(module_data_t *mod, int status)
 {
     if (mod->idx_callback != LUA_REFNIL)
     {
-        lua_State *const L = MODULE_L(mod);
+        lua_State *const L = module_lua(mod);
         lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
 
         /* data.exited.status */
@@ -152,7 +158,8 @@ void callback_exited(module_data_t *mod, int status)
         lua_setfield(L, -2, "status");
         lua_setfield(L, -2, "exited");
 
-        lua_call(L, 1, 0);
+        if (lua_tr_call(L, 1, 0) != 0)
+            lua_err_log(L);
     }
 }
 
@@ -242,7 +249,7 @@ void on_child_close(void *arg, int exit_code)
 static
 void on_sync_ready(void *arg)
 {
-    module_data_t *const mod = ((module_stream_t *)arg)->self;
+    module_data_t *const mod = (module_data_t *)arg;
 
     mpegts_sync_set_on_ready(mod->sync, NULL);
     asc_child_toggle_input(mod->child, STDOUT_FILENO, true);
@@ -369,8 +376,8 @@ int method_pid(lua_State *L, module_data_t *mod)
 static
 int method_send(lua_State *L, module_data_t *mod)
 {
-    const char *const str = luaL_checkstring(L, 1);
-    const int len = luaL_len(L, 1);
+    const char *const str = luaL_checkstring(L, 2);
+    const int len = luaL_len(L, 2);
 
     if (mod->child == NULL)
         luaL_error(L, MSG("process is not running"));
@@ -426,7 +433,7 @@ void module_init(lua_State *L, module_data_t *mod)
     mod->config.sin.mode = CHILD_IO_RAW;
 
     lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
-    if (lua_islightuserdata(L, -1))
+    if (!lua_isnil(L, -1))
     {
         /* output or transcode; relay TS from upstream module */
         mod->config.sin.mode = CHILD_IO_MPEGTS;
@@ -467,8 +474,8 @@ void module_init(lua_State *L, module_data_t *mod)
 
         mod->sync = mpegts_sync_init();
 
-        mpegts_sync_set_on_write(mod->sync, __module_stream_send);
-        mpegts_sync_set_arg(mod->sync, &mod->__stream);
+        mpegts_sync_set_on_write(mod->sync, module_stream_send);
+        mpegts_sync_set_arg(mod->sync, mod);
         mpegts_sync_set_fname(mod->sync, "sync/%s", mod->config.name);
 
         const char *optstr = NULL;
@@ -497,7 +504,7 @@ void module_init(lua_State *L, module_data_t *mod)
     else
         lua_pop(L, 1);
 
-    module_stream_init(mod, on_ts);
+    module_stream_init(L, mod, on_ts);
     on_child_restart(mod);
 }
 
@@ -508,7 +515,7 @@ void module_destroy(module_data_t *mod)
 
     if (mod->idx_callback != LUA_REFNIL)
     {
-        luaL_unref(MODULE_L(mod), LUA_REGISTRYINDEX, mod->idx_callback);
+        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, mod->idx_callback);
         mod->idx_callback = LUA_REFNIL;
     }
 
@@ -518,11 +525,17 @@ void module_destroy(module_data_t *mod)
     ASC_FREE(mod->sync, mpegts_sync_destroy);
 }
 
-MODULE_STREAM_METHODS()
-MODULE_LUA_METHODS()
+static
+const module_method_t module_methods[] =
 {
-    MODULE_STREAM_METHODS_REF(),
     { "pid", method_pid },
     { "send", method_send },
+    { NULL, NULL },
 };
-MODULE_LUA_REGISTER(pipe_generic)
+
+STREAM_MODULE_REGISTER(pipe_generic)
+{
+    .init = module_init,
+    .destroy = module_destroy,
+    .methods = module_methods,
+};

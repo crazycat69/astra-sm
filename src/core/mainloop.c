@@ -270,6 +270,9 @@ void asc_main_loop_init(void)
 
 void asc_main_loop_destroy(void)
 {
+    if (main_loop == NULL)
+        return;
+
     wake_close();
     asc_mutex_destroy(&main_loop->job_mutex);
 
@@ -307,9 +310,14 @@ bool asc_main_loop_run(void)
 
                 lua_getglobal(lua, "on_sighup");
                 if (lua_isfunction(lua, -1))
-                    lua_call(lua, 0, 0);
+                {
+                    if (lua_tr_call(lua, 0, 0) != 0)
+                        lua_err_log(lua);
+                }
                 else
+                {
                     lua_pop(lua, 1);
+                }
             }
         }
 
