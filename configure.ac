@@ -46,28 +46,23 @@ AM_PROG_CC_C_O
 AM_CONDITIONAL([CROSS_COMPILING],
     [test "x${cross_compiling}" = "xyes"])
 
-# Check C99/C++11 support
-compiler_lang=""
+# Check C99 support
+found_c99="no"
 
 case "${host_os}" in
     mingw*|cygwin*)
-        AX_CHECK_CFLAG([-std=gnu99], [], [compiler_lang=C], [
-            AX_CHECK_CFLAG([-std=gnu++11], [], [compiler_lang=C++]) ])
+        AX_CHECK_CFLAG([-std=gnu99], [], [found_c99=yes])
         ;;
 
     *)
-        AX_CHECK_CFLAG([-std=c99], [], [compiler_lang=C], [
-            AX_CHECK_CFLAG([-std=iso9899:1999], [], [compiler_lang=C], [
-                AX_CHECK_CFLAG([-std=c++11], [], [compiler_lang=C++]) ]) ])
+        AX_CHECK_CFLAG([-std=c99], [], [found_c99=yes], [
+            AX_CHECK_CFLAG([-std=iso9899:1999], [], [found_c99=yes], [
+                AX_CHECK_CFLAG([-std=gnu99], [], [found_c99=yes]) ]) ])
         ;;
 esac
 
-AS_IF([test -z "${compiler_lang}"], [
-    AC_MSG_ERROR([$CC doesn't support C nor C++]) ])
-
-AS_IF([test "x${compiler_lang}" = "xC++"], [
-    AX_CHECK_CFLAGS([-fkeep-inline-functions])
-])
+AS_IF([test "x${found_c99}" != "xyes"], [
+    AC_MSG_ERROR([$CC doesn't support C99]) ])
 
 #
 # Checks for typedefs, structures, and compiler characteristics
@@ -728,7 +723,6 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wold-style-definition], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wpointer-arith], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstack-protector], [WARN_CFLAGS])
-    AX_CHECK_CFLAG([-Wstrict-aliasing], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wstrict-prototypes], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wsync-nand], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wtrampolines], [WARN_CFLAGS])
@@ -760,9 +754,6 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wgnu], [WARN_CFLAGS])
 ])
 
-AS_IF([test "x${compiler_lang}" = "xC++"], [
-    AX_CHECK_CFLAG([-Wno-variadic-macros], [WARN_CFLAGS]) ])
-
 # Less important warnings
 AC_ARG_ENABLE([suggestions],
     AC_HELP_STRING([--enable-suggestions], [turn on non-vital warnings (e.g. -Wsuggest-*)]))
@@ -777,9 +768,6 @@ AS_IF([test "x${enable_suggestions}" = "xyes"], [
     AX_CHECK_CFLAG([-Wstrict-overflow=5], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wcast-align], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-fipa-pure-const], [WARN_CFLAGS])
-    AX_CHECK_CFLAG([-fstrict-overflow])
-], [
-    AX_CHECK_CFLAG([-fwrapv])
 ])
 
 # -Werror build
@@ -793,7 +781,8 @@ AS_IF([test "x${enable_werror}" = "xyes"], [
 AC_SUBST(WARN_CFLAGS)
 
 # Other flags
-AX_CHECK_CFLAG([-fstrict-aliasing])
+AX_CHECK_CFLAG([-fno-strict-aliasing])
+AX_CHECK_CFLAG([-fwrapv])
 
 # Makefile generation
 AC_CONFIG_FILES([
