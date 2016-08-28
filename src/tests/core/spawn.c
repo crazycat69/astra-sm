@@ -331,6 +331,12 @@ static void pipe_on_read(void *arg)
     }
 }
 
+static void pipe_on_error(void *arg)
+{
+    __uarg(arg);
+    fail("didn't expect an error event");
+}
+
 START_TEST(pipe_event)
 {
     int fds[2] = { -1, -1 };
@@ -349,6 +355,7 @@ START_TEST(pipe_event)
     /* set up event handler */
     asc_event_t *const ev = asc_event_init(fds[PIPE_RD], &fds[PIPE_RD]);
     asc_event_set_on_read(ev, pipe_on_read);
+    asc_event_set_on_error(ev, pipe_on_error);
 
     /* start writing thread */
     asc_thread_t *const thr = asc_thread_init();

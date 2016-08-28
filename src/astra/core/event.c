@@ -408,13 +408,14 @@ void asc_event_core_loop(unsigned int timeout)
 
         --ret;
         asc_event_t *const event = event_observer.event_list[i];
-        if(event->on_read && (revents & POLLIN))
+        if(event->on_read && ((revents & POLLIN)
+                              || (revents & (POLLERR | POLLHUP)) == POLLHUP))
         {
             event->on_read(event->arg);
             if(event_observer.is_changed)
                 break;
         }
-        if(event->on_error && (revents & (POLLERR | POLLHUP | POLLNVAL)))
+        if(event->on_error && (revents & (POLLERR | POLLNVAL)))
         {
             event->on_error(event->arg);
             if(event_observer.is_changed)
