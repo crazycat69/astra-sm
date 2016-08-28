@@ -45,10 +45,10 @@
  *                  - return table, client data
  */
 
-#include <astra.h>
-#include <core/list.h>
-#include <core/timer.h>
-#include <luaapi/stream.h>
+#include <astra/astra.h>
+#include <astra/core/list.h>
+#include <astra/core/timer.h>
+#include <astra/luaapi/stream.h>
 
 #include "http.h"
 

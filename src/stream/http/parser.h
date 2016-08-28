@@ -21,10 +21,10 @@
 #ifndef _PARSER_H_
 #define _PARSER_H_ 1
 
-#include <astra.h>
-#include <utils/base64.h>
-#include <utils/md5.h>
-#include <utils/strhex.h>
+#include <astra/astra.h>
+#include <astra/utils/base64.h>
+#include <astra/utils/md5.h>
+#include <astra/utils/strhex.h>
 
 typedef struct
 {

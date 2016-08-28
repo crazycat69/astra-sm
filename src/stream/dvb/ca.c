@@ -19,9 +19,9 @@
  */
 
 #include "dvb.h"
-#include <core/list.h>
-#include <utils/iso8859.h>
-#include <mpegts/psi.h>
+#include <astra/core/list.h>
+#include <astra/utils/iso8859.h>
+#include <astra/mpegts/psi.h>
 
 #include <netinet/in.h>
 

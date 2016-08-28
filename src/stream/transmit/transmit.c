@@ -30,8 +30,8 @@
  *      upstream    - object, stream instance returned by mod:stream()
  */
 
-#include <astra.h>
-#include <luaapi/stream.h>
+#include <astra/astra.h>
+#include <astra/luaapi/stream.h>
 
 struct module_data_t
 {

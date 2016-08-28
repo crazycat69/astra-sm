@@ -35,10 +35,10 @@ echo "#ifndef _MANIFEST_LIST_H_"
 echo "#define _MANIFEST_LIST_H_ 1"
 echo
 echo "#ifndef _ASTRA_H_"
-echo "#   error \"Please include <astra.h> first\""
+echo "#   error \"Please include <astra/astra.h> first\""
 echo "#endif /* !_ASTRA_H_ */"
 echo
-echo "#include <luaapi/module.h>"
+echo "#include <astra/luaapi/module.h>"
 echo
 
 echo '/* extern declarations */'

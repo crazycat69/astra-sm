@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <astra.h>
-#include <luaapi/stream.h>
+#include <astra/astra.h>
+#include <astra/luaapi/stream.h>
 
 #include "../http.h"
 

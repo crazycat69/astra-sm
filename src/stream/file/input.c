@@ -32,12 +32,12 @@
  *      callback    - function, call function on EOF, without parameters
  */
 
-#include <astra.h>
-#include <core/mainloop.h>
-#include <core/thread.h>
-#include <core/timer.h>
-#include <luaapi/stream.h>
-#include <mpegts/pcr.h>
+#include <astra/astra.h>
+#include <astra/core/mainloop.h>
+#include <astra/core/thread.h>
+#include <astra/core/timer.h>
+#include <astra/luaapi/stream.h>
+#include <astra/mpegts/pcr.h>
 
 #define MSG(_msg) "[file_input %s] " _msg, mod->filename
 

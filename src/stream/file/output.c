@@ -37,8 +37,8 @@
  *                    size      - number, current file size
  */
 
-#include <astra.h>
-#include <luaapi/stream.h>
+#include <astra/astra.h>
+#include <astra/luaapi/stream.h>
 
 #ifdef HAVE_AIO
 #   include <aio.h>

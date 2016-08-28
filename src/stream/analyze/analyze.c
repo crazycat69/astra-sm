@@ -38,12 +38,12 @@
  *                    data.rate     - table, rate_stat array
  */
 
-#include <astra.h>
-#include <core/timer.h>
-#include <luaapi/stream.h>
-#include <mpegts/descriptors.h>
-#include <mpegts/pes.h>
-#include <mpegts/psi.h>
+#include <astra/astra.h>
+#include <astra/core/timer.h>
+#include <astra/luaapi/stream.h>
+#include <astra/mpegts/descriptors.h>
+#include <astra/mpegts/pes.h>
+#include <astra/mpegts/psi.h>
 
 typedef struct
 {

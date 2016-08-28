@@ -37,11 +37,11 @@
  *      sync_opts   - string, sync buffer options
  */
 
-#include <astra.h>
-#include <core/socket.h>
-#include <core/timer.h>
-#include <luaapi/stream.h>
-#include <mpegts/sync.h>
+#include <astra/astra.h>
+#include <astra/core/socket.h>
+#include <astra/core/timer.h>
+#include <astra/luaapi/stream.h>
+#include <astra/mpegts/sync.h>
 
 #define MSG(_msg) "[udp_output %s:%d] " _msg, mod->addr, mod->port
 

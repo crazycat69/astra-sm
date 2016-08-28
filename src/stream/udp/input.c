@@ -37,10 +37,10 @@
  *      port()      - return number, random port number
  */
 
-#include <astra.h>
-#include <core/socket.h>
-#include <core/timer.h>
-#include <luaapi/stream.h>
+#include <astra/astra.h>
+#include <astra/core/socket.h>
+#include <astra/core/timer.h>
+#include <astra/luaapi/stream.h>
 
 #define UDP_BUFFER_SIZE 1460
 #define RTP_HEADER_SIZE 12

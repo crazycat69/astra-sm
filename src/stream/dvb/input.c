@@ -27,9 +27,9 @@
  */
 
 #include "dvb.h"
-#include <core/event.h>
-#include <core/thread.h>
-#include <core/timer.h>
+#include <astra/core/event.h>
+#include <astra/core/thread.h>
+#include <astra/core/timer.h>
 
 #define MSG(_msg) "[dvb_input %d:%d] " _msg, mod->adapter, mod->device
 

@@ -13,7 +13,7 @@ m4_if(pkg_version, [UNKNOWN],
 AC_PREREQ([2.60])
 AC_INIT([Astra SM], [pkg_version])
 
-AC_CONFIG_SRCDIR([src/astra.h])
+AC_CONFIG_SRCDIR([src/astra/astra.h])
 AC_CONFIG_HEADERS([src/config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux/m4])
@@ -43,6 +43,8 @@ LT_LIB_M
 # Set build compiler options
 AX_PROG_CC_FOR_BUILD
 AM_PROG_CC_C_O
+AM_CONDITIONAL([CROSS_COMPILING],
+    [test "x${cross_compiling}" = "xyes"])
 
 # Check C99/C++11 support
 compiler_lang=""
@@ -689,12 +691,6 @@ AS_IF([test "x${enable_gprof}" = "xyes"], [
     ])
 ])
 
-# Generate preprocessed files
-AC_ARG_ENABLE([preprocess],
-    AC_HELP_STRING([--enable-preprocess], [generate preprocessed files (*.i)]))
-
-AM_CONDITIONAL([HAVE_PREPROCESSED], [test "x${enable_preprocess}" = "xyes"])
-
 # Remove optimization flags
 AS_IF([test "x${kill_optflags}" = "xyes"], [
     CFLAGS=$(echo "$CFLAGS" | $SED -r -e 's/@<:@ @:>@*(-O@<:@^ @:>@*)@<:@ @:>@*/ /g')
@@ -806,7 +802,6 @@ AC_CONFIG_FILES([
     scripts/Makefile
     tools/Makefile
     src/Makefile
-    tests/Makefile
     testcards/Makefile
 ])
 AC_OUTPUT

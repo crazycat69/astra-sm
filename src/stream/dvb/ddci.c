@@ -27,8 +27,8 @@
  */
 
 #include "dvb.h"
-#include <core/mainloop.h>
-#include <core/thread.h>
+#include <astra/core/mainloop.h>
+#include <astra/core/thread.h>
 
 #define MSG(_msg) "[ddci %d:%d] " _msg, mod->adapter, mod->device
 

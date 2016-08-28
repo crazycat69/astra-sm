@@ -403,9 +403,9 @@ int main(int argc, const char *argv[])
     printf("\nstatic script_pkg_t script_list[] =\n{\n");
     for (size_t i = 0; i < cnt; i++)
     {
-        printf("    { \"%s\", \"=%s.lua\", __script_%s, %lluULL },\n"
+        printf("    { \"%s\", \"=%s.lua\", __script_%s, %luUL },\n"
                , list[i].pkgname, list[i].pkgname, list[i].cname
-               , (unsigned long long)list[i].size);
+               , (unsigned long)list[i].size);
 
         free(list[i].pkgname);
         free(list[i].cname);

@@ -21,11 +21,11 @@
 #ifndef _MODULE_CAM_H_
 #define _MODULE_CAM_H_ 1
 
-#include <astra.h>
-#include <core/list.h>
-#include <utils/strhex.h>
-#include <luaapi/stream.h>
-#include <mpegts/psi.h>
+#include <astra/astra.h>
+#include <astra/core/list.h>
+#include <astra/utils/strhex.h>
+#include <astra/luaapi/stream.h>
+#include <astra/mpegts/psi.h>
 
 #define EM_MAX_SIZE 1024
 

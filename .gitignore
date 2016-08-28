@@ -1,10 +1,10 @@
 # binaries
-/src/astra
+/src/main/astra
+/src/tests/libastra
+/src/tests/spawn_slave
+/src/tests/t2mi_decap
+/src/tests/ts_spammer
 /lua/luac
-/tests/misc/spammer
-/tests/misc/t2mi_decap
-/tests/misc/slave
-/tests/test_libastra
 /tools/mkscript
 /tools/tonegen
 
@@ -13,7 +13,6 @@
 /src/stream/list.h
 /testcards/*.ts
 /testcards/*.wav
-*.i
 
 # more binaries
 *.a

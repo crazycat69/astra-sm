@@ -18,8 +18,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <astra.h>
-#include <luaapi/module.h>
+#include <astra/astra.h>
+#include <astra/luaapi/module.h>
 
 #if defined(__linux) || defined(__APPLE__) || defined(__FreeBSD__)
 #   define ASC_SENDFILE (128 * 1024)

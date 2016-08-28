@@ -26,10 +26,10 @@
  *      Output stage, no demux
  */
 
-#include <astra.h>
-#include <utils/strhex.h>
-#include <luaapi/stream.h>
-#include <mpegts/psi.h>
+#include <astra/astra.h>
+#include <astra/utils/strhex.h>
+#include <astra/luaapi/stream.h>
+#include <astra/mpegts/psi.h>
 
 #include <dvbcsa/dvbcsa.h>
 

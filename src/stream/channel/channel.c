@@ -40,11 +40,11 @@
  *      filter      - list, drop PID
  */
 
-#include <astra.h>
-#include <core/list.h>
-#include <core/timer.h>
-#include <luaapi/stream.h>
-#include <mpegts/psi.h>
+#include <astra/astra.h>
+#include <astra/core/list.h>
+#include <astra/core/timer.h>
+#include <astra/luaapi/stream.h>
+#include <astra/mpegts/psi.h>
 
 typedef struct
 {

@@ -2,12 +2,12 @@
 #ifndef _HTTP_H_
 #define _HTTP_H_ 1
 
-#include <astra.h>
-#include <core/event.h>
-#include <core/socket.h>
-#include <core/strbuf.h>
-#include <luaapi/module.h>
-#include <utils/strhex.h>
+#include <astra/astra.h>
+#include <astra/core/event.h>
+#include <astra/core/socket.h>
+#include <astra/core/strbuf.h>
+#include <astra/luaapi/module.h>
+#include <astra/utils/strhex.h>
 
 #include "parser.h"
 

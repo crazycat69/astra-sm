@@ -32,9 +32,9 @@
  *      plp         - number, PLP ID (defaults to first one available)
  */
 
-#include <astra.h>
-#include <luaapi/stream.h>
-#include <mpegts/t2mi.h>
+#include <astra/astra.h>
+#include <astra/luaapi/stream.h>
+#include <astra/mpegts/t2mi.h>
 
 struct module_data_t
 {

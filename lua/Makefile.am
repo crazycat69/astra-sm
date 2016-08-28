@@ -12,7 +12,6 @@ endif
 # Library
 #
 noinst_LTLIBRARIES = liblua.la
-liblua_la_CFLAGS = $(AM_CFLAGS)
 liblua_la_LDFLAGS = -module -static
 liblua_la_LIBADD = $(LIBM) $(LIBADD_DLOPEN)
 liblua_la_SOURCES = \
@@ -79,7 +78,6 @@ liblua_la_SOURCES = \
 #
 if HAVE_LUA_COMPILER
 noinst_PROGRAMS = luac
-luac_CFLAGS = $(AM_CFLAGS)
 luac_LDADD = liblua.la
 luac_SOURCES = luac.c
 endif

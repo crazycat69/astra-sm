@@ -18,11 +18,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <astra.h>
-#include <core/list.h>
-#include <luaapi/module.h>
-#include <utils/base64.h>
-#include <utils/sha1.h>
+#include <astra/astra.h>
+#include <astra/core/list.h>
+#include <astra/luaapi/module.h>
+#include <astra/utils/base64.h>
+#include <astra/utils/sha1.h>
 
 #include "../http.h"
 

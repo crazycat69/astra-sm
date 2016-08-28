@@ -19,9 +19,9 @@
  */
 
 #include "../module_cam.h"
-#include <core/socket.h>
-#include <core/timer.h>
-#include <utils/md5.h>
+#include <astra/core/socket.h>
+#include <astra/core/timer.h>
+#include <astra/utils/md5.h>
 
 #include <openssl/des.h>
 

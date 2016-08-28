@@ -26,9 +26,9 @@
  *      Source, demux endpoint
  */
 
-#include <astra.h>
-#include <core/event.h>
-#include <luaapi/stream.h>
+#include <astra/astra.h>
+#include <astra/core/event.h>
+#include <astra/luaapi/stream.h>
 
 #include <sys/ioctl.h>
 

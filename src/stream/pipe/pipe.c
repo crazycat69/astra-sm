@@ -40,11 +40,11 @@
  *      send(text)  - send string to child's standard input
  */
 
-#include <astra.h>
-#include <core/child.h>
-#include <core/timer.h>
-#include <luaapi/stream.h>
-#include <mpegts/sync.h>
+#include <astra/astra.h>
+#include <astra/core/child.h>
+#include <astra/core/timer.h>
+#include <astra/luaapi/stream.h>
+#include <astra/mpegts/sync.h>
 
 #define MSG(_msg) "[%s] " _msg, mod->config.name
 

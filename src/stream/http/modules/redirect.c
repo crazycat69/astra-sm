@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <astra.h>
+#include <astra/astra.h>
 #include "../http.h"
 
 struct module_data_t

@@ -21,10 +21,10 @@
 #ifndef _DVB_H_
 #define _DVB_H_ 1
 
-#include <astra.h>
-#include <luaapi/stream.h>
-#include <core/list.h>
-#include <mpegts/psi.h>
+#include <astra/astra.h>
+#include <astra/luaapi/stream.h>
+#include <astra/core/list.h>
+#include <astra/mpegts/psi.h>
 
 #include <poll.h>
 #include <sys/ioctl.h>

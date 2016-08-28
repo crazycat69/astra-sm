@@ -20,11 +20,11 @@
 #ifndef _REMUX_H_
 #define _REMUX_H_ 1
 
-#include <astra.h>
-#include <luaapi/stream.h>
-#include <mpegts/pcr.h>
-#include <mpegts/pes.h>
-#include <mpegts/psi.h>
+#include <astra/astra.h>
+#include <astra/luaapi/stream.h>
+#include <astra/mpegts/pcr.h>
+#include <astra/mpegts/pes.h>
+#include <astra/mpegts/psi.h>
 
 #define MSG(_msg) "[remux %s] " _msg, mod->name
 

@@ -1,137 +1,153 @@
 AM_CFLAGS = \
     $(WARN_CFLAGS) \
-    $(LUA_CFLAGS) \
+    -include $(builddir)/config.h \
     -I$(builddir) -I$(srcdir)
 
-EXTRA_DIST =
-BUILT_SOURCES =
-noinst_LTLIBRARIES =
-bin_PROGRAMS =
-
-#
-# Astra library
-#
-noinst_LTLIBRARIES += libastra.la
-libastra_la_CFLAGS = $(AM_CFLAGS)
-libastra_la_LDFLAGS = -module -static
-libastra_la_LIBADD = $(LIBRT) $(LUA_LIBS)
-libastra_la_SOURCES = \
-    astra.h
+# add external library include dirs
+AM_CFLAGS += $(LUA_CFLAGS)
+if HAVE_CHECK
+AM_CFLAGS += $(CHECK_CFLAGS)
+endif
+if HAVE_DVBCSA
+AM_CFLAGS += $(DVBCSA_CFLAGS)
+endif
+if HAVE_LIBAIO
+AM_CFLAGS += $(LIBAIO_CFLAGS)
+endif
+if HAVE_LIBCRYPTO
+AM_CFLAGS += $(LIBCRYPTO_CFLAGS)
+endif
 
 # add Lua script path
 if HAVE_POSIX
-libastra_la_CFLAGS += \
+AM_CFLAGS += \
     -DASC_SCRIPTDIR='"$(sysconfdir)/astra/scripts"' \
     -DASC_DATADIR='"$(datadir)/astra"'
 endif
 
+# initialize variables so that '+=' works
+BUILT_SOURCES =
+CLEANFILES =
+
+bin_PROGRAMS =
+noinst_LTLIBRARIES =
+noinst_PROGRAMS =
+
+##
+## Core library
+##
+noinst_LTLIBRARIES += libastra.la
+libastra_la_LDFLAGS = -module -static
+libastra_la_LIBADD = $(LIBRT) $(LUA_LIBS)
+libastra_la_SOURCES = \
+    astra/astra.h
+
 # core/
 libastra_la_SOURCES += \
-    core/alloc.h \
-    core/assert.h \
-    core/child.c \
-    core/child.h \
-    core/clock.c \
-    core/clock.h \
-    core/compat.c \
-    core/compat.h \
-    core/compat_queue.h \
-    core/core.h \
-    core/error.c \
-    core/error.h \
-    core/event.c \
-    core/event.h \
-    core/init.c \
-    core/init.h \
-    core/list.c \
-    core/list.h \
-    core/log.c \
-    core/log.h \
-    core/mainloop.c \
-    core/mainloop.h \
-    core/mutex.c \
-    core/mutex.h \
-    core/socket.c \
-    core/socket.h \
-    core/spawn.c \
-    core/spawn.h \
-    core/strbuf.c \
-    core/strbuf.h \
-    core/thread.c \
-    core/thread.h \
-    core/timer.c \
-    core/timer.h
+    astra/core/alloc.h \
+    astra/core/assert.h \
+    astra/core/child.c \
+    astra/core/child.h \
+    astra/core/clock.c \
+    astra/core/clock.h \
+    astra/core/compat.c \
+    astra/core/compat.h \
+    astra/core/compat_queue.h \
+    astra/core/core.h \
+    astra/core/error.c \
+    astra/core/error.h \
+    astra/core/event.c \
+    astra/core/event.h \
+    astra/core/init.c \
+    astra/core/init.h \
+    astra/core/list.c \
+    astra/core/list.h \
+    astra/core/log.c \
+    astra/core/log.h \
+    astra/core/mainloop.c \
+    astra/core/mainloop.h \
+    astra/core/mutex.c \
+    astra/core/mutex.h \
+    astra/core/socket.c \
+    astra/core/socket.h \
+    astra/core/spawn.c \
+    astra/core/spawn.h \
+    astra/core/strbuf.c \
+    astra/core/strbuf.h \
+    astra/core/thread.c \
+    astra/core/thread.h \
+    astra/core/timer.c \
+    astra/core/timer.h
 
 # luaapi/
 libastra_la_SOURCES += \
-    luaapi/luaapi.c \
-    luaapi/luaapi.h \
-    luaapi/module.c \
-    luaapi/module.h \
-    luaapi/state.c \
-    luaapi/state.h \
-    luaapi/stream.c \
-    luaapi/stream.h
+    astra/luaapi/luaapi.c \
+    astra/luaapi/luaapi.h \
+    astra/luaapi/module.c \
+    astra/luaapi/module.h \
+    astra/luaapi/state.c \
+    astra/luaapi/state.h \
+    astra/luaapi/stream.c \
+    astra/luaapi/stream.h
 
 # luaapi/lib/
 libastra_la_SOURCES += \
-    luaapi/lib/astra.c \
-    luaapi/lib/base64.c \
-    luaapi/lib/iso8859.c \
-    luaapi/lib/json.c \
-    luaapi/lib/log.c \
-    luaapi/lib/md5.c \
-    luaapi/lib/pidfile.c \
-    luaapi/lib/rc4.c \
-    luaapi/lib/sha1.c \
-    luaapi/lib/strhex.c \
-    luaapi/lib/timer.c \
-    luaapi/lib/utils.c \
-    luaapi/lib/list.h
+    astra/luaapi/lib/astra.c \
+    astra/luaapi/lib/base64.c \
+    astra/luaapi/lib/iso8859.c \
+    astra/luaapi/lib/json.c \
+    astra/luaapi/lib/log.c \
+    astra/luaapi/lib/md5.c \
+    astra/luaapi/lib/pidfile.c \
+    astra/luaapi/lib/rc4.c \
+    astra/luaapi/lib/sha1.c \
+    astra/luaapi/lib/strhex.c \
+    astra/luaapi/lib/timer.c \
+    astra/luaapi/lib/utils.c \
+    astra/luaapi/lib/list.h
 
 # mpegts/
 libastra_la_SOURCES += \
-    mpegts/descriptors.c \
-    mpegts/descriptors.h \
-    mpegts/mpegts.h \
-    mpegts/pcr.c \
-    mpegts/pcr.h \
-    mpegts/pes.c \
-    mpegts/pes.h \
-    mpegts/psi.c \
-    mpegts/psi.h \
-    mpegts/sync.c \
-    mpegts/sync.h \
-    mpegts/t2mi.c \
-    mpegts/t2mi.h \
-    mpegts/tscore.h \
-    mpegts/types.c \
-    mpegts/types.h
+    astra/mpegts/descriptors.c \
+    astra/mpegts/descriptors.h \
+    astra/mpegts/mpegts.h \
+    astra/mpegts/pcr.c \
+    astra/mpegts/pcr.h \
+    astra/mpegts/pes.c \
+    astra/mpegts/pes.h \
+    astra/mpegts/psi.c \
+    astra/mpegts/psi.h \
+    astra/mpegts/sync.c \
+    astra/mpegts/sync.h \
+    astra/mpegts/t2mi.c \
+    astra/mpegts/t2mi.h \
+    astra/mpegts/tscore.h \
+    astra/mpegts/types.c \
+    astra/mpegts/types.h
 
 # utils/
 libastra_la_SOURCES += \
-    utils/base64.c \
-    utils/base64.h \
-    utils/crc32b.c \
-    utils/crc32b.h \
-    utils/crc8.c \
-    utils/crc8.h \
-    utils/iso8859.c \
-    utils/iso8859.h \
-    utils/md5.c \
-    utils/md5.h \
-    utils/rc4.c \
-    utils/rc4.h \
-    utils/sha1.c \
-    utils/sha1.h \
-    utils/strhex.c \
-    utils/strhex.h
+    astra/utils/base64.c \
+    astra/utils/base64.h \
+    astra/utils/crc32b.c \
+    astra/utils/crc32b.h \
+    astra/utils/crc8.c \
+    astra/utils/crc8.h \
+    astra/utils/iso8859.c \
+    astra/utils/iso8859.h \
+    astra/utils/md5.c \
+    astra/utils/md5.h \
+    astra/utils/rc4.c \
+    astra/utils/rc4.h \
+    astra/utils/sha1.c \
+    astra/utils/sha1.h \
+    astra/utils/strhex.c \
+    astra/utils/strhex.h
 
-#
-# Streaming library
-#
+##
+## Streaming library
+##
 noinst_LTLIBRARIES += libstream.la
-libstream_la_CFLAGS = $(AM_CFLAGS)
 libstream_la_LDFLAGS = -module -static
 libstream_la_LIBADD = libastra.la
 libstream_la_SOURCES = \
@@ -150,8 +166,11 @@ endif
 if HAVE_STREAM_BISS
 libstream_la_SOURCES += \
     stream/biss_encrypt/biss_encrypt.c
+
+if HAVE_DVBCSA
+libstream_la_LIBADD += $(DVBCSA_LIBS)
 endif
-EXTRA_DIST += stream/biss_encrypt/README.md
+endif
 
 ### dvb ###
 if HAVE_STREAM_DVB
@@ -173,7 +192,6 @@ libstream_la_SOURCES += \
     stream/file/output.c
 
 if HAVE_LIBAIO
-libstream_la_CFLAGS += $(LIBAIO_CFLAGS)
 libstream_la_LIBADD += $(LIBAIO_LIBS)
 endif
 endif
@@ -211,8 +229,6 @@ endif
 
 ### softcam ###
 if HAVE_STREAM_SOFTCAM
-libstream_la_CFLAGS += $(DVBCSA_CFLAGS)
-libstream_la_LIBADD += $(DVBCSA_LIBS)
 libstream_la_SOURCES += \
     stream/softcam/decrypt.c \
     stream/softcam/module_cam.h \
@@ -230,15 +246,16 @@ libstream_la_SOURCES += \
     stream/softcam/cas/viaccess.c \
     stream/softcam/cas/videoguard.c
 
+if HAVE_DVBCSA
+libstream_la_LIBADD += $(DVBCSA_LIBS)
+endif
 if HAVE_LIBCRYPTO
 # need DES for newcamd
-libstream_la_CFLAGS += $(LIBCRYPTO_CFLAGS)
 libstream_la_LIBADD += $(LIBCRYPTO_LIBS)
 libstream_la_SOURCES += \
     stream/softcam/cam/newcamd.c
 endif
 endif
-EXTRA_DIST += stream/softcam/cas/template.c
 
 ### udp ###
 if HAVE_STREAM_UDP
@@ -255,43 +272,95 @@ stream/list.h: $(GEN_MANIFEST_LIST)
 	$(AM_V_GEN)$(GEN_MANIFEST_LIST) $(srcdir) $(libstream_la_SOURCES) \
 	    >$@ || exit $$?
 
-#
-# Main binary
-#
-bin_PROGRAMS += astra
-astra_CFLAGS = $(AM_CFLAGS)
-astra_LDADD = \
-    libastra.la \
-    libstream.la
-astra_SOURCES = \
-    main.c \
-    sighandler.c \
-    sighandler.h
+##
+## Main binary
+##
+bin_PROGRAMS += main/astra
+main_astra_SOURCES = \
+    main/main.c \
+    main/sighandler.c \
+    main/sighandler.h
 
 if HAVE_INSCRIPT
-astra_SOURCES += \
-    inscript.c \
-    inscript.h
+main_astra_SOURCES += \
+    main/inscript.c \
+    main/inscript.h
 endif
 
-#
-# Built sources
-#
-# preprocessed source code
-if HAVE_PREPROCESSED
-PP_CFLAGS = $(DEFS) \
-    $(DEFAULT_INCLUDES) $(INCLUDES) \
-    $(AM_CPPFLAGS) $(CPPFLAGS) \
-    $(libastra_la_CFLAGS) \
-    $(libstream_la_CFLAGS) \
-    $(astra_CFLAGS) \
-    $(CFLAGS)
+main_astra_LDADD = \
+    libastra.la \
+    libstream.la
 
-BUILT_SOURCES += $(SOURCES:.c=.i)
+##
+## Test programs
+##
+noinst_PROGRAMS += tests/t2mi_decap
+tests_t2mi_decap_SOURCES = tests/t2mi_decap.c
+tests_t2mi_decap_LDADD = libastra.la
 
-SUFFIXES: .i
-.c.i: $*.c
-	$(AM_V_GEN)$(CPP) $(PP_CFLAGS) -o $@ $<
+noinst_PROGRAMS += tests/ts_spammer
+tests_ts_spammer_SOURCES = tests/ts_spammer.c
+
+##
+## Unit tests
+##
+if HAVE_CHECK
+noinst_PROGRAMS += tests/spawn_slave
+tests_spawn_slave_SOURCES = tests/spawn_slave.c
+
+noinst_PROGRAMS += tests/libastra
+tests_libastra_SOURCES = \
+    tests/libastra.c \
+    tests/libastra.h
+
+tests_libastra_SOURCES += \
+    tests/core/alloc.c \
+    tests/core/child.c \
+    tests/core/clock.c \
+    tests/core/list.c \
+    tests/core/mainloop.c \
+    tests/core/spawn.c \
+    tests/core/thread.c \
+    tests/core/timer.c
+
+tests_libastra_SOURCES += \
+    tests/luaapi/luaapi.c \
+    tests/luaapi/module.c \
+    tests/luaapi/stream.c
+
+tests_libastra_SOURCES += \
+    tests/luaapi/lib/astra.c \
+    tests/luaapi/lib/base64.c \
+    tests/luaapi/lib/md5.c \
+    tests/luaapi/lib/pidfile.c \
+    tests/luaapi/lib/rc4.c \
+    tests/luaapi/lib/sha1.c \
+    tests/luaapi/lib/strhex.c \
+    tests/luaapi/lib/utils.c
+
+tests_libastra_SOURCES += \
+    tests/utils/base64.c \
+    tests/utils/crc32b.c \
+    tests/utils/crc8.c \
+    tests/utils/md5.c \
+    tests/utils/rc4.c \
+    tests/utils/rc4_vectors.h \
+    tests/utils/sha1.c \
+    tests/utils/strhex.c
+
+tests_libastra_LDADD = libastra.la $(CHECK_LIBS)
+tests_libastra_DEPENDENCIES = libastra.la tests/spawn_slave$(EXEEXT)
+
+if !CROSS_COMPILING
+# TODO: fix output redirection on Windows
+if HAVE_POSIX
+AM_TESTS_ENVIRONMENT = export OUTPUT_REDIRECT_FD=9;
+AM_TESTS_FD_REDIRECT = 9>&2
 endif
 
-CLEANFILES = $(BUILT_SOURCES)
+TESTS = tests/libastra
+CLEANFILES += libastra.log
+endif
+endif
+
+CLEANFILES += $(BUILT_SOURCES)

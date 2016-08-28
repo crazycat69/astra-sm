@@ -41,10 +41,10 @@
  *      upstream    - object, stream instance returned by module_instance:stream()
  */
 
-#include <astra.h>
-#include <core/timer.h>
-#include <luaapi/stream.h>
-#include <mpegts/sync.h>
+#include <astra/astra.h>
+#include <astra/core/timer.h>
+#include <astra/luaapi/stream.h>
+#include <astra/mpegts/sync.h>
 
 #include "http.h"
 

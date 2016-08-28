@@ -1,4 +1,4 @@
-SUBDIRS = lua tools scripts src . tests testcards
+SUBDIRS = lua tools scripts src . testcards
 DIST_SUBDIRS = $(SUBDIRS)
 ACLOCAL_AMFLAGS = -I build-aux/m4
 EXTRA_DIST = \
