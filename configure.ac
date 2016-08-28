@@ -119,14 +119,33 @@ AC_SYS_LARGEFILE
 #
 # Platform-dependent options
 #
+AC_ARG_WITH([winver], AC_HELP_STRING([--with-winver=VER], [
+    minimum Windows version that the build will support
+    (2k or vista; defaults to vista)
+]))
+
 case "${host_os}" in
     mingw*)
         SYS=win32
 
-        AC_DEFINE([_WIN32_WINNT],
-            [0x0501], [Require at least Windows XP])
-        # TODO: add option to set winver
-        #    WSAPoll() needs at least 0x0600
+        # choose value for _WIN32_WINNT
+        AS_IF([test "x${with_winver}" = "x"], [
+            # default version
+            with_winver="vista"
+        ])
+
+        windows_version=""
+        AS_IF([test "x${with_winver}" = "xvista"],
+            [ windows_version="_WIN32_WINNT_VISTA" ])
+        AS_IF([test "x${with_winver}" = "x2k"],
+            [ windows_version="_WIN32_WINNT_WIN2K" ])
+
+        AS_IF([test "x${windows_version}" != "x"], [
+            AC_DEFINE_UNQUOTED([_WIN32_WINNT],
+                [$windows_version], [Define target Windows version])
+        ], [
+            AC_MSG_ERROR([invalid value for --with-winver])
+        ])
 
         # check winmm (needed for timer resolution APIs)
         AC_CHECK_LIB([winmm], [main],
@@ -802,7 +821,11 @@ echo "-----------------------"
 echo "Version:               ${PACKAGE_STRING}"
 echo
 echo "Compiler:              ${CC}"
-echo "Building for:          ${host_os}"
+echo -n "Building for:          ${host_os}"
+AS_IF([test "x${SYS}" = "xwin32"], [
+    echo -n ", ${with_winver} (${windows_version})"
+])
+echo
 echo "Event mechanism:       ${event_mechanism}"
 
 # large file support
