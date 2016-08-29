@@ -56,6 +56,31 @@ size_t strnlen(const char *str, size_t max)
 }
 #endif
 
+#if defined(_WIN32) && (_WIN32_WINNT <= _WIN32_WINNT_WIN2K)
+BOOL cx_IsProcessInJob(HANDLE process, HANDLE job, BOOL *result)
+{
+    typedef BOOL (WINAPI *cx_IsProcessInJob_t)(HANDLE, HANDLE, BOOL *);
+
+    static HMODULE kern32;
+    if (kern32 == NULL)
+    {
+        kern32 = LoadLibrary("kernel32.dll");
+        if (kern32 == NULL)
+            return FALSE;
+    }
+
+    static cx_IsProcessInJob_t func;
+    if (func == NULL)
+    {
+        func = (cx_IsProcessInJob_t)GetProcAddress(kern32, "IsProcessInJob");
+        if (func == NULL)
+            return FALSE;
+    }
+
+    return func(process, job, result);
+}
+#endif /* _WIN32 && (_WIN32_WINNT <= _WIN32_WINNT_WIN2K) */
+
 int cx_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
     int fd;
