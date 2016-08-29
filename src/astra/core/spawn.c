@@ -115,9 +115,6 @@ int create_redirected(const char *command
         *job = NULL;
     }
 
-    /* begin execution */
-    ResumeThread(pi->hThread);
-
     return 0;
 }
 
@@ -631,6 +628,11 @@ int asc_process_spawn(const char *command, asc_process_t *proc
     asc_pipe_close(child_sin);
     asc_pipe_close(child_sout);
     asc_pipe_close(child_serr);
+
+#ifdef _WIN32
+    /* begin execution */
+    ResumeThread(proc->pi.hThread);
+#endif /* _WIN32 */
 
     return 0;
 }
