@@ -1,0 +1,33 @@
+commit d77c57a4ad6d90d9dd6a6b82ae66d8245bb9b1e7
+Author: Artem Kharitonov <artem@3phase.pw>
+Date:   Thu Jun 9 14:13:47 2016 +0500
+
+    scripts/stream: add transform feature
+    
+    This allows adding additional stream modules between channel input
+    and output. As of now, two such modules are available: remux (CBR padding)
+    and pipe (filter TS through an external process).
+    
+    Usage examples:
+    
+        make_channel({
+            ...
+            transform = {
+                -- table syntax:
+                {
+                    format = "pipe",
+                    command = "ffmpeg -i pipe:0 -c copy -f mpegts pipe:1",
+                    -- see stream/pipe/pipe.c for more options
+                },
+    
+                -- URL syntax:
+                "pipe:///bin/cat",
+    
+                -- CBR example (table only):
+                {
+                    format = "cbr",
+                    rate = 10000000, -- 10 Mbps
+                },
+            },
+            ...
+        })

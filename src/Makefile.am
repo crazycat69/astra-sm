@@ -104,6 +104,11 @@ libastra_la_SOURCES += \
     astra/luaapi/lib/utils.c \
     astra/luaapi/lib/list.h
 
+if HAVE_WIN32
+libastra_la_SOURCES += \
+    astra/luaapi/lib/winsvc.c
+endif
+
 # mpegts/
 libastra_la_SOURCES += \
     astra/mpegts/descriptors.c \
