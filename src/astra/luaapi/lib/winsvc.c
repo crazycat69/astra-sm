@@ -55,7 +55,7 @@
 
 /* configure it as a network service */
 #define SVC_DEPENDENCIES "Tcpip\0"
-#define SVC_STARTNAME "NT AUTHORITY\\NetworkService"
+#define SVC_STARTNAME "NT AUTHORITY\\LocalService"
 
 /* option getter to prevent the user from passing empty strings */
 #define SVC_OPTION(__opt, __default) \
@@ -102,6 +102,39 @@ char *quoted_exe_path(void)
     return quoted;
 }
 
+/* check if a user account exists on the system */
+static
+bool check_account(const char *acct)
+{
+    /* get required buffer size */
+    DWORD sidbuf = 0, rdnbuf = 0;
+    SID_NAME_USE type;
+
+    if (LookupAccountName(NULL, acct, NULL, &sidbuf, NULL, &rdnbuf, &type)
+        || GetLastError() != ERROR_INSUFFICIENT_BUFFER
+        || sidbuf == 0 || rdnbuf == 0) /* should fail and set buffer sizes */
+    {
+        return false;
+    }
+
+    /* create buffers and get account SID */
+    TCHAR *const rdn = ASC_ALLOC(rdnbuf, TCHAR);
+    SID *const sid = (SID *)calloc(1, sidbuf);
+    asc_assert(sid != NULL, MSG("calloc() failed"));
+
+    bool ok = false;
+    if (LookupAccountName(NULL, acct, sid, &sidbuf, rdn, &rdnbuf, &type)
+        && IsValidSid(sid))
+    {
+        ok = true;
+    }
+
+    free(sid);
+    free(rdn);
+
+    return ok;
+}
+
 static
 int method_install(lua_State *L)
 {
@@ -116,6 +149,11 @@ int method_install(lua_State *L)
     SVC_OPTION(description, PACKAGE_NAME);
     SVC_OPTION(arguments, NULL);
     SVC_OPTION(start, "manual");
+
+    /* check account name */
+    const char *startname = SVC_STARTNAME;
+    if (!check_account(startname))
+        startname = NULL;
 
     /* check service start type */
     DWORD stype = -1;
@@ -146,7 +184,7 @@ int method_install(lua_State *L)
     svc = CreateService(scm, name, displayname
                         , SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS
                         , stype, SERVICE_ERROR_NORMAL, cmdline, NULL, NULL
-                        , SVC_DEPENDENCIES, SVC_STARTNAME, NULL);
+                        , SVC_DEPENDENCIES, startname, NULL);
     if (svc == NULL)
         SVC_PERROR(MSG("CreateService()"));
 
