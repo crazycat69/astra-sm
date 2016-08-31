@@ -26,6 +26,7 @@ AM_CFLAGS += \
 endif
 
 # initialize variables so that '+=' works
+BUILT_SOURCES =
 CLEANFILES =
 bin_PROGRAMS =
 noinst_LTLIBRARIES =
@@ -268,7 +269,7 @@ libstream_la_SOURCES += \
 endif
 
 # manifest list
-libstream_la_DEPENDENCIES = libastra.la stream/list.h
+BUILT_SOURCES += stream/list.h
 CLEANFILES += stream/list.h
 
 GEN_MANIFEST_LIST = $(top_srcdir)/build-aux/gen-manifest-list
