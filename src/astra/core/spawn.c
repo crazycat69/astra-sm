@@ -78,11 +78,6 @@ int create_redirected(const char *command
 
     const bool ret = CreateProcess(NULL, buf, NULL, NULL, true
                                    , (CREATE_NEW_PROCESS_GROUP
-                                      /*
-                                       * | CREATE_NO_WINDOW
-                                       *
-                                       * FIXME: sending ctrl+break doesn't work
-                                       */
                                       | CREATE_SUSPENDED
                                       | CREATE_BREAKAWAY_FROM_JOB)
                                    , NULL, NULL, &si, pi);
@@ -279,8 +274,7 @@ int asc_process_kill(const asc_process_t *proc, bool forced)
         if (!GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, proc->pi.dwProcessId))
             return -1;
 
-        if (!EnumWindows(enum_proc, (LPARAM)proc))
-            return -1;
+        EnumWindows(enum_proc, (LPARAM)proc);
     }
 
     return 0;
