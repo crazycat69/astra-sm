@@ -20,7 +20,6 @@
  */
 
 #include <astra/astra.h>
-#include <astra/luaapi/luaapi.h>
 
 #include "inscript.h"
 #include "../scripts/prepared.h"

@@ -20,213 +20,20 @@
 
 #include <astra/astra.h>
 #include <astra/core/mainloop.h>
-#include <astra/core/mutex.h>
 
-#include "sighandler.h"
+#include "sig.h"
 
-#define SIGNAL_LOCK_WAIT 5000 /* ms */
+#define lock_enter() \
+    WaitForSingleObject(signal_lock, INFINITE)
 
-static
-void lock_timeout(void)
-{
-    fprintf(stderr, "sighandler: wait timeout for mutex\n");
-    _exit(EXIT_SIGHANDLER);
-}
+#define lock_enter_timed() \
+    (WaitForSingleObject(signal_lock, SIGNAL_LOCK_WAIT) == WAIT_OBJECT_0)
 
-static
-void perror_exit(int errnum, const char *str)
-{
-    char buf[512] = { 0 };
-    asc_strerror(errnum, buf, sizeof(buf));
-    fprintf(stderr, "%s: %s\n", str, buf);
-
-    _exit(EXIT_SIGHANDLER);
-}
-
-#ifndef _WIN32
-
-#include <signal.h>
-#include <pthread.h>
-
-/* TODO: move these to core/thread.h */
-#define mutex_lock(__mutex) pthread_mutex_lock(&__mutex)
-#define mutex_timedlock(__mutex, __ms) asc_mutex_timedlock(&__mutex, (__ms))
-#define mutex_unlock(__mutex) pthread_mutex_unlock(&__mutex)
-
-struct signal_setup
-{
-    const int signum;
-    const bool ignore;
-    void (*oldhandler)(int);
-};
-
-static struct signal_setup siglist[] = {
-    { SIGHUP,  false, NULL },
-    { SIGINT,  false, NULL },
-    { SIGQUIT, false, NULL },
-    { SIGUSR1, false, NULL },
-    { SIGTERM, false, NULL },
-    { SIGPIPE, true, NULL },
-};
-
-static sigset_t block_mask;
-static sigset_t old_mask;
-
-static pthread_t signal_thread;
-static pthread_mutex_t signal_lock;
-static bool quit_thread = true;
-
-static
-void *thread_loop(void *arg)
-{
-    __uarg(arg);
-
-    while (true)
-    {
-        int signum;
-        const int ret = sigwait(&block_mask, &signum);
-        if (ret != 0)
-            perror_exit(ret, "sigwait()");
-
-        if (!mutex_timedlock(signal_lock, SIGNAL_LOCK_WAIT))
-        {
-            /*
-             * looks like the main thread disabled signal handling and
-             * then got blocked during cleanup or some other routine.
-             */
-            if (signum == SIGINT || signum == SIGTERM)
-                lock_timeout();
-
-            continue;
-        }
-
-        if (quit_thread)
-        {
-            /* signal handling is being shut down */
-            pthread_mutex_unlock(&signal_lock);
-            pthread_exit(NULL);
-        }
-
-        switch (signum)
-        {
-            case SIGINT:
-            case SIGTERM:
-                asc_main_loop_shutdown();
-                break;
-
-            case SIGUSR1:
-                asc_main_loop_reload();
-                break;
-
-            case SIGHUP:
-                asc_main_loop_sighup();
-                break;
-
-            case SIGQUIT:
-                asc_lib_abort();
-                break;
-
-            default:
-                break;
-        }
-
-        pthread_mutex_unlock(&signal_lock);
-    }
-
-    return NULL;
-}
-
-static
-void signal_cleanup(void)
-{
-    /* ask signal thread to quit */
-    if (!pthread_equal(pthread_self(), signal_thread))
-    {
-        pthread_mutex_lock(&signal_lock);
-        quit_thread = true;
-        pthread_mutex_unlock(&signal_lock);
-
-        if (pthread_kill(signal_thread, SIGTERM) == 0)
-            pthread_join(signal_thread, NULL);
-
-        pthread_mutex_destroy(&signal_lock);
-    }
-
-    /* restore old handlers for ignored signals */
-    for (size_t i = 0; i < ASC_ARRAY_SIZE(siglist); i++)
-    {
-        const struct signal_setup *const ss = &siglist[i];
-        if (ss->ignore)
-            signal(ss->signum, ss->oldhandler);
-    }
-
-    /* restore old signal mask */
-    const int ret = pthread_sigmask(SIG_SETMASK, &old_mask, NULL);
-    if (ret != 0)
-        perror_exit(ret, "pthread_sigmask()");
-}
-
-void signal_setup(void)
-{
-    /* block signals of interest before starting any threads */
-    sigemptyset(&block_mask);
-
-    for (size_t i = 0; i < ASC_ARRAY_SIZE(siglist); i++)
-    {
-        struct signal_setup *const ss = &siglist[i];
-        if (ss->ignore)
-        {
-            /* doesn't matter which thread gets to ignore it */
-            ss->oldhandler = signal(ss->signum, SIG_IGN);
-            if (ss->oldhandler == SIG_ERR)
-                perror_exit(errno, "signal()");
-        }
-        else
-        {
-            sigaddset(&block_mask, ss->signum);
-        }
-    }
-
-    int ret = pthread_sigmask(SIG_BLOCK, &block_mask, &old_mask);
-    if (ret != 0)
-        perror_exit(ret, "pthread_sigmask()");
-
-    /* initialize signal lock */
-    pthread_mutexattr_t attr;
-    ret = pthread_mutexattr_init(&attr);
-    if (ret != 0)
-        perror_exit(ret, "pthread_mutexattr_init()");
-
-    ret = pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_ERRORCHECK);
-    if (ret != 0)
-        perror_exit(ret, "pthread_mutexattr_settype()");
-
-    ret = pthread_mutex_init(&signal_lock, &attr);
-    if (ret != 0)
-        perror_exit(ret, "pthread_mutex_init()");
-
-    pthread_mutexattr_destroy(&attr);
-
-    /* delay any actions until main thread finishes initialization */
-    ret = pthread_mutex_lock(&signal_lock);
-    if (ret != 0)
-        perror_exit(ret, "pthread_mutex_lock()");
-
-    /* start our signal handling thread */
-    quit_thread = false;
-    ret = pthread_create(&signal_thread, NULL, &thread_loop, NULL);
-    if (ret != 0)
-        perror_exit(ret, "pthread_create()");
-
-    atexit(signal_cleanup);
-}
-
-#else /* !_WIN32 */
-
-/* TODO: move these to core/thread.h */
-#define mutex_lock(__mutex) WaitForSingleObject(__mutex, INFINITE)
-#define mutex_timedlock(__mutex, __ms) __mutex_timedlock(__mutex, (__ms))
-#define mutex_unlock(__mutex) while (ReleaseMutex(__mutex))
+#define lock_leave() \
+    do { \
+        while (ReleaseMutex(signal_lock)) \
+            ; /* nothing */ \
+    } while (0)
 
 #define SERVICE_NAME (char *)PACKAGE_NAME
 
@@ -237,13 +44,6 @@ static HANDLE service_thread = NULL;
 
 static HANDLE signal_lock = NULL;
 static bool ignore_ctrl = true;
-
-static
-bool __mutex_timedlock(HANDLE mutex, unsigned ms)
-{
-    DWORD ret = WaitForSingleObject(mutex, ms);
-    return (ret == WAIT_OBJECT_0);
-}
 
 #ifdef DEBUG
 static
@@ -302,16 +102,16 @@ void service_handler(DWORD control)
                  */
                 service_set_state(SERVICE_STOP_PENDING);
 
-                if (mutex_timedlock(signal_lock, SIGNAL_LOCK_WAIT))
+                if (lock_enter_timed())
                 {
                     if (!ignore_ctrl)
                         asc_main_loop_shutdown();
 
-                    mutex_unlock(signal_lock);
+                    lock_leave();
                 }
                 else
                 {
-                    lock_timeout();
+                    signal_timeout();
                 }
             }
             break;
@@ -334,16 +134,16 @@ BOOL console_handler(DWORD type)
         case CTRL_C_EVENT:
         case CTRL_BREAK_EVENT:
         case CTRL_CLOSE_EVENT:
-            if (mutex_timedlock(signal_lock, SIGNAL_LOCK_WAIT))
+            if (lock_enter_timed())
             {
                 if (!ignore_ctrl)
                     asc_main_loop_shutdown();
 
-                mutex_unlock(signal_lock);
+                lock_leave();
             }
             else
             {
-                lock_timeout();
+                signal_timeout();
             }
             return true;
 
@@ -364,7 +164,7 @@ void service_main(DWORD argc, LPTSTR *argv)
         RegisterServiceCtrlHandler(SERVICE_NAME, service_handler);
 
     if (service_status_handle == NULL)
-        perror_exit(GetLastError(), "RegisterServiceCtrlHandler()");
+        signal_perror(GetLastError(), "RegisterServiceCtrlHandler()");
 
     /* report to SCM */
     service_set_state(SERVICE_START_PENDING);
@@ -406,7 +206,7 @@ bool service_initialize(void)
     /* attempt to connect to SCM */
     service_event = CreateEvent(NULL, false, false, NULL);
     if (service_event == NULL)
-        perror_exit(GetLastError(), "CreateEvent()");
+        signal_perror(GetLastError(), "CreateEvent()");
 
     const intptr_t thr = _beginthreadex(NULL, 0, service_thread_proc, NULL
                                         , 0, NULL);
@@ -439,7 +239,7 @@ bool service_initialize(void)
 
         ASC_FREE(service_thread, CloseHandle);
         if (exit_code != ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
-            perror_exit(exit_code, "StartServiceCtrlDispatcher()");
+            signal_perror(exit_code, "StartServiceCtrlDispatcher()");
     }
     else
     {
@@ -447,7 +247,7 @@ bool service_initialize(void)
         if (ret != WAIT_FAILED)
             SetLastError(ERROR_INTERNAL_ERROR);
 
-        perror_exit(GetLastError(), "WaitForMultipleObjects()");
+        signal_perror(GetLastError(), "WaitForMultipleObjects()");
     }
 
     return false;
@@ -488,15 +288,15 @@ static
 void signal_cleanup(void)
 {
     /* dismiss any threads waiting for lock */
-    mutex_lock(signal_lock);
+    lock_enter();
     ignore_ctrl = true;
-    mutex_unlock(signal_lock);
+    lock_leave();
 
     if (!service_destroy())
     {
         /* remove ctrl handler; this also joins handler threads */
         if (!SetConsoleCtrlHandler(console_handler, false))
-            perror_exit(GetLastError(), "SetConsoleCtrlHandler()");
+            signal_perror(GetLastError(), "SetConsoleCtrlHandler()");
     }
 
     /* free mutex */
@@ -508,7 +308,7 @@ void signal_setup(void)
     /* create and lock signal handling mutex */
     signal_lock = CreateMutex(NULL, true, NULL);
     if (signal_lock == NULL)
-        perror_exit(GetLastError(), "CreateMutex()");
+        signal_perror(GetLastError(), "CreateMutex()");
 
     bool is_service = false;
 
@@ -535,26 +335,22 @@ void signal_setup(void)
         /* set up regular console control handler */
         ignore_ctrl = false;
         if (!SetConsoleCtrlHandler(console_handler, true))
-            perror_exit(GetLastError(), "SetConsoleCtrlHandler()");
+            signal_perror(GetLastError(), "SetConsoleCtrlHandler()");
     }
 
     atexit(signal_cleanup);
 }
 
-#endif /* !_WIN32 */
-
 void signal_enable(bool running)
 {
-    mutex_lock(signal_lock);
+    lock_enter();
 
     if (running)
     {
-#ifdef _WIN32
         /* mark service as running on first init */
         if (service_status.dwCurrentState == SERVICE_START_PENDING)
             service_set_state(SERVICE_RUNNING);
-#endif /* !_WIN32 */
 
-        mutex_unlock(signal_lock);
+        lock_leave();
     }
 }

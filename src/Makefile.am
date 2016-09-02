@@ -281,10 +281,13 @@ stream/list.h: $(GEN_MANIFEST_LIST) config.h
 ## Main binary
 ##
 bin_PROGRAMS += main/astra
-main_astra_SOURCES = \
-    main/main.c \
-    main/sighandler.c \
-    main/sighandler.h
+main_astra_SOURCES = main/main.c main/sig.h
+
+if HAVE_WIN32
+main_astra_SOURCES += main/sig-win32.c
+else
+main_astra_SOURCES += main/sig-posix.c
+endif
 
 if HAVE_INSCRIPT
 main_astra_SOURCES += \

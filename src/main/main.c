@@ -31,7 +31,7 @@
 #   include "inscript.h"
 #endif
 
-#include "sighandler.h"
+#include "sig.h"
 
 static
 void bootstrap(lua_State *L, int argc, const char *argv[])
