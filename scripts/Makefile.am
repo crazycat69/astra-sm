@@ -13,6 +13,7 @@ SCRIPT_FILES += \
     apps/dvbls.lua \
     apps/femon.lua \
     apps/relay.lua \
+    apps/service.lua \
     apps/stream.lua
 
 # script packaging
