@@ -94,12 +94,15 @@ int create_redirected(const char *command
         if (new_job == NULL
             || !AssignProcessToJobObject(new_job, pi->hProcess))
         {
+            const DWORD olderr = GetLastError();
+
             TerminateProcess(pi->hProcess, 0);
 
             ASC_FREE(pi->hProcess, CloseHandle);
             ASC_FREE(pi->hThread, CloseHandle);
             ASC_FREE(new_job, CloseHandle);
 
+            SetLastError(olderr);
             return -1;
         }
 
