@@ -26,13 +26,15 @@
 
 #define SIGNAL_LOCK_WAIT 5000 /* ms */
 
-static void lock_timeout(void)
+static
+void lock_timeout(void)
 {
     fprintf(stderr, "sighandler: wait timeout for mutex\n");
     _exit(EXIT_SIGHANDLER);
 }
 
-static void perror_exit(int errnum, const char *str)
+static
+void perror_exit(int errnum, const char *str)
 {
     char buf[512] = { 0 };
     asc_strerror(errnum, buf, sizeof(buf));
@@ -74,7 +76,8 @@ static pthread_t signal_thread;
 static pthread_mutex_t signal_lock;
 static bool quit_thread = true;
 
-static void *thread_loop(void *arg)
+static
+void *thread_loop(void *arg)
 {
     __uarg(arg);
 
@@ -133,7 +136,8 @@ static void *thread_loop(void *arg)
     return NULL;
 }
 
-static void signal_cleanup(void)
+static
+void signal_cleanup(void)
 {
     /* ask signal thread to quit */
     if (!pthread_equal(pthread_self(), signal_thread))
@@ -234,34 +238,33 @@ static HANDLE service_thread = NULL;
 static HANDLE signal_lock = NULL;
 static bool ignore_ctrl = true;
 
-static bool __mutex_timedlock(HANDLE mutex, unsigned ms)
+static
+bool __mutex_timedlock(HANDLE mutex, unsigned ms)
 {
     DWORD ret = WaitForSingleObject(mutex, ms);
     return (ret == WAIT_OBJECT_0);
 }
 
 #ifdef DEBUG
-static int reopen(int fd, const char *pathname)
+static
+void reopen(const char *path, FILE *origfile, int origfd)
 {
-    const int file = open(pathname, O_WRONLY | O_CREAT | O_APPEND
-                          , S_IRUSR | S_IWUSR);
-
-    if (file == -1)
-        return -1;
-
-    const int ret = dup2(file, fd);
-    close(file);
-
-    return ret;
+    FILE *const newfile = freopen(path, "ab", origfile);
+    if (newfile != NULL)
+    {
+        setvbuf(origfile, NULL, _IONBF, 0);
+        dup2(fileno(newfile), origfd);
+    }
 }
 
-static void redirect_stdio(void)
+static
+void redirect_stdio(void)
 {
-    static const char logfile[] = "\\stdio.log";
-
     char buf[MAX_PATH] = { 0 };
-    if (!GetModuleFileName(NULL, buf, sizeof(buf)))
-        perror_exit(GetLastError(), "GetModuleFileName()");
+    const DWORD ret = GetModuleFileName(NULL, buf, sizeof(buf));
+
+    if (ret == 0 || ret >= sizeof(buf))
+        buf[0] = '\0';
 
     char *const p = strrchr(buf, '\\');
     if (p != NULL)
@@ -269,23 +272,23 @@ static void redirect_stdio(void)
     else
         memcpy(buf, ".", sizeof("."));
 
+    static const char logfile[] = "\\stdio.log";
     strncat(buf, logfile, sizeof(buf) - strlen(buf) - 1);
 
-    if (reopen(STDOUT_FILENO, buf) == -1)
-        perror_exit(errno, "reopen()");
-
-    if (reopen(STDERR_FILENO, buf) == -1)
-        perror_exit(errno, "reopen()");
+    reopen(buf, stdout, STDOUT_FILENO);
+    reopen(buf, stderr, STDERR_FILENO);
 }
 #endif /* DEBUG */
 
-static inline void service_set_state(DWORD state)
+static inline
+void service_set_state(DWORD state)
 {
     service_status.dwCurrentState = state;
     SetServiceStatus(service_status_handle, &service_status);
 }
 
-static void WINAPI service_handler(DWORD control)
+static WINAPI
+void service_handler(DWORD control)
 {
     switch (control)
     {
@@ -322,7 +325,8 @@ static void WINAPI service_handler(DWORD control)
     }
 }
 
-static BOOL WINAPI console_handler(DWORD type)
+static WINAPI
+BOOL console_handler(DWORD type)
 {
     /* NOTE: handlers are run in separate threads */
     switch (type)
@@ -348,14 +352,11 @@ static BOOL WINAPI console_handler(DWORD type)
     }
 }
 
-static void WINAPI service_main(DWORD argc, LPTSTR *argv)
+static WINAPI
+void service_main(DWORD argc, LPTSTR *argv)
 {
     __uarg(argc);
     __uarg(argv);
-
-#ifdef DEBUG
-    redirect_stdio();
-#endif /* DEBUG */
 
     /* register control handler */
     ignore_ctrl = false;
@@ -372,7 +373,8 @@ static void WINAPI service_main(DWORD argc, LPTSTR *argv)
     SetEvent(service_event);
 }
 
-static unsigned int __stdcall service_thread_proc(void *arg)
+static __stdcall
+unsigned int service_thread_proc(void *arg)
 {
     __uarg(arg);
 
@@ -392,7 +394,8 @@ static unsigned int __stdcall service_thread_proc(void *arg)
     return ERROR_SUCCESS;
 }
 
-static bool service_initialize(void)
+static
+bool service_initialize(void)
 {
     /* initialize service state struct */
     memset(&service_status, 0, sizeof(service_status));
@@ -425,7 +428,7 @@ static bool service_initialize(void)
     }
     else if (ret == WAIT_OBJECT_0 + 1)
     {
-        /* service_thread exited; we're probably running from a console */
+        /* service_thread exited, which means SCM connection failed */
         DWORD exit_code = ERROR_INTERNAL_ERROR;
         if (GetExitCodeThread(service_thread, &exit_code))
         {
@@ -434,10 +437,9 @@ static bool service_initialize(void)
                 exit_code = ERROR_INTERNAL_ERROR;
         }
 
+        ASC_FREE(service_thread, CloseHandle);
         if (exit_code != ERROR_FAILED_SERVICE_CONTROLLER_CONNECT)
             perror_exit(exit_code, "StartServiceCtrlDispatcher()");
-
-        ASC_FREE(service_thread, CloseHandle);
     }
     else
     {
@@ -451,7 +453,8 @@ static bool service_initialize(void)
     return false;
 }
 
-static bool service_destroy(void)
+static
+bool service_destroy(void)
 {
     if (service_thread != NULL)
     {
@@ -481,7 +484,8 @@ static bool service_destroy(void)
     return false;
 }
 
-static void signal_cleanup(void)
+static
+void signal_cleanup(void)
 {
     /* dismiss any threads waiting for lock */
     mutex_lock(signal_lock);
@@ -506,9 +510,29 @@ void signal_setup(void)
     if (signal_lock == NULL)
         perror_exit(GetLastError(), "CreateMutex()");
 
-    /* install console control handler if not started as a service */
-    if (!service_initialize())
+    bool is_service = false;
+
+    if (GetStdHandle(STD_INPUT_HANDLE) == NULL
+        && GetStdHandle(STD_OUTPUT_HANDLE) == NULL
+        && GetStdHandle(STD_ERROR_HANDLE) == NULL)
     {
+        /* no console handles; probably running under SCM */
+        if (AllocConsole())
+        {
+            const HWND cons = GetConsoleWindow();
+            if (cons != NULL)
+                ShowWindow(cons, SW_HIDE);
+        }
+
+#ifdef DEBUG
+        redirect_stdio();
+#endif
+        is_service = service_initialize();
+    }
+
+    if (!is_service)
+    {
+        /* set up regular console control handler */
         ignore_ctrl = false;
         if (!SetConsoleCtrlHandler(console_handler, true))
             perror_exit(GetLastError(), "SetConsoleCtrlHandler()");
