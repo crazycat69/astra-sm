@@ -65,7 +65,8 @@ START_TEST(random_values)
     /* normal order */
     for (i = 0; i < ASC_ARRAY_SIZE(data); i++)
     {
-        data[i] = (void *)((intptr_t)rand());
+        const int r = rand();
+        data[i] = (void *)((intptr_t)r);
         asc_list_insert_tail(list, data[i]);
     }
 
@@ -81,7 +82,8 @@ START_TEST(random_values)
     /* reverse order */
     for (i = 0; i < ASC_ARRAY_SIZE(data); i++)
     {
-        data[i] = (void *)((intptr_t)rand());
+        const int r = rand();
+        data[i] = (void *)((intptr_t)r);
         asc_list_insert_head(list, data[i]);
     }
 
