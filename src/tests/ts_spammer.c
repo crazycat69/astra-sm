@@ -27,7 +27,8 @@ static const char *unit_list[] = { "B", "KiB", "MiB", "GiB", "TiB", "PiB", NULL 
 int main(void)
 {
 #ifdef _WIN32
-    const HANDLE sout = ASC_TO_HANDLE(_get_osfhandle(STDOUT_FILENO));
+    const intptr_t osfh = _get_osfhandle(STDOUT_FILENO);
+    const HANDLE sout = ASC_TO_HANDLE(osfh);
     setvbuf(stderr, NULL, _IONBF, 0);
 #endif /* _WIN32 */
 

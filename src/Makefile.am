@@ -25,10 +25,17 @@ AM_CFLAGS += \
     -DASC_DATADIR='"$(datadir)/astra"'
 endif
 
+# set up windows resource compiler
+if HAVE_WIN32
+.rc.$(OBJEXT):
+	$(AM_V_GEN)$(RC) \
+	    -I$(top_builddir)/icons -I$(builddir) \
+	    -i $< -J rc -o $@ -O coff
+endif
+
 # initialize variables so that '+=' works
 BUILT_SOURCES =
 CLEANFILES =
-
 bin_PROGRAMS =
 noinst_LTLIBRARIES =
 noinst_PROGRAMS =
@@ -105,6 +112,11 @@ libastra_la_SOURCES += \
     astra/luaapi/lib/timer.c \
     astra/luaapi/lib/utils.c \
     astra/luaapi/lib/list.h
+
+if HAVE_WIN32
+libastra_la_SOURCES += \
+    astra/luaapi/lib/winsvc.c
+endif
 
 # mpegts/
 libastra_la_SOURCES += \
@@ -266,9 +278,10 @@ endif
 
 # manifest list
 BUILT_SOURCES += stream/list.h
-GEN_MANIFEST_LIST = $(top_srcdir)/build-aux/gen-manifest-list
+CLEANFILES += stream/list.h
 
-stream/list.h: $(GEN_MANIFEST_LIST)
+GEN_MANIFEST_LIST = $(top_srcdir)/build-aux/gen-manifest-list
+stream/list.h: $(GEN_MANIFEST_LIST) config.h
 	$(AM_V_GEN)$(GEN_MANIFEST_LIST) $(srcdir) $(libstream_la_SOURCES) \
 	    >$@ || exit $$?
 
@@ -276,10 +289,16 @@ stream/list.h: $(GEN_MANIFEST_LIST)
 ## Main binary
 ##
 bin_PROGRAMS += main/astra
-main_astra_SOURCES = \
-    main/main.c \
-    main/sighandler.c \
-    main/sighandler.h
+main_astra_SOURCES = main/main.c main/sig.h
+
+if HAVE_WIN32
+main_astra_SOURCES += \
+    main/resources.rc \
+    main/sig-win32.c
+else
+main_astra_SOURCES += \
+    main/sig-posix.c
+endif
 
 if HAVE_INSCRIPT
 main_astra_SOURCES += \
@@ -326,6 +345,7 @@ tests_libastra_SOURCES += \
 tests_libastra_SOURCES += \
     tests/luaapi/luaapi.c \
     tests/luaapi/module.c \
+    tests/luaapi/state.c \
     tests/luaapi/stream.c
 
 tests_libastra_SOURCES += \
@@ -349,7 +369,9 @@ tests_libastra_SOURCES += \
     tests/utils/strhex.c
 
 tests_libastra_LDADD = libastra.la $(CHECK_LIBS)
-tests_libastra_DEPENDENCIES = libastra.la tests/spawn_slave$(EXEEXT)
+tests_libastra_DEPENDENCIES = libastra.la \
+    tests/spawn_slave$(EXEEXT) \
+    tests/ts_spammer$(EXEEXT)
 
 if !CROSS_COMPILING
 # TODO: fix output redirection on Windows
@@ -362,5 +384,3 @@ TESTS = tests/libastra
 CLEANFILES += libastra.log
 endif
 endif
-
-CLEANFILES += $(BUILT_SOURCES)

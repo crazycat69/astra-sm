@@ -11,7 +11,8 @@ m4_if(pkg_version, [UNKNOWN],
 # Autotools setup
 #
 AC_PREREQ([2.60])
-AC_INIT([Astra SM], [pkg_version])
+AC_INIT([Astra SM], [pkg_version], [bugs@3phase.pw], [astra-sm], [https://3phase.pw/])
+AC_DEFINE([PACKAGE_VENDOR], ["3phase.pw"], [Define package's vendor string])
 
 AC_CONFIG_SRCDIR([src/astra/astra.h])
 AC_CONFIG_HEADERS([src/config.h])
@@ -51,18 +52,21 @@ found_c99="no"
 
 case "${host_os}" in
     mingw*|cygwin*)
-        AX_CHECK_CFLAG([-std=gnu99], [], [found_c99=yes])
+        AX_CHECK_CFLAG([-std=gnu99], [STD_CFLAGS], [found_c99=yes])
         ;;
 
     *)
-        AX_CHECK_CFLAG([-std=c99], [], [found_c99=yes], [
-            AX_CHECK_CFLAG([-std=iso9899:1999], [], [found_c99=yes], [
-                AX_CHECK_CFLAG([-std=gnu99], [], [found_c99=yes]) ]) ])
+        AX_CHECK_CFLAG([-std=c99], [STD_CFLAGS], [found_c99=yes], [
+            AX_CHECK_CFLAG([-std=iso9899:1999], [STD_CFLAGS], [found_c99=yes], [
+                AX_CHECK_CFLAG([-std=gnu99], [STD_CFLAGS], [found_c99=yes]) ]) ])
         ;;
 esac
 
 AS_IF([test "x${found_c99}" != "xyes"], [
     AC_MSG_ERROR([$CC doesn't support C99]) ])
+
+CFLAGS="$CFLAGS $STD_CFLAGS"
+CFLAGS_FOR_BUILD="$CFLAGS_FOR_BUILD $STD_CFLAGS"
 
 #
 # Checks for typedefs, structures, and compiler characteristics
@@ -119,14 +123,33 @@ AC_SYS_LARGEFILE
 #
 # Platform-dependent options
 #
+AC_ARG_WITH([winver], AC_HELP_STRING([--with-winver=VER], [
+    minimum Windows version that the build will support
+    (2k or vista; defaults to vista)
+]))
+
 case "${host_os}" in
     mingw*)
         SYS=win32
 
-        AC_DEFINE([_WIN32_WINNT],
-            [0x0501], [Require at least Windows XP])
-        # TODO: add option to set winver
-        #    WSAPoll() needs at least 0x0600
+        # choose value for _WIN32_WINNT
+        AS_IF([test "x${with_winver}" = "x"], [
+            # default version
+            with_winver="vista"
+        ])
+
+        windows_version=""
+        AS_IF([test "x${with_winver}" = "xvista"],
+            [ windows_version="_WIN32_WINNT_VISTA" ])
+        AS_IF([test "x${with_winver}" = "x2k"],
+            [ windows_version="_WIN32_WINNT_WIN2K" ])
+
+        AS_IF([test "x${windows_version}" != "x"], [
+            AC_DEFINE_UNQUOTED([_WIN32_WINNT],
+                [$windows_version], [Define target Windows version])
+        ], [
+            AC_MSG_ERROR([invalid value for --with-winver])
+        ])
 
         # check winmm (needed for timer resolution APIs)
         AC_CHECK_LIB([winmm], [main],
@@ -141,6 +164,15 @@ case "${host_os}" in
         ], [[
             #include <winsock2.h>
         ]])
+
+        # look for resource tools
+        LT_LANG([Windows Resource])
+        AS_IF([test "x${RC}" = "x"],
+            [ AC_MSG_ERROR([couldn't find windres]) ])
+
+        AC_CHECK_TOOL([ICOTOOL], [icotool], [no])
+        AS_IF([test "x${ICOTOOL}" = "xno"],
+            [ AC_MSG_ERROR([couldn't find icotool]) ])
     ;;
 
     *)
@@ -790,6 +822,7 @@ AC_CONFIG_FILES([
     lua/Makefile
     scripts/Makefile
     tools/Makefile
+    icons/Makefile
     src/Makefile
     testcards/Makefile
 ])
@@ -802,7 +835,11 @@ echo "-----------------------"
 echo "Version:               ${PACKAGE_STRING}"
 echo
 echo "Compiler:              ${CC}"
-echo "Building for:          ${host_os}"
+echo -n "Building for:          ${host_os}"
+AS_IF([test "x${SYS}" = "xwin32"], [
+    echo -n ", ${with_winver} (${windows_version})"
+])
+echo
 echo "Event mechanism:       ${event_mechanism}"
 
 # large file support

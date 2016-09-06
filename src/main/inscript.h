@@ -19,9 +19,15 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _INSCRIPT_H_
-#define _INSCRIPT_H_ 1
+#ifndef _MAIN_INSCRIPT_H_
+#define _MAIN_INSCRIPT_H_ 1
+
+#ifndef _ASTRA_H_
+#   error "Please include <astra/astra.h> first"
+#endif /* !_ASTRA_H_ */
+
+#include <astra/luaapi/luaapi.h>
 
 void inscript_init(lua_State *L);
 
-#endif /* _INSCRIPT_H_ */
+#endif /* _MAIN_INSCRIPT_H_ */

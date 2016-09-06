@@ -28,17 +28,21 @@ enum fork_status can_fork;
 unsigned int get_timer_res(void)
 {
     uint64_t total = 0;
+    unsigned int samples = 0;
 
-    for (unsigned int i = 0; i < TIME_SAMPLE_COUNT; i++)
+    while (samples < TIME_SAMPLE_COUNT)
     {
         const uint64_t time_a = asc_utime();
         asc_usleep(2000);
 
         const uint64_t time_b = asc_utime();
-        ck_assert_msg(time_b > time_a, "Time did not increase");
+        if (time_b > time_a)
+        {
+            const uint64_t duration = time_b - time_a;
+            total += duration;
 
-        const uint64_t duration = time_b - time_a;
-        total += duration;
+            samples++;
+        }
     }
 
     const uint64_t mean = (total / TIME_SAMPLE_COUNT);

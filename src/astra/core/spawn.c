@@ -78,11 +78,6 @@ int create_redirected(const char *command
 
     const bool ret = CreateProcess(NULL, buf, NULL, NULL, true
                                    , (CREATE_NEW_PROCESS_GROUP
-                                      /*
-                                       * | CREATE_NO_WINDOW
-                                       *
-                                       * FIXME: sending ctrl+break doesn't work
-                                       */
                                       | CREATE_SUSPENDED
                                       | CREATE_BREAKAWAY_FROM_JOB)
                                    , NULL, NULL, &si, pi);
@@ -99,12 +94,15 @@ int create_redirected(const char *command
         if (new_job == NULL
             || !AssignProcessToJobObject(new_job, pi->hProcess))
         {
+            const DWORD olderr = GetLastError();
+
             TerminateProcess(pi->hProcess, 0);
 
             ASC_FREE(pi->hProcess, CloseHandle);
             ASC_FREE(pi->hThread, CloseHandle);
             ASC_FREE(new_job, CloseHandle);
 
+            SetLastError(olderr);
             return -1;
         }
 
@@ -114,9 +112,6 @@ int create_redirected(const char *command
     {
         *job = NULL;
     }
-
-    /* begin execution */
-    ResumeThread(pi->hThread);
 
     return 0;
 }
@@ -282,8 +277,7 @@ int asc_process_kill(const asc_process_t *proc, bool forced)
         if (!GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, proc->pi.dwProcessId))
             return -1;
 
-        if (!EnumWindows(enum_proc, (LPARAM)proc))
-            return -1;
+        EnumWindows(enum_proc, (LPARAM)proc);
     }
 
     return 0;
@@ -631,6 +625,11 @@ int asc_process_spawn(const char *command, asc_process_t *proc
     asc_pipe_close(child_sin);
     asc_pipe_close(child_sout);
     asc_pipe_close(child_serr);
+
+#ifdef _WIN32
+    /* begin execution */
+    ResumeThread(proc->pi.hThread);
+#endif /* _WIN32 */
 
     return 0;
 }

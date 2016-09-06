@@ -29,6 +29,7 @@
 #endif /* !_WIN32 */
 
 #define TEST_SLAVE "./tests/spawn_slave"
+#define TEST_SPAMMER "./tests/ts_spammer"
 
 static void fail_on_read(void *arg, const void *buf, size_t len)
 {
@@ -703,6 +704,61 @@ START_TEST(discard)
 }
 END_TEST
 
+/* run TS spammer for 1 second */
+static size_t spammer_rcvd = 0;
+static asc_child_t *spammer_child = NULL;
+static asc_timer_t *spammer_timer = NULL;
+
+static void spammer_on_timer(void *arg)
+{
+    __uarg(arg);
+
+    asc_child_close(spammer_child);
+    spammer_timer = NULL;
+}
+
+static void spammer_on_read(void *arg, const void *ts, size_t len)
+{
+    __uarg(arg);
+    __uarg(ts);
+
+    spammer_rcvd += len;
+}
+
+static void spammer_on_close(void *arg, int status)
+{
+    __uarg(arg);
+    __uarg(status);
+
+    asc_main_loop_shutdown();
+    spammer_child = NULL;
+}
+
+START_TEST(ts_spammer)
+{
+    asc_child_cfg_t cfg;
+
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.name = "ts_spammer";
+    cfg.command = TEST_SPAMMER;
+    cfg.sout.on_flush = spammer_on_read;
+    cfg.sout.mode = CHILD_IO_MPEGTS;
+    cfg.serr.mode = CHILD_IO_NONE;
+    cfg.on_close = spammer_on_close;
+
+    spammer_child = asc_child_init(&cfg);
+    ck_assert(spammer_child != NULL);
+
+    spammer_timer = asc_timer_one_shot(1000, spammer_on_timer, NULL);
+    ck_assert(asc_main_loop_run() == false);
+
+    asc_log_info("received %zu packets from spammer", spammer_rcvd);
+    ck_assert(spammer_rcvd > 0);
+    ck_assert(spammer_timer == NULL);
+    ck_assert(spammer_child == NULL);
+}
+END_TEST
+
 Suite *core_child(void)
 {
     Suite *const s = suite_create("core/child");
@@ -725,6 +781,7 @@ Suite *core_child(void)
     tcase_add_test(tc, ts_push_pull);
     tcase_add_test(tc, raw_push_pull);
     tcase_add_test(tc, discard);
+    tcase_add_test(tc, ts_spammer);
 
     suite_add_tcase(s, tc);
 

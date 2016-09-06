@@ -50,6 +50,14 @@ if dvb_input ~= nil then
     })
 end
 
+if winsvc ~= nil then
+    table.insert(list, {
+        pkg = "apps/service",
+        arg = "--service",
+        txt = "install or remove Windows service",
+    })
+end
+
 table.insert(list, {
     pkg = nil, -- hardcoded in main.c
     arg = "--dumb",
