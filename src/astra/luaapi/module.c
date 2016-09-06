@@ -197,7 +197,7 @@ bool module_option_integer(lua_State *L, const char *name, int *integer)
 
     if (type == LUA_TNUMBER)
     {
-        *integer = lua_tointeger(L, -1);
+        *integer = lua_tonumber(L, -1);
         result = true;
     }
     else if (type == LUA_TSTRING)
