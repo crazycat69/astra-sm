@@ -1,7 +1,3 @@
-if HAVE_WIN32
-noinst_DATA = main.ico
-CLEANFILES = $(noinst_DATA)
-
 main_ico_IMAGES = \
     main-16px-4bpp.png \
     main-32px-4bpp.png \
@@ -12,6 +8,10 @@ main_ico_IMAGES = \
 
 EXTRA_DIST = \
     $(main_ico_IMAGES)
+
+if HAVE_WIN32
+noinst_DATA = main.ico
+CLEANFILES = $(noinst_DATA)
 
 main.ico: $(main_ico_IMAGES)
 	$(AM_V_GEN)arglist=""; \
