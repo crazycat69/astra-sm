@@ -158,8 +158,10 @@ static void module_init(lua_State *L, module_data_t *mod)
 
     mod->sock = asc_socket_open_udp4(mod);
     asc_socket_set_reuseaddr(mod->sock, 1);
+
+    module_option_string(L, "localaddr", &mod->config.localaddr, NULL);
 #if defined(_WIN32) || defined(__CYGWIN__)
-    if(!asc_socket_bind(mod->sock, NULL, mod->config.port))
+    if(!asc_socket_bind(mod->sock, mod->config.localaddr, mod->config.port))
 #else
     if(!asc_socket_bind(mod->sock, mod->config.addr, mod->config.port))
 #endif
@@ -174,9 +176,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     asc_socket_set_on_read(mod->sock, on_read);
     asc_socket_set_on_close(mod->sock, on_close);
 
-    module_option_string(L, "localaddr", &mod->config.localaddr, NULL);
     asc_socket_multicast_join(mod->sock, mod->config.addr, mod->config.localaddr);
-
     if(module_option_integer(L, "renew", &value))
         mod->timer_renew = asc_timer_init(value * 1000, timer_renew_callback, mod);
 }
