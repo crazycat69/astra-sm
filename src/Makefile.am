@@ -368,7 +368,9 @@ tests_libastra_SOURCES += \
     tests/utils/strhex.c
 
 tests_libastra_LDADD = libastra.la $(CHECK_LIBS)
-tests_libastra_DEPENDENCIES = libastra.la tests/spawn_slave$(EXEEXT)
+tests_libastra_DEPENDENCIES = libastra.la \
+    tests/spawn_slave$(EXEEXT) \
+    tests/ts_spammer$(EXEEXT)
 
 if !CROSS_COMPILING
 # TODO: fix output redirection on Windows
