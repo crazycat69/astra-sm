@@ -345,6 +345,7 @@ tests_libastra_SOURCES += \
 tests_libastra_SOURCES += \
     tests/luaapi/luaapi.c \
     tests/luaapi/module.c \
+    tests/luaapi/state.c \
     tests/luaapi/stream.c
 
 tests_libastra_SOURCES += \
