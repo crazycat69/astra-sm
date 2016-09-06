@@ -11,7 +11,8 @@ m4_if(pkg_version, [UNKNOWN],
 # Autotools setup
 #
 AC_PREREQ([2.60])
-AC_INIT([Astra SM], [pkg_version])
+AC_INIT([Astra SM], [pkg_version], [bugs@3phase.pw], [astra-sm], [https://3phase.pw/])
+AC_DEFINE([PACKAGE_VENDOR], ["3phase.pw"], [Define package's vendor string])
 
 AC_CONFIG_SRCDIR([src/astra/astra.h])
 AC_CONFIG_HEADERS([src/config.h])
@@ -163,6 +164,15 @@ case "${host_os}" in
         ], [[
             #include <winsock2.h>
         ]])
+
+        # look for resource tools
+        LT_LANG([Windows Resource])
+        AS_IF([test "x${RC}" = "x"],
+            [ AC_MSG_ERROR([couldn't find windres]) ])
+
+        AC_CHECK_TOOL([ICOTOOL], [icotool], [no])
+        AS_IF([test "x${ICOTOOL}" = "xno"],
+            [ AC_MSG_ERROR([couldn't find icotool]) ])
     ;;
 
     *)
@@ -812,6 +822,7 @@ AC_CONFIG_FILES([
     lua/Makefile
     scripts/Makefile
     tools/Makefile
+    icons/Makefile
     src/Makefile
     testcards/Makefile
 ])

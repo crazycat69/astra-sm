@@ -25,6 +25,14 @@ AM_CFLAGS += \
     -DASC_DATADIR='"$(datadir)/astra"'
 endif
 
+# set up windows resource compiler
+if HAVE_WIN32
+.rc.$(OBJEXT):
+	$(AM_V_GEN)$(RC) \
+	    -I$(top_builddir)/icons -I$(builddir) \
+	    -i $< -J rc -o $@ -O coff
+endif
+
 # initialize variables so that '+=' works
 BUILT_SOURCES =
 CLEANFILES =
@@ -284,9 +292,12 @@ bin_PROGRAMS += main/astra
 main_astra_SOURCES = main/main.c main/sig.h
 
 if HAVE_WIN32
-main_astra_SOURCES += main/sig-win32.c
+main_astra_SOURCES += \
+    main/resources.rc \
+    main/sig-win32.c
 else
-main_astra_SOURCES += main/sig-posix.c
+main_astra_SOURCES += \
+    main/sig-posix.c
 endif
 
 if HAVE_INSCRIPT

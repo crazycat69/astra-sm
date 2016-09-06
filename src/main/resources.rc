@@ -1,0 +1,32 @@
+#include "config.h"
+#include <winver.h>
+
+1 VERSIONINFO
+FILEVERSION 1,0,0,0
+PRODUCTVERSION 1,0,0,0
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+BEGIN
+	BLOCK "StringFileInfo"
+	BEGIN
+		BLOCK "040904e4"
+		BEGIN
+			VALUE "Comments", PACKAGE_URL "\0"
+			VALUE "CompanyName", PACKAGE_VENDOR "\0"
+			VALUE "FileDescription", PACKAGE_NAME "\0"
+			VALUE "FileVersion", PACKAGE_VERSION "\0"
+			VALUE "InternalName", "astra" "\0"
+			VALUE "LegalCopyright", "Licensed under GPL v3 or later" "\0"
+			VALUE "OriginalFilename", "astra.exe" "\0"
+			VALUE "ProductName", PACKAGE_NAME "\0"
+			VALUE "ProductVersion", PACKAGE_VERSION "\0"
+		END
+	END
+
+	BLOCK "VarFileInfo"
+	BEGIN
+		VALUE "Translation", 0x409, 0x4e4
+	END
+END
+
+2 ICON "main.ico"
