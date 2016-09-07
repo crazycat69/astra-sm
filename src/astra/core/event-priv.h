@@ -19,34 +19,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <astra/astra.h>
-#include <astra/core/list.h>
+#ifndef _ASC_EVENT_PRIV_H_
+#define _ASC_EVENT_PRIV_H_ 1
 
-#include "event-priv.h"
+#ifndef _ASTRA_H_
+#   error "Please include <astra/astra.h> first"
+#endif /* !_ASTRA_H_ */
 
-void asc_event_set_on_read(asc_event_t *event, event_callback_t on_read)
+#include <astra/core/event.h>
+
+struct asc_event_t
 {
-    if (event->on_read == on_read)
-        return;
+    int fd;
+    event_callback_t on_read;
+    event_callback_t on_write;
+    event_callback_t on_error;
+    void *arg;
+};
 
-    event->on_read = on_read;
-    asc_event_subscribe(event);
-}
+void asc_event_subscribe(asc_event_t *event);
 
-void asc_event_set_on_write(asc_event_t *event, event_callback_t on_write)
-{
-    if (event->on_write == on_write)
-        return;
-
-    event->on_write = on_write;
-    asc_event_subscribe(event);
-}
-
-void asc_event_set_on_error(asc_event_t *event, event_callback_t on_error)
-{
-    if (event->on_error == on_error)
-        return;
-
-    event->on_error = on_error;
-    asc_event_subscribe(event);
-}
+#endif /* _ASC_EVENT_PRIV_H_ */
