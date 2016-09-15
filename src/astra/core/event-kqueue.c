@@ -19,181 +19,174 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <astra/astra.h>
-#include <astra/core/list.h>
-
 #include "event-priv.h"
-
-#ifndef EV_LIST_SIZE
-#   define EV_LIST_SIZE 1024
-#endif
 
 #include <sys/event.h>
 
 #define MSG(_msg) "[core/event-kqueue] " _msg
 
-static inline
-int __event_init(void)
-{
-    int fd = -1;
-
-#ifdef HAVE_KQUEUE1
-    /* kqueue1() is only present on NetBSD as of this writing */
-    fd = kqueue1(O_CLOEXEC);
-#endif
-    if (fd != -1)
-        return fd;
-
-    fd = kqueue();
-    if (fd == -1)
-        return fd;
-
-    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
-    {
-        close(fd);
-        fd = -1;
-    }
-
-    return fd;
-}
-
 typedef struct
 {
-    asc_list_t *event_list;
+    asc_list_t *list;
     bool is_changed;
 
     int fd;
-    struct kevent ed_list[EV_LIST_SIZE];
-} event_observer_t;
+    struct kevent *out;
+    size_t out_size;
+} asc_event_mgr_t;
 
-static event_observer_t event_observer;
+static asc_event_mgr_t *event_mgr = NULL;
 
 void asc_event_core_init(void)
 {
-    memset(&event_observer, 0, sizeof(event_observer));
-    event_observer.event_list = asc_list_init();
+    event_mgr = ASC_ALLOC(1, asc_event_mgr_t);
+    event_mgr->list = asc_list_init();
 
-    event_observer.fd = __event_init();
-    asc_assert(event_observer.fd != -1
-               , MSG("failed to init event observer [%s]")
-               , strerror(errno));
+    event_mgr->fd = kqueue();
+    asc_assert(event_mgr->fd != -1
+               , MSG("kqueue(): %s"), strerror(errno));
 }
 
 void asc_event_core_destroy(void)
 {
-    if (!event_observer.event_list || !event_observer.fd)
+    if (event_mgr == NULL)
         return;
 
-    close(event_observer.fd);
-    event_observer.fd = 0;
-
-    asc_event_t *prev_event = NULL;
-    asc_list_till_empty(event_observer.event_list)
+    asc_event_t *event, *prev = NULL;
+    asc_list_till_empty(event_mgr->list)
     {
-        asc_event_t *event = (asc_event_t *)asc_list_data(event_observer.event_list);
-        asc_assert(event != prev_event
-                   , MSG("loop on asc_event_core_destroy() event:%p")
-                   , (void *)event);
+        event = (asc_event_t *)asc_list_data(event_mgr->list);
+        asc_assert(event != prev, MSG("on_error didn't close event"));
 
-        if (event->on_error)
+        if (event->on_error != NULL)
             event->on_error(event->arg);
+        else
+            asc_event_close(event);
 
-        prev_event = event;
+        prev = event;
     }
 
-    ASC_FREE(event_observer.event_list, asc_list_destroy);
+    close(event_mgr->fd);
+
+    ASC_FREE(event_mgr->list, asc_list_destroy);
+    ASC_FREE(event_mgr->out, free);
+    ASC_FREE(event_mgr, free);
 }
 
-void asc_event_core_loop(unsigned int timeout)
+bool asc_event_core_loop(unsigned int timeout)
 {
-    if (asc_list_size(event_observer.event_list) == 0)
+    if (asc_list_size(event_mgr->list) == 0)
     {
         asc_usleep(timeout * 1000ULL); /* dry run */
-        return;
+        return true;
     }
 
     const struct timespec ts = {
         (timeout / 1000), /* tv_sec */
         (timeout % 1000) * 1000000UL, /* tv_nsec */
     };
-    const int ret = kevent(event_observer.fd, NULL, 0
-                           , event_observer.ed_list, EV_LIST_SIZE, &ts);
 
-    if (ret == -1)
+    const int ret = kevent(event_mgr->fd, NULL, 0, event_mgr->out
+                           , event_mgr->out_size, &ts);
+
+    if (ret == -1 && errno != EINTR)
     {
-        asc_assert(errno == EINTR, MSG("event observer critical error [%s]"), strerror(errno));
-        return;
+        asc_log_error(MSG("kevent(): %s"), strerror(errno));
+        return false;
     }
 
-    event_observer.is_changed = false;
-    for (int i = 0; i < ret; ++i)
+    event_mgr->is_changed = false;
+    for (int i = 0; i < ret; i++)
     {
-        struct kevent *ed = &event_observer.ed_list[i];
+        const struct kevent *ed = &event_mgr->out[i];
+        const asc_event_t *event = (asc_event_t *)ed->udata;
 
-        asc_event_t *event = (asc_event_t *)ed->udata;
-        const bool is_rd = (ed->data > 0) && (ed->filter == EVFILT_READ);
-        const bool is_wr = (ed->data > 0) && (ed->filter == EVFILT_WRITE);
-        const bool is_er = (ed->flags & ~EV_ADD) && (!is_rd || is_wr);
+        const bool is_rd = (ed->filter == EVFILT_READ)
+                           && (ed->data > 0 || ed->flags & EV_EOF);
+        const bool is_wr = (ed->filter == EVFILT_WRITE)
+                           && (ed->data > 0);
+        const bool is_er = (ed->flags & EV_ERROR) && !is_rd;
 
         if (event->on_read && is_rd)
         {
             event->on_read(event->arg);
-            if (event_observer.is_changed)
+            if (event_mgr->is_changed)
                 break;
         }
         if (event->on_error && is_er)
         {
             event->on_error(event->arg);
-            if (event_observer.is_changed)
+            if (event_mgr->is_changed)
                 break;
         }
         if (event->on_write && is_wr)
         {
             event->on_write(event->arg);
-            if (event_observer.is_changed)
+            if (event_mgr->is_changed)
                 break;
         }
     }
+
+    return true;
 }
 
 void asc_event_subscribe(asc_event_t *event)
 {
-    int ret = 0;
+    int ret;
     struct kevent ed;
 
-    do
+    if (event->on_read)
     {
-        if (event->on_read)
-        {
-            EV_SET(&ed, event->fd, EVFILT_READ, EV_ADD | EV_EOF | EV_ERROR, 0, 0, event);
-            ret = kevent(event_observer.fd, &ed, 1, NULL, 0, NULL);
-            if (ret == -1)
-                break;
-        }
-        else
-        {
-            EV_SET(&ed, event->fd, EVFILT_READ, EV_DELETE, 0, 0, event);
-            kevent(event_observer.fd, &ed, 1, NULL, 0, NULL);
-        }
+        EV_SET(&ed, event->fd, EVFILT_READ, EV_ADD | EV_EOF | EV_ERROR, 0, 0
+               , event);
 
-        if (event->on_write)
-        {
-            EV_SET(&ed, event->fd, EVFILT_WRITE, EV_ADD | EV_EOF | EV_ERROR, 0, 0, event);
-            ret = kevent(event_observer.fd, &ed, 1, NULL, 0, NULL);
-            if (ret == -1)
-                break;
-        }
-        else
-        {
-            EV_SET(&ed, event->fd, EVFILT_WRITE, EV_DELETE, 0, 0, event);
-            kevent(event_observer.fd, &ed, 1, NULL, 0, NULL);
-        }
+        ret = kevent(event_mgr->fd, &ed, 1, NULL, 0, NULL);
+        asc_assert(ret == 0
+                   , MSG("kevent(): couldn't add read handler to fd %d: %s")
+                   , event->fd, strerror(errno));
+    }
+    else
+    {
+        EV_SET(&ed, event->fd, EVFILT_READ, EV_DELETE, 0, 0, event);
 
-        return;
-    } while (0);
+        ret = kevent(event_mgr->fd, &ed, 1, NULL, 0, NULL);
+        asc_assert(ret == 0 || errno == ENOENT
+                   , MSG("kevent(): couldn't remove read handler from fd %d: %s")
+                   , event->fd, strerror(errno));
+    }
 
-    asc_assert(ret != -1, MSG("failed to set fd=%d [%s]")
-               , event->fd, strerror(errno));
+    if (event->on_write)
+    {
+        EV_SET(&ed, event->fd, EVFILT_WRITE, EV_ADD | EV_EOF | EV_ERROR, 0, 0
+               , event);
+
+        ret = kevent(event_mgr->fd, &ed, 1, NULL, 0, NULL);
+        asc_assert(ret == 0
+                   , MSG("kevent(): couldn't add write handler to fd %d: %s")
+                   , event->fd, strerror(errno));
+    }
+    else
+    {
+        EV_SET(&ed, event->fd, EVFILT_WRITE, EV_DELETE, 0, 0, event);
+
+        ret = kevent(event_mgr->fd, &ed, 1, NULL, 0, NULL);
+        asc_assert(ret == 0 || errno == ENOENT
+                   , MSG("kevent(): couldn't remove write handler from fd %d: %s")
+                   , event->fd, strerror(errno));
+    }
+}
+
+static
+void resize_event_list(void)
+{
+    const size_t ev_cnt = asc_list_size(event_mgr->list);
+    const size_t new_size = ev_cnt * sizeof(*event_mgr->out);
+
+    event_mgr->out = (struct kevent *)realloc(event_mgr->out, new_size);
+    asc_assert(new_size == 0 || event_mgr->out != NULL
+               , MSG("realloc() failed"));
+
+    event_mgr->out_size = ev_cnt;
 }
 
 asc_event_t *asc_event_init(int fd, void *arg)
@@ -203,32 +196,22 @@ asc_event_t *asc_event_init(int fd, void *arg)
     event->fd = fd;
     event->arg = arg;
 
-    asc_list_insert_tail(event_observer.event_list, event);
-    event_observer.is_changed = true;
+    asc_list_insert_tail(event_mgr->list, event);
+    event_mgr->is_changed = true;
+    resize_event_list();
 
     return event;
 }
 
 void asc_event_close(asc_event_t *event)
 {
-    if (event == NULL)
-        return;
+    event->on_read = NULL;
+    event->on_write = NULL;
+    asc_event_subscribe(event);
 
-    struct kevent ed;
-
-    if (event->on_read != NULL)
-    {
-        EV_SET(&ed, event->fd, EVFILT_READ, EV_DELETE, 0, 0, event);
-        kevent(event_observer.fd, &ed, 1, NULL, 0, NULL);
-    }
-    if (event->on_write != NULL)
-    {
-        EV_SET(&ed, event->fd, EVFILT_WRITE, EV_DELETE, 0, 0, event);
-        kevent(event_observer.fd, &ed, 1, NULL, 0, NULL);
-    }
-
-    event_observer.is_changed = true;
-    asc_list_remove_item(event_observer.event_list, event);
+    asc_list_remove_item(event_mgr->list, event);
+    event_mgr->is_changed = true;
+    resize_event_list();
 
     free(event);
 }

@@ -19,162 +19,145 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <astra/astra.h>
-#include <astra/core/list.h>
-
 #include "event-priv.h"
-
-#ifndef EV_LIST_SIZE
-#   define EV_LIST_SIZE 1024
-#endif
 
 #include <sys/epoll.h>
 
 #ifndef EPOLLRDHUP
-#   define EPOLLRDHUP 0
+#   define EPOLLRDHUP 0 /* didn't exist before Linux 2.6.17 */
 #endif
-#define EPOLLCLOSE (EPOLLERR | EPOLLHUP | EPOLLRDHUP)
+#define EPOLLREAD (EPOLLIN | EPOLLRDHUP | EPOLLHUP)
 
-#define MSG(_msg) "[core/event epoll] " _msg
-
-static inline
-int __event_init(void)
-{
-    int fd = -1;
-
-#ifdef HAVE_EPOLL_CREATE1
-    /* epoll_create1() first appeared in Linux kernel 2.6.27 */
-    fd = epoll_create1(O_CLOEXEC);
-#endif
-    if (fd != -1)
-        return fd;
-
-    fd = epoll_create(EV_LIST_SIZE);
-    if (fd == -1)
-        return fd;
-
-    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
-    {
-        close(fd);
-        fd = -1;
-    }
-
-    return fd;
-}
+#define MSG(_msg) "[core/event-epoll] " _msg
 
 typedef struct
 {
-    asc_list_t *event_list;
+    asc_list_t *list;
     bool is_changed;
 
     int fd;
-    struct epoll_event ed_list[EV_LIST_SIZE];
-} event_observer_t;
+    struct epoll_event *out;
+    size_t out_size;
+} asc_event_mgr_t;
 
-static event_observer_t event_observer;
+static asc_event_mgr_t *event_mgr = NULL;
 
 void asc_event_core_init(void)
 {
-    memset(&event_observer, 0, sizeof(event_observer));
-    event_observer.event_list = asc_list_init();
+    event_mgr = ASC_ALLOC(1, asc_event_mgr_t);
+    event_mgr->list = asc_list_init();
 
-    event_observer.fd = __event_init();
-    asc_assert(event_observer.fd != -1
-               , MSG("failed to init event observer [%s]")
-               , strerror(errno));
+    event_mgr->fd = epoll_create(256);
+    asc_assert(event_mgr->fd != -1
+               , MSG("epoll_create(): %s"), strerror(errno));
 }
 
 void asc_event_core_destroy(void)
 {
-    if (!event_observer.event_list || !event_observer.fd)
+    if (event_mgr == NULL)
         return;
 
-    close(event_observer.fd);
-    event_observer.fd = 0;
-
-    asc_event_t *prev_event = NULL;
-    asc_list_till_empty(event_observer.event_list)
+    asc_event_t *event, *prev = NULL;
+    asc_list_till_empty(event_mgr->list)
     {
-        asc_event_t *const event =
-            (asc_event_t *)asc_list_data(event_observer.event_list);
+        event = (asc_event_t *)asc_list_data(event_mgr->list);
+        asc_assert(event != prev, MSG("on_error didn't close event"));
 
-        asc_assert(event != prev_event
-                   , MSG("loop on asc_event_core_destroy() event:%p")
-                   , (void *)event);
-
-        if (event->on_error)
+        if (event->on_error != NULL)
             event->on_error(event->arg);
+        else
+            asc_event_close(event);
 
-        prev_event = event;
+        prev = event;
     }
 
-    ASC_FREE(event_observer.event_list, asc_list_destroy);
+    close(event_mgr->fd);
+
+    ASC_FREE(event_mgr->list, asc_list_destroy);
+    ASC_FREE(event_mgr->out, free);
+    ASC_FREE(event_mgr, free);
 }
 
-void asc_event_core_loop(unsigned int timeout)
+bool asc_event_core_loop(unsigned int timeout)
 {
-    if (asc_list_size(event_observer.event_list) == 0)
+    if (asc_list_size(event_mgr->list) == 0)
     {
         asc_usleep(timeout * 1000ULL); /* dry run */
-        return;
+        return true;
     }
 
-    const int ret = epoll_wait(event_observer.fd, event_observer.ed_list
-                               , EV_LIST_SIZE, timeout);
-    if (ret == -1)
-    {
-        asc_assert(errno == EINTR, MSG("event observer critical error [%s]")
-                   , strerror(errno));
+    const int ret = epoll_wait(event_mgr->fd, event_mgr->out
+                               , event_mgr->out_size, timeout);
 
-        return;
+    if (ret == -1 && errno != EINTR)
+    {
+        asc_log_error(MSG("epoll_wait(): %s"), strerror(errno));
+        return false;
     }
 
-    event_observer.is_changed = false;
-    for (int i = 0; i < ret; ++i)
+    event_mgr->is_changed = false;
+    for (int i = 0; i < ret; i++)
     {
-        struct epoll_event *ed = &event_observer.ed_list[i];
+        const struct epoll_event *ed = &event_mgr->out[i];
+        const asc_event_t *event = (asc_event_t *)ed->data.ptr;
 
-        asc_event_t *event = (asc_event_t *)ed->data.ptr;
-        const bool is_rd = ed->events & EPOLLIN;
+        const bool is_rd = ed->events & EPOLLREAD;
         const bool is_wr = ed->events & EPOLLOUT;
-        const bool is_er = ed->events & EPOLLCLOSE;
+        const bool is_er = ed->events & EPOLLERR;
 
         if (event->on_read && is_rd)
         {
             event->on_read(event->arg);
-            if (event_observer.is_changed)
+            if (event_mgr->is_changed)
                 break;
         }
         if (event->on_error && is_er)
         {
             event->on_error(event->arg);
-            if (event_observer.is_changed)
+            if (event_mgr->is_changed)
                 break;
         }
         if (event->on_write && is_wr)
         {
             event->on_write(event->arg);
-            if (event_observer.is_changed)
+            if (event_mgr->is_changed)
                 break;
         }
     }
+
+    return true;
 }
 
 void asc_event_subscribe(asc_event_t *event)
 {
-    int ret = 0;
-    struct epoll_event ed;
+    struct epoll_event ed = {
+        .events = EPOLLERR,
+        .data = {
+            .ptr = event,
+        },
+    };
 
-    ed.data.ptr = event;
-    ed.events = EPOLLCLOSE;
     if (event->on_read)
-        ed.events |= EPOLLIN;
+        ed.events |= EPOLLREAD;
     if (event->on_write)
         ed.events |= EPOLLOUT;
-    ret = epoll_ctl(event_observer.fd, EPOLL_CTL_MOD, event->fd, &ed);
 
-    asc_assert(ret != -1, MSG("failed to set fd=%d [%s]")
+    const int ret = epoll_ctl(event_mgr->fd, EPOLL_CTL_MOD, event->fd, &ed);
+    asc_assert(ret == 0, MSG("epoll_ctl(): couldn't change fd %d: %s")
                , event->fd, strerror(errno));
+}
+
+static
+void resize_event_list(void)
+{
+    const size_t ev_cnt = asc_list_size(event_mgr->list);
+    const size_t new_size = ev_cnt * sizeof(*event_mgr->out);
+
+    event_mgr->out = (struct epoll_event *)realloc(event_mgr->out, new_size);
+    asc_assert(new_size == 0 || event_mgr->out != NULL
+               , MSG("realloc() failed"));
+
+    event_mgr->out_size = ev_cnt;
 }
 
 asc_event_t *asc_event_init(int fd, void *arg)
@@ -184,31 +167,38 @@ asc_event_t *asc_event_init(int fd, void *arg)
     event->fd = fd;
     event->arg = arg;
 
-    struct epoll_event ed;
-    ed.data.ptr = event;
-    ed.events = EPOLLCLOSE;
+    struct epoll_event ed = {
+        .events = EPOLLERR,
+        .data = {
+            .ptr = event,
+        },
+    };
 
-    const int ret = epoll_ctl(event_observer.fd
-                              , EPOLL_CTL_ADD, event->fd, &ed);
-
-    asc_assert(ret != -1, MSG("failed to attach fd=%d [%s]")
+    const int ret = epoll_ctl(event_mgr->fd, EPOLL_CTL_ADD, event->fd, &ed);
+    asc_assert(ret == 0, MSG("epoll_ctl(): couldn't register fd %d: %s")
                , event->fd, strerror(errno));
 
-    asc_list_insert_tail(event_observer.event_list, event);
-    event_observer.is_changed = true;
+    asc_list_insert_tail(event_mgr->list, event);
+    event_mgr->is_changed = true;
+    resize_event_list();
 
     return event;
 }
 
 void asc_event_close(asc_event_t *event)
 {
-    if (!event)
-        return;
+    /* NOTE: pre-2.6.9 kernels require non-NULL pointer to event struct */
+    struct epoll_event ed = {
+        .events = 0,
+    };
 
-    epoll_ctl(event_observer.fd, EPOLL_CTL_DEL, event->fd, NULL);
+    const int ret = epoll_ctl(event_mgr->fd, EPOLL_CTL_DEL, event->fd, &ed);
+    asc_assert(ret == 0, MSG("epoll_ctl(): couldn't remove fd %d: %s")
+               , event->fd, strerror(errno));
 
-    event_observer.is_changed = true;
-    asc_list_remove_item(event_observer.event_list, event);
+    asc_list_remove_item(event_mgr->list, event);
+    event_mgr->is_changed = true;
+    resize_event_list();
 
     free(event);
 }

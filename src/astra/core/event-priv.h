@@ -22,10 +22,8 @@
 #ifndef _ASC_EVENT_PRIV_H_
 #define _ASC_EVENT_PRIV_H_ 1
 
-#ifndef _ASTRA_H_
-#   error "Please include <astra/astra.h> first"
-#endif /* !_ASTRA_H_ */
-
+#include <astra/astra.h>
+#include <astra/core/list.h>
 #include <astra/core/event.h>
 
 struct asc_event_t

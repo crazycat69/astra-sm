@@ -19,14 +19,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <astra/astra.h>
-#include <astra/core/list.h>
-
 #include "event-priv.h"
-
-#ifndef EV_LIST_SIZE
-#   define EV_LIST_SIZE 1024
-#endif
 
 #ifdef HAVE_POLL_H
 #   include <poll.h>
@@ -36,152 +29,187 @@
 #   define poll(_a, _b, _c) WSAPoll(_a, _b, _c)
 #endif
 
+#ifndef POLLRDHUP
+#   define POLLRDHUP 0 /* only exists on Linux 2.6.17 and newer */
+#endif
+
 #define MSG(_msg) "[core/event-poll] " _msg
 
 typedef struct
 {
-    asc_event_t *event_list[EV_LIST_SIZE];
+    asc_event_t **ev;
+    struct pollfd *fd;
+    size_t ev_cnt;
     bool is_changed;
-    int fd_count;
+} asc_event_mgr_t;
 
-    struct pollfd fd_list[EV_LIST_SIZE];
-} event_observer_t;
-
-static event_observer_t event_observer;
+static asc_event_mgr_t *event_mgr = NULL;
 
 void asc_event_core_init(void)
 {
-    memset(&event_observer, 0, sizeof(event_observer));
+    event_mgr = ASC_ALLOC(1, asc_event_mgr_t);
 }
 
 void asc_event_core_destroy(void)
 {
-    while (event_observer.fd_count > 0)
+    if (event_mgr == NULL)
+        return;
+
+    asc_event_t *event, *prev = NULL;
+    while (event_mgr->ev_cnt > 0)
     {
-        const int next_fd_count = event_observer.fd_count - 1;
+        event = event_mgr->ev[0];
+        asc_assert(event != prev, MSG("on_error didn't close event"));
 
-        asc_event_t *event = event_observer.event_list[next_fd_count];
-        if (event->on_error)
+        if (event->on_error != NULL)
             event->on_error(event->arg);
+        else
+            asc_event_close(event);
 
-        asc_assert(event_observer.fd_count == next_fd_count
-                   , MSG("loop on asc_event_core_destroy() event:%p")
-                   , (void *)event);
+        prev = event;
     }
+
+    ASC_FREE(event_mgr->ev, free);
+    ASC_FREE(event_mgr->fd, free);
+    ASC_FREE(event_mgr, free);
 }
 
-void asc_event_core_loop(unsigned int timeout)
+bool asc_event_core_loop(unsigned int timeout)
 {
-    if (event_observer.fd_count == 0)
+    if (event_mgr->ev_cnt == 0)
     {
         asc_usleep(timeout * 1000ULL); /* dry run */
-        return;
+        return true;
     }
 
-    int ret = poll(event_observer.fd_list, event_observer.fd_count, timeout);
-    if (ret == -1)
-    {
+    int ret = poll(event_mgr->fd, event_mgr->ev_cnt, timeout);
 #ifndef _WIN32
-        if (errno == EINTR)
-            return;
-#endif /* !_WIN32 */
-
+    if (ret == -1 && errno != EINTR)
+#else
+    if (ret == -1)
+#endif
+    {
         asc_log_error(MSG("poll() failed: %s"), asc_error_msg());
-        asc_lib_abort();
+        return false;
     }
 
-    event_observer.is_changed = false;
-    for (int i = 0; i < event_observer.fd_count && ret > 0; ++i)
+    event_mgr->is_changed = false;
+    for (size_t i = 0; i < event_mgr->ev_cnt && ret > 0; i++)
     {
-        const short revents = event_observer.fd_list[i].revents;
-        if (revents == 0)
+        const short revents = event_mgr->fd[i].revents;
+        if (revents <= 0)
             continue;
 
-        --ret;
-        asc_event_t *const event = event_observer.event_list[i];
-        if (event->on_read && ((revents & POLLIN)
-                               || (revents & (POLLERR | POLLHUP)) == POLLHUP))
+        ret--;
+        const asc_event_t *const event = event_mgr->ev[i];
+
+        const bool is_rd = revents & (POLLIN | POLLRDHUP | POLLHUP);
+        const bool is_wr = revents & POLLOUT;
+        const bool is_er = revents & (POLLERR | POLLNVAL);
+
+        if (event->on_read && is_rd)
         {
             event->on_read(event->arg);
-            if (event_observer.is_changed)
+            if (event_mgr->is_changed)
                 break;
         }
-        if (event->on_error && (revents & (POLLERR | POLLNVAL)))
+        if (event->on_error && is_er)
         {
             event->on_error(event->arg);
-            if (event_observer.is_changed)
+            if (event_mgr->is_changed)
                 break;
         }
-        if (event->on_write && (revents & POLLOUT))
+        if (event->on_write && is_wr)
         {
             event->on_write(event->arg);
-            if (event_observer.is_changed)
+            if (event_mgr->is_changed)
                 break;
         }
     }
+
+    return true;
+}
+
+static
+size_t find_event(const asc_event_t *event)
+{
+    size_t i;
+
+    for (i = 0; i < event_mgr->ev_cnt; i++)
+    {
+        if (event_mgr->ev[i] == event)
+            break;
+    }
+    asc_assert(i < event_mgr->ev_cnt, MSG("event %p not in array")
+               , (void *)event);
+
+    return i;
+}
+
+static
+void resize_event_list(void)
+{
+    const size_t ev_size = event_mgr->ev_cnt * sizeof(*event_mgr->ev);
+    event_mgr->ev = (asc_event_t **)realloc(event_mgr->ev, ev_size);
+
+    const size_t fd_size = event_mgr->ev_cnt * sizeof(*event_mgr->fd);
+    event_mgr->fd = (struct pollfd *)realloc(event_mgr->fd, fd_size);
+
+    asc_assert(event_mgr->ev_cnt == 0
+               || (event_mgr->ev != NULL && event_mgr->fd != NULL)
+               , MSG("realloc() failed"));
 }
 
 void asc_event_subscribe(asc_event_t *event)
 {
-    int i;
-    for (i = 0; i < event_observer.fd_count; ++i)
-    {
-        if (event_observer.event_list[i]->fd == event->fd)
-            break;
-    }
-    asc_assert(i < event_observer.fd_count
-               , MSG("failed to set fd=%d"), event->fd);
+    const size_t i = find_event(event);
 
-    event_observer.fd_list[i].events = 0;
+    event_mgr->fd[i].events = 0;
     if (event->on_read)
-        event_observer.fd_list[i].events |= POLLIN;
+        event_mgr->fd[i].events |= (POLLIN | POLLRDHUP);
     if (event->on_write)
-        event_observer.fd_list[i].events |= POLLOUT;
+        event_mgr->fd[i].events |= POLLOUT;
 }
 
 asc_event_t *asc_event_init(int fd, void *arg)
 {
-    const int i = event_observer.fd_count;
-    memset(&event_observer.fd_list[i], 0, sizeof(struct pollfd));
-    event_observer.fd_list[i].fd = fd;
-
     asc_event_t *const event = ASC_ALLOC(1, asc_event_t);
 
-    event_observer.event_list[i] = event;
     event->fd = fd;
     event->arg = arg;
 
-    event_observer.fd_count += 1;
-    event_observer.is_changed = true;
+    /* append new event to the list */
+    event_mgr->ev_cnt++;
+    event_mgr->is_changed = true;
+    resize_event_list();
+
+    const int i = event_mgr->ev_cnt - 1;
+    memset(&event_mgr->fd[i], 0, sizeof(*event_mgr->fd));
+    event_mgr->fd[i].fd = fd;
+    event_mgr->ev[i] = event;
 
     return event;
 }
 
 void asc_event_close(asc_event_t *event)
 {
-    if (!event)
-        return;
+    const size_t i = find_event(event);
 
-    int i;
-    for (i = 0; i < event_observer.fd_count; ++i)
+    /* shift down array remainder */
+    const size_t more = event_mgr->ev_cnt - (i + 1);
+    if (more > 0)
     {
-        if (event_observer.event_list[i]->fd == event->fd)
-            break;
-    }
-    asc_assert(i < event_observer.fd_count
-               , MSG("failed to detach fd=%d"), event->fd);
+        memmove(&event_mgr->ev[i], &event_mgr->ev[i + 1]
+                , more * sizeof(*event_mgr->ev));
 
-    for (; i < event_observer.fd_count; ++i)
-    {
-        memcpy(&event_observer.fd_list[i], &event_observer.fd_list[i + 1]
-               , sizeof(struct pollfd));
-        event_observer.event_list[i] = event_observer.event_list[i + 1];
+        memmove(&event_mgr->fd[i], &event_mgr->fd[i + 1]
+                , more * sizeof(*event_mgr->fd));
     }
-    memset(&event_observer.fd_list[i], 0, sizeof(struct pollfd));
-    event_observer.event_list[i] = NULL;
 
-    event_observer.fd_count -= 1;
-    event_observer.is_changed = true;
+    /* remove last element from the list */
+    event_mgr->ev_cnt--;
+    event_mgr->is_changed = true;
+    resize_event_list();
 
     free(event);
 }

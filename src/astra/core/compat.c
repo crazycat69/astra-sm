@@ -24,6 +24,14 @@
 #include <astra/astra.h>
 #include <astra/core/compat.h>
 
+#ifdef HAVE_EPOLL_CREATE
+#   include <sys/epoll.h>
+#endif
+
+#ifdef HAVE_KQUEUE
+#   include <sys/event.h>
+#endif
+
 #ifndef HAVE_PREAD
 ssize_t pread(int fd, void *buffer, size_t size, off_t off)
 {
@@ -236,3 +244,55 @@ int cx_socket(int family, int type, int protocol)
 
     return fd;
 }
+
+#ifdef HAVE_EPOLL_CREATE
+int cx_epoll_create(int size)
+{
+    int fd = -1;
+
+#if defined(HAVE_EPOLL_CREATE1) && defined(EPOLL_CLOEXEC)
+    /* epoll_create1() first appeared in Linux kernel 2.6.27 */
+    fd = epoll_create1(EPOLL_CLOEXEC);
+#endif
+    if (fd != -1)
+        return fd;
+
+    fd = epoll_create(size);
+    if (fd == -1)
+        return fd;
+
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
+    {
+        close(fd);
+        fd = -1;
+    }
+
+    return fd;
+}
+#endif /* HAVE_EPOLL_CREATE */
+
+#ifdef HAVE_KQUEUE
+int cx_kqueue(void)
+{
+    int fd = -1;
+
+#if defined(HAVE_KQUEUE1) && defined(O_CLOEXEC)
+    /* kqueue1() is only present on NetBSD as of this writing */
+    fd = kqueue1(O_CLOEXEC);
+#endif
+    if (fd != -1)
+        return fd;
+
+    fd = kqueue();
+    if (fd == -1)
+        return fd;
+
+    if (fcntl(fd, F_SETFD, FD_CLOEXEC) != 0)
+    {
+        close(fd);
+        fd = -1;
+    }
+
+    return fd;
+}
+#endif /* HAVE_KQUEUE */

@@ -19,9 +19,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <astra/astra.h>
-#include <astra/core/list.h>
-
 #include "event-priv.h"
 
 void asc_event_set_on_read(asc_event_t *event, event_callback_t on_read)
