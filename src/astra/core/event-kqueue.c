@@ -23,6 +23,8 @@
 
 #include <sys/event.h>
 
+#define EV_ADD_ALL (EV_ADD | EV_EOF | EV_ERROR)
+
 #define MSG(_msg) "[core/event-kqueue] " _msg
 
 typedef struct
@@ -104,8 +106,8 @@ bool asc_event_core_loop(unsigned int timeout)
         const bool is_rd = (ed->filter == EVFILT_READ)
                            && (ed->data > 0 || ed->flags & EV_EOF);
         const bool is_wr = (ed->filter == EVFILT_WRITE)
-                           && (ed->data > 0);
-        const bool is_er = (ed->flags & EV_ERROR) && !is_rd;
+                           && (ed->data > 0 || ed->flags & EV_EOF);
+        const bool is_er = (ed->flags & EV_ERROR);
 
         if (event->on_read && is_rd)
         {
@@ -132,46 +134,23 @@ bool asc_event_core_loop(unsigned int timeout)
 
 void asc_event_subscribe(asc_event_t *event)
 {
-    int ret;
-    struct kevent ed;
+    struct kevent ed[2];
 
     if (event->on_read)
-    {
-        EV_SET(&ed, event->fd, EVFILT_READ, EV_ADD | EV_EOF | EV_ERROR, 0, 0
-               , event);
-
-        ret = kevent(event_mgr->fd, &ed, 1, NULL, 0, NULL);
-        asc_assert(ret == 0
-                   , MSG("kevent(): couldn't add read handler to fd %d: %s")
-                   , event->fd, strerror(errno));
-    }
+        EV_SET(&ed[0], event->fd, EVFILT_READ, EV_ADD_ALL, 0, 0, event);
     else
-    {
-        EV_SET(&ed, event->fd, EVFILT_READ, EV_DELETE, 0, 0, event);
-
-        ret = kevent(event_mgr->fd, &ed, 1, NULL, 0, NULL);
-        asc_assert(ret == 0 || errno == ENOENT
-                   , MSG("kevent(): couldn't remove read handler from fd %d: %s")
-                   , event->fd, strerror(errno));
-    }
+        EV_SET(&ed[0], event->fd, EVFILT_READ, EV_DELETE, 0, 0, event);
 
     if (event->on_write)
-    {
-        EV_SET(&ed, event->fd, EVFILT_WRITE, EV_ADD | EV_EOF | EV_ERROR, 0, 0
-               , event);
-
-        ret = kevent(event_mgr->fd, &ed, 1, NULL, 0, NULL);
-        asc_assert(ret == 0
-                   , MSG("kevent(): couldn't add write handler to fd %d: %s")
-                   , event->fd, strerror(errno));
-    }
+        EV_SET(&ed[1], event->fd, EVFILT_WRITE, EV_ADD_ALL, 0, 0, event);
     else
-    {
-        EV_SET(&ed, event->fd, EVFILT_WRITE, EV_DELETE, 0, 0, event);
+        EV_SET(&ed[1], event->fd, EVFILT_WRITE, EV_DELETE, 0, 0, event);
 
-        ret = kevent(event_mgr->fd, &ed, 1, NULL, 0, NULL);
-        asc_assert(ret == 0 || errno == ENOENT
-                   , MSG("kevent(): couldn't remove write handler from fd %d: %s")
+    for (unsigned int i = 0; i < 2; i++)
+    {
+        const int ret = kevent(event_mgr->fd, &ed[i], 1, NULL, 0, NULL);
+        asc_assert(ret == 0 || errno == ENOENT || errno == EINTR
+                   , MSG("kevent(): couldn't register fd %d: %s")
                    , event->fd, strerror(errno));
     }
 }
