@@ -23,7 +23,9 @@
 #include <astra/core/spawn.h>
 #include <astra/core/timer.h>
 #include <astra/core/mainloop.h>
+#include <astra/core/list.h>
 
+/* socket mini-API to avoid touching core/socket */
 #ifndef _WIN32
 #   include <arpa/inet.h>
 #   include <netinet/in.h>
@@ -74,14 +76,16 @@ static void sock_nonblock(int fd)
     ck_assert(ioctlsocket(fd, FIONBIO, &nonblock) == 0);
 #else /* _WIN32 */
     const int flags = fcntl(fd, F_GETFL);
+    ck_assert(flags >= 0);
+
     ck_assert(fcntl(fd, F_SETFL, flags | O_NONBLOCK) == 0);
 #endif /* !_WIN32 */
 }
 
 static int sock_open(int type, unsigned short *port)
 {
-    int fd = socket(AF_INET, type, 0);
-    ck_assert(fd != -1);
+    const int fd = socket(AF_INET, type, 0);
+    ck_assert(fd >= 0);
     sock_nonblock(fd);
 
     /* bind to loopback */
@@ -116,10 +120,7 @@ static int sock_connect(int fd, unsigned short port)
     sa.in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
     const int ret = connect(fd, &sa.addr, sizeof(sa));
-    if (ret == 0)
-        return 0;
-    else
-        return sock_err();
+    return (ret == 0 ? 0 : sock_err());
 }
 
 static void sock_close(int s)
@@ -160,18 +161,19 @@ typedef struct
     unsigned int cnt;
     size_t rx;
     size_t tx;
-} pp_test_t;
+} pp_pipe_t;
 
 static asc_event_t *pp_ev_a = NULL;
 static asc_event_t *pp_ev_b = NULL;
 static asc_timer_t *pp_timer = NULL;
+
 static char pp_buf[1024] = { 0 };
 
 static void pp_on_write(void *arg);
 
 static void pp_on_read(void *arg)
 {
-    pp_test_t *const t = (pp_test_t *)arg;
+    pp_pipe_t *const t = (pp_pipe_t *)arg;
 
     while (true)
     {
@@ -196,7 +198,7 @@ static void pp_on_read(void *arg)
 
 static void pp_on_write(void *arg)
 {
-    pp_test_t *const t = (pp_test_t *)arg;
+    pp_pipe_t *const t = (pp_pipe_t *)arg;
 
     while (true)
     {
@@ -229,30 +231,29 @@ static void pp_on_timer(void *arg)
 
 START_TEST(push_pull)
 {
-    int fds[2] = { -1, -1 };
-
-    pp_test_t *const tests = ASC_ALLOC(2, pp_test_t);
-    ck_assert(tests != NULL);
-
-    const int ret = asc_pipe_open(fds, NULL, PIPE_BOTH);
-    ck_assert(ret == 0 && fds[0] != -1 && fds[1] != -1);
-
-    pp_ev_a = asc_event_init(fds[0], &tests[0]);
-    pp_ev_b = asc_event_init(fds[1], &tests[1]);
-    ck_assert(pp_ev_a != NULL && pp_ev_b != NULL);
-
     pp_timer = asc_timer_one_shot(1000, pp_on_timer, NULL); /* 1s */
     ck_assert(pp_timer != NULL);
 
-    tests[0].fd = fds[0];
-    tests[0].ev = pp_ev_a;
-    tests[0].peer_fd = fds[1];
-    tests[0].peer_ev = pp_ev_b;
+    int fds[2] = { -1, -1 };
+    const int ret = asc_pipe_open(fds, NULL, PIPE_BOTH);
+    ck_assert(ret == 0 && fds[0] != -1 && fds[1] != -1);
 
-    tests[1].fd = fds[1];
-    tests[1].ev = pp_ev_b;
-    tests[1].peer_fd = fds[0];
-    tests[1].peer_ev = pp_ev_a;
+    pp_pipe_t *pipes = ASC_ALLOC(2, pp_pipe_t);
+    ck_assert(pipes != NULL);
+
+    pp_ev_a = asc_event_init(fds[0], &pipes[0]);
+    pp_ev_b = asc_event_init(fds[1], &pipes[1]);
+    ck_assert(pp_ev_a != NULL && pp_ev_b != NULL);
+
+    pipes[0].fd = fds[0];
+    pipes[0].ev = pp_ev_a;
+    pipes[0].peer_fd = fds[1];
+    pipes[0].peer_ev = pp_ev_b;
+
+    pipes[1].fd = fds[1];
+    pipes[1].ev = pp_ev_b;
+    pipes[1].peer_fd = fds[0];
+    pipes[1].peer_ev = pp_ev_a;
 
     asc_event_set_on_error(pp_ev_a, on_fail_event);
     asc_event_set_on_error(pp_ev_b, on_fail_event);
@@ -262,22 +263,22 @@ START_TEST(push_pull)
     ck_assert(asc_main_loop_run() == false);
     for (unsigned int i = 0; i < 2; i++)
     {
-        ck_assert(tests[i].cnt > 0);
-        ck_assert(tests[i].rx > 0);
-        ck_assert(tests[i].tx > 0);
+        ck_assert(pipes[i].cnt > 0);
+        ck_assert(pipes[i].rx > 0);
+        ck_assert(pipes[i].tx > 0);
 
         asc_log_info("event push-pull test %u: cnt=%u rx=%zu tx=%zu"
-                     , i, tests[i].cnt, tests[i].rx, tests[i].tx);
+                     , i, pipes[i].cnt, pipes[i].rx, pipes[i].tx);
     }
 
     ASC_FREE(pp_ev_a, asc_event_close);
     ASC_FREE(pp_ev_b, asc_event_close);
+    ASC_FREE(pipes, free);
 
     ck_assert(asc_pipe_close(fds[0]) == 0);
     ck_assert(asc_pipe_close(fds[1]) == 0);
-    ck_assert(pp_timer == NULL);
 
-    free(tests);
+    ck_assert(pp_timer == NULL);
 }
 END_TEST
 
@@ -291,15 +292,17 @@ enum
     TC_CASE_COUNT,
 };
 
+static unsigned int tc_got[TC_CASE_COUNT] = { 0 };
+static unsigned int tc_want[TC_CASE_COUNT] = { 0 };
 static int tc_case = -1;
 
-static int tc_ear_fd = -1;
+static int tc_ear_fd = -1; /* listener */
 static asc_event_t *tc_ear_ev = NULL;
 
-static int tc_clnt_fd = -1;
+static int tc_clnt_fd = -1; /* client */
 static asc_event_t *tc_clnt_ev = NULL;
 
-static int tc_svr_fd = -1;
+static int tc_svr_fd = -1; /* server */
 static asc_event_t *tc_svr_ev = NULL;
 
 #define TC_SOCK_KILL(_fd, _event, _soft) \
@@ -313,19 +316,20 @@ static asc_event_t *tc_svr_ev = NULL;
 
 #define TC_GRACEFUL true
 #define TC_ABORTIVE false
-#define TC_CLEANUP false
+#define TC_CLEANUP  false
 
+#define TC_BUFSIZE 32
 #define TC_ITERATIONS 512
 
 static void tc_send(int fd)
 {
-    static const char buf[32] = { 0 };
-    ck_assert(send(fd, buf, sizeof(buf), 0) > 0);
+    static const char buf[TC_BUFSIZE] = { 0 };
+    ck_assert(send(fd, buf, sizeof(buf), 0) == sizeof(buf));
 }
 
 static ssize_t tc_recv(int fd)
 {
-    char buf[128];
+    char buf[TC_BUFSIZE * 4];
 
     while (true)
     {
@@ -334,8 +338,8 @@ static ssize_t tc_recv(int fd)
             return 0;
         else if (ret == -1)
             return sock_err();
-        else if (ret != 32)
-            ck_abort();
+        else if (ret != TC_BUFSIZE)
+            ck_abort_msg("got %zd bytes!", ret);
     }
 }
 
@@ -347,10 +351,11 @@ static void tc_ear_on_accept(void *arg)
 {
     __uarg(arg);
 
+    /* accept client */
     struct sockaddr sa;
     socklen_t sl = sizeof(sa);
     tc_svr_fd = accept(tc_ear_fd, &sa, &sl);
-    ck_assert(tc_svr_fd >= 0);
+    ck_assert_msg(tc_svr_fd >= 0, "accept() failed");
     sock_nonblock(tc_svr_fd);
 
     tc_svr_ev = asc_event_init(tc_svr_fd, NULL);
@@ -379,6 +384,9 @@ static void tc_ear_on_accept(void *arg)
         default:
             ck_abort();
     }
+
+    /* clean up listener */
+    TC_SOCK_KILL(tc_ear_fd, tc_ear_ev, TC_CLEANUP);
 }
 
 static void tc_clnt_on_read(void *arg);
@@ -389,7 +397,7 @@ static void tc_clnt_on_connect(void *arg)
 {
     __uarg(arg);
 
-    ck_assert(sock_erropt(tc_clnt_fd) == 0);
+    ck_assert_msg(sock_erropt(tc_clnt_fd) == 0, "SO_ERROR is not 0");
 
     switch (tc_case)
     {
@@ -429,16 +437,18 @@ static void tc_clnt_on_read(void *arg)
             if (sock_blocked(ret))
                 return;
 
-            ck_assert(ret == 0);
+            ck_assert_msg(ret == 0, "expected zero read!");
 
             /* clean up client side socket */
+            tc_got[TC_SERVER_CLOSE_GRACEFUL]++;
             TC_SOCK_KILL(tc_clnt_fd, tc_clnt_ev, TC_CLEANUP);
             asc_main_loop_shutdown();
             break;
 
         case TC_CLIENT_CLOSE_GRACEFUL:
             /* drain socket buffers */
-            ck_assert(sock_blocked(tc_recv(tc_clnt_fd)));
+            ck_assert_msg(sock_blocked(tc_recv(tc_clnt_fd))
+                          , "expected EWOULDBLOCK");
 
             /* initiate shutdown as soon as fd is writable */
             asc_event_set_on_write(tc_clnt_ev, tc_clnt_on_write);
@@ -451,9 +461,10 @@ static void tc_clnt_on_read(void *arg)
             if (sock_blocked(ret))
                 return;
 
-            ck_assert(ret == 0);
+            ck_assert_msg(ret == 0, "expected zero read!");
 
             /* clean up client side socket */
+            tc_got[TC_SERVER_CLOSE_ABORTIVE]++;
             TC_SOCK_KILL(tc_clnt_fd, tc_clnt_ev, TC_CLEANUP);
             asc_main_loop_shutdown();
             break;
@@ -506,9 +517,10 @@ static void tc_svr_on_read(void *arg)
             if (sock_blocked(ret))
                 return;
 
-            ck_assert(ret == 0);
+            ck_assert_msg(ret == 0, "expected zero read!");
 
             /* clean up server side socket */
+            tc_got[TC_CLIENT_CLOSE_ABORTIVE]++;
             TC_SOCK_KILL(tc_svr_fd, tc_svr_ev, TC_CLEANUP);
             asc_main_loop_shutdown();
             break;
@@ -519,16 +531,18 @@ static void tc_svr_on_read(void *arg)
             if (sock_blocked(ret))
                 return;
 
-            ck_assert(ret == 0);
+            ck_assert_msg(ret == 0, "expected zero read!");
 
             /* clean up server side socket */
+            tc_got[TC_CLIENT_CLOSE_GRACEFUL]++;
             TC_SOCK_KILL(tc_svr_fd, tc_svr_ev, TC_CLEANUP);
             asc_main_loop_shutdown();
             break;
 
         case TC_SERVER_CLOSE_ABORTIVE:
             /* drain socket buffers */
-            ck_assert(sock_blocked(tc_recv(tc_svr_fd)));
+            ck_assert_msg(sock_blocked(tc_recv(tc_svr_fd))
+                          , "expected EWOULDBLOCK");
 
             /* close server side socket */
             TC_SOCK_KILL(tc_svr_fd, tc_svr_ev, TC_ABORTIVE);
@@ -570,11 +584,13 @@ START_TEST(tcp_connect)
     for (unsigned int i = 0; i < TC_ITERATIONS; i++)
     {
         tc_case = i % TC_CASE_COUNT;
+        tc_want[tc_case]++;
 
         /* open up listening socket */
         short unsigned listen_port = 0;
         tc_ear_fd = sock_open(SOCK_STREAM, &listen_port);
-        ck_assert(listen(tc_ear_fd, SOMAXCONN) == 0);
+        ck_assert_msg(listen(tc_ear_fd, SOMAXCONN) == 0
+                      , "couldn't set up a listening socket");
 
         tc_ear_ev = asc_event_init(tc_ear_fd, NULL);
         asc_event_set_on_read(tc_ear_ev, tc_ear_on_accept);
@@ -585,10 +601,11 @@ START_TEST(tcp_connect)
         tc_clnt_fd = sock_open(SOCK_STREAM, NULL);
         const int ret = sock_connect(tc_clnt_fd, listen_port);
 #ifdef _WIN32
-        ck_assert(ret == 0 || ret == WSAEINPROGRESS || ret == WSAEWOULDBLOCK);
+        if (ret != 0 && ret != WSAEINPROGRESS && ret != WSAEWOULDBLOCK)
 #else
-        ck_assert(ret == 0 || ret == EINPROGRESS);
+        if (ret != 0 && ret != EINPROGRESS)
 #endif
+            ck_abort_msg("couldn't initiate TCP connection");
 
         tc_clnt_ev = asc_event_init(tc_clnt_fd, NULL);
         asc_event_set_on_write(tc_clnt_ev, tc_clnt_on_connect);
@@ -597,13 +614,13 @@ START_TEST(tcp_connect)
         /* run test case */
         ck_assert(asc_main_loop_run() == false);
 
-        /* clean up listener */
-        TC_SOCK_KILL(tc_ear_fd, tc_ear_ev, TC_CLEANUP);
-
         ck_assert(tc_ear_fd == -1 && tc_ear_ev == NULL);
         ck_assert(tc_clnt_fd == -1 && tc_clnt_ev == NULL);
         ck_assert(tc_svr_fd == -1 && tc_svr_ev == NULL);
     }
+
+    for (unsigned int i = 0; i < TC_CASE_COUNT; i++)
+        ck_assert(tc_got[i] > 0 && tc_got[i] == tc_want[i]);
 }
 END_TEST
 
@@ -677,52 +694,54 @@ static void tr_on_error(void *arg)
 
 START_TEST(tcp_refused)
 {
-    int i = 1;
-//#ifndef __FreeBSD__
-    i++;
-//#endif
-
-    while (i--)
+    for (unsigned int i = 0; i < 2; i++)
     {
-        unsigned short port = 0;
-        const int spoiler = sock_open(SOCK_STREAM, &port);
+        /*
+         * Get a port number that is known to be closed. There's a minor
+         * race condition in here, but who cares.
+         */
+        unsigned short closed_port = 0;
+        const int spoiler = sock_open(SOCK_STREAM, &closed_port);
         tr_fd = sock_open(SOCK_STREAM, NULL);
         sock_close(spoiler);
 
+        /* set up event object */
         tr_ev = asc_event_init(tr_fd, NULL);
 
-        /* handle read event on first iteration */
-        if (i == 1)
+        if (i == 0)
+        {
+            /* handle read event on first iteration */
             asc_event_set_on_read(tr_ev, tr_on_read);
+        }
 
         asc_event_set_on_write(tr_ev, tr_on_write);
         asc_event_set_on_error(tr_ev, tr_on_error);
 
-        int ret = sock_connect(tr_fd, port);
-#ifdef _WIN32
-        ck_assert(ret == WSAEINPROGRESS || ret == WSAEWOULDBLOCK);
-#else
-        ck_assert(ret == EINPROGRESS || ret == ECONNREFUSED);
-#endif
-
-#ifdef _WIN32
-        if (ret == WSAECONNREFUSED)
-#else
+        /* initiate non-blocking connection */
+        const int ret = sock_connect(tr_fd, closed_port);
+#ifndef _WIN32
         if (ret == ECONNREFUSED)
-#endif
         {
             /* completed right away, but we still want on_error event */
             asc_log_warning("connect() completed right away");
             tr_err = ret;
         }
+        else
+        {
+            ck_assert(ret == EINPROGRESS);
+        }
+#else /* !_WIN32 */
+        ck_assert(ret == WSAEINPROGRESS || ret == WSAEWOULDBLOCK);
+#endif /* _WIN32 */
 
+        /* expect on_error handler to clean up the socket */
         ck_assert(asc_main_loop_run() == false);
         ck_assert(tr_fd == -1 && tr_err == -1 && tr_ev == NULL);
     }
 }
 END_TEST
 
-#ifndef HAVE_EVENT_KQUEUE
+#ifndef WITH_EVENT_KQUEUE
 /* send out-of-band data */
 typedef struct
 {
@@ -730,7 +749,7 @@ typedef struct
     int fd;
     unsigned int rx;
     unsigned int tx;
-} oob_test_t;
+} oob_sock_t;
 
 #define OOB_MAX_BYTES 1024
 #define OOB_DATA 0x10
@@ -781,7 +800,7 @@ static void oob_pipe(int fds[2])
 
 static void oob_on_write(void *arg)
 {
-    oob_test_t *const t = (oob_test_t *)arg;
+    oob_sock_t *const t = (oob_sock_t *)arg;
     ck_assert(sock_erropt(t->fd) == 0);
 
     char data = OOB_DATA;
@@ -792,7 +811,7 @@ static void oob_on_write(void *arg)
 
 static void oob_on_error(void *arg)
 {
-    oob_test_t *const t = (oob_test_t *)arg;
+    oob_sock_t *const t = (oob_sock_t *)arg;
     ck_assert(sock_erropt(t->fd) == 0);
 
     while (true)
@@ -829,24 +848,21 @@ static void oob_on_error(void *arg)
 
 START_TEST(tcp_oob)
 {
-    asc_event_t *oob_ev_a = NULL;
-    asc_event_t *oob_ev_b = NULL;
-
     int fds[2] = { -1, -1 };
     oob_pipe(fds);
 
-    oob_test_t *tests = ASC_ALLOC(2, oob_test_t);
-    ck_assert(tests != NULL);
+    oob_sock_t *socks = ASC_ALLOC(2, oob_sock_t);
+    ck_assert(socks != NULL);
 
-    oob_ev_a = asc_event_init(fds[0], &tests[0]);
-    oob_ev_b = asc_event_init(fds[1], &tests[1]);
+    asc_event_t *oob_ev_a = asc_event_init(fds[0], &socks[0]);
+    asc_event_t *oob_ev_b = asc_event_init(fds[1], &socks[1]);
     ck_assert(oob_ev_a != NULL && oob_ev_b != NULL);
 
-    tests[0].fd = fds[0];
-    tests[0].ev = oob_ev_a;
+    socks[0].fd = fds[0];
+    socks[0].ev = oob_ev_a;
 
-    tests[1].fd = fds[1];
-    tests[1].ev = oob_ev_b;
+    socks[1].fd = fds[1];
+    socks[1].ev = oob_ev_b;
 
     /* expect OOB to be delivered to on_error */
     asc_event_set_on_read(oob_ev_a, on_fail_event);
@@ -858,44 +874,439 @@ START_TEST(tcp_oob)
     asc_event_set_on_error(oob_ev_b, oob_on_error);
 
     ck_assert(asc_main_loop_run() == false);
-
     asc_log_info("OOB test: RX:%u/TX:%u, RX:%u/TX:%u"
-                 , tests[0].rx, tests[0].tx, tests[1].rx, tests[1].tx);
+                 , socks[0].rx, socks[0].tx
+                 , socks[1].rx, socks[1].tx);
 
-    ck_assert(tests[0].rx > 0 && tests[0].tx > 0);
-    ck_assert(tests[1].rx > 0 && tests[1].tx > 0);
+    ck_assert(socks[0].rx > 0 && socks[0].tx > 0);
+    ck_assert(socks[1].rx > 0 && socks[1].tx > 0);
 
     ASC_FREE(oob_ev_a, asc_event_close);
     ASC_FREE(oob_ev_b, asc_event_close);
 
+    ASC_FREE(socks, free);
+
     sock_close(fds[0]);
     sock_close(fds[1]);
-
-    ASC_FREE(tests, free);
 }
 END_TEST
-#endif /* !HAVE_EVENT_KQUEUE */
+#endif /* !WITH_EVENT_KQUEUE */
 
 /* send UDP packets to and from localhost */
+typedef struct
+{
+    int fd;
+    asc_event_t *ev;
+    size_t rx;
+    size_t tx;
+} udp_sock_t;
+
+static char udp_buf[1024];
+
+#define UDP_MAX_PKTS 1024
+#define UDP_MAX_BYTES (UDP_MAX_PKTS * sizeof(udp_buf))
+
+static void udp_on_write(void *arg)
+{
+    udp_sock_t *const s = (udp_sock_t *)arg;
+
+    const ssize_t ret = send(s->fd, udp_buf, sizeof(udp_buf), 0);
+    ck_assert(ret == sizeof(udp_buf));
+    s->tx += ret;
+
+    asc_event_set_on_write(s->ev, NULL);
+}
+
+static void udp_on_read(void *arg)
+{
+    udp_sock_t *const s = (udp_sock_t *)arg;
+
+    while (true)
+    {
+        const ssize_t ret = recv(s->fd, udp_buf, sizeof(udp_buf), 0);
+        if (ret == -1 && sock_blocked(sock_err()))
+            break;
+
+        ck_assert(ret > 0);
+        s->rx += ret;
+    }
+
+    if (s->rx >= UDP_MAX_BYTES && s->tx >= UDP_MAX_BYTES)
+    {
+        asc_event_set_on_read(s->ev, NULL);
+        asc_main_loop_shutdown();
+    }
+    else if (s->tx < UDP_MAX_BYTES)
+    {
+        asc_event_set_on_write(s->ev, udp_on_write);
+    }
+}
+
 START_TEST(udp_sockets)
 {
-    // create udp sock 1
-    // get port
-    // create udp sock 2
-    // "connect" to port
-    // ??? set buffers?
-    // set events
-    //   on_write - send 1k
-    //   on_read - read all data
-    //             if (rx >= 65536)
-    //                 left--;
-    //             if (left == 0) asc_shutdown
+    /* create UDP sockets */
+    unsigned short port_a = 0;
+    const int sock_a = sock_open(SOCK_DGRAM, &port_a);
+
+    unsigned short port_b = 0;
+    const int sock_b = sock_open(SOCK_DGRAM, &port_b);
+
+    /* set default destination for send() */
+    sock_connect(sock_a, port_b);
+    sock_connect(sock_b, port_a);
+
+    /* set up event objects */
+    udp_sock_t *socks = ASC_ALLOC(2, udp_sock_t);
+    asc_event_t *ev_a = asc_event_init(sock_a, &socks[0]);
+    asc_event_t *ev_b = asc_event_init(sock_b, &socks[1]);
+
+    socks[0].fd = sock_a;
+    socks[0].ev = ev_a;
+    socks[1].fd = sock_b;
+    socks[1].ev = ev_b;
+
+    asc_event_set_on_write(ev_a, udp_on_write);
+    asc_event_set_on_read(ev_a, udp_on_read);
+    asc_event_set_on_error(ev_a, on_fail_event);
+
+    asc_event_set_on_write(ev_b, udp_on_write);
+    asc_event_set_on_read(ev_b, udp_on_read);
+    asc_event_set_on_error(ev_b, on_fail_event);
+
+    /* run test */
+    ck_assert(asc_main_loop_run() == false);
+    asc_log_info("UDP test stats: RX:%zu/TX:%zu, RX:%zu/TX:%zu\n"
+                 , socks[0].rx, socks[0].tx, socks[1].rx, socks[1].tx);
+
+    ck_assert(socks[0].rx >= UDP_MAX_BYTES && socks[0].tx >= UDP_MAX_BYTES);
+    ck_assert(socks[1].rx >= UDP_MAX_BYTES && socks[1].tx >= UDP_MAX_BYTES);
+    ck_assert(socks[0].rx == socks[1].tx && socks[1].rx == socks[0].tx);
+
+    ASC_FREE(ev_a, asc_event_close);
+    ASC_FREE(ev_b, asc_event_close);
+    ASC_FREE(socks, free);
+
+    sock_close(sock_a);
+    sock_close(sock_b);
 }
 END_TEST
 
 /* lots of short lived TCP connections */
+typedef struct sot_server_t sot_server_t;
+
+typedef struct
+{
+    int fd;
+    test_sa_t sa;
+    asc_event_t *ev;
+    sot_server_t *svr;
+    size_t rx;
+    size_t tx;
+} sot_sock_t;
+
+struct sot_server_t
+{
+    /* listener */
+    sot_sock_t sk;
+
+    /* total number of requests created and served */
+    size_t nr_reqs;
+    size_t nr_completed;
+
+    /* server side sockets */
+    asc_list_t *clients;
+
+    /* client side sockets */
+    asc_list_t *requests;
+};
+
+#define SOT_SERVERS 8 /* how many listening sockets to create */
+#define SOT_MAX_CLIENTS 32 /* max. clients per server socket */
+#define SOT_RUN_TIME 3000 /* shut down main loop after 3 seconds */
+#define SOT_CHECK_MS 10 /* create new requests every 10 ms */
+#define SOT_BYTES 16384 /* how much data to send in each direction */
+
+static char sot_buf[1024];
+
+static sot_server_t sot_servers[SOT_SERVERS];
+
+static asc_timer_t *sot_check = NULL;
+static asc_timer_t *sot_kill = NULL;
+static bool sot_shutdown = false;
+
+static void sot_svr_on_read(void *arg);
+
+static void sot_svr_on_write(void *arg);
+
+static void sot_svr_on_accept(void *arg)
+{
+    sot_server_t *const svr = (sot_server_t *)arg; /* listener */
+
+    while (true)
+    {
+        /* accept connection */
+        test_sa_t sa;
+        socklen_t sl = sizeof(sa);
+
+        const int fd = accept(svr->sk.fd, &sa.addr, &sl);
+        if (fd == -1 && sock_blocked(sock_err()))
+            break;
+
+        ck_assert_msg(fd >= 0, "accept() failed: %s", asc_error_msg());
+        sock_nonblock(fd);
+
+        /* add to client list */
+        sot_sock_t *const client = ASC_ALLOC(1, sot_sock_t);
+        client->svr = svr;
+        client->fd = fd;
+        memcpy(&client->sa, &sa, sizeof(sa));
+
+        client->ev = asc_event_init(client->fd, client);
+        asc_event_set_on_read(client->ev, sot_svr_on_read);
+        asc_event_set_on_error(client->ev, on_fail_event);
+
+        asc_list_insert_tail(svr->clients, client);
+    }
+}
+
+static void sot_svr_on_read(void *arg)
+{
+    sot_sock_t *const sk = (sot_sock_t *)arg; /* server side */
+
+    while (true)
+    {
+        const ssize_t ret = recv(sk->fd, sot_buf, sizeof(sot_buf), 0);
+
+        if (ret == 0)
+        {
+            ck_assert_msg(sk->rx >= SOT_BYTES, "premature hangup");
+            ck_assert(sk->tx >= SOT_BYTES);
+            sk->svr->nr_completed++;
+
+            asc_event_close(sk->ev);
+            asc_list_remove_item(sk->svr->clients, sk);
+            sock_close(sk->fd);
+            free(sk);
+
+            return;
+        }
+        else
+        {
+            if (ret == -1 && sock_blocked(sock_err()))
+                break;
+
+            ck_assert(ret > 0);
+            ck_assert(sk->rx < SOT_BYTES);
+
+            sk->rx += ret;
+            if (sk->rx >= SOT_BYTES)
+            {
+                asc_event_set_on_write(sk->ev, sot_svr_on_write);
+                break;
+            }
+        }
+    }
+}
+
+static void sot_svr_on_write(void *arg)
+{
+    sot_sock_t *const sk = (sot_sock_t *)arg; /* server side */
+
+    while (true)
+    {
+        const ssize_t ret = send(sk->fd, sot_buf, sizeof(sot_buf), 0);
+        if (ret == -1 && sock_blocked(sock_err()))
+            break;
+
+        ck_assert(ret > 0);
+        ck_assert(sk->tx < SOT_BYTES);
+
+        sk->tx += ret;
+        if (sk->tx >= SOT_BYTES)
+        {
+            asc_event_set_on_write(sk->ev, NULL);
+            break;
+        }
+    }
+}
+
+static void sot_clnt_on_read(void *arg);
+
+static void sot_clnt_on_write(void *arg);
+
+static void sot_clnt_on_connect(void *arg)
+{
+    sot_sock_t *const req = (sot_sock_t *)arg; /* client side */
+
+    /* make sure connection was successful */
+    ck_assert(sock_erropt(req->fd) == 0);
+
+    asc_event_set_on_read(req->ev, sot_clnt_on_read);
+    asc_event_set_on_write(req->ev, sot_clnt_on_write);
+}
+
+static void sot_clnt_on_read(void *arg)
+{
+    sot_sock_t *const req = (sot_sock_t *)arg; /* client side */
+
+    while (true)
+    {
+        const ssize_t ret = recv(req->fd, sot_buf, sizeof(sot_buf), 0);
+        if (ret == -1 && sock_blocked(sock_err()))
+            break;
+
+        ck_assert_msg(ret > 0, "didn't expect the server to hang up");
+        ck_assert(req->rx < SOT_BYTES);
+
+        req->rx += ret;
+        if (req->rx >= SOT_BYTES)
+        {
+            ck_assert(req->tx >= SOT_BYTES);
+
+            asc_event_close(req->ev);
+            sock_shutdown(req->fd);
+            sock_close(req->fd);
+            asc_list_remove_item(req->svr->requests, req);
+            free(req);
+
+            return;
+        }
+    }
+}
+
+static void sot_clnt_on_write(void *arg)
+{
+    sot_sock_t *const req = (sot_sock_t *)arg; /* client side */
+
+    while (true)
+    {
+        const ssize_t ret = send(req->fd, sot_buf, sizeof(sot_buf), 0);
+        if (ret == -1 && sock_blocked(sock_err()))
+            break;
+
+        ck_assert_msg(ret > 0, "%s", asc_error_msg());
+        ck_assert(req->tx < SOT_BYTES);
+
+        req->tx += ret;
+        if (req->tx >= SOT_BYTES)
+        {
+            asc_event_set_on_write(req->ev, NULL);
+            break;
+        }
+    }
+}
+
+static void sot_on_check(void *arg)
+{
+    __uarg(arg);
+
+    bool busy = false;
+    for (unsigned int i = 0; i < SOT_SERVERS; i++)
+    {
+        sot_server_t *const svr = &sot_servers[i];
+
+        size_t reqs = asc_list_size(svr->requests);
+        size_t clients = asc_list_size(svr->clients);
+        if (sot_shutdown)
+        {
+            if (reqs > 0 || clients > 0)
+                busy = true;
+
+            continue;
+        }
+
+        while (reqs++ < SOT_MAX_CLIENTS)
+        {
+            sot_sock_t *const req = ASC_ALLOC(1, sot_sock_t);
+            req->svr = svr;
+
+            req->fd = sock_open(SOCK_STREAM, NULL);
+            req->ev = asc_event_init(req->fd, req);
+            asc_event_set_on_write(req->ev, sot_clnt_on_connect);
+            asc_event_set_on_error(req->ev, on_fail_event);
+
+            const int ret = sock_connect(req->fd, svr->sk.sa.in.sin_port);
+#ifdef _WIN32
+            if (ret != 0 && ret != WSAEINPROGRESS && ret != WSAEWOULDBLOCK)
+#else
+            if (ret != 0 && ret != EINPROGRESS)
+#endif
+                ck_abort_msg("couldn't initiate TCP connection");
+
+            asc_list_insert_tail(svr->requests, req);
+            svr->nr_reqs++;
+        }
+    }
+
+    if (sot_shutdown && !busy)
+    {
+        ASC_FREE(sot_check, asc_timer_destroy);
+        asc_main_loop_shutdown();
+    }
+}
+
+static void sot_on_kill(void *arg)
+{
+    __uarg(arg);
+
+    sot_kill = NULL;
+    sot_shutdown = true;
+}
+
 START_TEST(series_of_tubes)
 {
+    /* create servers */
+    for (unsigned int i = 0; i < SOT_SERVERS; i++)
+    {
+        sot_server_t *const svr = &sot_servers[i];
+
+        const int fd = sock_open(SOCK_STREAM, NULL);
+        ck_assert(listen(fd, SOMAXCONN) == 0);
+
+        svr->sk.fd = fd;
+        svr->sk.ev = asc_event_init(fd, svr);
+        asc_event_set_on_read(svr->sk.ev, sot_svr_on_accept);
+        asc_event_set_on_write(svr->sk.ev, on_fail_event);
+        asc_event_set_on_error(svr->sk.ev, on_fail_event);
+
+        socklen_t sl = sizeof(svr->sk.sa);
+        ck_assert(getsockname(fd, &svr->sk.sa.addr, &sl) == 0);
+
+        svr->clients = asc_list_init();
+        svr->requests = asc_list_init();
+    }
+
+    /* set up timers and run the test */
+    sot_check = asc_timer_init(SOT_CHECK_MS, sot_on_check, NULL);
+    sot_kill = asc_timer_one_shot(SOT_RUN_TIME, sot_on_kill, NULL);
+    sot_shutdown = false;
+
+    ck_assert(asc_main_loop_run() == false);
+
+    ck_assert(sot_kill == NULL);
+    ASC_FREE(sot_check, asc_timer_destroy);
+
+    /* take servers down */
+    size_t total_reqs = 0;
+    size_t total_completed = 0;
+    for (unsigned int i = 0; i < SOT_SERVERS; i++)
+    {
+        sot_server_t *const svr = &sot_servers[i];
+
+        total_reqs += svr->nr_reqs;
+        total_completed += svr->nr_completed;
+
+        asc_event_close(svr->sk.ev);
+        sock_close(svr->sk.fd);
+        asc_list_destroy(svr->clients);
+        asc_list_destroy(svr->requests);
+    }
+
+    asc_log_info("series_of_tubes: %zu/%zu requests completed"
+                 , total_completed, total_reqs);
+
+    ck_assert(total_completed > 0 && total_reqs > 0
+              && total_completed == total_reqs);
 }
 END_TEST
 
@@ -926,7 +1337,8 @@ Suite *core_event(void)
     tcase_add_test(tc, push_pull);
     tcase_add_test(tc, tcp_connect);
     tcase_add_test(tc, tcp_refused);
-#ifndef HAVE_EVENT_KQUEUE
+#ifndef WITH_EVENT_KQUEUE
+    /* NOTE: most kqueue OS'es don't support polling for OOB data */
     tcase_add_test(tc, tcp_oob);
 #endif
     tcase_add_test(tc, udp_sockets);
