@@ -112,7 +112,7 @@ bool asc_event_core_loop(unsigned int timeout)
 
 #ifndef _WIN32
             /* see asc_event_subscribe() */
-            if (event->fd < 0 || event->fd >= FD_SETSIZE)
+            if (event->fd < 0 || event->fd >= (int)FD_SETSIZE)
                 continue;
 #endif /* !_WIN32 */
 
@@ -151,7 +151,7 @@ void asc_event_subscribe(asc_event_t *event)
      *
      * On Windows, these checks are done inside FD_XXX macros.
      */
-    if (event->fd < 0 || event->fd >= FD_SETSIZE)
+    if (event->fd < 0 || event->fd >= (int)FD_SETSIZE)
     {
         asc_log_error(MSG("fd %d out of range for select(), ignoring")
                       , event->fd);
