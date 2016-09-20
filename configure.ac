@@ -791,8 +791,8 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wlogical-op], [WARN_CFLAGS])
 
     # Clang-specific
-    AX_CHECK_CFLAG([-Wgnu], [WARN_CFLAGS])
-    AX_CHECK_CFLAG([-Wno-gnu-zero-variadic-macro-arguments], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wgnu], [WARN_CFLAGS], [
+        AX_CHECK_CFLAG([-Wno-gnu-zero-variadic-macro-arguments], [WARN_CFLAGS]) ])
 ])
 
 # Less important warnings
