@@ -100,6 +100,7 @@ bool is_valid_fd(int fd)
      * select()'s nfds argument is completely ignored. We still warn
      * the user if the fd list gets too large.
      */
+    __uarg(fd);
     return true;
 #endif
 }
@@ -124,7 +125,7 @@ bool asc_event_core_loop(unsigned int timeout)
         .tv_usec = (timeout % 1000) * 1000UL,
     };
 
-    const int ret = select(event_mgr->max_fd + 1, &rset, &wset, &eset, &tv);
+    int ret = select(event_mgr->max_fd + 1, &rset, &wset, &eset, &tv);
 #ifndef _WIN32
     if (ret == -1 && errno != EINTR)
 #else
@@ -135,35 +136,37 @@ bool asc_event_core_loop(unsigned int timeout)
         return false;
     }
 
-    if (ret > 0)
+    event_mgr->is_changed = false;
+    for (asc_list_first(event_mgr->list)
+         ; !asc_list_eol(event_mgr->list) && ret > 0
+         ; asc_list_next(event_mgr->list))
     {
-        event_mgr->is_changed = false;
-        asc_list_for(event_mgr->list)
+        asc_event_t *const event =
+            (asc_event_t *)asc_list_data(event_mgr->list);
+
+        if (!is_valid_fd(event->fd))
+            continue;
+
+        if (event->on_read && FD_ISSET(event->fd, &rset))
         {
-            asc_event_t *const event =
-                (asc_event_t *)asc_list_data(event_mgr->list);
-
-            if (!is_valid_fd(event->fd))
-                continue;
-
-            if (event->on_read && FD_ISSET(event->fd, &rset))
-            {
-                event->on_read(event->arg);
-                if (event_mgr->is_changed)
-                    break;
-            }
-            if (event->on_error && FD_ISSET(event->fd, &eset))
-            {
-                event->on_error(event->arg);
-                if (event_mgr->is_changed)
-                    break;
-            }
-            if (event->on_write && FD_ISSET(event->fd, &wset))
-            {
-                event->on_write(event->arg);
-                if (event_mgr->is_changed)
-                    break;
-            }
+            ret--;
+            event->on_read(event->arg);
+            if (event_mgr->is_changed)
+                break;
+        }
+        if (event->on_error && FD_ISSET(event->fd, &eset))
+        {
+            ret--;
+            event->on_error(event->arg);
+            if (event_mgr->is_changed)
+                break;
+        }
+        if (event->on_write && FD_ISSET(event->fd, &wset))
+        {
+            ret--;
+            event->on_write(event->arg);
+            if (event_mgr->is_changed)
+                break;
         }
     }
 
