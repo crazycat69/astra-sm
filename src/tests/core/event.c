@@ -105,7 +105,7 @@ static int sock_open(int type, unsigned short *port)
     sa.in.sin_port = 0;
     sa.in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-    socklen_t addrlen = sizeof(sa);
+    socklen_t addrlen = sizeof(sa.in);
     ck_assert(bind(fd, &sa.addr, addrlen) == 0);
 
     /* get port */
@@ -128,7 +128,7 @@ static int sock_connect(int fd, unsigned short port)
     sa.in.sin_port = port;
     sa.in.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-    const int ret = connect(fd, &sa.addr, sizeof(sa));
+    const int ret = connect(fd, &sa.addr, sizeof(sa.in));
     return (ret == 0 ? 0 : sock_err());
 }
 
@@ -362,7 +362,7 @@ static void tc_ear_on_accept(void *arg)
 
     /* accept client */
     test_sa_t sa;
-    socklen_t sl = sizeof(sa);
+    socklen_t sl = sizeof(sa.in);
     tc_svr_fd = accept(tc_ear_fd, &sa.addr, &sl);
     ck_assert_msg(tc_svr_fd >= 0, "accept() failed");
     sock_nonblock(tc_svr_fd);
@@ -754,7 +754,6 @@ START_TEST(tcp_refused)
 }
 END_TEST
 
-#ifndef WITH_EVENT_KQUEUE
 /* send out-of-band data */
 typedef struct
 {
@@ -793,7 +792,7 @@ static void oob_pipe(int fds[2])
 
     /* get server side socket */
     test_sa_t sa;
-    socklen_t sl = sizeof(sa);
+    socklen_t sl = sizeof(sa.in);
     int server = accept(listener, &sa.addr, &sl);
     ck_assert(server >= 0);
     sock_nonblock(server);
@@ -813,9 +812,18 @@ static void oob_on_write(void *arg)
     char data = OOB_DATA;
     const ssize_t ret = send(t->fd, &data, sizeof(data), MSG_OOB);
     ck_assert(ret == 1);
+
     t->tx++;
+#ifdef WITH_EVENT_KQUEUE
+    if (t->tx >= OOB_MAX_BYTES)
+    {
+        asc_event_set_on_write(t->ev, NULL);
+        asc_main_loop_shutdown();
+    }
+#endif /* WITH_EVENT_KQUEUE */
 }
 
+#ifndef WITH_EVENT_KQUEUE
 static void oob_on_error(void *arg)
 {
     oob_sock_t *const t = (oob_sock_t *)arg;
@@ -852,6 +860,18 @@ static void oob_on_error(void *arg)
         asc_main_loop_shutdown();
     }
 }
+#else /* !WITH_EVENT_KQUEUE */
+static void oob_on_error(void *arg)
+{
+    __uarg(arg);
+
+    /*
+     * NOTE: most kqueue implementations don't support polling for
+     *       OOB data, so let's make sure it's ignored.
+     */
+    ck_abort_msg("expected kqueue to ignore TCP out-of-band data!");
+}
+#endif /* WITH_EVENT_KQUEUE */
 
 START_TEST(tcp_oob)
 {
@@ -885,8 +905,12 @@ START_TEST(tcp_oob)
                  , socks[0].rx, socks[0].tx
                  , socks[1].rx, socks[1].tx);
 
-    ck_assert(socks[0].rx > 0 && socks[0].tx > 0);
-    ck_assert(socks[1].rx > 0 && socks[1].tx > 0);
+    ck_assert(socks[0].tx > 0 && socks[1].tx > 0);
+#ifndef WITH_EVENT_KQUEUE
+    ck_assert(socks[0].rx > 0 && socks[1].rx > 0);
+#else
+    ck_assert(socks[0].rx == 0 && socks[1].rx == 0);
+#endif
 
     ASC_FREE(oob_ev_a, asc_event_close);
     ASC_FREE(oob_ev_b, asc_event_close);
@@ -897,7 +921,6 @@ START_TEST(tcp_oob)
     sock_close(fds[1]);
 }
 END_TEST
-#endif /* !WITH_EVENT_KQUEUE */
 
 /* send UDP packets to and from localhost */
 typedef struct
@@ -1053,7 +1076,7 @@ static void sot_svr_on_accept(void *arg)
     {
         /* accept connection */
         test_sa_t sa;
-        socklen_t sl = sizeof(sa);
+        socklen_t sl = sizeof(sa.in);
 
         const int fd = accept(svr->sk.fd, &sa.addr, &sl);
         if (fd == -1 && sock_blocked(sock_err()))
@@ -1279,7 +1302,7 @@ START_TEST(series_of_tubes)
         asc_event_set_on_write(svr->sk.ev, on_fail_event);
         asc_event_set_on_error(svr->sk.ev, on_fail_event);
 
-        socklen_t sl = sizeof(svr->sk.sa);
+        socklen_t sl = sizeof(svr->sk.sa.in);
         ck_assert(getsockname(fd, &svr->sk.sa.addr, &sl) == 0);
 
         svr->clients = asc_list_init();
@@ -1347,10 +1370,7 @@ Suite *core_event(void)
     tcase_add_test(tc, push_pull);
     tcase_add_test(tc, tcp_connect);
     tcase_add_test(tc, tcp_refused);
-#ifndef WITH_EVENT_KQUEUE
-    /* NOTE: most kqueue OS'es don't support polling for OOB data */
     tcase_add_test(tc, tcp_oob);
-#endif
     tcase_add_test(tc, udp_sockets);
     tcase_add_test(tc, series_of_tubes);
 
