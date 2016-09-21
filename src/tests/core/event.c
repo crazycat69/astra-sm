@@ -36,8 +36,9 @@
 
 typedef union
 {
-    struct sockaddr_in in;
     struct sockaddr addr;
+    struct sockaddr_storage stor;
+    struct sockaddr_in in;
 } test_sa_t;
 
 static int sock_erropt(int fd)
@@ -352,9 +353,9 @@ static void tc_ear_on_accept(void *arg)
     __uarg(arg);
 
     /* accept client */
-    struct sockaddr sa;
+    test_sa_t sa;
     socklen_t sl = sizeof(sa);
-    tc_svr_fd = accept(tc_ear_fd, &sa, &sl);
+    tc_svr_fd = accept(tc_ear_fd, &sa.addr, &sl);
     ck_assert_msg(tc_svr_fd >= 0, "accept() failed");
     sock_nonblock(tc_svr_fd);
 
@@ -777,9 +778,9 @@ static void oob_pipe(int fds[2])
     ck_assert(FD_ISSET(listener, &rset));
 
     /* get server side socket */
-    struct sockaddr sa;
+    test_sa_t sa;
     socklen_t sl = sizeof(sa);
-    int server = accept(listener, &sa, &sl);
+    int server = accept(listener, &sa.addr, &sl);
     ck_assert(server >= 0);
     sock_nonblock(server);
 
