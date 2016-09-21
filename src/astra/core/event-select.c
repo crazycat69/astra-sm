@@ -19,6 +19,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+/*
+ * On some systems it's possible to change the size of an fd_set
+ * by manually defining FD_SETSIZE.
+ */
+#define FD_SETSIZE 8192
+
 #include "event-priv.h"
 
 #ifdef HAVE_SYS_SELECT_H
@@ -26,6 +32,12 @@
 #endif
 
 #define MSG(_msg) "[core/event-select] " _msg
+
+/*
+ * Enforce sane minimum size for fd_set. Linux system headers
+ * redefine this as 1024, so don't insist on anything bigger.
+ */
+ASC_STATIC_ASSERT(FD_SETSIZE >= 1024);
 
 typedef struct
 {
@@ -71,9 +83,30 @@ void asc_event_core_destroy(void)
     ASC_FREE(event_mgr, free);
 }
 
+static inline
+bool is_valid_fd(int fd)
+{
+#ifndef _WIN32
+    /*
+     * POSIX requires fds to be greater than or equal to 0 and less than
+     * FD_SETSIZE. Given that an fd_set is normally a bitmask on those
+     * systems, breaking this rule WILL corrupt whatever's located next
+     * to the set.
+     */
+    return (fd >= 0 && fd < (int)FD_SETSIZE);
+#else
+    /*
+     * On Windows, these checks are done inside FD_XXX macros, while
+     * select()'s nfds argument is completely ignored. We still warn
+     * the user if the fd list gets too large.
+     */
+    return true;
+#endif
+}
+
 bool asc_event_core_loop(unsigned int timeout)
 {
-    if (asc_list_size(event_mgr->list) == 0)
+    if (event_mgr->max_fd < 0)
     {
         asc_usleep(timeout * 1000ULL); /* dry run */
         return true;
@@ -110,11 +143,8 @@ bool asc_event_core_loop(unsigned int timeout)
             asc_event_t *const event =
                 (asc_event_t *)asc_list_data(event_mgr->list);
 
-#ifndef _WIN32
-            /* see asc_event_subscribe() */
-            if (event->fd < 0 || event->fd >= (int)FD_SETSIZE)
+            if (!is_valid_fd(event->fd))
                 continue;
-#endif /* !_WIN32 */
 
             if (event->on_read && FD_ISSET(event->fd, &rset))
             {
@@ -142,22 +172,12 @@ bool asc_event_core_loop(unsigned int timeout)
 
 void asc_event_subscribe(asc_event_t *event)
 {
-#ifndef _WIN32
-    /*
-     * POSIX requires fds to be greater than or equal to 0 and less than
-     * FD_SETSIZE. Given that an fd_set is normally a bitmask on those
-     * systems, breaking this rule WILL corrupt whatever's located next
-     * to the set.
-     *
-     * On Windows, these checks are done inside FD_XXX macros.
-     */
-    if (event->fd < 0 || event->fd >= (int)FD_SETSIZE)
+    if (!is_valid_fd(event->fd))
     {
-        asc_log_error(MSG("fd %d out of range for select(), ignoring")
+        asc_log_error(MSG("fd %d out of range for select(), ignoring events")
                       , event->fd);
         return;
     }
-#endif /* !_WIN32 */
 
     if (event->on_read)
         FD_SET((unsigned)event->fd, &event_mgr->rmaster);
@@ -182,8 +202,13 @@ asc_event_t *asc_event_init(int fd, void *arg)
     event->fd = fd;
     event->arg = arg;
 
-    if (fd > event_mgr->max_fd)
+    if (fd > event_mgr->max_fd && is_valid_fd(fd))
         event_mgr->max_fd = fd;
+
+#ifdef _WIN32
+    if (asc_list_size(event_mgr->list) >= FD_SETSIZE)
+        asc_log_error(MSG("fd list is too large, events could get dropped"));
+#endif
 
     asc_list_insert_tail(event_mgr->list, event);
     event_mgr->is_changed = true;
@@ -222,7 +247,7 @@ void asc_event_close(asc_event_t *event)
         }
         else
         {
-            if (item->fd > event_mgr->max_fd)
+            if (item->fd > event_mgr->max_fd && is_valid_fd(item->fd))
                 event_mgr->max_fd = item->fd;
 
             asc_list_next(event_mgr->list);
