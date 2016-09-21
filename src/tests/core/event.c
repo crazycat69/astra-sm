@@ -70,6 +70,14 @@ static bool sock_blocked(int err)
 #endif
 }
 
+static void sock_nodelay(int fd)
+{
+    /* disable Nagle algorithm */
+    int one = 1;
+    ck_assert(setsockopt(fd, IPPROTO_TCP, TCP_NODELAY
+                         , (char *)&one, sizeof(one)) == 0);
+}
+
 static void sock_nonblock(int fd)
 {
 #ifdef _WIN32
@@ -358,6 +366,7 @@ static void tc_ear_on_accept(void *arg)
     tc_svr_fd = accept(tc_ear_fd, &sa.addr, &sl);
     ck_assert_msg(tc_svr_fd >= 0, "accept() failed");
     sock_nonblock(tc_svr_fd);
+    sock_nodelay(tc_svr_fd);
 
     tc_svr_ev = asc_event_init(tc_svr_fd, NULL);
     asc_event_set_on_error(tc_svr_ev, on_fail_event);
@@ -600,6 +609,8 @@ START_TEST(tcp_connect)
 
         /* initiate client connection */
         tc_clnt_fd = sock_open(SOCK_STREAM, NULL);
+        sock_nodelay(tc_clnt_fd);
+
         const int ret = sock_connect(tc_clnt_fd, listen_port);
 #ifdef _WIN32
         if (ret != 0 && ret != WSAEINPROGRESS && ret != WSAEWOULDBLOCK)
@@ -705,6 +716,7 @@ START_TEST(tcp_refused)
         const int spoiler = sock_open(SOCK_STREAM, &closed_port);
         tr_fd = sock_open(SOCK_STREAM, NULL);
         sock_close(spoiler);
+        sock_nodelay(tr_fd);
 
         /* set up event object */
         tr_ev = asc_event_init(tr_fd, NULL);
@@ -763,6 +775,8 @@ static void oob_pipe(int fds[2])
     ck_assert(listen(listener, SOMAXCONN) == 0);
 
     const int client = sock_open(SOCK_STREAM, NULL);
+    sock_nodelay(client);
+
     const int ret = sock_connect(client, port);
 #ifdef _WIN32
     ck_assert(ret == 0 || ret == WSAEINPROGRESS || ret == WSAEWOULDBLOCK);
@@ -783,15 +797,7 @@ static void oob_pipe(int fds[2])
     int server = accept(listener, &sa.addr, &sl);
     ck_assert(server >= 0);
     sock_nonblock(server);
-
-    /* disable Nagle algorithm */
-    int one = 1;
-    ck_assert(setsockopt(server, IPPROTO_TCP, TCP_NODELAY
-                         , (char *)&one, sizeof(one)) == 0);
-
-    one = 1;
-    ck_assert(setsockopt(client, IPPROTO_TCP, TCP_NODELAY
-                         , (char *)&one, sizeof(one)) == 0);
+    sock_nodelay(server);
 
     fds[0] = server;
     fds[1] = client;
@@ -1055,6 +1061,7 @@ static void sot_svr_on_accept(void *arg)
 
         ck_assert_msg(fd >= 0, "accept() failed: %s", asc_error_msg());
         sock_nonblock(fd);
+        sock_nodelay(fd);
 
         /* add to client list */
         sot_sock_t *const client = ASC_ALLOC(1, sot_sock_t);
@@ -1222,6 +1229,8 @@ static void sot_on_check(void *arg)
             req->svr = svr;
 
             req->fd = sock_open(SOCK_STREAM, NULL);
+            sock_nodelay(req->fd);
+
             req->ev = asc_event_init(req->fd, req);
             asc_event_set_on_write(req->ev, sot_clnt_on_connect);
             asc_event_set_on_error(req->ev, on_fail_event);
