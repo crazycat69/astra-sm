@@ -21,12 +21,16 @@
 
 #include "event-priv.h"
 
-#ifdef HAVE_POLL_H
-#   include <poll.h>
-#endif
-
-#if !defined(HAVE_POLL) && defined(HAVE_WSAPOLL)
-#   define poll(_a, _b, _c) WSAPoll(_a, _b, _c)
+#ifdef _WIN32
+#   if !defined(HAVE_POLL) && defined(HAVE_WSAPOLL)
+#       define poll(_a, _b, _c) WSAPoll(_a, _b, _c)
+#   endif
+#   define POLLBAND (POLLRDBAND) /* Windows hates POLLPRI for some reason */
+#else
+#   ifdef HAVE_POLL_H
+#       include <poll.h>
+#   endif
+#   define POLLBAND (POLLRDBAND | POLLPRI)
 #endif
 
 #ifndef POLLRDHUP
@@ -103,9 +107,9 @@ bool asc_event_core_loop(unsigned int timeout)
         ret--;
         const asc_event_t *const event = event_mgr->ev[i];
 
-        const bool is_rd = revents & (POLLIN | POLLRDHUP | POLLHUP);
+        const bool is_rd = revents & (POLLRDNORM | POLLRDHUP | POLLHUP);
         const bool is_wr = revents & POLLOUT;
-        const bool is_er = revents & (POLLERR | POLLNVAL);
+        const bool is_er = revents & (POLLERR | POLLNVAL | POLLHUP | POLLBAND);
 
         if (event->on_read && is_rd)
         {
@@ -166,9 +170,11 @@ void asc_event_subscribe(asc_event_t *event)
 
     event_mgr->fd[i].events = 0;
     if (event->on_read)
-        event_mgr->fd[i].events |= (POLLIN | POLLRDHUP);
+        event_mgr->fd[i].events |= (POLLRDNORM | POLLRDHUP);
     if (event->on_write)
         event_mgr->fd[i].events |= POLLOUT;
+    if (event->on_error)
+        event_mgr->fd[i].events |= POLLBAND;
 }
 
 asc_event_t *asc_event_init(int fd, void *arg)

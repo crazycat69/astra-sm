@@ -26,7 +26,6 @@
 #ifndef EPOLLRDHUP
 #   define EPOLLRDHUP 0 /* didn't exist before Linux 2.6.17 */
 #endif
-#define EPOLLREAD (EPOLLIN | EPOLLRDHUP | EPOLLHUP)
 
 #define MSG(_msg) "[core/event-epoll] " _msg
 
@@ -101,9 +100,9 @@ bool asc_event_core_loop(unsigned int timeout)
         const struct epoll_event *ed = &event_mgr->out[i];
         const asc_event_t *event = (asc_event_t *)ed->data.ptr;
 
-        const bool is_rd = ed->events & EPOLLREAD;
+        const bool is_rd = ed->events & (EPOLLIN | EPOLLRDHUP | EPOLLHUP);
         const bool is_wr = ed->events & EPOLLOUT;
-        const bool is_er = ed->events & EPOLLERR;
+        const bool is_er = ed->events & (EPOLLERR | EPOLLHUP | EPOLLPRI);
 
         if (event->on_read && is_rd)
         {
@@ -131,16 +130,18 @@ bool asc_event_core_loop(unsigned int timeout)
 void asc_event_subscribe(asc_event_t *event)
 {
     struct epoll_event ed = {
-        .events = EPOLLERR,
+        .events = (EPOLLERR | EPOLLHUP),
         .data = {
             .ptr = event,
         },
     };
 
     if (event->on_read)
-        ed.events |= EPOLLREAD;
+        ed.events |= (EPOLLIN | EPOLLRDHUP);
     if (event->on_write)
         ed.events |= EPOLLOUT;
+    if (event->on_error)
+        ed.events |= EPOLLPRI;
 
     const int ret = epoll_ctl(event_mgr->fd, EPOLL_CTL_MOD, event->fd, &ed);
     asc_assert(ret == 0, MSG("epoll_ctl(): couldn't change fd %d: %s")
@@ -168,7 +169,7 @@ asc_event_t *asc_event_init(int fd, void *arg)
     event->arg = arg;
 
     struct epoll_event ed = {
-        .events = EPOLLERR,
+        .events = (EPOLLERR | EPOLLHUP),
         .data = {
             .ptr = event,
         },
