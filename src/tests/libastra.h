@@ -34,6 +34,7 @@ void lib_teardown(void);
 /* core */
 Suite *core_alloc(void);
 Suite *core_clock(void);
+Suite *core_event(void);
 Suite *core_list(void);
 Suite *core_mainloop(void);
 Suite *core_spawn(void);
@@ -73,6 +74,7 @@ static suite_func_t suite_list[] = {
     /* core */
     core_alloc,
     core_clock,
+    core_event,
     core_list,
     core_mainloop,
     core_spawn,

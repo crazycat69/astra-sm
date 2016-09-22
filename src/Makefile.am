@@ -65,6 +65,7 @@ libastra_la_SOURCES += \
     astra/core/error.h \
     astra/core/event.c \
     astra/core/event.h \
+    astra/core/event-priv.h \
     astra/core/init.c \
     astra/core/init.h \
     astra/core/list.c \
@@ -85,6 +86,19 @@ libastra_la_SOURCES += \
     astra/core/thread.h \
     astra/core/timer.c \
     astra/core/timer.h
+
+if WITH_SELECT
+libastra_la_SOURCES += astra/core/event-select.c
+endif
+if WITH_POLL
+libastra_la_SOURCES += astra/core/event-poll.c
+endif
+if WITH_KQUEUE
+libastra_la_SOURCES += astra/core/event-kqueue.c
+endif
+if WITH_EPOLL
+libastra_la_SOURCES += astra/core/event-epoll.c
+endif
 
 # luaapi/
 libastra_la_SOURCES += \
@@ -336,6 +350,7 @@ tests_libastra_SOURCES += \
     tests/core/alloc.c \
     tests/core/child.c \
     tests/core/clock.c \
+    tests/core/event.c \
     tests/core/list.c \
     tests/core/mainloop.c \
     tests/core/spawn.c \

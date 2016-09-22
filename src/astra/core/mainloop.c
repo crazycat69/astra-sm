@@ -288,7 +288,8 @@ bool asc_main_loop_run(void)
 
     while (true)
     {
-        asc_event_core_loop(ev_sleep);
+        if (!asc_event_core_loop(ev_sleep))
+            return true; /* polling failed, restart instance */
 
         if (main_loop->flags)
         {

@@ -250,10 +250,12 @@ AS_IF([test "x${event_mechanism}" = "x"], [
     AS_IF([test "x${epoll_failed}" = "xno"], [
         event_mechanism="epoll"
         AC_CHECK_FUNCS([epoll_create1])
-        AC_DEFINE([WITH_EPOLL],
-            [1], [Define to use epoll for event notification])
+        AC_DEFINE([WITH_EVENT_EPOLL], [1],
+            [Define to 1 if using epoll for event notification])
     ])
 ])
+AM_CONDITIONAL([WITH_EPOLL],
+    [test "x${event_mechanism}" = "xepoll"])
 
 # kqueue (various BSD)
 AS_IF([test "x${event_mechanism}" = "x"], [
@@ -267,10 +269,12 @@ AS_IF([test "x${event_mechanism}" = "x"], [
     AS_IF([test "x${kqueue_failed}" = "xno"], [
         event_mechanism="kqueue"
         AC_CHECK_FUNCS([kqueue1])
-        AC_DEFINE([WITH_KQUEUE],
-            [1], [Define to use kqueue for event notification])
+        AC_DEFINE([WITH_EVENT_KQUEUE], [1],
+            [Define to 1 if using kqueue for event notification])
     ])
 ])
+AM_CONDITIONAL([WITH_KQUEUE],
+    [test "x${event_mechanism}" = "xkqueue"])
 
 # poll
 AS_IF([test "x${event_mechanism}" = "x"], [
@@ -289,19 +293,23 @@ AS_IF([test "x${event_mechanism}" = "x"], [
     ])
     AS_IF([test "x${poll_failed}" = "xno"], [
         event_mechanism="poll"
-        AC_DEFINE([WITH_POLL],
-            [1], [Define to use poll() for event notification])
+        AC_DEFINE([WITH_EVENT_POLL], [1],
+            [Define to 1 if using poll() for event notification])
     ])
 ])
+AM_CONDITIONAL([WITH_POLL],
+    [test "x${event_mechanism}" = "xpoll"])
 
 # select
 AS_IF([test "x${event_mechanism}" = "x"], [
     # no need to check the function, it's present on every system
     AC_CHECK_HEADERS([sys/select.h])
     event_mechanism="select"
-    AC_DEFINE([WITH_SELECT],
-        [1], [Define to use select() for event notification])
+    AC_DEFINE([WITH_EVENT_SELECT], [1],
+        [Define to 1 if using select() for event notification])
 ])
+AM_CONDITIONAL([WITH_SELECT],
+    [test "x${event_mechanism}" = "xselect"])
 
 AC_MSG_NOTICE([using ${event_mechanism} for event notification])
 
@@ -783,7 +791,8 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wlogical-op], [WARN_CFLAGS])
 
     # Clang-specific
-    AX_CHECK_CFLAG([-Wgnu], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wgnu], [WARN_CFLAGS], [
+        AX_CHECK_CFLAG([-Wno-gnu-zero-variadic-macro-arguments], [WARN_CFLAGS]) ])
 ])
 
 # Less important warnings

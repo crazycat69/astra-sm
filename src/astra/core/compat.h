@@ -136,6 +136,14 @@ int cx_mkstemp(char *tpl);
 int cx_open(const char *path, int flags, ...);
 int cx_socket(int family, int type, int protocol);
 
+#ifdef HAVE_EPOLL_CREATE
+int cx_epoll_create(int size);
+#endif
+
+#ifdef HAVE_KQUEUE
+int cx_kqueue(void);
+#endif
+
 #ifndef ASC_COMPAT_NOWRAP
     /* accept() */
 #   ifdef accept
@@ -160,6 +168,18 @@ int cx_socket(int family, int type, int protocol);
 #       undef socket
 #   endif
 #   define socket(...) cx_socket(__VA_ARGS__)
+
+    /* epoll_create() */
+#   ifdef epoll_create
+#       undef epoll_create
+#   endif
+#   define epoll_create(...) cx_epoll_create(__VA_ARGS__)
+
+    /* kqueue() */
+#   ifdef kqueue
+#       undef kqueue
+#   endif
+#   define kqueue(...) cx_kqueue(__VA_ARGS__)
 #endif /* !ASC_COMPAT_NOWRAP */
 
 #endif /* _ASC_COMPAT_H_ */
