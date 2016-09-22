@@ -32,6 +32,7 @@
 #   include <netinet/tcp.h>
 #   include <netdb.h>
 #   include <sys/ioctl.h>
+#   include <sys/resource.h>
 #endif
 
 typedef union
@@ -1005,7 +1006,7 @@ START_TEST(udp_sockets)
 
     /* run test */
     ck_assert(asc_main_loop_run() == false);
-    asc_log_info("UDP test stats: RX:%zu/TX:%zu, RX:%zu/TX:%zu\n"
+    asc_log_info("UDP test stats: RX:%zu/TX:%zu, RX:%zu/TX:%zu"
                  , socks[0].rx, socks[0].tx, socks[1].rx, socks[1].tx);
 
     ck_assert(socks[0].rx >= UDP_MAX_BYTES && socks[0].tx >= UDP_MAX_BYTES);
@@ -1051,18 +1052,19 @@ struct sot_server_t
 };
 
 #define SOT_SERVERS 8 /* how many listening sockets to create */
-#define SOT_MAX_CLIENTS 32 /* max. clients per server socket */
+#define SOT_DEFAULT_CLIENTS 32 /* max. clients per server socket */
 #define SOT_RUN_TIME 3000 /* shut down main loop after 3 seconds */
-#define SOT_CHECK_MS 10 /* create new requests every 10 ms */
 #define SOT_BYTES 16384 /* how much data to send in each direction */
 
 static char sot_buf[1024];
 
 static sot_server_t sot_servers[SOT_SERVERS];
+static unsigned int sot_max_clients = SOT_DEFAULT_CLIENTS;
 
-static asc_timer_t *sot_check = NULL;
 static asc_timer_t *sot_kill = NULL;
 static bool sot_shutdown = false;
+
+static bool sot_check(void);
 
 static void sot_svr_on_read(void *arg);
 
@@ -1118,6 +1120,10 @@ static void sot_svr_on_read(void *arg)
             asc_list_remove_item(sk->svr->clients, sk);
             sock_close(sk->fd);
             free(sk);
+
+            /* repopulate connection pool */
+            if (!sot_check() && sot_shutdown)
+                asc_main_loop_shutdown();
 
             return;
         }
@@ -1200,6 +1206,10 @@ static void sot_clnt_on_read(void *arg)
             asc_list_remove_item(req->svr->requests, req);
             free(req);
 
+            /* repopulate connection pool */
+            if (!sot_check() && sot_shutdown)
+                asc_main_loop_shutdown();
+
             return;
         }
     }
@@ -1227,10 +1237,8 @@ static void sot_clnt_on_write(void *arg)
     }
 }
 
-static void sot_on_check(void *arg)
+static bool sot_check(void)
 {
-    __uarg(arg);
-
     bool busy = false;
     for (unsigned int i = 0; i < SOT_SERVERS; i++)
     {
@@ -1246,7 +1254,7 @@ static void sot_on_check(void *arg)
             continue;
         }
 
-        while (reqs++ < SOT_MAX_CLIENTS)
+        while (reqs++ < sot_max_clients)
         {
             sot_sock_t *const req = ASC_ALLOC(1, sot_sock_t);
             req->svr = svr;
@@ -1271,11 +1279,7 @@ static void sot_on_check(void *arg)
         }
     }
 
-    if (sot_shutdown && !busy)
-    {
-        ASC_FREE(sot_check, asc_timer_destroy);
-        asc_main_loop_shutdown();
-    }
+    return busy;
 }
 
 static void sot_on_kill(void *arg)
@@ -1288,6 +1292,33 @@ static void sot_on_kill(void *arg)
 
 START_TEST(series_of_tubes)
 {
+#ifndef _WIN32
+    /* adjust open files limit */
+    struct rlimit rl;
+    ck_assert(getrlimit(RLIMIT_NOFILE, &rl) == 0);
+    if (rl.rlim_cur < rl.rlim_max)
+    {
+        rl.rlim_cur = rl.rlim_max;
+        ck_assert(setrlimit(RLIMIT_NOFILE, &rl) == 0);
+    }
+
+    asc_log_info("RLIMIT_NOFILE=%lu", (unsigned long)rl.rlim_cur);
+#ifdef WITH_EVENT_SELECT
+    if (rl.rlim_cur > 1024)
+        rl.rlim_cur = 1024;
+#endif
+
+    static const int pad = 64;
+    const int max = (rl.rlim_cur - SOT_SERVERS - pad) / SOT_SERVERS / 3;
+    ck_assert(max > 0);
+
+    sot_max_clients = max;
+#endif /* !_WIN32 */
+    asc_log_info("%s: servers: %u, max clients per server: %u"
+                 , __FUNCTION__, SOT_SERVERS, sot_max_clients);
+    asc_log_info("using no more than %u file descriptors"
+                 , (sot_max_clients * 2 * SOT_SERVERS) + SOT_SERVERS);
+
     /* create servers */
     for (unsigned int i = 0; i < SOT_SERVERS; i++)
     {
@@ -1310,14 +1341,12 @@ START_TEST(series_of_tubes)
     }
 
     /* set up timers and run the test */
-    sot_check = asc_timer_init(SOT_CHECK_MS, sot_on_check, NULL);
+    ck_assert(sot_check() == false);
     sot_kill = asc_timer_one_shot(SOT_RUN_TIME, sot_on_kill, NULL);
     sot_shutdown = false;
 
     ck_assert(asc_main_loop_run() == false);
-
     ck_assert(sot_kill == NULL);
-    ASC_FREE(sot_check, asc_timer_destroy);
 
     /* take servers down */
     size_t total_reqs = 0;
@@ -1335,8 +1364,8 @@ START_TEST(series_of_tubes)
         asc_list_destroy(svr->requests);
     }
 
-    asc_log_info("series_of_tubes: %zu/%zu requests completed"
-                 , total_completed, total_reqs);
+    asc_log_info("%s: %zu/%zu requests completed"
+                 , __FUNCTION__, total_completed, total_reqs);
 
     ck_assert(total_completed > 0 && total_reqs > 0
               && total_completed == total_reqs);
@@ -1376,6 +1405,7 @@ Suite *core_event(void)
 
     if (can_fork != CK_NOFORK)
     {
+        tcase_set_timeout(tc, 10);
         tcase_add_exit_test(tc, no_close_on_error, EXIT_ABORT);
     }
 
