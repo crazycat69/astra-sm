@@ -159,13 +159,16 @@ static
 void resize_event_list(void)
 {
     const size_t ev_cnt = asc_list_size(event_mgr->list);
-    const size_t new_size = ev_cnt * sizeof(*event_mgr->out);
+    const size_t new_size = event_out_size(event_mgr->out_size, ev_cnt);
 
-    event_mgr->out = (struct kevent *)realloc(event_mgr->out, new_size);
-    asc_assert(new_size == 0 || event_mgr->out != NULL
-               , MSG("realloc() failed"));
+    if (event_mgr->out_size != new_size)
+    {
+        const size_t bytes = new_size * sizeof(*event_mgr->out);
+        event_mgr->out = (struct kevent *)realloc(event_mgr->out, bytes);
+        asc_assert(event_mgr->out != NULL, MSG("realloc() failed"));
 
-    event_mgr->out_size = ev_cnt;
+        event_mgr->out_size = new_size;
+    }
 }
 
 asc_event_t *asc_event_init(int fd, void *arg)

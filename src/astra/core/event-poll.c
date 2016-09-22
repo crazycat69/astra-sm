@@ -46,6 +46,7 @@ typedef struct
     asc_event_t **ev;
     struct pollfd *fd;
     size_t ev_cnt;
+    size_t ev_maxcnt;
     bool is_changed;
 } asc_event_mgr_t;
 
@@ -252,15 +253,22 @@ size_t find_event(const asc_event_t *event)
 static
 void resize_event_list(void)
 {
-    const size_t ev_size = event_mgr->ev_cnt * sizeof(*event_mgr->ev);
-    event_mgr->ev = (asc_event_t **)realloc(event_mgr->ev, ev_size);
+    const size_t maxcnt = event_out_size(event_mgr->ev_maxcnt
+                                         , event_mgr->ev_cnt);
 
-    const size_t fd_size = event_mgr->ev_cnt * sizeof(*event_mgr->fd);
-    event_mgr->fd = (struct pollfd *)realloc(event_mgr->fd, fd_size);
+    if (event_mgr->ev_maxcnt != maxcnt)
+    {
+        const size_t ev_size = maxcnt * sizeof(*event_mgr->ev);
+        event_mgr->ev = (asc_event_t **)realloc(event_mgr->ev, ev_size);
 
-    asc_assert(event_mgr->ev_cnt == 0
-               || (event_mgr->ev != NULL && event_mgr->fd != NULL)
-               , MSG("realloc() failed"));
+        const size_t fd_size = maxcnt * sizeof(*event_mgr->fd);
+        event_mgr->fd = (struct pollfd *)realloc(event_mgr->fd, fd_size);
+
+        asc_assert(event_mgr->ev != NULL && event_mgr->fd != NULL
+                   , MSG("realloc() failed"));
+
+        event_mgr->ev_maxcnt = maxcnt;
+    }
 }
 
 void asc_event_subscribe(asc_event_t *event)

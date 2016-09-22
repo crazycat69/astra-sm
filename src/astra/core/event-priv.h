@@ -43,4 +43,27 @@ struct asc_event_t
 
 void asc_event_subscribe(asc_event_t *event);
 
+/* minimum size for output arrays */
+#define EVENT_LIST_SIZE 1024
+
+static inline __func_const
+size_t event_out_size(size_t max_size, size_t ev_cnt)
+{
+    if (max_size < EVENT_LIST_SIZE)
+        max_size = EVENT_LIST_SIZE;
+
+    while (ev_cnt >= max_size)
+    {
+        max_size *= 2;
+    }
+
+    while (ev_cnt < (max_size / 4)
+           && max_size > EVENT_LIST_SIZE)
+    {
+        max_size /= 2;
+    }
+
+    return max_size;
+}
+
 #endif /* _ASC_EVENT_PRIV_H_ */
