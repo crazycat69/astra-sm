@@ -22,10 +22,12 @@
 #include "event-priv.h"
 
 #ifdef _WIN32
+#   include <astra/core/mainloop.h> /* for job queue */
 #   if !defined(HAVE_POLL) && defined(HAVE_WSAPOLL)
 #       define poll(_a, _b, _c) WSAPoll(_a, _b, _c)
 #   endif
 #   define POLLBAND (POLLRDBAND) /* Windows hates POLLPRI for some reason */
+#   define CONNECT_TIMEOUT (300000) /* release wait object after 5 minutes */
 #else
 #   ifdef HAVE_POLL_H
 #       include <poll.h>
@@ -48,6 +50,97 @@ typedef struct
 } asc_event_mgr_t;
 
 static asc_event_mgr_t *event_mgr = NULL;
+
+#ifdef _WIN32
+/*
+ * WSAPoll() has an annoying bug where it fails to report connection
+ * failure. This workaround uses a wait thread to wait for the FD_CONNECT
+ * event. Error notification is then delivered to the main loop via
+ * job queue.
+ */
+
+static
+void wait_connect_fail(asc_event_t *event)
+{
+    if (event->on_error)
+        event->on_error(event->arg);
+}
+
+static
+void wait_unregister(asc_event_t *event)
+{
+    if (!UnregisterWaitEx(event->wait, INVALID_HANDLE_VALUE))
+        asc_log_error(MSG("UnregisterWaitEx(): %s"), asc_error_msg());
+
+    event->wait = NULL;
+
+    if (WSAEventSelect(event->fd, event->conn_evt, 0) != 0)
+        asc_log_error(MSG("WSAEventSelect(): %s"), asc_error_msg());
+
+    ASC_FREE(event->conn_evt, CloseHandle);
+    asc_job_prune(event);
+}
+
+static CALLBACK
+void wait_thread_proc(void *arg, BOOLEAN timedout)
+{
+    asc_event_t *const event = (asc_event_t *)arg;
+
+    if (!timedout)
+    {
+        WSANETWORKEVENTS ne;
+        const int ret = WSAEnumNetworkEvents(event->fd, event->conn_evt, &ne);
+
+        if (ret == 0 && (ne.lNetworkEvents & FD_CONNECT)
+            && ne.iErrorCode[FD_CONNECT_BIT] != 0)
+        {
+            asc_job_queue(event, (loop_callback_t)wait_connect_fail, event);
+        }
+    }
+    else
+    {
+        asc_job_queue(event, (loop_callback_t)wait_unregister, event);
+    }
+}
+
+static
+void wait_register(asc_event_t *event)
+{
+    HANDLE wait = NULL;
+
+    const HANDLE conn_evt = CreateEvent(NULL, TRUE, FALSE, NULL);
+    if (conn_evt == NULL)
+    {
+        asc_log_error(MSG("CreateEvent(): %s"), asc_error_msg());
+
+        return;
+    }
+
+    if (WSAEventSelect(event->fd, conn_evt, FD_CONNECT) != 0)
+    {
+        asc_log_error(MSG("WSAEventSelect(): %s"), asc_error_msg());
+
+        CloseHandle(conn_evt);
+        return;
+    }
+
+    if (!RegisterWaitForSingleObject(&wait, conn_evt, wait_thread_proc
+                                     , event, CONNECT_TIMEOUT
+                                     , (WT_EXECUTEONLYONCE
+                                        | WT_EXECUTEINWAITTHREAD)))
+    {
+        asc_log_error(MSG("RegisterWaitForSingleObject(): %s")
+                      , asc_error_msg());
+
+        WSAEventSelect(event->fd, conn_evt, 0);
+        CloseHandle(conn_evt);
+        return;
+    }
+
+    event->conn_evt = conn_evt;
+    event->wait = wait;
+}
+#endif /* _WIN32 */
 
 void asc_event_core_init(void)
 {
@@ -105,11 +198,17 @@ bool asc_event_core_loop(unsigned int timeout)
             continue;
 
         ret--;
-        const asc_event_t *const event = event_mgr->ev[i];
+        asc_event_t *const event = event_mgr->ev[i];
 
         const bool is_rd = revents & (POLLRDNORM | POLLRDHUP | POLLHUP);
         const bool is_wr = revents & POLLOUT;
         const bool is_er = revents & (POLLERR | POLLNVAL | POLLHUP | POLLBAND);
+
+#ifdef _WIN32
+        /* kill connect() wait on first event */
+        if (event->wait != NULL)
+            wait_unregister(event);
+#endif
 
         if (event->on_read && is_rd)
         {
@@ -194,12 +293,23 @@ asc_event_t *asc_event_init(int fd, void *arg)
     event_mgr->fd[i].fd = fd;
     event_mgr->ev[i] = event;
 
+#ifdef _WIN32
+    /* watch for connection failure event */
+    wait_register(event);
+#endif
+
     return event;
 }
 
 void asc_event_close(asc_event_t *event)
 {
     const size_t i = find_event(event);
+
+#ifdef _WIN32
+    /* stop background wait for connect() */
+    if (event->wait != NULL)
+        wait_unregister(event);
+#endif
 
     /* shift down array remainder */
     const size_t more = event_mgr->ev_cnt - (i + 1);

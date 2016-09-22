@@ -33,6 +33,12 @@ struct asc_event_t
     event_callback_t on_write;
     event_callback_t on_error;
     void *arg;
+
+#if defined(_WIN32) && defined(WITH_EVENT_POLL)
+    /* these are for WSAPoll non-blocking connect() workaround */
+    HANDLE conn_evt;
+    HANDLE wait;
+#endif
 };
 
 void asc_event_subscribe(asc_event_t *event);
