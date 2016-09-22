@@ -35,6 +35,8 @@
 #   include <sys/resource.h>
 #endif
 
+#define SOCK_MIN_BUF 16384
+
 typedef union
 {
     struct sockaddr addr;
@@ -79,6 +81,35 @@ static void sock_nodelay(int fd)
                          , (char *)&one, sizeof(one)) == 0);
 }
 
+static void sock_buf(int fd)
+{
+    int opts[] = { SO_RCVBUF, SO_SNDBUF };
+
+    for (unsigned i = 0; i < ASC_ARRAY_SIZE(opts); i++)
+    {
+        const int opt = opts[i];
+
+        int val;
+        socklen_t len = sizeof(val);
+        ck_assert_msg(getsockopt(fd, SOL_SOCKET, opt, (char *)&val, &len) == 0
+                      , "getsockopt(): %s", asc_error_msg());
+
+        if (val < SOCK_MIN_BUF)
+        {
+            val = SOCK_MIN_BUF;
+            len = sizeof(val);
+
+            ck_assert_msg(setsockopt(fd, SOL_SOCKET, opt
+                                     , (char *)&val, len) == 0
+                          , "setsockopt(): %s", asc_error_msg());
+            ck_assert_msg(getsockopt(fd, SOL_SOCKET, opt
+                                     , (char *)&val, &len) == 0
+                          , "getsockopt(): %s", asc_error_msg());
+            ck_assert(val >= SOCK_MIN_BUF);
+        }
+    }
+}
+
 static void sock_nonblock(int fd)
 {
 #ifdef _WIN32
@@ -97,6 +128,7 @@ static int sock_open(int type, unsigned short *port)
     const int fd = socket(AF_INET, type, 0);
     ck_assert(fd >= 0);
     sock_nonblock(fd);
+    sock_buf(fd);
 
     /* bind to loopback */
     test_sa_t sa;
@@ -368,6 +400,7 @@ static void tc_ear_on_accept(void *arg)
     ck_assert_msg(tc_svr_fd >= 0, "accept() failed");
     sock_nonblock(tc_svr_fd);
     sock_nodelay(tc_svr_fd);
+    sock_buf(tc_svr_fd);
 
     tc_svr_ev = asc_event_init(tc_svr_fd, NULL);
     asc_event_set_on_error(tc_svr_ev, on_fail_event);
@@ -798,6 +831,7 @@ static void oob_pipe(int fds[2])
     ck_assert(server >= 0);
     sock_nonblock(server);
     sock_nodelay(server);
+    sock_buf(server);
 
     fds[0] = server;
     fds[1] = client;
@@ -1066,6 +1100,17 @@ static bool sot_shutdown = false;
 
 static bool sot_check(void);
 
+static void sot_on_error(void *arg)
+{
+    sot_sock_t *const sk = (sot_sock_t *)arg;
+
+    char buf[1024] = { 0 };
+    const int err = sock_erropt(sk->fd);
+    asc_strerror(err, buf, sizeof(buf));
+
+    ck_abort_msg("error on fd %d: %d, %s", sk->fd, err, buf);
+}
+
 static void sot_svr_on_read(void *arg);
 
 static void sot_svr_on_write(void *arg);
@@ -1087,6 +1132,7 @@ static void sot_svr_on_accept(void *arg)
         ck_assert_msg(fd >= 0, "accept() failed: %s", asc_error_msg());
         sock_nonblock(fd);
         sock_nodelay(fd);
+        sock_buf(fd);
 
         /* add to client list */
         sot_sock_t *const client = ASC_ALLOC(1, sot_sock_t);
@@ -1096,7 +1142,7 @@ static void sot_svr_on_accept(void *arg)
 
         client->ev = asc_event_init(client->fd, client);
         asc_event_set_on_read(client->ev, sot_svr_on_read);
-        asc_event_set_on_error(client->ev, on_fail_event);
+        asc_event_set_on_error(client->ev, sot_on_error);
 
         asc_list_insert_tail(svr->clients, client);
     }
@@ -1176,10 +1222,17 @@ static void sot_clnt_on_connect(void *arg)
     sot_sock_t *const req = (sot_sock_t *)arg; /* client side */
 
     /* make sure connection was successful */
-    ck_assert(sock_erropt(req->fd) == 0);
+    int err = sock_erropt(req->fd);
+    if (err != 0)
+    {
+        char buf[1024] = { 0 };
+        asc_strerror(err, buf, sizeof(buf));
+        ck_abort_msg("%s: fd=%d, %s", __FUNCTION__, req->fd, buf);
+    }
 
     asc_event_set_on_read(req->ev, sot_clnt_on_read);
     asc_event_set_on_write(req->ev, sot_clnt_on_write);
+    sot_clnt_on_write(req);
 }
 
 static void sot_clnt_on_read(void *arg)
@@ -1264,7 +1317,7 @@ static bool sot_check(void)
 
             req->ev = asc_event_init(req->fd, req);
             asc_event_set_on_write(req->ev, sot_clnt_on_connect);
-            asc_event_set_on_error(req->ev, on_fail_event);
+            asc_event_set_on_error(req->ev, sot_on_error);
 
             const int ret = sock_connect(req->fd, svr->sk.sa.in.sin_port);
 #ifdef _WIN32
@@ -1286,6 +1339,7 @@ static void sot_on_kill(void *arg)
 {
     __uarg(arg);
 
+    asc_log_info("kill timer!");
     sot_kill = NULL;
     sot_shutdown = true;
 }
@@ -1330,8 +1384,8 @@ START_TEST(series_of_tubes)
         svr->sk.fd = fd;
         svr->sk.ev = asc_event_init(fd, svr);
         asc_event_set_on_read(svr->sk.ev, sot_svr_on_accept);
-        asc_event_set_on_write(svr->sk.ev, on_fail_event);
-        asc_event_set_on_error(svr->sk.ev, on_fail_event);
+        asc_event_set_on_write(svr->sk.ev, sot_on_error);
+        asc_event_set_on_error(svr->sk.ev, sot_on_error);
 
         socklen_t sl = sizeof(svr->sk.sa.in);
         ck_assert(getsockname(fd, &svr->sk.sa.addr, &sl) == 0);
