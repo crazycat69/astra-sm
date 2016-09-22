@@ -149,9 +149,11 @@ void asc_event_subscribe(asc_event_t *event)
     for (unsigned int i = 0; i < 2; i++)
     {
         const int ret = kevent(event_mgr->fd, &ed[i], 1, NULL, 0, NULL);
-        asc_assert(ret == 0 || errno == ENOENT || errno == EINTR
-                   , MSG("kevent(): couldn't register fd %d: %s")
-                   , event->fd, strerror(errno));
+        if (ret != 0 && errno != ENOENT && errno != EINTR)
+        {
+            asc_log_error(MSG("kevent(): couldn't register fd %d: %s")
+                          , event->fd, strerror(errno));
+        }
     }
 }
 

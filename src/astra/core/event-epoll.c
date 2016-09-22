@@ -144,8 +144,11 @@ void asc_event_subscribe(asc_event_t *event)
         ed.events |= EPOLLPRI;
 
     const int ret = epoll_ctl(event_mgr->fd, EPOLL_CTL_MOD, event->fd, &ed);
-    asc_assert(ret == 0, MSG("epoll_ctl(): couldn't change fd %d: %s")
-               , event->fd, strerror(errno));
+    if (ret != 0)
+    {
+        asc_log_error(MSG("epoll_ctl(): couldn't change fd %d: %s")
+                      , event->fd, strerror(errno));
+    }
 }
 
 static
@@ -179,8 +182,11 @@ asc_event_t *asc_event_init(int fd, void *arg)
     };
 
     const int ret = epoll_ctl(event_mgr->fd, EPOLL_CTL_ADD, event->fd, &ed);
-    asc_assert(ret == 0, MSG("epoll_ctl(): couldn't register fd %d: %s")
-               , event->fd, strerror(errno));
+    if (ret != 0)
+    {
+        asc_log_error(MSG("epoll_ctl(): couldn't register fd %d: %s")
+                      , event->fd, strerror(errno));
+    }
 
     asc_list_insert_tail(event_mgr->list, event);
     event_mgr->is_changed = true;
@@ -197,8 +203,11 @@ void asc_event_close(asc_event_t *event)
     };
 
     const int ret = epoll_ctl(event_mgr->fd, EPOLL_CTL_DEL, event->fd, &ed);
-    asc_assert(ret == 0, MSG("epoll_ctl(): couldn't remove fd %d: %s")
-               , event->fd, strerror(errno));
+    if (ret != 0)
+    {
+        asc_log_error(MSG("epoll_ctl(): couldn't remove fd %d: %s")
+                      , event->fd, strerror(errno));
+    }
 
     asc_list_remove_item(event_mgr->list, event);
     event_mgr->is_changed = true;
