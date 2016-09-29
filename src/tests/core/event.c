@@ -1227,7 +1227,7 @@ static void sot_clnt_on_connect(void *arg)
     {
         char buf[1024] = { 0 };
         asc_strerror(err, buf, sizeof(buf));
-        ck_abort_msg("%s: fd=%d, %s", __FUNCTION__, req->fd, buf);
+        ck_abort_msg("%s: fd=%d, %s", __func__, req->fd, buf);
     }
 
     asc_event_set_on_read(req->ev, sot_clnt_on_read);
@@ -1369,7 +1369,7 @@ START_TEST(series_of_tubes)
     sot_max_clients = max;
 #endif /* !_WIN32 */
     asc_log_info("%s: servers: %u, max clients per server: %u"
-                 , __FUNCTION__, SOT_SERVERS, sot_max_clients);
+                 , __func__, SOT_SERVERS, sot_max_clients);
     asc_log_info("using no more than %u file descriptors"
                  , (sot_max_clients * 2 * SOT_SERVERS) + SOT_SERVERS);
 
@@ -1419,7 +1419,7 @@ START_TEST(series_of_tubes)
     }
 
     asc_log_info("%s: %zu/%zu requests completed"
-                 , __FUNCTION__, total_completed, total_reqs);
+                 , __func__, total_completed, total_reqs);
 
     ck_assert(total_completed > 0 && total_reqs > 0
               && total_completed == total_reqs);
