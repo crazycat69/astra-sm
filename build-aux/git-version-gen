@@ -1,48 +1,76 @@
 #! /bin/sh
 
+fatal()
+{
+    echo "$1" 1>&1
+    echo -n "UNKNOWN"
+    exit 1
+}
+
 unset version
+versionfile=./version.txt
+
 if [ ! -d ".git" ]; then
     # autoreconf called in a tarball distribution tree
-    . ./version.txt
+    if [ -s "$versionfile" ]; then
+        . ./version.txt
+    fi
     if [ -n "$version" ]; then
         echo -n "$version"
         exit 0
-    else
-        echo -n "UNKNOWN"
-        exit 1
     fi
+    fatal "version file empty or invalid"
 fi
 
 # get current branch
 ref=`git symbolic-ref HEAD 2>/dev/null`
-branch=`echo $ref | sed -e 's/^.*\///'`
+branch=`echo -n "$ref" | sed -e 's/^.*\///'`
 
-# get commit no. and hash
-describe=`git describe --match "v[0-9]*" --abbrev=7 HEAD 2>/dev/null`
-hash=`echo $describe | sed -e 's/^.*-g//'`
-vtag=`echo $describe | sed -e 's/-.*$//'`
-
-if [ -z "$hash" -o -z "$vtag" ]; then
-    unset branch
+if [ -z "$branch" ]; then
+    fatal "couldn't get branch name"
 fi
 
+# get commit no. and hash
+describe=`git describe --match "v[0-9]*" --abbrev=7 HEAD 2>/dev/null \
+          || git describe --abbrev=7 HEAD 2>/dev/null`
+
+case "$describe" in
+    v*-*-g*)
+        ;;
+    v*-g*)
+        ;;
+
+    *)
+        fatal "git describe failed"
+esac
+
+hash=`echo -n "$describe" | sed -e 's/^.*-g//'`
+vtag=`echo -n "$describe" | sed -e 's/-.*$//'`
+commitno=`git rev-list "$vtag"..HEAD | wc -l | awk '{print $1}'`
+
+if [ -z "$hash" -o -z "$vtag" -o -z "$commitno" ]; then
+    fatal "couldn't retrieve version data from git"
+fi
+
+# print version string
 if [ "$branch" = "master" ]; then
-    # tag and commit no. (hash)
-    commitno=`git rev-list "$vtag"..HEAD | wc -l | awk '{print $1}'`
+    # tag and commit no.
     if [ "$commitno" = "0" ]; then
         version="${vtag}"
     else
         version="${vtag}.${commitno}"
     fi
+elif [ "$branch" = "staging" ]; then
+    # tag, the number 9999 and commit no.
+    version="${vtag}.9999.${commitno}"
 elif [ -n "$branch" ]; then
     # tag, branch and commit hash
     version="${vtag}-${branch}-${hash}"
 fi
 
 if [ -z "$version" ]; then
-    echo -n "UNKNOWN"
-    exit 1
+    fatal "version string is empty"
 fi
 
-version=`echo $version | sed -e 's/^v//'`
+version=`echo -n "$version" | sed -e 's/^v//'`
 echo -n "$version"
