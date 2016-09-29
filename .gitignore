@@ -27,6 +27,7 @@
 
 # debug data
 gmon.out
+*.core
 *.gcda
 *.gcno
 *.log

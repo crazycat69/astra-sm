@@ -48,6 +48,7 @@ static void leave_pid(void *arg, uint16_t pid)
 
 int main(int argc, char *argv[])
 {
+    asc_log_core_init();
     asc_log_set_debug(true);
 
     /* parse command line */
@@ -147,6 +148,8 @@ int main(int argc, char *argv[])
 
     fclose(f_in);
     fclose(f_out);
+
+    asc_log_core_destroy();
 
     return 0;
 }
