@@ -179,27 +179,48 @@ libstream_la_LIBADD = libastra.la
 libstream_la_SOURCES = \
     stream/analyze/analyze.c \
     stream/channel/channel.c \
+    stream/file/input.c \
+    stream/file/output.c \
+    stream/http/http.h \
+    stream/http/parser.c \
+    stream/http/parser.h \
+    stream/http/request.c \
+    stream/http/server.c \
+    stream/http/utils.c \
+    stream/http/modules/downstream.c \
+    stream/http/modules/redirect.c \
+    stream/http/modules/static.c \
+    stream/http/modules/upstream.c \
+    stream/http/modules/websocket.c \
+    stream/pipe/pipe.c \
+    stream/remux/remux.c \
+    stream/remux/remux.h \
+    stream/remux/si.c \
+    stream/remux/utils.c \
+    stream/t2mi/decap.c \
     stream/transmit/transmit.c \
-    stream/t2mi/decap.c
+    stream/udp/input.c \
+    stream/udp/output.c
 
-### asi ###
-if HAVE_STREAM_ASI
+# link external libraries
+if HAVE_DVBCSA
+libstream_la_LIBADD += $(DVBCSA_LIBS)
+if HAVE_LIBCRYPTO
+libstream_la_LIBADD += $(LIBCRYPTO_LIBS)
+endif
+endif
+if HAVE_LIBAIO
+libstream_la_LIBADD += $(LIBAIO_LIBS)
+endif
+
+# DVB-ASI input
+if !HAVE_WIN32
 libstream_la_SOURCES += \
     stream/asi/input.c
 endif
 
-### biss_encrypt ###
-if HAVE_STREAM_BISS
-libstream_la_SOURCES += \
-    stream/biss_encrypt/biss_encrypt.c
-
-if HAVE_DVBCSA
-libstream_la_LIBADD += $(DVBCSA_LIBS)
-endif
-endif
-
-### dvb ###
-if HAVE_STREAM_DVB
+# DVB reception
+if HAVE_DVBAPI
 libstream_la_SOURCES += \
     stream/dvb/ca.c \
     stream/dvb/ca.h \
@@ -211,50 +232,11 @@ libstream_la_SOURCES += \
     stream/dvb/input.c
 endif
 
-### file ###
-if HAVE_STREAM_FILE
+# CSA scrambling and descrambling
+if HAVE_DVBCSA
 libstream_la_SOURCES += \
-    stream/file/input.c \
-    stream/file/output.c
+    stream/biss_encrypt/biss_encrypt.c
 
-if HAVE_LIBAIO
-libstream_la_LIBADD += $(LIBAIO_LIBS)
-endif
-endif
-
-### http ###
-if HAVE_STREAM_HTTP
-libstream_la_SOURCES += \
-    stream/http/http.h \
-    stream/http/parser.c \
-    stream/http/parser.h \
-    stream/http/request.c \
-    stream/http/server.c \
-    stream/http/utils.c \
-    stream/http/modules/downstream.c \
-    stream/http/modules/redirect.c \
-    stream/http/modules/static.c \
-    stream/http/modules/upstream.c \
-    stream/http/modules/websocket.c
-endif
-
-### pipe ###
-if HAVE_STREAM_PIPE
-libstream_la_SOURCES += \
-    stream/pipe/pipe.c
-endif
-
-### remux ###
-if HAVE_STREAM_REMUX
-libstream_la_SOURCES += \
-    stream/remux/remux.c \
-    stream/remux/remux.h \
-    stream/remux/si.c \
-    stream/remux/utils.c
-endif
-
-### softcam ###
-if HAVE_STREAM_SOFTCAM
 libstream_la_SOURCES += \
     stream/softcam/decrypt.c \
     stream/softcam/module_cam.h \
@@ -272,22 +254,11 @@ libstream_la_SOURCES += \
     stream/softcam/cas/viaccess.c \
     stream/softcam/cas/videoguard.c
 
-if HAVE_DVBCSA
-libstream_la_LIBADD += $(DVBCSA_LIBS)
-endif
 if HAVE_LIBCRYPTO
 # need DES for newcamd
-libstream_la_LIBADD += $(LIBCRYPTO_LIBS)
 libstream_la_SOURCES += \
     stream/softcam/cam/newcamd.c
 endif
-endif
-
-### udp ###
-if HAVE_STREAM_UDP
-libstream_la_SOURCES += \
-    stream/udp/input.c \
-    stream/udp/output.c
 endif
 
 # manifest list

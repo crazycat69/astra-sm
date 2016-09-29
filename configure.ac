@@ -73,6 +73,8 @@ CFLAGS_FOR_BUILD="$CFLAGS_FOR_BUILD $STD_CFLAGS"
 #
 AC_C_INLINE
 AC_TYPE_OFF_T
+AC_TYPE_MODE_T
+AC_TYPE_PID_T
 AC_TYPE_SIZE_T
 AC_TYPE_SSIZE_T
 AC_TYPE_UINT8_T
@@ -80,8 +82,6 @@ AC_TYPE_UINT16_T
 AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_TYPE_INT64_T
-AC_CHECK_TYPES([ptrdiff_t])
-AC_CHECK_TYPES([_Bool])
 
 # in case endian.h is absent
 AC_MSG_CHECKING([for endian.h presence and usability])
@@ -159,12 +159,6 @@ case "${host_os}" in
         AC_CHECK_LIB([ws2_32], [main],
             [], AC_MSG_ERROR([cannot link with ws2_32.dll]) )
 
-        AC_CHECK_DECL([WSAStartup], [], [
-            AC_MSG_ERROR([missing required library function])
-        ], [[
-            #include <winsock2.h>
-        ]])
-
         # look for resource tools
         LT_LANG([Windows Resource])
         AS_IF([test "x${RC}" = "x"],
@@ -178,6 +172,7 @@ case "${host_os}" in
     *)
         SYS=posix
 
+        # require POSIX threads support
         AX_PTHREAD([
             LIBS="$PTHREAD_LIBS $LIBS"
             CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
@@ -186,6 +181,7 @@ case "${host_os}" in
             AC_MSG_ERROR([missing pthread support])
         ])
 
+        # OS headers and functions
         AC_CHECK_DECLS([environ])
         AC_CHECK_MEMBERS([struct sockaddr_in.sin_len], [], [], [[
             #include <sys/types.h>
@@ -549,79 +545,24 @@ AS_IF([test "x${with_check}" != "xno"], [
 ])
 AM_CONDITIONAL([HAVE_CHECK], [test "x${have_check}" = "xyes"])
 
-# Linux DVB API
-have_dvbapi="no"
-AC_MSG_CHECKING([for Linux DVB API version 5 or higher])
-AC_PREPROC_IFELSE([
-    AC_LANG_PROGRAM([
-        #include <sys/ioctl.h>
-        #include <linux/dvb/version.h>
-        #include <linux/dvb/frontend.h>
-        #include <linux/dvb/dmx.h>
-        #include <linux/dvb/ca.h>
-        #if DVB_API_VERSION < 5
-        #error "DVB API is too old"
-        #endif
-    ])
-], [
-    AC_MSG_RESULT([yes])
-    AC_DEFINE([HAVE_DVBAPI], [1], [Define to 1 if you have a usable DVB API])
-
-    # DVB-T2 (DVB API >= 5.3)
-    have_dvbapi_t2="no"
-    AC_MSG_CHECKING([for DVB-T2 support])
-    AC_COMPILE_IFELSE([
-        AC_LANG_PROGRAM([[
-            #include <linux/dvb/frontend.h>
-        ]], [[
-            fe_delivery_system_t sys = SYS_DVBT2;
-            fe_transmit_mode_t tm;
-            tm = TRANSMISSION_MODE_1K;
-            tm = TRANSMISSION_MODE_16K;
-            tm = TRANSMISSION_MODE_32K;
-        ]])
-    ], [
-        AC_MSG_RESULT([yes])
-        AC_DEFINE([HAVE_DVBAPI_T2], [1], [Define to 1 if your system supports DVB-T2])
-        have_dvbapi_t2="yes"
-    ], [
-        AC_MSG_RESULT([no])
-    ])
-    AS_IF([test "x${have_dvbapi_t2}" = "xno"], [
-        AC_MSG_WARN([DVB API 5.3 or higher required for DVB-T2 support]) ])
-
-    # DVB-C annex A/C defines (DVB API >= 5.6)
-    AC_MSG_CHECKING([DVB-C annex A/C definitions])
-    AC_COMPILE_IFELSE([
-        AC_LANG_PROGRAM([[
-            #include <linux/dvb/frontend.h>
-        ]], [[
-            fe_delivery_system_t sys;
-            sys = SYS_DVBC_ANNEX_A;
-            sys = SYS_DVBC_ANNEX_C;
-        ]])
-    ], [
-        AC_MSG_RESULT([separate A and C])
-        AC_DEFINE([HAVE_DVBAPI_C_ANNEX_AC], [1],
-            [Define to 1 if you have separate constants for DVB-C annex A and C])
-    ], [
-        AC_MSG_RESULT([single constant])
-    ])
-
-    # Network header (not present on FreeBSD)
-    AC_CHECK_HEADERS([linux/dvb/net.h])
-
-    have_dvbapi="yes"
-], [
-    AC_MSG_RESULT([no])
-])
-AS_IF([test "x${have_dvbapi}" = "xno"], [
-    AC_MSG_WARN([no DVB API found; DVB functionality will be unavailable]) ])
-
 #
 # Optional features
 #
-AX_HELP_SECTION([Features and modules:])
+AX_HELP_SECTION([Optional features:])
+
+# Linux DVB API
+AC_ARG_ENABLE([dvbapi], AC_HELP_STRING([--disable-dvbapi],
+    [disable DVB receive functionality on Linux (auto)]))
+
+have_dvbapi="no"
+AS_IF([test "x${enable_dvbapi}" != "xno" -a "x${SYS}" = "xposix"], [
+    AX_DVBAPI([have_dvbapi="yes"])
+    AS_IF([test "x${have_dvbapi}" = "xno"], [
+        AS_IF([test "x${enable_dvbapi}" = "xyes"],
+            [ AC_MSG_ERROR([no DVB API found; pass --disable-dvbapi to disable this check ]) ],
+            [ AC_MSG_WARN([no DVB API found; DVB reception will be unavailable]) ]) ])
+])
+AM_CONDITIONAL([HAVE_DVBAPI], [test "x${have_dvbapi}" = "xyes"])
 
 # Built-in scripts
 AC_ARG_ENABLE([inscript], AC_HELP_STRING([--disable-inscript],
@@ -642,40 +583,6 @@ AS_IF([test "x${enable_igmp_emulation}" = "xyes"], [
         [Define to 1 to use IGMP emulation via raw sockets])
 ])
 AM_CONDITIONAL([IGMP_EMULATION], [test "x${enable_igmp_emulation}" != "xno"])
-
-# Streaming modules
-stream_modules="analyze channel transmit"
-
-# asi
-AX_STREAM_MODULE(asi, [DVB-ASI input module],
-    [test "x${SYS}" = "xposix"], [not available on Windows])
-
-# biss_encrypt
-AX_STREAM_MODULE(biss, [BISS software scrambler],
-    [test "x${have_dvbcsa}" = "xyes"], [libdvbcsa is unavailable])
-
-# dvb
-AX_STREAM_MODULE(dvb, [DVB input module],
-    [test "x${have_dvbapi}" = "xyes"], [Linux DVB API is unavailable])
-
-# file
-AX_STREAM_MODULE(file, [file I/O module])
-
-# http
-AX_STREAM_MODULE(http, [HTTP server and client])
-
-# pipe
-AX_STREAM_MODULE(pipe, [external process module])
-
-# remux
-AX_STREAM_MODULE(remux, [remultiplexer module])
-
-# softcam
-AX_STREAM_MODULE(softcam, [software descrambler],
-    [test "x${have_dvbcsa}" = "xyes"], [libdvbcsa is unavailable])
-
-# udp
-AX_STREAM_MODULE(udp, [UDP receive and transmit module])
 
 #
 # Developer options
@@ -825,7 +732,9 @@ AC_SUBST(WARN_CFLAGS)
 AX_CHECK_CFLAG([-fno-strict-aliasing])
 AX_CHECK_CFLAG([-fwrapv])
 
+#
 # Makefile generation
+#
 AC_CONFIG_FILES([
     Makefile
     lua/Makefile
@@ -884,13 +793,16 @@ AS_IF([test "x${have_aio}" = "xyes"], [
     echo "no"
 ])
 
+# check
+echo -n "Check (unit tests):    "
+AS_IF([test "x${have_check}" = "xyes"],
+    [echo "yes"], [echo "no"])
+
 # dvb api
-echo -n "Linux DVB API:         "
-AS_IF([test "x${have_dvbapi}" = "xyes"], [
-    AS_IF([test "x${have_dvbapi_t2}" = "xyes"],
-        [echo "yes"], [echo "old version (no DVB-T2)"])
-], [
-    echo "no"
+echo
+AS_IF([test "x${SYS}" = "xposix"], [
+    echo -n "Linux DVB API:         "
+    AS_IF([test "x${have_dvbapi}" = "xyes"], [echo "yes"], [echo "no"])
 ])
 
 # inscript
@@ -902,25 +814,8 @@ echo -n "IGMP emulation:        "
 AS_IF([test "x${enable_igmp_emulation}" = "xyes"],
     [echo "yes"], [echo "no"])
 
-# check
-echo -n "Check (unit tests):    "
-AS_IF([test "x${have_check}" = "xyes"],
-    [echo "yes"], [echo "no"])
-
-# streaming module list
-echo
-echo -n "Streaming modules:     "
-first="yes"
-for mod in ${stream_modules}; do
-    if [ test "x${first}" != "xyes" ]; then
-        echo -n "                       "
-    fi
-    echo "${mod}"
-    first="no"
-done
-echo
-
 # debug build
+echo
 echo -n "Debug build:           "
 AS_IF([test "x${enable_debug}" = "xyes"], [echo "yes"], [echo "no"])
 

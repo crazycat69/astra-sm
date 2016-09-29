@@ -1,19 +1,28 @@
 #
 # Custom macros for Astra SM
 #
+
+# AX_HELP_SECTION
+#----------------
 AC_DEFUN([AX_HELP_SECTION], [m4_divert_once([HELP_ENABLE], [
 $1])])
 
+# AX_SAVE_FLAGS
+# -------------
 AC_DEFUN([AX_SAVE_FLAGS], [
     SAVED_CFLAGS="$CFLAGS"
     SAVED_LIBS="$LIBS"
 ])
 
+# AX_RESTORE_FLAGS
+#-----------------
 AC_DEFUN([AX_RESTORE_FLAGS], [
     CFLAGS="$SAVED_CFLAGS"
     LIBS="$SAVED_LIBS"
 ])
 
+# AX_EXTLIB_VARS(LIBNAME)
+#------------------------
 AC_DEFUN([AX_EXTLIB_VARS], [
     # makefile variables
     m4_define([$1_ucase],[m4_translit([$1], [a-z], [A-Z])])
@@ -29,6 +38,8 @@ AC_DEFUN([AX_EXTLIB_VARS], [
     m4_undefine([$1_ucase])
 ])
 
+# AX_EXTLIB_OPTIONAL(LIBNAME, DESCRIPTION)
+#-----------------------------------------
 AC_DEFUN([AX_EXTLIB_OPTIONAL], [
     # optional dependency parameters
     AC_ARG_WITH($1, AC_HELP_STRING([--with-$1], [$2 (auto)]))
@@ -40,47 +51,85 @@ AC_DEFUN([AX_EXTLIB_OPTIONAL], [
         [with_$1="yes"], [with_$1_libs="no"])
 ])
 
+# AX_EXTLIB_PARAM(LIBNAME, DESCRIPTION)
+#--------------------------------------
 AC_DEFUN([AX_EXTLIB_PARAM], [
     AX_EXTLIB_OPTIONAL($1, $2)
     AX_EXTLIB_VARS($1)
 ])
 
-AC_DEFUN([AX_STREAM_MODULE], [
-    m4_define([$1_varname], [m4_translit([$1], [a-z], [A-Z])])
-    AC_ARG_ENABLE($1,
-        AC_HELP_STRING([--disable-$1], [disable $2 (auto)]))
-
-    have_$1="no"
-    AC_MSG_CHECKING([whether to build stream module `$1'])
-    AS_IF([test "x${enable_$1}" != "xno"], [
-        AS_IF([m4_default([$3], [true])], [
-            # auto/force on
-            AC_MSG_RESULT([yes])
-            AC_DEFINE([HAVE_STREAM_]$1_varname, [1],
-                [Define to 1 if the `$1' module is enabled])
-
-            stream_modules="${stream_modules} $1"
-            have_$1="yes"
-        ], [
-            AC_MSG_RESULT([no])
-            AS_IF([test "x${enable_$1}" = "xyes"], [
-                # force on, but can't build
-                AC_MSG_ERROR([m4_default([$4], [dependency checks failed]); pass --disable-$1 to disable this check])
-            ], [
-                # auto off
-                AC_MSG_WARN([m4_default([$4], [dependency checks failed]); skipping])
-            ])
+# AX_DVBAPI([ACTION-IF-SUCCESS], [ACTION-IF-FAILURE])
+#----------------------------------------------------
+# Check presence of the Linux DVB API
+AC_DEFUN([AX_DVBAPI], [
+    AC_MSG_CHECKING([for Linux DVB API version 5 or higher])
+    AC_PREPROC_IFELSE([
+        AC_LANG_PROGRAM([
+            #include <sys/ioctl.h>
+            #include <linux/dvb/version.h>
+            #include <linux/dvb/frontend.h>
+            #include <linux/dvb/dmx.h>
+            #include <linux/dvb/ca.h>
+            #if DVB_API_VERSION < 5
+            #error "DVB API is too old"
+            #endif
         ])
     ], [
-        # force off
-        AC_MSG_RESULT([disabled by user])
+        AC_MSG_RESULT([yes])
+        AC_DEFINE([HAVE_DVBAPI], [1],
+            [Define to 1 if you have a usable DVB API])
+
+        # DVB-T2 (DVB API >= 5.3)
+        AC_MSG_CHECKING([for DVB-T2 support])
+        AC_COMPILE_IFELSE([
+            AC_LANG_PROGRAM([[
+                #include <linux/dvb/frontend.h>
+            ]], [[
+                fe_delivery_system_t sys = SYS_DVBT2;
+                fe_transmit_mode_t tm;
+                tm = TRANSMISSION_MODE_1K;
+                tm = TRANSMISSION_MODE_16K;
+                tm = TRANSMISSION_MODE_32K;
+            ]])
+        ], [
+            AC_MSG_RESULT([yes])
+            AC_DEFINE([HAVE_DVBAPI_T2], [1],
+                [Define to 1 if your system supports DVB-T2])
+        ], [
+            AC_MSG_RESULT([no])
+            AC_MSG_WARN([DVB API 5.3 or higher required for DVB-T2 support])
+        ])
+
+        # DVB-C annex A/C defines (DVB API >= 5.6)
+        AC_MSG_CHECKING([DVB-C annex A/C definitions])
+        AC_COMPILE_IFELSE([
+            AC_LANG_PROGRAM([[
+                #include <linux/dvb/frontend.h>
+            ]], [[
+                fe_delivery_system_t sys;
+                sys = SYS_DVBC_ANNEX_A;
+                sys = SYS_DVBC_ANNEX_C;
+            ]])
+        ], [
+            AC_MSG_RESULT([separate A and C])
+            AC_DEFINE([HAVE_DVBAPI_C_ANNEX_AC], [1],
+                [Define to 1 if you have separate constants for DVB-C annex A and C])
+        ], [
+            AC_MSG_RESULT([single constant])
+        ])
+
+        # Network header (not present on FreeBSD)
+        AC_CHECK_HEADERS([linux/dvb/net.h])
+
+        m4_default([$1], [])
+    ], [
+        AC_MSG_RESULT([no])
+        m4_default([$2], [])
     ])
-    AM_CONDITIONAL([HAVE_STREAM_]$1_varname, [test "x${have_$1}" = "xyes"])
-    m4_undefine([$1_varname])
 ])
 
-# AX_CHECK_CFLAG(FLAG, [FLAGVAR], [ACTION-IF-SUCCESS], [ACTION-IF-FAILURE]
-#-------------------------------------------------------------------------
+# AX_CHECK_CFLAG(FLAG, [FLAGVAR], [ACTION-IF-SUCCESS], [ACTION-IF-FAILURE])
+#--------------------------------------------------------------------------
 # Check if $CC supports FLAG; append it to FLAGVAR on success.
 # If specified, perform ACTION-IF-SUCCESS or ACTION-IF-FAILURE.
 AC_DEFUN([AX_CHECK_CFLAG], [
@@ -111,8 +160,8 @@ AC_DEFUN([AX_CHECK_CFLAG], [
     ])
 ])
 
-# AX_CHECK_CFLAGS(FLAGLIST, [FLAGVAR], [ACTION-IF-SUCCESS], [ACTION-IF-FAILURE]
-#------------------------------------------------------------------------------
+# AX_CHECK_CFLAGS(FLAGLIST, [FLAGVAR], [ACTION-IF-SUCCESS], [ACTION-IF-FAILURE])
+#-------------------------------------------------------------------------------
 # For each flag in FLAGLIST perform AX_CHECK_CFLAG
 AC_DEFUN([AX_CHECK_CFLAGS], [
     for ac_flag in $1; do
