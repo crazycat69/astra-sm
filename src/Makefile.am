@@ -192,6 +192,10 @@ libstream_la_SOURCES = \
     stream/http/modules/static.c \
     stream/http/modules/upstream.c \
     stream/http/modules/websocket.c \
+    stream/hwdev/device.c \
+    stream/hwdev/drivers.h \
+    stream/hwdev/enumerate.c \
+    stream/hwdev/hwdev.h \
     stream/pipe/pipe.c \
     stream/remux/remux.c \
     stream/remux/remux.h \
