@@ -121,11 +121,19 @@ char *strndup(const char *str, size_t max);
 size_t strnlen(const char *str, size_t max) __func_pure;
 #endif
 
+#ifdef _WIN32
 /* IsProcessInJob() wrapper for legacy builds */
-#if defined(_WIN32) && (_WIN32_WINNT <= _WIN32_WINNT_WIN2K)
+#if _WIN32_WINNT <= _WIN32_WINNT_WIN2K
 BOOL cx_IsProcessInJob(HANDLE process, HANDLE job, BOOL *result);
 #define IsProcessInJob(...) cx_IsProcessInJob(__VA_ARGS__)
-#endif
+#endif /* _WIN32_WINNT <= _WIN32_WINNT_WIN2K */
+
+/* convert from char (UTF-8) to wchar_t (UTF-16) */
+wchar_t *cx_widen(const char *str);
+
+/* convert from wchar_t (UTF-16) to char (UTF-8) */
+char *cx_narrow(const wchar_t *str);
+#endif /* _WIN32 */
 
 /*
  * standard function wrappers

@@ -89,6 +89,48 @@ BOOL cx_IsProcessInJob(HANDLE process, HANDLE job, BOOL *result)
 }
 #endif /* _WIN32 && (_WIN32_WINNT <= _WIN32_WINNT_WIN2K) */
 
+#ifdef _WIN32
+wchar_t *cx_widen(const char *str)
+{
+    int ret = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
+    if (ret <= 0)
+        return NULL;
+
+    wchar_t *buf = (wchar_t *)calloc((size_t)ret, sizeof(*buf));
+    if (buf != NULL)
+    {
+        ret = MultiByteToWideChar(CP_UTF8, 0, str, -1, buf, ret);
+        if (ret <= 0)
+        {
+            free(buf);
+            buf = NULL;
+        }
+    }
+
+    return buf;
+}
+
+char *cx_narrow(const wchar_t *str)
+{
+    int ret = WideCharToMultiByte(CP_UTF8, 0, str, -1, NULL, 0, NULL, NULL);
+    if (ret <= 0)
+        return NULL;
+
+    char *buf = (char *)calloc((size_t)ret, sizeof(*buf));
+    if (buf != NULL)
+    {
+        ret = WideCharToMultiByte(CP_UTF8, 0, str, -1, buf, ret, NULL, NULL);
+        if (ret <= 0)
+        {
+            free(buf);
+            buf = NULL;
+        }
+    }
+
+    return buf;
+}
+#endif /* _WIN32 */
+
 int cx_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
     int fd;
