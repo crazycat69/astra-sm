@@ -42,6 +42,10 @@
 #       define _WIN32_WINNT _WIN32_WINNT_WIN2K
 #   endif /* !_WIN32_WINNT */
 
+    /* enable C COM API */
+#   define COBJMACROS
+#   define CINTERFACE
+
 #   include <winsock2.h>
 #   include <ws2tcpip.h>
 #   if _WIN32_WINNT <= _WIN32_WINNT_WIN2K
