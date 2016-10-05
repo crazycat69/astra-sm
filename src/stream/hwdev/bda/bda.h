@@ -17,37 +17,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _HWDEV_DRIVERS_H_
-#define _HWDEV_DRIVERS_H_ 1
+#ifndef _HWDEV_BDA_H_
+#define _HWDEV_BDA_H_ 1
 
-#include "hwdev.h"
+#include "../hwdev.h"
 
-#ifdef _WIN32
-extern const hw_driver_t hw_driver_bda;
-#endif
+int bda_enumerate(lua_State *L);
 
-static const hw_driver_t *hw_drivers[] =
-{
-#ifdef _WIN32
-    &hw_driver_bda,
-#endif
-    NULL,
-};
-
-static inline
-const hw_driver_t *hw_find_driver(const char *drvname)
-{
-    const hw_driver_t *drv = NULL;
-    for (size_t i = 0; hw_drivers[i] != NULL; i++)
-    {
-        if (!strcmp(hw_drivers[i]->name, drvname))
-        {
-            drv = hw_drivers[i];
-            break;
-        }
-    }
-
-    return drv;
-}
-
-#endif /* _HWDEV_DRIVERS_H_ */
+#endif /* _HWDEV_BDA_H_ */

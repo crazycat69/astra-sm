@@ -223,7 +223,7 @@ libstream_la_SOURCES += \
     stream/asi/input.c
 endif
 
-# DVB reception
+# DVB reception (Linux)
 if HAVE_DVBAPI
 libstream_la_SOURCES += \
     stream/dvb/ca.c \
@@ -234,6 +234,14 @@ libstream_la_SOURCES += \
     stream/dvb/frontend.h \
     stream/dvb/ddci.c \
     stream/dvb/input.c
+endif
+
+# DVB reception (Windows)
+if HAVE_WIN32
+libstream_la_SOURCES += \
+    stream/hwdev/bda/bda.h \
+    stream/hwdev/bda/driver.c \
+    stream/hwdev/bda/enumerate.c
 endif
 
 # CSA scrambling and descrambling

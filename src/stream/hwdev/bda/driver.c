@@ -17,37 +17,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _HWDEV_DRIVERS_H_
-#define _HWDEV_DRIVERS_H_ 1
+/*
+ * Driver Name:
+ *      dvb_input
+ *
+ * Module Options:
+ *      TODO
+ *
+ * Module Methods:
+ *      TODO
+ */
 
-#include "hwdev.h"
+#include "bda.h"
 
-#ifdef _WIN32
-extern const hw_driver_t hw_driver_bda;
-#endif
-
-static const hw_driver_t *hw_drivers[] =
+const hw_driver_t hw_driver_bda =
 {
-#ifdef _WIN32
-    &hw_driver_bda,
-#endif
-    NULL,
+    .name = "dvb_input",
+    .description = "DVB Input (DirectShow BDA)",
+    .init = NULL, /* TODO */
+    .destroy = NULL, /* TODO */
+    .enumerate = bda_enumerate,
 };
-
-static inline
-const hw_driver_t *hw_find_driver(const char *drvname)
-{
-    const hw_driver_t *drv = NULL;
-    for (size_t i = 0; hw_drivers[i] != NULL; i++)
-    {
-        if (!strcmp(hw_drivers[i]->name, drvname))
-        {
-            drv = hw_drivers[i];
-            break;
-        }
-    }
-
-    return drv;
-}
-
-#endif /* _HWDEV_DRIVERS_H_ */
