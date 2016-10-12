@@ -21,7 +21,6 @@
 
 #include <astra/astra.h>
 #include <astra/luaapi/module.h>
-#include <astra/luaapi/stream.h>
 
 #define MSG(_msg) "[module %s] " _msg, \
     (mod->manifest != NULL ? mod->manifest->name : NULL)
@@ -56,9 +55,8 @@ int callback_thunk(lua_State *L)
     return ((module_method_t *)method)->func(L, (module_data_t *)mod);
 }
 
-static
-void add_methods(lua_State *L, const module_data_t *mod
-                 , const module_method_t *list)
+void module_add_methods(lua_State *L, const module_data_t *mod
+                        , const module_method_t *list)
 {
     while (list->name != NULL)
     {
@@ -123,10 +121,7 @@ int method_new(lua_State *L)
 
     /* set up user methods */
     if (manifest->reg->methods != NULL)
-        add_methods(L, mod, manifest->reg->methods);
-
-    if (manifest->type == MODULE_TYPE_STREAM)
-        add_methods(L, mod, module_stream_methods);
+        module_add_methods(L, mod, manifest->reg->methods);
 
     /* set up options table */
     if (lua_gettop(L) >= 3)

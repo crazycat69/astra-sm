@@ -44,8 +44,6 @@ void module_demux_join(module_data_t *mod, uint16_t pid);
 void module_demux_leave(module_data_t *mod, uint16_t pid);
 bool module_demux_check(const module_data_t *mod, uint16_t pid) __func_pure;
 
-extern const module_method_t module_stream_methods[];
-
 #define STREAM_MODULE_DATA_SIZE \
     MODULE_DATA_SIZE
 

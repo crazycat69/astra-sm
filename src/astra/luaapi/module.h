@@ -60,6 +60,8 @@ typedef struct
     const module_registry_t *reg;
 } module_manifest_t;
 
+void module_add_methods(lua_State *L, const module_data_t *mod
+                        , const module_method_t *list);
 void module_register(lua_State *L, const module_manifest_t *manifest);
 lua_State *module_lua(const module_data_t *mod) __func_pure;
 

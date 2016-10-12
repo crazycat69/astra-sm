@@ -63,6 +63,21 @@ ASC_STATIC_ASSERT(sizeof(module_data_t) <= STREAM_MODULE_DATA_SIZE);
 static
 int method_set_upstream(lua_State *L, module_data_t *mod);
 
+static
+int method_stream(lua_State *L, module_data_t *mod)
+{
+    lua_pushlightuserdata(L, mod);
+    return 1;
+}
+
+static
+const module_method_t stream_methods[] =
+{
+    { "set_upstream", method_set_upstream },
+    { "stream", method_stream },
+    { NULL, NULL },
+};
+
 void module_stream_init(lua_State *L, module_data_t *mod
                         , stream_callback_t on_ts)
 {
@@ -79,13 +94,18 @@ void module_stream_init(lua_State *L, module_data_t *mod
 
     mod->stream = st;
 
-    if (L != NULL && lua_istable(L, MODULE_OPTIONS_IDX))
+    if (L != NULL)
     {
-        lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
-        if (!lua_isnil(L, -1))
-            method_set_upstream(L, mod);
+        module_add_methods(L, mod, stream_methods);
 
-        lua_pop(L, 1);
+        if (lua_istable(L, MODULE_OPTIONS_IDX))
+        {
+            lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
+            if (!lua_isnil(L, -1))
+                method_set_upstream(L, mod);
+
+            lua_pop(L, 1);
+        }
     }
 }
 
@@ -147,20 +167,6 @@ int method_set_upstream(lua_State *L, module_data_t *mod)
 
     return 0;
 }
-
-static
-int method_stream(lua_State *L, module_data_t *mod)
-{
-    lua_pushlightuserdata(L, mod);
-    return 1;
-}
-
-const module_method_t module_stream_methods[] =
-{
-    { "set_upstream", method_set_upstream },
-    { "stream", method_stream },
-    { NULL, NULL },
-};
 
 void module_stream_attach(module_data_t *mod, module_data_t *child)
 {
