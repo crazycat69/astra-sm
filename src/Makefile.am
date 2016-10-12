@@ -294,6 +294,7 @@ bin_PROGRAMS += main/astra
 main_astra_SOURCES = main/main.c main/sig.h
 
 if HAVE_WIN32
+main_astra_LDFLAGS = -municode
 main_astra_SOURCES += \
     main/resources.rc \
     main/sig-win32.c
