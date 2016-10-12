@@ -241,7 +241,12 @@ if HAVE_WIN32
 libstream_la_SOURCES += \
     stream/hwdev/bda/bda.h \
     stream/hwdev/bda/driver.c \
-    stream/hwdev/bda/enumerate.c
+    stream/hwdev/bda/enumerate.c \
+    stream/hwdev/bda/networks.c \
+    stream/hwdev/win32/dshow.c \
+    stream/hwdev/win32/dshow.h \
+    stream/hwdev/win32/guids.c \
+    stream/hwdev/win32/guids.h
 endif
 
 # CSA scrambling and descrambling

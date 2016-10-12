@@ -1,5 +1,5 @@
 /*
- * Astra Module: BDA
+ * Astra Module: Hardware Device (GUIDs)
  *
  * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
  *
@@ -18,23 +18,15 @@
  */
 
 /*
- * Driver Name:
- *      dvb_input
+ * Apparently, MinGW's version of the strmiids library is incomplete
+ * with many GUIDs missing. This is a miniature version of it made by
+ * hand-picking needed GUIDs from the Windows SDK.
  *
- * Module Options:
- *      TODO
- *
- * Module Methods:
- *      TODO
+ * Including initguid.h causes the DEFINE_GUID macro to emit actual
+ * GUID definitions instead of extern references. In order to avoid
+ * duplicating symbols, it should not be included from more than one
+ * source file.
  */
 
-#include "bda.h"
-
-const hw_driver_t hw_driver_bda =
-{
-    .name = "dvb_input",
-    .description = "DVB Input (DirectShow BDA)",
-    .init = NULL, /* TODO */
-    .destroy = NULL, /* TODO */
-    .enumerate = bda_enumerate,
-};
+#include <initguid.h>
+#include "guids.h"

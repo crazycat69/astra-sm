@@ -46,6 +46,10 @@
 #   define COBJMACROS
 #   define CINTERFACE
 
+    /* suppress strsafe.h warnings */
+#   define __CRT_STRSAFE_IMPL
+#   define __STRSAFE__NO_INLINE
+
 #   include <winsock2.h>
 #   include <ws2tcpip.h>
 #   if _WIN32_WINNT <= _WIN32_WINNT_WIN2K

@@ -1,5 +1,5 @@
 /*
- * Astra Module: Hardware Device
+ * Astra Module: Hardware Device (Lua frontend)
  *
  * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
  *

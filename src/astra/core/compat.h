@@ -98,6 +98,9 @@
      *       however it seems to work on existing WinAPI implementations;
      *       some future Windows version might break this.
      */
+
+    /* COM release shorthand */
+#   define SAFE_RELEASE(_obj) ASC_FREE(_obj, IUnknown_Release)
 #endif /* _WIN32 */
 
 /* not defined on some systems */

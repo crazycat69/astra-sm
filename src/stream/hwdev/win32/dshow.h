@@ -1,5 +1,5 @@
 /*
- * Astra Module: BDA
+ * Astra Module: Hardware Device (DirectShow utilities)
  *
  * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
  *
@@ -17,24 +17,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-/*
- * Driver Name:
- *      dvb_input
- *
- * Module Options:
- *      TODO
- *
- * Module Methods:
- *      TODO
- */
+#ifndef _HWDEV_DSHOW_H_
+#define _HWDEV_DSHOW_H_ 1
 
-#include "bda.h"
+#ifndef _ASTRA_H_
+#   error "Please include <astra/astra.h> first"
+#endif /* !_ASTRA_H_ */
 
-const hw_driver_t hw_driver_bda =
-{
-    .name = "dvb_input",
-    .description = "DVB Input (DirectShow BDA)",
-    .init = NULL, /* TODO */
-    .destroy = NULL, /* TODO */
-    .enumerate = bda_enumerate,
-};
+#include <dshow.h>
+
+char *dshow_error_msg(HRESULT hr);
+HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir, IPin **out);
+
+#endif /* _HWDEV_DSHOW_H_ */

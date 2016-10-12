@@ -161,12 +161,12 @@ case "${host_os}" in
         # COM interfaces
         AC_CHECK_LIB([ole32], [main],
             [], AC_MSG_ERROR([cannot link with ole32.dll]) )
+        # SysAllocString() and friends
+        AC_CHECK_LIB([oleaut32], [main],
+            [], AC_MSG_ERROR([cannot link with oleaut32.dll]) )
         # AMGetErrorText()
         AC_CHECK_LIB([quartz], [main],
             [], AC_MSG_ERROR([cannot link with quartz.dll]) )
-        # DirectShow IIDs
-        AC_CHECK_LIB([strmiids], [main],
-            [], AC_MSG_ERROR([cannot link with strmiids.lib]) )
 
         # look for resource tools
         LT_LANG([Windows Resource])
