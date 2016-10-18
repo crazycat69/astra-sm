@@ -223,6 +223,13 @@ START_TEST(callback_cancel)
 }
 END_TEST
 
+/* shutting down while wake up pipe is still open */
+START_TEST(abandoned_pipe)
+{
+    asc_wake_open();
+}
+END_TEST
+
 Suite *core_mainloop(void)
 {
     Suite *const s = suite_create("core/mainloop");
@@ -238,6 +245,7 @@ Suite *core_mainloop(void)
     tcase_add_test(tc, callback_simple);
     tcase_add_test(tc, callback_prune);
     tcase_add_test(tc, callback_cancel);
+    tcase_add_test(tc, abandoned_pipe);
 
     if (can_fork != CK_NOFORK)
     {

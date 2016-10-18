@@ -86,11 +86,13 @@ void asc_lib_destroy(void)
     /* join any stray threads */
     asc_thread_core_destroy();
 
+    /* main loop uses events for the wake up pipe */
+    asc_main_loop_destroy();
+
     /* cleaning up rogue events might invoke their on_error callbacks */
     asc_event_core_destroy();
 
-    /* no side effects for these two */
-    asc_main_loop_destroy();
+    /* no side effects for this one */
     asc_timer_core_destroy();
 
     /* nothing left to use sockets or logs */

@@ -42,7 +42,7 @@ char *asc_strerror(int errnum, char *buf, size_t buflen)
         /* remove trailing punctuation */
         for (ssize_t i = strlen(msg) - 1; i >= 0; i--)
         {
-            if (msg[i] != '.' && msg[i] != ' ')
+            if (msg[i] != '.' && !isspace(msg[i]))
                 break;
 
             msg[i] = '\0';
