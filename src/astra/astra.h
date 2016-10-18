@@ -25,6 +25,7 @@
 /*
  * system headers
  */
+
 #ifdef _WIN32
     /* reduce header size */
 #   define WIN32_LEAN_AND_MEAN
@@ -82,6 +83,7 @@
 /*
  * common macros
  */
+
 #define ASC_ARRAY_SIZE(_a) \
     (sizeof(_a) / sizeof(_a[0]))
 
@@ -111,6 +113,7 @@
 /*
  * public interface
  */
+
 #include "core/core.h"
 #include "mpegts/mpegts.h"
 

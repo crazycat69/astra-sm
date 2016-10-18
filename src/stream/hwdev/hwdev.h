@@ -29,8 +29,11 @@ typedef struct
 {
     const char *name;
     const char *description;
+
     void (*init)(lua_State *, module_data_t *);
     void (*destroy)(module_data_t *);
+    const module_method_t *methods;
+
     int (*enumerate)(lua_State *);
 } hw_driver_t;
 

@@ -22,7 +22,6 @@
  *      hw_device
  *
  * Module Options:
- *      name        - string, instance name
  *      driver      - string, driver name
  *
  * Module role, methods and other options are driver-specific.
@@ -32,17 +31,11 @@
 #include "hwdev.h"
 #include "drivers.h"
 
-#define MSG(_msg) "[hw_device] %s" _msg, mod->name
+#define MSG(_msg) "[hw_device] %s" _msg
 
 static
 void module_init(lua_State *L, module_data_t *mod)
 {
-    /* device name */
-    module_option_string(L, "name", &mod->name, NULL);
-    if (mod->name == NULL)
-        luaL_error(L, "[hw_device] option 'name' is required");
-
-    /* device driver */
     const char *drvname = NULL;
     module_option_string(L, "driver", &drvname, NULL);
     if (drvname == NULL)
@@ -54,6 +47,9 @@ void module_init(lua_State *L, module_data_t *mod)
         luaL_error(L, MSG("driver '%s' is not available in this build")
                    , drvname);
     }
+
+    if (mod->drv->methods != NULL)
+        module_add_methods(L, mod, mod->drv->methods);
 
     mod->drv->init(L, mod);
 }

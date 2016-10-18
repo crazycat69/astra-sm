@@ -45,21 +45,10 @@ bool probe_tuner(lua_State *L, IBaseFilter *tuner_dev
     ITuneRequest *req = NULL;
     ITuner *prov_tuner = NULL;
 
-    /* create network provider; try the universal one first */
-    hr = CoCreateInstance(&CLSID_NetworkProvider, NULL, CLSCTX_INPROC
-                          , &IID_IBaseFilter, (void **)&net_prov);
+    /* create network provider */
+    hr = bda_net_provider(net, &net_prov);
     if (FAILED(hr))
-    {
-        /* fall back to legacy provider if the network type supports it */
-        if (net->provider != NULL)
-        {
-            hr = CoCreateInstance(net->provider, NULL, CLSCTX_INPROC
-                                  , &IID_IBaseFilter, (void **)&net_prov);
-        }
-
-        if (FAILED(hr))
-            BDA_ENUM_THROW("couldn't create network provider");
-    }
+        BDA_ENUM_THROW("couldn't create network provider");
 
     /* create graph and add filters */
     hr = CoCreateInstance(&CLSID_FilterGraph, NULL, CLSCTX_INPROC

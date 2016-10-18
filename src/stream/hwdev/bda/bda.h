@@ -26,9 +26,13 @@
 // FIXME
 
 #include "../hwdev.h"
+#include <astra/core/list.h>
+#include <astra/core/thread.h>
+#include <astra/core/mutex.h>
+#include <astra/core/mainloop.h>
+
 #include "../win32/guids.h"
 #include "../win32/dshow.h"
-
 #include <tuner.h>
 
 /*
@@ -40,8 +44,9 @@ typedef enum
     BDA_COMMAND_TUNE = 0,   /* tune the device and begin receiving TS */
     BDA_COMMAND_CLOSE,      /* tear down BDA graph and close the device */
     BDA_COMMAND_DEMUX,      /* ask pid filter to join or leave pid */
-    BDA_COMMAND_DISEQC,     /* send DiSEqC command to driver */
     BDA_COMMAND_CA,         /* control CI CAM program descrambling */
+    BDA_COMMAND_DISEQC,     /* send DiSEqC command to driver */
+    BDA_COMMAND_QUIT,       /* clean up and exit the BDA thread */
 } bda_command_t;
 
 typedef struct bda_network_t bda_network_t;
@@ -65,6 +70,8 @@ typedef struct
     int major_channel;
     int minor_channel;
     int virtual_channel;
+    int country_code;
+    TunerInputType input_type;
 
     /* dvb-s */
     int lof1;
@@ -87,11 +94,6 @@ typedef struct
 typedef struct
 {
     bda_command_t cmd;
-} bda_close_cmd_t;
-
-typedef struct
-{
-    bda_command_t cmd;
 
     bool join;
     uint16_t pid;
@@ -101,24 +103,24 @@ typedef struct
 {
     bda_command_t cmd;
 
-    // TODO: diseqc commands
-} bda_diseqc_cmd_t;
+    // TODO: CA PMT commands
+} bda_ca_cmd_t;
 
 typedef struct
 {
     bda_command_t cmd;
 
-    // TODO: CA PMT commands
-} bda_ca_cmd_t;
+    // TODO: diseqc commands
+} bda_diseqc_cmd_t;
 
 typedef union
 {
     bda_command_t cmd;
 
     bda_tune_cmd_t tune;
-    bda_close_cmd_t close;
-    bda_diseqc_cmd_t diseqc;
+    bda_demux_cmd_t demux;
     bda_ca_cmd_t ca;
+    bda_diseqc_cmd_t diseqc;
 } bda_user_cmd_t;
 
 /*
@@ -135,22 +137,19 @@ struct bda_network_t
     const CLSID *network_type;  /* GUID to assign to tuning spaces */
 
     /* tuning space initializers */
-    HRESULT (*init_locator)(ILocator *);
-    HRESULT (*init_tuning_space)(ITuningSpace *);
+    HRESULT (*init_default_locator)(ILocator *);
+    HRESULT (*init_space)(ITuningSpace *);
 
     /* tune request initializers */
+    HRESULT (*set_space)(const bda_tune_cmd_t *, ITuningSpace *);
+    HRESULT (*set_request)(const bda_tune_cmd_t *, ITuneRequest *);
     HRESULT (*set_locator)(const bda_tune_cmd_t *, ILocator *);
-    HRESULT (*set_tuning_space)(const bda_tune_cmd_t *, ITuningSpace *);
-    HRESULT (*set_tune_request)(const bda_tune_cmd_t *, ITuneRequest *);
 };
 
 extern const bda_network_t *const bda_network_list[];
+HRESULT bda_net_provider(const bda_network_t *net, IBaseFilter **out);
 HRESULT bda_tuning_space(const bda_network_t *net, ITuningSpace **out);
-/*
- * TODO
- *
- * HRESULT bda_tune_request(const bda_tune_cmd_t *cmd, ITuneRequest **out);
- */
+HRESULT bda_tune_request(const bda_tune_cmd_t *cmd, ITuneRequest **out);
 
 /*
  * BDA graph
@@ -158,15 +157,29 @@ HRESULT bda_tuning_space(const bda_network_t *net, ITuningSpace **out);
 
 struct hw_device_t
 {
-    // module config
-    int adapter; // default = -1
+    const char *name;
+
+    int adapter;
+    const char *displayname;
+    bool budget;
+
+    /* dedicated graph thread */
+    asc_thread_t *thr;
+    asc_list_t *queue;
+    asc_mutex_t queue_lock;
+    uint64_t next_tune;
+    void *arg;
+
+    /* tuner state; restored on graph restart */
+    bda_tune_cmd_t *tune;
+    bool demux[MAX_PID];
+    // TODO: add CA pnr list
+
+    /* graph objects */
+    IGraphBuilder *graph;
+    IMediaEvent *event;
 
 /*
- *  TODO
- *
- *  const char *displayname; // use strdup?
- *  bool budget;
- *
  *  // extra options from the linux module
  *  // do we need to implement these?
  *  buffer_size
@@ -174,40 +187,14 @@ struct hw_device_t
  *  timeout
  *  ca_pmt_delay
  *  raw_signal
- *
- *  // graph thread
- *  asc_thread_t *thr;
- *
- *  asc_list_t *commands;
- *  asc_mutex_t *cmd_lock;
- *
- *  // keep demux pid state in an array
- *  // restore on graph restart
- *
- *  // graph objects
- *  IBlaBla *bla;
  */
 };
 
-/*
- * TODO
- *
- * void bda_thread_loop(void *arg);
- */
+void bda_graph_loop(void *arg);
 
-/*
- * Lua methods
- */
+void bda_on_status(void *arg);
+void bda_on_buffer(void *arg);
 
 int bda_enumerate(lua_State *L);
-
-/*
- * TODO
- *
- * int bda_method_tune(lua_State *L, module_data_t *mod);
- * int bda_method_close(lua_State *L, module_data_t *mod);
- * int bda_method_diseqc(lua_State *L, module_data_t *mod);
- * int bda_method_ca(lua_State *L, module_data_t *mod);
- */
 
 #endif /* _HWDEV_BDA_H_ */
