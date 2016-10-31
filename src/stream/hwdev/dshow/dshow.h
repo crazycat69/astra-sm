@@ -1,5 +1,5 @@
 /*
- * Astra Module: Hardware Device (DirectShow utilities)
+ * Astra Module: DirectShow
  *
  * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
  *
@@ -24,9 +24,24 @@
 #   error "Please include <astra/astra.h> first"
 #endif /* !_ASTRA_H_ */
 
+/* include GUIDs first to suppress redeclaration warnings */
+#include "guids.h"
+
 #include <dshow.h>
 
+typedef void (*sample_callback_t)(void *, const void *, size_t);
+
 char *dshow_error_msg(HRESULT hr);
-HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir, IPin **out);
+HRESULT dshow_enum(const CLSID *category, IEnumMoniker **out);
+HRESULT dshow_filter_by_index(const CLSID *category
+                              , size_t index, IBaseFilter **out);
+HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir, bool free_only
+                       , IPin **out);
+HRESULT dshow_from_moniker(IMoniker *moniker, const IID *iid
+                           , IBaseFilter **out);
+HRESULT dshow_get_graph(IBaseFilter *filter, IFilterGraph2 **out);
+
+HRESULT dshow_grabber(sample_callback_t callback, void *arg
+                      , const AM_MEDIA_TYPE *media_type, IBaseFilter **out);
 
 #endif /* _HWDEV_DSHOW_H_ */

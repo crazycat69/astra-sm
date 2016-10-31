@@ -31,8 +31,7 @@
 #include <astra/core/mutex.h>
 #include <astra/core/mainloop.h>
 
-#include "../win32/guids.h"
-#include "../win32/dshow.h"
+#include "../dshow/dshow.h"
 #include <tuner.h>
 
 /*
@@ -103,14 +102,15 @@ typedef struct
 {
     bda_command_t cmd;
 
-    // TODO: CA PMT commands
+    bool enable;
+    uint16_t pnr;
 } bda_ca_cmd_t;
 
 typedef struct
 {
     bda_command_t cmd;
 
-    // TODO: diseqc commands
+    /* TODO: add diseqc command sequence */
 } bda_diseqc_cmd_t;
 
 typedef union
@@ -155,44 +155,84 @@ HRESULT bda_tune_request(const bda_tune_cmd_t *cmd, ITuneRequest **out);
  * BDA graph
  */
 
+typedef enum
+{
+    BDA_STATE_INIT = 0,     /* control thread shall attempt tuner init */
+    BDA_STATE_RUNNING,      /* tuner open, graph is working properly */
+    BDA_STATE_STOPPED,      /* tuner device closed by user command */
+    BDA_STATE_ERROR,        /* graph stopped due to error; awaiting reinit */
+} bda_state_t;
+
+typedef struct
+{
+    BOOLEAN locked;
+    BOOLEAN present;
+    LONG quality;
+    LONG strength;
+} bda_signal_stats_t;
+
 struct hw_device_t
 {
     const char *name;
 
     int adapter;
     const char *displayname;
+    int idx_callback;
     bool budget;
+    bool debug;
+
+    /*
+     * TODO
+     *
+     * Linux DVB input module also has these extra options.
+     * Do we need to implement them?
+     *
+     * buffer_size - maybe. default to 4mib ?
+     * log_signal - no. handle it via lua callbacks
+     * timeout - timeout waiting for signal lock before re-tuning
+     * ca_pmt_delay
+     * raw_signal - nope. no way to switch signal readout format
+     * no_dvr
+     * tone - 22khz tone. vendor specific
+     */
 
     /* dedicated graph thread */
     asc_thread_t *thr;
     asc_list_t *queue;
     asc_mutex_t queue_lock;
-    uint64_t next_tune;
+    HANDLE queue_evt;
     void *arg;
 
-    /* tuner state; restored on graph restart */
-    bda_tune_cmd_t *tune;
-    bool demux[MAX_PID];
-    // TODO: add CA pnr list
+    /* TS ring buffer */
+    // TODO
 
-    /* graph objects */
-    IGraphBuilder *graph;
+    /* graph objects and parameters */
+    bda_tune_cmd_t tune;
+    bool joined_pids[MAX_PID];
+    bool ca_pmts[MAX_PNR];
+    /* TODO: add diseqc sequence */
+
+    bda_state_t state;
+    int cooldown;
+
+    bda_signal_stats_t signal_stats;
+    asc_mutex_t signal_lock;
+
+    IFilterGraph2 *graph;
     IMediaEvent *event;
+    IBaseFilter *provider;
+    IMPEG2PIDMap *pidmap;
+    IBDA_SignalStatistics *signal;
 
-/*
- *  // extra options from the linux module
- *  // do we need to implement these?
- *  buffer_size
- *  log_signal
- *  timeout
- *  ca_pmt_delay
- *  raw_signal
- */
+    HANDLE graph_evt;
+    DWORD rot_reg;
 };
 
 void bda_graph_loop(void *arg);
 
-void bda_on_status(void *arg);
+void bda_dump_request(ITuneRequest *request);
+
+void bda_on_stats(void *arg);
 void bda_on_buffer(void *arg);
 
 int bda_enumerate(lua_State *L);

@@ -1,5 +1,5 @@
 /*
- * Astra Module: Hardware Device (GUIDs)
+ * Astra Module: DirectShow (GUIDs)
  *
  * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
  *

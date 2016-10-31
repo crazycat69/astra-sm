@@ -113,21 +113,7 @@ void graph_submit(hw_device_t *dev, const bda_user_cmd_t *cmd)
     asc_list_insert_tail(dev->queue, item);
 
     asc_mutex_unlock(&dev->queue_lock);
-}
-
-/* join or leave pid */
-static
-void graph_set_pid(hw_device_t *dev, uint16_t pid, bool join)
-{
-    const bda_user_cmd_t cmd = {
-        .demux = {
-            .cmd = BDA_COMMAND_DEMUX,
-            .join = join,
-            .pid = pid,
-        },
-    };
-
-    graph_submit(dev, &cmd);
+    SetEvent(dev->queue_evt);
 }
 
 /* thread exit callback */
@@ -140,17 +126,40 @@ void on_thread_close(void *arg)
     asc_log_error("BUG: BDA thread exited on its own");
 }
 
-/* device status callback */
-void bda_on_status(void *arg)
+/* signal statistics callback */
+void bda_on_stats(void *arg)
 {
-    const module_data_t *const mod = (module_data_t *)arg;
-    __uarg(mod);
+    hw_device_t *const dev = (hw_device_t *)arg;
+    module_data_t *const mod = (module_data_t *)dev->arg;
+
+    if (dev->idx_callback != LUA_REFNIL)
+    {
+        lua_State *const L = module_lua(mod);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, dev->idx_callback);
+
+        asc_mutex_lock(&dev->signal_lock);
+        lua_newtable(L);
+        lua_pushboolean(L, dev->signal_stats.present);
+        lua_setfield(L, -2, "present");
+        lua_pushboolean(L, dev->signal_stats.locked);
+        lua_setfield(L, -2, "locked");
+        lua_pushinteger(L, dev->signal_stats.strength);
+        lua_setfield(L, -2, "strength");
+        lua_pushinteger(L, dev->signal_stats.quality);
+        lua_setfield(L, -2, "quality");
+        asc_mutex_unlock(&dev->signal_lock);
+
+        if (lua_tr_call(L, 1, 0) != 0)
+            lua_err_log(L);
+    }
 }
 
 /* buffer callback */
 void bda_on_buffer(void *arg)
 {
     const module_data_t *const mod = (module_data_t *)arg;
+
+    /* TODO */
     __uarg(mod);
 }
 
@@ -661,8 +670,22 @@ int method_close(lua_State *L, module_data_t *mod)
 static
 int method_ca(lua_State *L, module_data_t *mod)
 {
-    __uarg(mod);
-    luaL_error(L, MSG("CAM support is not implemented yet"));
+    luaL_checktype(L, -1, LUA_TBOOLEAN);
+    const bool enable = lua_toboolean(L, -1);
+    const int pnr = luaL_checkinteger(L, -2);
+
+    if (pnr < 1 || pnr > UINT16_MAX)
+        luaL_error(L, MSG("program number %d out of range"), pnr);
+
+    const bda_user_cmd_t cmd = {
+        .ca = {
+            .cmd = BDA_COMMAND_CA,
+            .enable = enable,
+            .pnr = pnr,
+        },
+    };
+    graph_submit(mod->dev, &cmd);
+
     return 0;
 }
 
@@ -676,14 +699,28 @@ int method_diseqc(lua_State *L, module_data_t *mod)
 }
 
 /*
- * module init/destroy
+ * demux control
  */
+
+static
+void set_pid(hw_device_t *dev, uint16_t pid, bool join)
+{
+    const bda_user_cmd_t cmd = {
+        .demux = {
+            .cmd = BDA_COMMAND_DEMUX,
+            .join = join,
+            .pid = pid,
+        },
+    };
+
+    graph_submit(dev, &cmd);
+}
 
 static
 void join_pid(module_data_t *mod, uint16_t pid)
 {
     if (!module_demux_check(mod, pid))
-        graph_set_pid(mod->dev, pid, true);
+        set_pid(mod->dev, pid, true);
 
     module_demux_join(mod, pid);
 }
@@ -694,15 +731,21 @@ void leave_pid(module_data_t *mod, uint16_t pid)
     module_demux_leave(mod, pid);
 
     if (!module_demux_check(mod, pid))
-        graph_set_pid(mod->dev, pid, false);
+        set_pid(mod->dev, pid, false);
 }
+
+/*
+ * module init/destroy
+ */
 
 static
 void module_init(lua_State *L, module_data_t *mod)
 {
     hw_device_t *const dev = ASC_ALLOC(1, hw_device_t);
+
     mod->dev = dev;
     mod->dev->arg = mod;
+    dev->idx_callback = LUA_REFNIL;
 
     module_option_string(L, "name", &mod->dev->name, NULL);
     if (mod->dev->name == NULL)
@@ -730,12 +773,25 @@ void module_init(lua_State *L, module_data_t *mod)
         luaL_error(L, MSG("either adapter or displayname must be set"));
     }
 
-    // get other options FIXME TODO
+    /* get signal status callback */
+    lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
+    if (lua_isfunction(L, -1))
+        dev->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
+    else
+        lua_pop(L, 1);
+
+    /* miscellaneous options */
     module_option_boolean(L, "budget", &dev->budget);
+    module_option_boolean(L, "debug", &dev->debug);
 
     /* create command queue */
+    asc_mutex_init(&dev->signal_lock);
     asc_mutex_init(&dev->queue_lock);
     dev->queue = asc_list_init();
+
+    dev->queue_evt = CreateEvent(NULL, FALSE, FALSE, NULL);
+    if (dev->queue_evt == NULL)
+        luaL_error(L, MSG("CreateEvent() failed: %s"), asc_error_msg());
 
     /* send initial tuning commands */
     method_tune(L, mod);
@@ -757,6 +813,12 @@ void module_destroy(module_data_t *mod)
 {
     hw_device_t *const dev = mod->dev;
 
+    if (dev->idx_callback != LUA_REFNIL)
+    {
+        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, dev->idx_callback);
+        dev->idx_callback = LUA_REFNIL;
+    }
+
     if (dev->thr != NULL)
     {
         const bda_user_cmd_t cmd = {
@@ -765,9 +827,9 @@ void module_destroy(module_data_t *mod)
         graph_submit(dev, &cmd);
 
         ASC_FREE(dev->thr, asc_thread_join);
-        asc_wake_close();
+        asc_wake_close(); // move this outside if block
 
-        asc_job_prune(dev);
+        asc_job_prune(dev); // this too
     }
 
     if (dev->queue != NULL)
@@ -775,7 +837,10 @@ void module_destroy(module_data_t *mod)
         asc_list_clear(dev->queue);
         ASC_FREE(dev->queue, asc_list_destroy);
         asc_mutex_destroy(&dev->queue_lock);
+        asc_mutex_destroy(&dev->signal_lock);
     }
+
+    ASC_FREE(dev->queue_evt, CloseHandle);
 
     ASC_FREE(mod->dev, free);
     module_stream_destroy(mod);

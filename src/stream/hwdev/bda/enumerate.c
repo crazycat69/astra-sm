@@ -65,11 +65,11 @@ bool probe_tuner(lua_State *L, IBaseFilter *tuner_dev
         BDA_ENUM_THROW("couldn't add source filter to graph");
 
     /* try connecting the pins */
-    hr = dshow_find_pin(net_prov, PINDIR_OUTPUT, &prov_out);
+    hr = dshow_find_pin(net_prov, PINDIR_OUTPUT, true, &prov_out);
     if (FAILED(hr))
         BDA_ENUM_THROW("couldn't find network provider's output pin");
 
-    hr = dshow_find_pin(tuner_dev, PINDIR_INPUT, &tuner_in);
+    hr = dshow_find_pin(tuner_dev, PINDIR_INPUT, true, &tuner_in);
     if (FAILED(hr))
         BDA_ENUM_THROW("couldn't find source filter's input pin");
 
@@ -236,7 +236,6 @@ int bda_enumerate(lua_State *L)
     HRESULT hr = E_FAIL;
     bool co_init = false;
 
-    ICreateDevEnum *dev_enum = NULL;
     IEnumMoniker *enum_moniker = NULL;
     IMoniker *moniker = NULL;
 
@@ -251,18 +250,10 @@ int bda_enumerate(lua_State *L)
 
     co_init = true;
 
-    /* create device enumerator */
-    hr = CoCreateInstance(&CLSID_SystemDeviceEnum, NULL, CLSCTX_INPROC
-                          , &IID_ICreateDevEnum, (void **)&dev_enum);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("CoCreateInstance()");
-
     /* list BDA tuners */
-    hr = ICreateDevEnum_CreateClassEnumerator(dev_enum
-                                              , &KSCATEGORY_BDA_NETWORK_TUNER
-                                              , &enum_moniker, 0);
+    hr = dshow_enum(&KSCATEGORY_BDA_NETWORK_TUNER, &enum_moniker);
     if (FAILED(hr))
-        BDA_ENUM_THROW("ICreateDevEnum::CreateClassEnumerator()");
+        BDA_ENUM_THROW("couldn't create device enumerator");
     else if (hr != S_OK)
         goto out; /* no tuners; return empty table */
 
@@ -296,7 +287,6 @@ int bda_enumerate(lua_State *L)
 
 out:
     SAFE_RELEASE(enum_moniker);
-    SAFE_RELEASE(dev_enum);
 
     if (co_init)
         CoUninitialize();
