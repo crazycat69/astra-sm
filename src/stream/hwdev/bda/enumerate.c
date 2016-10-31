@@ -296,3 +296,11 @@ out:
 
     return 1;
 }
+
+const hw_driver_t hw_driver_bda =
+{
+    .name = "dvb_input",
+    .description = "DVB Input (DirectShow BDA)",
+
+    .enumerate = bda_enumerate,
+};

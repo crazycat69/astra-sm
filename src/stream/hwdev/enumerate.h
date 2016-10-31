@@ -1,5 +1,5 @@
 /*
- * Astra Module: Hardware Device (Driver list)
+ * Astra Module: Hardware Device (Enumeration)
  *
  * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
  *
@@ -20,8 +20,6 @@
 #ifndef _HWDEV_DRIVERS_H_
 #define _HWDEV_DRIVERS_H_ 1
 
-#include "hwdev.h"
-
 #ifdef _WIN32
 extern const hw_driver_t hw_driver_bda;
 #endif
@@ -33,21 +31,5 @@ static const hw_driver_t *hw_drivers[] =
 #endif
     NULL,
 };
-
-static inline
-const hw_driver_t *hw_find_driver(const char *drvname)
-{
-    const hw_driver_t *drv = NULL;
-    for (size_t i = 0; hw_drivers[i] != NULL; i++)
-    {
-        if (!strcmp(hw_drivers[i]->name, drvname))
-        {
-            drv = hw_drivers[i];
-            break;
-        }
-    }
-
-    return drv;
-}
 
 #endif /* _HWDEV_DRIVERS_H_ */

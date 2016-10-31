@@ -19,7 +19,7 @@
 
 #include "bda.h"
 
-#define MSG(_msg) "[dvb_input %s] " _msg, dev->name
+#define MSG(_msg) "[dvb_input %s] " _msg, mod->name
 
 /*
  * error handling (a.k.a. the joys of working with COM in plain C)
@@ -28,7 +28,7 @@
 #define COOLDOWN_TICKS 10
 
 static
-HRESULT throw_log(const hw_device_t *dev, HRESULT hr
+HRESULT throw_log(const module_data_t *mod, HRESULT hr
                   , bool debug, const char *msg)
 {
     if (SUCCEEDED(hr))
@@ -57,13 +57,13 @@ HRESULT throw_log(const hw_device_t *dev, HRESULT hr
 /* go to cleanup, unconditionally */
 #define BDA_THROW(_msg) \
     do { \
-        hr = throw_log(dev, hr, false, _msg); \
+        hr = throw_log(mod, hr, false, _msg); \
         goto out; \
     } while (0)
 
 #define BDA_THROW_D(_msg) \
     do { \
-        hr = throw_log(dev, hr, true, _msg); \
+        hr = throw_log(mod, hr, true, _msg); \
         goto out; \
     } while (0)
 
@@ -83,12 +83,12 @@ HRESULT throw_log(const hw_device_t *dev, HRESULT hr
 /* log formatted error message */
 #define BDA_ERROR(_msg) \
     do { \
-        throw_log(dev, hr, false, _msg); \
+        throw_log(mod, hr, false, _msg); \
     } while (0)
 
 #define BDA_ERROR_D(_msg) \
     do { \
-        throw_log(dev, hr, true, _msg); \
+        throw_log(mod, hr, true, _msg); \
     } while (0)
 
 /*
@@ -115,24 +115,24 @@ HRESULT dshow_filter_by_name(const CLSID *category
 
 /* create a source filter based on user settings */
 static
-HRESULT create_source(const hw_device_t *dev, IBaseFilter **out)
+HRESULT create_source(const module_data_t *mod, IBaseFilter **out)
 {
     if (out == NULL)
         return E_POINTER;
 
     *out = NULL;
 
-    if (dev->adapter != -1)
+    if (mod->adapter != -1)
     {
         /* search by adapter number */
         return dshow_filter_by_index(&KSCATEGORY_BDA_NETWORK_TUNER
-                                     , dev->adapter, out);
+                                     , mod->adapter, out);
     }
-    else if (dev->displayname != NULL)
+    else if (mod->displayname != NULL)
     {
         /* search by unique device path */
         return dshow_filter_by_name(&KSCATEGORY_BDA_NETWORK_TUNER
-                                    , dev->displayname, out);
+                                    , mod->displayname, out);
     }
 
     // TODO: add argument to dshow_filter_by_XXX to return friendly name
@@ -143,7 +143,7 @@ HRESULT create_source(const hw_device_t *dev, IBaseFilter **out)
 
 /* find a receiver corresponding to the source and connect it to the graph */
 static
-HRESULT create_receiver(const hw_device_t *dev, IBaseFilter *source
+HRESULT create_receiver(const module_data_t *mod, IBaseFilter *source
                         , IBaseFilter **out)
 {
     HRESULT hr = E_FAIL;
@@ -224,7 +224,7 @@ out:
 
 /* create demultiplexer filter and connect it to the graph */
 static
-HRESULT create_demux(const hw_device_t *dev, IBaseFilter *tail
+HRESULT create_demux(const module_data_t *mod, IBaseFilter *tail
                      , IBaseFilter **out)
 {
     HRESULT hr = E_FAIL;
@@ -269,7 +269,7 @@ out:
 
 /* create TIF and connect it to the graph */
 static
-HRESULT create_tif(const hw_device_t *dev, IBaseFilter *demux
+HRESULT create_tif(const module_data_t *mod, IBaseFilter *demux
                    , IBaseFilter **out)
 {
     HRESULT hr = E_FAIL;
@@ -331,7 +331,7 @@ out:
 
 /* create an output pin with PID mapping on the demux */
 static
-HRESULT create_pidmap(const hw_device_t *dev, IBaseFilter *demux
+HRESULT create_pidmap(const module_data_t *mod, IBaseFilter *demux
                       , IMPEG2PIDMap **out)
 {
     HRESULT hr = E_FAIL;
@@ -373,7 +373,7 @@ static
 void on_sample(void *arg, const void *buf, size_t len);
 
 static
-HRESULT create_probe(hw_device_t *dev, IBaseFilter *tail, IBaseFilter **out)
+HRESULT create_probe(module_data_t *mod, IBaseFilter *tail, IBaseFilter **out)
 {
     HRESULT hr = E_FAIL;
 
@@ -410,7 +410,7 @@ HRESULT create_probe(hw_device_t *dev, IBaseFilter *tail, IBaseFilter **out)
         else
             break;
 
-        hr = dshow_grabber(on_sample, dev, &mt, &probe);
+        hr = dshow_grabber(on_sample, mod, &mt, &probe);
         BDA_CHECK_HR_D("couldn't instantiate TS probe filter");
 
         hr = dshow_find_pin(probe, PINDIR_INPUT, true, &probe_in);
@@ -439,7 +439,7 @@ out:
 
 /* create TS probe and connect it to demux PID mapper */
 static
-HRESULT create_probe_dmx(hw_device_t *dev, IMPEG2PIDMap *pidmap
+HRESULT create_probe_dmx(module_data_t *mod, IMPEG2PIDMap *pidmap
                          , IBaseFilter **out)
 {
     HRESULT hr = E_FAIL;
@@ -477,7 +477,7 @@ HRESULT create_probe_dmx(hw_device_t *dev, IMPEG2PIDMap *pidmap
     mt.majortype = MEDIATYPE_Stream;
     mt.subtype = MEDIASUBTYPE_MPEG2_TRANSPORT;
 
-    hr = dshow_grabber(on_sample, dev, &mt, &probe);
+    hr = dshow_grabber(on_sample, mod, &mt, &probe);
     BDA_CHECK_HR_D("couldn't instantiate TS probe filter");
 
     hr = dshow_find_pin(probe, PINDIR_INPUT, true, &probe_in);
@@ -530,7 +530,7 @@ bool node_signal_stats(IBDA_Topology *topology, ULONG type, const GUID *intf
 typedef bool (*node_callback_t)(IBDA_Topology *, ULONG, const GUID *, void *);
 
 static
-HRESULT enumerate_topology(const hw_device_t *dev, IBaseFilter *filter
+HRESULT enumerate_topology(const module_data_t *mod, IBaseFilter *filter
                            , node_callback_t callback, void *arg)
 {
     HRESULT hr = E_FAIL;
@@ -582,7 +582,7 @@ out:
 
 /* submit tune request to network provider */
 static
-HRESULT provider_tune(const hw_device_t *dev, IBaseFilter *provider
+HRESULT provider_tune(const module_data_t *mod, IBaseFilter *provider
                       , const bda_tune_cmd_t *tune)
 {
     HRESULT hr = E_FAIL;
@@ -598,7 +598,7 @@ HRESULT provider_tune(const hw_device_t *dev, IBaseFilter *provider
     hr = bda_tune_request(tune, &request);
     BDA_CHECK_HR_D("couldn't create tune request");
 
-    if (dev->debug)
+    if (mod->debug)
         bda_dump_request(request);
 
     hr = ITuneRequest_get_TuningSpace(request, &space);
@@ -623,7 +623,7 @@ out:
 
 /* connect network provider to the source filter */
 static
-HRESULT provider_setup(const hw_device_t *dev, IFilterGraph2 *graph
+HRESULT provider_setup(const module_data_t *mod, IFilterGraph2 *graph
                        , IBaseFilter *provider, IBaseFilter *source)
 {
     HRESULT hr = E_FAIL;
@@ -659,7 +659,7 @@ HRESULT provider_setup(const hw_device_t *dev, IFilterGraph2 *graph
         retry_pins = true;
     }
 
-    hr = provider_tune(dev, provider, &dev->tune);
+    hr = provider_tune(mod, provider, &mod->tune);
     BDA_CHECK_HR_D("couldn't submit initial tune request to provider");
 
     if (retry_pins)
@@ -677,7 +677,7 @@ out:
 
 /* load saved PID list into demultiplexer's PID mapper */
 static
-HRESULT restore_pids(const hw_device_t *dev, IMPEG2PIDMap *pidmap)
+HRESULT restore_pids(const module_data_t *mod, IMPEG2PIDMap *pidmap)
 {
     if (pidmap == NULL)
         return E_POINTER;
@@ -710,7 +710,7 @@ HRESULT restore_pids(const hw_device_t *dev, IMPEG2PIDMap *pidmap)
 
     for (unsigned int i = 0; i < ASC_ARRAY_SIZE(pids); i++)
     {
-        if (dev->joined_pids[i])
+        if (mod->joined_pids[i])
             pids[cnt++] = i;
     }
 
@@ -724,7 +724,7 @@ HRESULT restore_pids(const hw_device_t *dev, IMPEG2PIDMap *pidmap)
 
 /* remove all filters from the graph */
 static
-HRESULT remove_filters(const hw_device_t *dev, IFilterGraph2 *graph)
+HRESULT remove_filters(const module_data_t *mod, IFilterGraph2 *graph)
 {
     HRESULT hr = E_FAIL;
 
@@ -774,7 +774,8 @@ out:
 
 /* register the graph in the running object table */
 static
-HRESULT rot_register(const hw_device_t *dev, IFilterGraph2 *graph, DWORD *out)
+HRESULT rot_register(const module_data_t *mod, IFilterGraph2 *graph
+                     , DWORD *out)
 {
     HRESULT hr = E_FAIL;
     wchar_t wbuf[256] = { L'\0' };
@@ -836,7 +837,7 @@ HRESULT rot_unregister(DWORD *reg)
 
 /* start the graph */
 static
-HRESULT control_run(const hw_device_t *dev, IFilterGraph2 *graph)
+HRESULT control_run(const module_data_t *mod, IFilterGraph2 *graph)
 {
     HRESULT hr = E_FAIL;
     OAFilterState state = State_Stopped;
@@ -905,7 +906,7 @@ HRESULT control_stop(IFilterGraph2 *graph)
  */
 
 static
-HRESULT graph_setup(hw_device_t *dev)
+HRESULT graph_setup(module_data_t *mod)
 {
     HRESULT hr = E_FAIL;
     bool need_uninit = false;
@@ -945,25 +946,25 @@ HRESULT graph_setup(hw_device_t *dev)
     BDA_CHECK_HR("failed to retrieve graph's event handle");
 
     /* set up network provider and source filter */
-    hr = bda_net_provider(dev->tune.net, &provider);
+    hr = bda_net_provider(mod->tune.net, &provider);
     BDA_CHECK_HR("failed to create network provider filter");
 
-    hr = create_source(dev, &source);
+    hr = create_source(mod, &source);
     if (FAILED(hr))
         BDA_THROW("failed to create source filter");
     else if (hr != S_OK)
         BDA_THROW("failed to find the requested device");
 
-    hr = provider_setup(dev, graph, provider, source);
+    hr = provider_setup(mod, graph, provider, source);
     BDA_CHECK_HR("failed to connect network provider to source filter");
 
     /* add demodulator and capture filters if this device has them */
-    hr = create_receiver(dev, source, &demod);
+    hr = create_receiver(mod, source, &demod);
     BDA_CHECK_HR("failed to create demodulator filter");
 
     if (demod != NULL)
     {
-        hr = create_receiver(dev, demod, &capture);
+        hr = create_receiver(mod, demod, &capture);
         BDA_CHECK_HR("failed to create capture filter");
 
         if (capture == NULL)
@@ -981,38 +982,38 @@ HRESULT graph_setup(hw_device_t *dev)
     else
         tail = source;
 
-    if (dev->budget)
+    if (mod->budget)
     {
         /* insert probe between capture filter and demux */
-        hr = create_probe(dev, tail, &probe);
+        hr = create_probe(mod, tail, &probe);
         BDA_CHECK_HR("failed to create TS probe");
 
         tail = probe;
     }
 
     /* set up demultiplexer and TIF */
-    hr = create_demux(dev, tail, &demux);
+    hr = create_demux(mod, tail, &demux);
     BDA_CHECK_HR("failed to initialize demultiplexer");
 
-    hr = create_tif(dev, demux, &tif);
+    hr = create_tif(mod, demux, &tif);
     BDA_CHECK_HR("failed to initialize transport information filter");
 
     /* add TS probe (PID filtering enabled) */
-    if (!dev->budget)
+    if (!mod->budget)
     {
-        hr = create_pidmap(dev, demux, &pidmap);
+        hr = create_pidmap(mod, demux, &pidmap);
         BDA_CHECK_HR("failed to initialize PID mapper");
 
-        hr = create_probe_dmx(dev, pidmap, &probe);
+        hr = create_probe_dmx(mod, pidmap, &probe);
         BDA_CHECK_HR("failed to create TS probe");
 
-        hr = restore_pids(dev, pidmap);
+        hr = restore_pids(mod, pidmap);
         if (FAILED(hr))
             BDA_ERROR("failed to load joined PID list into PID mapper");
     }
 
     /* create signal statistics interface */
-    hr = enumerate_topology(dev, source, node_signal_stats, &signal);
+    hr = enumerate_topology(mod, source, node_signal_stats, &signal);
     BDA_CHECK_HR("failed to search device topology for signal stats");
     if (signal == NULL)
         asc_log_warning(MSG("couldn't find signal statistics interface"));
@@ -1035,36 +1036,36 @@ HRESULT graph_setup(hw_device_t *dev)
     // - scan for vendor extensions (CAM, Diseqc, etc)
     // -------
 
-    if (dev->debug)
+    if (mod->debug)
     {
-        hr = rot_register(dev, graph, &dev->rot_reg);
+        hr = rot_register(mod, graph, &mod->rot_reg);
         if (FAILED(hr))
             BDA_ERROR_D("failed to register the graph in ROT");
     }
 
     /* start the graph */
-    hr = control_run(dev, graph);
+    hr = control_run(mod, graph);
     BDA_CHECK_HR("failed to run the graph");
 
     /* increase refcount on objects of interest */
     IFilterGraph2_AddRef(graph);
-    dev->graph = graph;
+    mod->graph = graph;
 
     IMediaEvent_AddRef(event);
-    dev->event = event;
-    dev->graph_evt = graph_evt;
+    mod->event = event;
+    mod->graph_evt = graph_evt;
 
     IBaseFilter_AddRef(provider);
-    dev->provider = provider;
+    mod->provider = provider;
 
-    if (dev->pidmap != NULL)
+    if (mod->pidmap != NULL)
     {
         IMPEG2PIDMap_AddRef(pidmap);
-        dev->pidmap = pidmap;
+        mod->pidmap = pidmap;
     }
 
     IBDA_SignalStatistics_AddRef(signal);
-    dev->signal = signal;
+    mod->signal = signal;
 
     need_uninit = false;
     hr = S_OK;
@@ -1072,8 +1073,8 @@ HRESULT graph_setup(hw_device_t *dev)
 out:
     if (need_uninit)
     {
-        rot_unregister(&dev->rot_reg);
-        remove_filters(dev, graph);
+        rot_unregister(&mod->rot_reg);
+        remove_filters(mod, graph);
     }
 
     SAFE_RELEASE(signal);
@@ -1095,19 +1096,19 @@ out:
 }
 
 static
-void graph_teardown(hw_device_t *dev)
+void graph_teardown(module_data_t *mod)
 {
-    control_stop(dev->graph);
-    rot_unregister(&dev->rot_reg);
-    remove_filters(dev, dev->graph);
+    control_stop(mod->graph);
+    rot_unregister(&mod->rot_reg);
+    remove_filters(mod, mod->graph);
 
-    SAFE_RELEASE(dev->signal);
-    SAFE_RELEASE(dev->pidmap);
-    SAFE_RELEASE(dev->provider);
-    SAFE_RELEASE(dev->event);
-    SAFE_RELEASE(dev->graph);
+    SAFE_RELEASE(mod->signal);
+    SAFE_RELEASE(mod->pidmap);
+    SAFE_RELEASE(mod->provider);
+    SAFE_RELEASE(mod->event);
+    SAFE_RELEASE(mod->graph);
 
-    dev->graph_evt = NULL;
+    mod->graph_evt = NULL;
 
     CoUninitialize();
 }
@@ -1118,9 +1119,9 @@ void graph_teardown(hw_device_t *dev)
 
 /* set new graph state */
 static
-void graph_set_state(hw_device_t *dev, bda_state_t state)
+void graph_set_state(module_data_t *mod, bda_state_t state)
 {
-    if (dev->state == state)
+    if (mod->state == state)
         return;
 
     const char *str = NULL;
@@ -1136,57 +1137,57 @@ void graph_set_state(hw_device_t *dev, bda_state_t state)
     }
 
     asc_log_debug(MSG("setting state to %s"), str);
-    dev->state = state;
+    mod->state = state;
 
     if (state == BDA_STATE_ERROR)
     {
         asc_log_info(MSG("reopening device in %u seconds"), COOLDOWN_TICKS);
-        dev->cooldown = COOLDOWN_TICKS;
+        mod->cooldown = COOLDOWN_TICKS;
     }
 }
 
 /* set tuning data, opening the device if necessary */
 static
-void graph_set_tune(hw_device_t *dev, const bda_tune_cmd_t *tune)
+void graph_set_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
 {
-    memcpy(&dev->tune, tune, sizeof(*tune));
+    memcpy(&mod->tune, tune, sizeof(*tune));
 
-    if (dev->state == BDA_STATE_RUNNING)
+    if (mod->state == BDA_STATE_RUNNING)
     {
-        const HRESULT hr = provider_tune(dev, dev->provider, &dev->tune);
+        const HRESULT hr = provider_tune(mod, mod->provider, &mod->tune);
         if (FAILED(hr))
         {
             BDA_ERROR("failed to submit tune request");
 
-            graph_teardown(dev);
-            graph_set_state(dev, BDA_STATE_ERROR);
+            graph_teardown(mod);
+            graph_set_state(mod, BDA_STATE_ERROR);
         }
     }
     else
     {
-        graph_set_state(dev, BDA_STATE_INIT);
+        graph_set_state(mod, BDA_STATE_INIT);
     }
 }
 
 /* request demultiplexer to join or leave PID */
 static
-void graph_set_pid(hw_device_t *dev, bool join, uint16_t pid)
+void graph_set_pid(module_data_t *mod, bool join, uint16_t pid)
 {
-    dev->joined_pids[pid] = join;
+    mod->joined_pids[pid] = join;
 
-    if (dev->pidmap != NULL)
+    if (mod->pidmap != NULL)
     {
         ULONG val = pid;
         HRESULT hr;
 
         if (join)
         {
-            hr = IMPEG2PIDMap_MapPID(dev->pidmap, 1, &val
+            hr = IMPEG2PIDMap_MapPID(mod->pidmap, 1, &val
                                      , MEDIA_TRANSPORT_PACKET);
         }
         else
         {
-            hr = IMPEG2PIDMap_UnmapPID(dev->pidmap, 1, &val);
+            hr = IMPEG2PIDMap_UnmapPID(mod->pidmap, 1, &val);
         }
 
         if (FAILED(hr))
@@ -1203,9 +1204,9 @@ void graph_set_pid(hw_device_t *dev, bool join, uint16_t pid)
 
 /* enable or disable CAM descrambling for a specific program */
 static
-void graph_set_ca(hw_device_t *dev, bool enable, uint16_t pnr)
+void graph_set_ca(module_data_t *mod, bool enable, uint16_t pnr)
 {
-    dev->ca_pmts[pnr] = enable;
+    mod->ca_pmts[pnr] = enable;
 
     /* TODO: implement CAM support */
     asc_log_error(MSG("STUB: %s CAM for PNR %hu")
@@ -1214,14 +1215,14 @@ void graph_set_ca(hw_device_t *dev, bool enable, uint16_t pnr)
 
 /*
 static
-void graph_set_diseqc(dev, command sequence)
+void graph_set_diseqc(mod, command sequence)
 {
 }
 */
 
 /* dispatch graph events */
 static
-HRESULT graph_do_events(hw_device_t *dev)
+HRESULT graph_do_events(module_data_t *mod)
 {
     HRESULT hr = E_FAIL;
 
@@ -1232,7 +1233,7 @@ HRESULT graph_do_events(hw_device_t *dev)
         LONG_PTR p1, p2;
 
         /* wait up to 50ms */
-        hr = IMediaEvent_GetEvent(dev->event, &ec, &p1, &p2, 50);
+        hr = IMediaEvent_GetEvent(mod->event, &ec, &p1, &p2, 50);
         if (hr == E_ABORT)
         {
             /* no more events */
@@ -1252,37 +1253,37 @@ HRESULT graph_do_events(hw_device_t *dev)
                 break;
         }
 
-        hr = IMediaEvent_FreeEventParams(dev->event, ec, p1, p2);
+        hr = IMediaEvent_FreeEventParams(mod->event, ec, p1, p2);
         BDA_CHECK_HR("failed to free event parameters");
     } while (true);
 
     /* update signal statistics */
-    if (dev->signal != NULL)
+    if (mod->signal != NULL)
     {
         bda_signal_stats_t s;
         memset(&s, 0, sizeof(s));
 
-        hr = dev->signal->lpVtbl->get_SignalLocked(dev->signal, &s.locked);
+        hr = mod->signal->lpVtbl->get_SignalLocked(mod->signal, &s.locked);
         BDA_CHECK_HR("failed to retrieve signal lock status");
 
-        hr = dev->signal->lpVtbl->get_SignalPresent(dev->signal, &s.present);
+        hr = mod->signal->lpVtbl->get_SignalPresent(mod->signal, &s.present);
         BDA_CHECK_HR("failed to retrieve signal presence status");
 
-        hr = dev->signal->lpVtbl->get_SignalQuality(dev->signal, &s.quality);
+        hr = mod->signal->lpVtbl->get_SignalQuality(mod->signal, &s.quality);
         BDA_CHECK_HR("failed to retrieve signal quality value");
 
-        hr = dev->signal->lpVtbl->get_SignalStrength(dev->signal, &s.strength);
+        hr = mod->signal->lpVtbl->get_SignalStrength(mod->signal, &s.strength);
         BDA_CHECK_HR("failed to retrieve signal strength value");
 
         /* resend tuning request on lock loss */
         // TODO
 
         /* notify main thread */
-        asc_mutex_lock(&dev->signal_lock);
-        memcpy(&dev->signal_stats, &s, sizeof(s));
-        asc_mutex_unlock(&dev->signal_lock);
+        asc_mutex_lock(&mod->signal_lock);
+        memcpy(&mod->signal_stats, &s, sizeof(s));
+        asc_mutex_unlock(&mod->signal_lock);
 
-        asc_job_queue(dev, bda_on_stats, dev);
+        asc_job_queue(mod, bda_on_stats, mod);
     }
 
 out:
@@ -1291,13 +1292,13 @@ out:
 
 /* wait for graph event or user command */
 static
-void graph_wait_events(hw_device_t *dev)
+void graph_wait_events(module_data_t *mod)
 {
-    HANDLE ev[2] = { dev->queue_evt, NULL };
+    HANDLE ev[2] = { mod->queue_evt, NULL };
     DWORD ev_cnt = 1;
 
-    if (dev->graph_evt != NULL)
-        ev[ev_cnt++] = dev->graph_evt;
+    if (mod->graph_evt != NULL)
+        ev[ev_cnt++] = mod->graph_evt;
 
     /* wait up to 1 second */
     const DWORD ret = WaitForMultipleObjects(ev_cnt, ev, FALSE, 1000);
@@ -1307,35 +1308,35 @@ void graph_wait_events(hw_device_t *dev)
 
 /* execute user command */
 static
-void graph_execute(hw_device_t *dev, const bda_user_cmd_t *cmd)
+void graph_execute(module_data_t *mod, const bda_user_cmd_t *cmd)
 {
     switch (cmd->cmd)
     {
         case BDA_COMMAND_TUNE:
-            graph_set_tune(dev, &cmd->tune);
+            graph_set_tune(mod, &cmd->tune);
             break;
 
         case BDA_COMMAND_DEMUX:
-            graph_set_pid(dev, cmd->demux.join, cmd->demux.pid);
+            graph_set_pid(mod, cmd->demux.join, cmd->demux.pid);
             break;
 
         case BDA_COMMAND_CA:
-            graph_set_ca(dev, cmd->ca.enable, cmd->ca.pnr);
+            graph_set_ca(mod, cmd->ca.enable, cmd->ca.pnr);
             break;
 
         case BDA_COMMAND_DISEQC:
             /*
              * TODO: implement sending diseqc commands
              *
-             * graph_set_diseqc(dev, &cmd->diseqc);
+             * graph_set_diseqc(mod, &cmd->diseqc);
              */
             break;
 
         case BDA_COMMAND_QUIT:
         case BDA_COMMAND_CLOSE:
         default:
-            graph_teardown(dev);
-            graph_set_state(dev, BDA_STATE_STOPPED);
+            graph_teardown(mod);
+            graph_set_state(mod, BDA_STATE_STOPPED);
             break;
     }
 }
@@ -1348,10 +1349,10 @@ void graph_execute(hw_device_t *dev, const bda_user_cmd_t *cmd)
 static
 void on_sample(void *arg, const void *buf, size_t len)
 {
-    hw_device_t *const dev = (hw_device_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
     /* TODO: implement buffering */
-    __uarg(dev);
+    __uarg(mod);
     __uarg(buf);
     __uarg(len);
 }
@@ -1362,58 +1363,58 @@ void on_sample(void *arg, const void *buf, size_t len)
 
 void bda_graph_loop(void *arg)
 {
-    hw_device_t *const dev = (hw_device_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
     bool quit = false;
 
     asc_log_debug(MSG("control thread started"));
-    dev->state = BDA_STATE_STOPPED;
+    mod->state = BDA_STATE_STOPPED;
 
     do
     {
         /* run queued user commands */
-        asc_mutex_lock(&dev->queue_lock);
-        asc_list_clear(dev->queue)
+        asc_mutex_lock(&mod->queue_lock);
+        asc_list_clear(mod->queue)
         {
             bda_user_cmd_t *const item =
-                (bda_user_cmd_t *)asc_list_data(dev->queue);
+                (bda_user_cmd_t *)asc_list_data(mod->queue);
 
             /* execute command with mutex unlocked */
-            asc_mutex_unlock(&dev->queue_lock);
+            asc_mutex_unlock(&mod->queue_lock);
 
             if (item->cmd == BDA_COMMAND_QUIT)
                 quit = true;
 
-            graph_execute(dev, item);
+            graph_execute(mod, item);
             free(item);
 
-            asc_mutex_lock(&dev->queue_lock);
+            asc_mutex_lock(&mod->queue_lock);
         }
-        asc_mutex_unlock(&dev->queue_lock);
+        asc_mutex_unlock(&mod->queue_lock);
 
         if (quit)
             break;
 
         /* handle state changes */
-        switch (dev->state)
+        switch (mod->state)
         {
             case BDA_STATE_INIT:
             {
-                const HRESULT hr = graph_setup(dev);
+                const HRESULT hr = graph_setup(mod);
                 if (SUCCEEDED(hr))
-                    graph_set_state(dev, BDA_STATE_RUNNING);
+                    graph_set_state(mod, BDA_STATE_RUNNING);
                 else
-                    graph_set_state(dev, BDA_STATE_ERROR);
+                    graph_set_state(mod, BDA_STATE_ERROR);
 
                 break;
             }
 
             case BDA_STATE_RUNNING:
             {
-                const HRESULT hr = graph_do_events(dev);
+                const HRESULT hr = graph_do_events(mod);
                 if (FAILED(hr))
                 {
-                    graph_teardown(dev);
-                    graph_set_state(dev, BDA_STATE_ERROR);
+                    graph_teardown(mod);
+                    graph_set_state(mod, BDA_STATE_ERROR);
                 }
 
                 break;
@@ -1421,8 +1422,8 @@ void bda_graph_loop(void *arg)
 
             case BDA_STATE_ERROR:
             {
-                if (--dev->cooldown <= 0)
-                    graph_set_state(dev, BDA_STATE_INIT);
+                if (--mod->cooldown <= 0)
+                    graph_set_state(mod, BDA_STATE_INIT);
 
                 break;
             }
@@ -1436,7 +1437,7 @@ void bda_graph_loop(void *arg)
         }
 
         /* sleep until next event */
-        graph_wait_events(dev);
+        graph_wait_events(mod);
     } while (true);
 
     asc_log_debug(MSG("control thread exiting"));

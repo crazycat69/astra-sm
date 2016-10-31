@@ -18,7 +18,7 @@
  */
 
 /*
- * Driver Name:
+ * Module Name:
  *      dvb_input
  *
  * Module Role:
@@ -96,7 +96,7 @@
 
 #include "bda.h"
 
-#define MSG(_msg) "[dvb_input %s] " _msg, mod->dev->name
+#define MSG(_msg) "[dvb_input %s] " _msg, mod->name
 
 /*
  * BDA thread communication
@@ -104,16 +104,16 @@
 
 /* submit command to thread */
 static
-void graph_submit(hw_device_t *dev, const bda_user_cmd_t *cmd)
+void graph_submit(module_data_t *mod, const bda_user_cmd_t *cmd)
 {
-    asc_mutex_lock(&dev->queue_lock);
+    asc_mutex_lock(&mod->queue_lock);
 
     bda_user_cmd_t *const item = ASC_ALLOC(1, bda_user_cmd_t);
     memcpy(item, cmd, sizeof(*item));
-    asc_list_insert_tail(dev->queue, item);
+    asc_list_insert_tail(mod->queue, item);
 
-    asc_mutex_unlock(&dev->queue_lock);
-    SetEvent(dev->queue_evt);
+    asc_mutex_unlock(&mod->queue_lock);
+    SetEvent(mod->queue_evt);
 }
 
 /* thread exit callback */
@@ -129,25 +129,24 @@ void on_thread_close(void *arg)
 /* signal statistics callback */
 void bda_on_stats(void *arg)
 {
-    hw_device_t *const dev = (hw_device_t *)arg;
-    module_data_t *const mod = (module_data_t *)dev->arg;
+    module_data_t *const mod = (module_data_t *)arg;
 
-    if (dev->idx_callback != LUA_REFNIL)
+    if (mod->idx_callback != LUA_REFNIL)
     {
         lua_State *const L = module_lua(mod);
-        lua_rawgeti(L, LUA_REGISTRYINDEX, dev->idx_callback);
+        lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
 
-        asc_mutex_lock(&dev->signal_lock);
+        asc_mutex_lock(&mod->signal_lock);
         lua_newtable(L);
-        lua_pushboolean(L, dev->signal_stats.present);
+        lua_pushboolean(L, mod->signal_stats.present);
         lua_setfield(L, -2, "present");
-        lua_pushboolean(L, dev->signal_stats.locked);
+        lua_pushboolean(L, mod->signal_stats.locked);
         lua_setfield(L, -2, "locked");
-        lua_pushinteger(L, dev->signal_stats.strength);
+        lua_pushinteger(L, mod->signal_stats.strength);
         lua_setfield(L, -2, "strength");
-        lua_pushinteger(L, dev->signal_stats.quality);
+        lua_pushinteger(L, mod->signal_stats.quality);
         lua_setfield(L, -2, "quality");
-        asc_mutex_unlock(&dev->signal_lock);
+        asc_mutex_unlock(&mod->signal_lock);
 
         if (lua_tr_call(L, 1, 0) != 0)
             lua_err_log(L);
@@ -649,7 +648,7 @@ int method_tune(lua_State *L, module_data_t *mod)
 {
     bda_user_cmd_t cmd;
     parse_tune_options(L, mod, &cmd.tune);
-    graph_submit(mod->dev, &cmd);
+    graph_submit(mod, &cmd);
 
     return 0;
 }
@@ -662,7 +661,7 @@ int method_close(lua_State *L, module_data_t *mod)
     const bda_user_cmd_t cmd = {
         .cmd = BDA_COMMAND_CLOSE,
     };
-    graph_submit(mod->dev, &cmd);
+    graph_submit(mod, &cmd);
 
     return 0;
 }
@@ -684,7 +683,7 @@ int method_ca(lua_State *L, module_data_t *mod)
             .pnr = pnr,
         },
     };
-    graph_submit(mod->dev, &cmd);
+    graph_submit(mod, &cmd);
 
     return 0;
 }
@@ -703,7 +702,7 @@ int method_diseqc(lua_State *L, module_data_t *mod)
  */
 
 static
-void set_pid(hw_device_t *dev, uint16_t pid, bool join)
+void set_pid(module_data_t *mod, uint16_t pid, bool join)
 {
     const bda_user_cmd_t cmd = {
         .demux = {
@@ -713,14 +712,14 @@ void set_pid(hw_device_t *dev, uint16_t pid, bool join)
         },
     };
 
-    graph_submit(dev, &cmd);
+    graph_submit(mod, &cmd);
 }
 
 static
 void join_pid(module_data_t *mod, uint16_t pid)
 {
     if (!module_demux_check(mod, pid))
-        set_pid(mod->dev, pid, true);
+        set_pid(mod, pid, true);
 
     module_demux_join(mod, pid);
 }
@@ -731,7 +730,7 @@ void leave_pid(module_data_t *mod, uint16_t pid)
     module_demux_leave(mod, pid);
 
     if (!module_demux_check(mod, pid))
-        set_pid(mod->dev, pid, false);
+        set_pid(mod, pid, false);
 }
 
 /*
@@ -741,31 +740,27 @@ void leave_pid(module_data_t *mod, uint16_t pid)
 static
 void module_init(lua_State *L, module_data_t *mod)
 {
-    hw_device_t *const dev = ASC_ALLOC(1, hw_device_t);
+    mod->idx_callback = LUA_REFNIL;
 
-    mod->dev = dev;
-    mod->dev->arg = mod;
-    dev->idx_callback = LUA_REFNIL;
-
-    module_option_string(L, "name", &mod->dev->name, NULL);
-    if (mod->dev->name == NULL)
+    module_option_string(L, "name", &mod->name, NULL);
+    if (mod->name == NULL)
         luaL_error(L, "[dvb_input] option 'name' is required");
 
     module_stream_init(L, mod, NULL);
     module_demux_set(mod, join_pid, leave_pid);
 
     /* get device identifier */
-    dev->adapter = -1;
-    if (module_option_integer(L, "adapter", &dev->adapter))
+    mod->adapter = -1;
+    if (module_option_integer(L, "adapter", &mod->adapter))
     {
         /* device index */
-        if (dev->adapter < 0)
+        if (mod->adapter < 0)
             luaL_error(L, MSG("adapter number can't be negative"));
     }
-    else if (module_option_string(L, "displayname", &dev->displayname, NULL))
+    else if (module_option_string(L, "displayname", &mod->displayname, NULL))
     {
         /* unique device path */
-        if (strlen(dev->displayname) == 0)
+        if (strlen(mod->displayname) == 0)
             luaL_error(L, MSG("display name can't be empty"));
     }
     else
@@ -776,21 +771,21 @@ void module_init(lua_State *L, module_data_t *mod)
     /* get signal status callback */
     lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
     if (lua_isfunction(L, -1))
-        dev->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
+        mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
     else
         lua_pop(L, 1);
 
     /* miscellaneous options */
-    module_option_boolean(L, "budget", &dev->budget);
-    module_option_boolean(L, "debug", &dev->debug);
+    module_option_boolean(L, "budget", &mod->budget);
+    module_option_boolean(L, "debug", &mod->debug);
 
     /* create command queue */
-    asc_mutex_init(&dev->signal_lock);
-    asc_mutex_init(&dev->queue_lock);
-    dev->queue = asc_list_init();
+    asc_mutex_init(&mod->signal_lock);
+    asc_mutex_init(&mod->queue_lock);
+    mod->queue = asc_list_init();
 
-    dev->queue_evt = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if (dev->queue_evt == NULL)
+    mod->queue_evt = CreateEvent(NULL, FALSE, FALSE, NULL);
+    if (mod->queue_evt == NULL)
         luaL_error(L, MSG("CreateEvent() failed: %s"), asc_error_msg());
 
     /* send initial tuning commands */
@@ -804,45 +799,42 @@ void module_init(lua_State *L, module_data_t *mod)
 
     /* start dedicated thread for BDA graph */
     asc_wake_open();
-    dev->thr = asc_thread_init();
-    asc_thread_start(dev->thr, dev, bda_graph_loop, on_thread_close);
+    mod->thr = asc_thread_init();
+    asc_thread_start(mod->thr, mod, bda_graph_loop, on_thread_close);
 }
 
 static
 void module_destroy(module_data_t *mod)
 {
-    hw_device_t *const dev = mod->dev;
-
-    if (dev->idx_callback != LUA_REFNIL)
+    if (mod->idx_callback != LUA_REFNIL)
     {
-        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, dev->idx_callback);
-        dev->idx_callback = LUA_REFNIL;
+        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, mod->idx_callback);
+        mod->idx_callback = LUA_REFNIL;
     }
 
-    if (dev->thr != NULL)
+    if (mod->thr != NULL)
     {
         const bda_user_cmd_t cmd = {
             .cmd = BDA_COMMAND_QUIT,
         };
-        graph_submit(dev, &cmd);
+        graph_submit(mod, &cmd);
 
-        ASC_FREE(dev->thr, asc_thread_join);
+        ASC_FREE(mod->thr, asc_thread_join);
         asc_wake_close(); // move this outside if block
 
-        asc_job_prune(dev); // this too
+        asc_job_prune(mod); // this too
     }
 
-    if (dev->queue != NULL)
+    if (mod->queue != NULL)
     {
-        asc_list_clear(dev->queue);
-        ASC_FREE(dev->queue, asc_list_destroy);
-        asc_mutex_destroy(&dev->queue_lock);
-        asc_mutex_destroy(&dev->signal_lock);
+        asc_list_clear(mod->queue);
+        ASC_FREE(mod->queue, asc_list_destroy);
+        asc_mutex_destroy(&mod->queue_lock);
+        asc_mutex_destroy(&mod->signal_lock);
     }
 
-    ASC_FREE(dev->queue_evt, CloseHandle);
+    ASC_FREE(mod->queue_evt, CloseHandle);
 
-    ASC_FREE(mod->dev, free);
     module_stream_destroy(mod);
 }
 
@@ -856,14 +848,9 @@ const module_method_t module_methods[] =
     { NULL, NULL },
 };
 
-const hw_driver_t hw_driver_bda =
+STREAM_MODULE_REGISTER(dvb_input)
 {
-    .name = "dvb_input",
-    .description = "DVB Input (DirectShow BDA)",
-
     .init = module_init,
     .destroy = module_destroy,
     .methods = module_methods,
-
-    .enumerate = bda_enumerate,
 };

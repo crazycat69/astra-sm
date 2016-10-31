@@ -28,9 +28,25 @@
  */
 
 #include "hwdev.h"
-#include "drivers.h"
+#include "enumerate.h"
 
 #define MSG(_msg) "[hw_enum] " _msg
+
+static
+const hw_driver_t *hw_find_driver(const char *drvname)
+{
+    const hw_driver_t *drv = NULL;
+    for (size_t i = 0; hw_drivers[i] != NULL; i++)
+    {
+        if (!strcmp(hw_drivers[i]->name, drvname))
+        {
+            drv = hw_drivers[i];
+            break;
+        }
+    }
+
+    return drv;
+}
 
 static
 int method_drivers(lua_State *L)

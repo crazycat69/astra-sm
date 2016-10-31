@@ -192,9 +192,8 @@ libstream_la_SOURCES = \
     stream/http/modules/static.c \
     stream/http/modules/upstream.c \
     stream/http/modules/websocket.c \
-    stream/hwdev/device.c \
-    stream/hwdev/drivers.h \
     stream/hwdev/enumerate.c \
+    stream/hwdev/enumerate.h \
     stream/hwdev/hwdev.h \
     stream/pipe/pipe.c \
     stream/remux/remux.c \
@@ -240,10 +239,10 @@ endif
 if HAVE_WIN32
 libstream_la_SOURCES += \
     stream/hwdev/bda/bda.h \
-    stream/hwdev/bda/driver.c \
     stream/hwdev/bda/dump.c \
     stream/hwdev/bda/enumerate.c \
     stream/hwdev/bda/graph.c \
+    stream/hwdev/bda/module.c \
     stream/hwdev/bda/networks.c \
     stream/hwdev/dshow/dshow.c \
     stream/hwdev/dshow/dshow.h \

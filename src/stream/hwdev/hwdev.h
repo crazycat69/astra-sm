@@ -23,28 +23,12 @@
 #include <astra/astra.h>
 #include <astra/luaapi/stream.h>
 
-typedef struct hw_device_t hw_device_t;
-
 typedef struct
 {
     const char *name;
     const char *description;
 
-    void (*init)(lua_State *, module_data_t *);
-    void (*destroy)(module_data_t *);
-    const module_method_t *methods;
-
     int (*enumerate)(lua_State *);
 } hw_driver_t;
-
-struct module_data_t
-{
-    STREAM_MODULE_DATA();
-
-    const char *name;
-    const hw_driver_t *drv;
-
-    hw_device_t *dev;
-};
 
 #endif /* _HWDEV_H_ */

@@ -171,10 +171,12 @@ typedef struct
     LONG strength;
 } bda_signal_stats_t;
 
-struct hw_device_t
+struct module_data_t
 {
-    const char *name;
+    STREAM_MODULE_DATA();
 
+    /* module configuration */
+    const char *name;
     int adapter;
     const char *displayname;
     int idx_callback;
@@ -201,7 +203,6 @@ struct hw_device_t
     asc_list_t *queue;
     asc_mutex_t queue_lock;
     HANDLE queue_evt;
-    void *arg;
 
     /* TS ring buffer */
     // TODO
