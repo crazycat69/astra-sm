@@ -209,8 +209,8 @@ struct module_data_t
 
     /* graph objects and parameters */
     bda_tune_cmd_t tune;
-    bool joined_pids[MAX_PID];
-    bool ca_pmts[MAX_PNR];
+    bool joined_pids[TS_MAX_PID];
+    bool ca_pmts[TS_MAX_PNR];
     /* TODO: add diseqc sequence */
 
     bda_state_t state;

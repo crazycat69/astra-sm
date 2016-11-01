@@ -688,13 +688,13 @@ HRESULT restore_pids(const module_data_t *mod, IMPEG2PIDMap *pidmap)
 
     if (hr == S_OK)
     {
-        PID_MAP old[MAX_PID];
+        PID_MAP old[TS_MAX_PID];
         ULONG old_cnt;
 
         hr = IEnumPIDMap_Next(enum_pid, ASC_ARRAY_SIZE(old), old, &old_cnt);
         if (hr == S_OK)
         {
-            ULONG unpids[MAX_PID];
+            ULONG unpids[TS_MAX_PID];
             for (unsigned int i = 0; i < old_cnt; i++)
                 unpids[i] = old[i].ulPID;
 
@@ -705,7 +705,7 @@ HRESULT restore_pids(const module_data_t *mod, IMPEG2PIDMap *pidmap)
     SAFE_RELEASE(enum_pid);
 
     /* create and submit PID array */
-    ULONG pids[MAX_PID] = { 0 };
+    ULONG pids[TS_MAX_PID] = { 0 };
     unsigned int cnt = 0;
 
     for (unsigned int i = 0; i < ASC_ARRAY_SIZE(pids); i++)

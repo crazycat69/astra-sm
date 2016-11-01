@@ -75,7 +75,7 @@ struct module_data_t
 
     /* */
     asc_list_t *map;
-    uint16_t pid_map[MAX_PID];
+    uint16_t pid_map[TS_MAX_PID];
     uint8_t custom_ts[TS_PACKET_SIZE];
 
     mpegts_psi_t *pat;
@@ -84,7 +84,7 @@ struct module_data_t
     mpegts_psi_t *sdt;
     mpegts_psi_t *eit;
 
-    mpegts_packet_type_t stream[MAX_PID];
+    mpegts_packet_type_t stream[TS_MAX_PID];
 
     uint16_t tsid;
     mpegts_psi_t *custom_pat;
@@ -109,7 +109,7 @@ static void stream_reload(module_data_t *mod)
 {
     memset(mod->stream, 0, sizeof(mod->stream));
 
-    for(int __i = 0; __i < MAX_PID; ++__i)
+    for(int __i = 0; __i < TS_MAX_PID; ++__i)
     {
         if(module_demux_check(mod, __i))
             module_demux_leave(mod, __i);
@@ -342,10 +342,10 @@ static void on_cat(void *arg, mpegts_psi_t *psi)
         if(desc_pointer[0] == 0x09)
         {
             const uint16_t ca_pid = DESC_CA_PID(desc_pointer);
-            if(mod->stream[ca_pid] == MPEGTS_PACKET_UNKNOWN && ca_pid != NULL_TS_PID)
+            if(mod->stream[ca_pid] == MPEGTS_PACKET_UNKNOWN && ca_pid != TS_NULL_PID)
             {
                 mod->stream[ca_pid] = MPEGTS_PACKET_CA;
-                if(mod->pid_map[ca_pid] == MAX_PID)
+                if(mod->pid_map[ca_pid] == TS_MAX_PID)
                     mod->pid_map[ca_pid] = 0;
                 module_demux_join(mod, ca_pid);
             }
@@ -444,10 +444,10 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
                 continue;
 
             const uint16_t ca_pid = DESC_CA_PID(desc_pointer);
-            if(mod->stream[ca_pid] == MPEGTS_PACKET_UNKNOWN && ca_pid != NULL_TS_PID)
+            if(mod->stream[ca_pid] == MPEGTS_PACKET_UNKNOWN && ca_pid != TS_NULL_PID)
             {
                 mod->stream[ca_pid] = MPEGTS_PACKET_CA;
-                if(mod->pid_map[ca_pid] == MAX_PID)
+                if(mod->pid_map[ca_pid] == TS_MAX_PID)
                     mod->pid_map[ca_pid] = 0;
                 module_demux_join(mod, ca_pid);
             }
@@ -474,7 +474,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     {
         const uint16_t pid = PMT_ITEM_GET_PID(psi, pointer);
 
-        if(mod->pid_map[pid] == MAX_PID) // skip filtered pid
+        if(mod->pid_map[pid] == TS_MAX_PID) // skip filtered pid
             continue;
 
         const uint8_t item_type = PMT_ITEM_GET_TYPE(psi, pointer);
@@ -503,10 +503,10 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
                     continue;
 
                 const uint16_t ca_pid = DESC_CA_PID(desc_pointer);
-                if(mod->stream[ca_pid] == MPEGTS_PACKET_UNKNOWN && ca_pid != NULL_TS_PID)
+                if(mod->stream[ca_pid] == MPEGTS_PACKET_UNKNOWN && ca_pid != TS_NULL_PID)
                 {
                     mod->stream[ca_pid] = MPEGTS_PACKET_CA;
-                    if(mod->pid_map[ca_pid] == MAX_PID)
+                    if(mod->pid_map[ca_pid] == TS_MAX_PID)
                         mod->pid_map[ca_pid] = 0;
                     module_demux_join(mod, ca_pid);
                 }
@@ -582,7 +582,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     if(join_pcr)
     {
         mod->stream[pcr_pid] = MPEGTS_PACKET_PES;
-        if(mod->pid_map[pcr_pid] == MAX_PID)
+        if(mod->pid_map[pcr_pid] == TS_MAX_PID)
             mod->pid_map[pcr_pid] = 0;
         module_demux_join(mod, pcr_pid);
     }
@@ -747,7 +747,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
     if(!module_demux_check(mod, pid))
         return;
 
-    if(pid == NULL_TS_PID)
+    if(pid == TS_NULL_PID)
         return;
 
     switch(mod->stream[pid])
@@ -779,7 +779,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
             break;
     }
 
-    if(mod->pid_map[pid] == MAX_PID)
+    if(mod->pid_map[pid] == TS_MAX_PID)
         return;
 
     if(mod->map)
@@ -822,9 +822,9 @@ static void module_init(lua_State *L, module_data_t *mod)
         module_option_boolean(L, "cas", &mod->config.cas);
 
         mod->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
-        mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, MAX_PID);
+        mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, TS_MAX_PID);
         mod->custom_pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
-        mod->custom_pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, MAX_PID);
+        mod->custom_pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, TS_MAX_PID);
         mod->stream[0] = MPEGTS_PACKET_PAT;
         module_demux_join(mod, 0);
         if(mod->config.cas)
@@ -871,7 +871,7 @@ static void module_init(lua_State *L, module_data_t *mod)
             lua_foreach(L, -2)
             {
                 const int pid = lua_tointeger(L, -1);
-                if(!(pid >= 0 && pid < MAX_PID))
+                if(!(pid >= 0 && pid < TS_MAX_PID))
                     luaL_error(L, MSG("option 'pid': pid is out of range"));
 
                 mod->stream[pid] = MPEGTS_PACKET_PES;
@@ -900,7 +900,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 
             lua_rawgeti(L, -1, 2);
             int val = lua_tointeger(L, -1);
-            if(!(val > 0 && val < NULL_TS_PID))
+            if(!(val > 0 && val < TS_NULL_PID))
                 luaL_error(L, MSG("option 'map': value is out of range"));
             lua_pop(L, 1);
 
@@ -921,10 +921,10 @@ static void module_init(lua_State *L, module_data_t *mod)
         lua_foreach(L, -2)
         {
             const int pid = lua_tointeger(L, -1);
-            if(!(pid >= 0 && pid < MAX_PID))
+            if(!(pid >= 0 && pid < TS_MAX_PID))
                 luaL_error(L, MSG("option 'filter': pid is out of range"));
 
-            mod->pid_map[pid] = MAX_PID;
+            mod->pid_map[pid] = TS_MAX_PID;
         }
     }
     lua_pop(L, 1); // filter
@@ -933,12 +933,12 @@ static void module_init(lua_State *L, module_data_t *mod)
     if(lua_istable(L, -1))
     {
         for(uint32_t i = 0; i < ASC_ARRAY_SIZE(mod->pid_map); ++i)
-            mod->pid_map[i] = MAX_PID;
+            mod->pid_map[i] = TS_MAX_PID;
 
         lua_foreach(L, -2)
         {
             const int pid = lua_tointeger(L, -1);
-            if(!(pid >= 0 && pid < MAX_PID))
+            if(!(pid >= 0 && pid < TS_MAX_PID))
                 luaL_error(L, MSG("option 'filter~': pid is out of range"));
 
             mod->pid_map[pid] = 0;

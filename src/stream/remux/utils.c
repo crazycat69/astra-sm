@@ -28,7 +28,7 @@ ts_program_t *ts_program_init(uint16_t pnr, uint16_t pid)
 
     prog->pnr = pnr;
     prog->pmt_pid = pid;
-    prog->pcr_pid = NULL_TS_PID;
+    prog->pcr_pid = TS_NULL_PID;
 
     prog->custom_pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, pid);
 

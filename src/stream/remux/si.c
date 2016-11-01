@@ -71,7 +71,7 @@ static inline void copy_psi(mpegts_psi_t *dst
 static void stream_reload(module_data_t *mod)
 {
     /* garbage collection */
-    for(size_t pid = 16; pid < NULL_TS_PID; pid++)
+    for(size_t pid = 16; pid < TS_NULL_PID; pid++)
     {
         /* try to find pid's owner */
         if((mod->stream[pid] != MPEGTS_PACKET_NIT
@@ -131,7 +131,7 @@ static void stream_reload(module_data_t *mod)
     {
         const uint16_t pid = mod->progs[i]->pcr_pid;
 
-        if(pid == NULL_TS_PID)
+        if(pid == TS_NULL_PID)
             /* PCR pid not yet assigned */
             continue;
 
@@ -433,7 +433,7 @@ void remux_pmt(void *arg, mpegts_psi_t *psi)
     if(pcr_pid < 32 || pcr_pid > 8190)
     {
         /* invalid pid or no PCR */
-        pcr_pid = NULL_TS_PID;
+        pcr_pid = TS_NULL_PID;
 
         /* TODO: enable PCR recovery using PTS */
         asc_log_info(MSG("program %hu (PMT %hu) has no PCR")

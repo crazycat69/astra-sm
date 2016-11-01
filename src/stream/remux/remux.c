@@ -388,7 +388,7 @@ static void module_destroy(module_data_t *mod)
     mpegts_psi_destroy(mod->pmt);
 
     /* pid list deinit */
-    for(size_t i = 0; i < MAX_PID; i++)
+    for(size_t i = 0; i < TS_MAX_PID; i++)
     {
         mod->stream[i] = MPEGTS_PACKET_UNKNOWN;
 

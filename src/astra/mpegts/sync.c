@@ -311,7 +311,7 @@ bool seek_pcr(mpegts_sync_t *sx)
         if (!TS_IS_PCR(ts))
             continue;
 
-        if (!sx->pcr_pid && pid != NULL_TS_PID)
+        if (!sx->pcr_pid && pid != TS_NULL_PID)
         {
             /* latch onto first PCR pid we see */
             sx->pcr_pid = pid;

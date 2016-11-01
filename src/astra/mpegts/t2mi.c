@@ -253,7 +253,7 @@ struct mpegts_t2mi_t
     mpegts_psi_t *pat;
     mpegts_psi_t *pmt;
 
-    mpegts_packet_type_t streams[MAX_PID];
+    mpegts_packet_type_t streams[TS_MAX_PID];
     unsigned pmt_pid;
     unsigned payload_pid;
     unsigned last_cc;
@@ -420,7 +420,7 @@ mpegts_t2mi_t *mpegts_t2mi_init(void)
 
 void mpegts_t2mi_destroy(mpegts_t2mi_t *mi)
 {
-    for (size_t i = 0; i < MAX_PID; i++)
+    for (size_t i = 0; i < TS_MAX_PID; i++)
     {
         if (mi->streams[i] != MPEGTS_PACKET_UNKNOWN)
             outer_leave_pid(mi, i);
@@ -491,7 +491,7 @@ void mpegts_t2mi_set_payload(mpegts_t2mi_t *mi, uint16_t pnr, uint16_t pid)
     mi->payload_pid = mi->pmt_pid = 0;
 
     /* reset pid map */
-    for (size_t i = 0; i < MAX_PID; i++)
+    for (size_t i = 0; i < TS_MAX_PID; i++)
     {
         if (mi->streams[i] != MPEGTS_PACKET_UNKNOWN)
         {

@@ -218,7 +218,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
         mod->buffer[2 + mod->buffer_skip] = (t >>  8) & 0xFF;
         mod->buffer[3 + mod->buffer_skip] = (t      ) & 0xFF;
         memcpy(&mod->buffer[4 + mod->buffer_skip], ts, TS_PACKET_SIZE);
-        mod->buffer_skip += M2TS_PACKET_SIZE;
+        mod->buffer_skip += TS_PACKET_SIZE_BDAV;
     }
 }
 
@@ -246,7 +246,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 
     bool m2ts = 0;
     module_option_boolean(L, "m2ts", &m2ts);
-    mod->packet_size = (m2ts) ? M2TS_PACKET_SIZE : TS_PACKET_SIZE;
+    mod->packet_size = (m2ts) ? TS_PACKET_SIZE_BDAV : TS_PACKET_SIZE;
 
 #ifdef O_DIRECT
     module_option_boolean(L, "directio", &mod->config.directio);

@@ -149,7 +149,7 @@ static bool open_file(module_data_t *mod)
 
     if(mod->buffer[0] == 0x47 && mod->buffer[TS_PACKET_SIZE] == 0x47)
         mod->m2ts_header = 0;
-    else if(mod->buffer[4] == 0x47 && mod->buffer[4 + M2TS_PACKET_SIZE] == 0x47)
+    else if(mod->buffer[4] == 0x47 && mod->buffer[4 + TS_PACKET_SIZE_BDAV] == 0x47)
         mod->m2ts_header = 4;
     else
     {
@@ -172,10 +172,10 @@ static bool open_file(module_data_t *mod)
     {
         mod->start_time = m2ts_time(mod->buffer) / 1000;
 
-        uint8_t tail[M2TS_PACKET_SIZE];
-        const ssize_t pktlen = pread(  mod->fd, tail, M2TS_PACKET_SIZE
-                                     , mod->file_size - M2TS_PACKET_SIZE);
-        if(pktlen != M2TS_PACKET_SIZE || tail[4] != 0x47)
+        uint8_t tail[TS_PACKET_SIZE_BDAV];
+        const ssize_t pktlen = pread(  mod->fd, tail, TS_PACKET_SIZE_BDAV
+                                     , mod->file_size - TS_PACKET_SIZE_BDAV);
+        if(pktlen != TS_PACKET_SIZE_BDAV || tail[4] != 0x47)
         {
             asc_log_warning(MSG("failed to get M2TS file length"));
         }

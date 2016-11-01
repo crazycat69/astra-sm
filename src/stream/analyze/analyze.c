@@ -83,7 +83,7 @@ struct module_data_t
     uint16_t tsid;
 
     asc_timer_t *check_stat;
-    analyze_item_t *stream[MAX_PID];
+    analyze_item_t *stream[TS_MAX_PID];
 
     mpegts_psi_t *pat;
     mpegts_psi_t *cat;
@@ -184,7 +184,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
         const uint16_t pnr = PAT_ITEM_GET_PNR(psi, pointer);
         const uint16_t pid = PAT_ITEM_GET_PID(psi, pointer);
 
-        if(!pid || pid >= NULL_TS_PID)
+        if(!pid || pid >= TS_NULL_PID)
             continue;
 
         const int item_count = luaL_len(L, -1) + 1;
@@ -381,7 +381,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
         const uint16_t pid = PMT_ITEM_GET_PID(psi, pointer);
         const uint8_t type = PMT_ITEM_GET_TYPE(psi, pointer);
 
-        if(!pid || pid >= NULL_TS_PID)
+        if(!pid || pid >= TS_NULL_PID)
             continue;
 
         lua_pushinteger(L, streams_count++);
@@ -599,10 +599,10 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 
     const uint16_t pid = TS_GET_PID(ts);
     analyze_item_t *item = NULL;
-    if(ts[0] == 0x47 && pid < MAX_PID)
+    if(ts[0] == 0x47 && pid < TS_MAX_PID)
         item = mod->stream[pid];
     if(!item)
-        item = mod->stream[NULL_TS_PID];
+        item = mod->stream[TS_NULL_PID];
 
     ++item->packets;
 
@@ -687,7 +687,7 @@ static void on_check_stat(void *arg)
                                  : ((mod->video_check) ? 256 : 32);
 
     lua_newtable(L);
-    for(int i = 0; i < MAX_PID; ++i)
+    for(int i = 0; i < TS_MAX_PID; ++i)
     {
         analyze_item_t *item = mod->stream[i];
 
@@ -821,10 +821,10 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->stream[0x12] = ASC_ALLOC(1, analyze_item_t);
     mod->stream[0x12]->type = MPEGTS_PACKET_EIT;
     // PMT
-    mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, MAX_PID);
+    mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, TS_MAX_PID);
     // NULL
-    mod->stream[NULL_TS_PID] = ASC_ALLOC(1, analyze_item_t);
-    mod->stream[NULL_TS_PID]->type = MPEGTS_PACKET_NULL;
+    mod->stream[TS_NULL_PID] = ASC_ALLOC(1, analyze_item_t);
+    mod->stream[TS_NULL_PID]->type = MPEGTS_PACKET_NULL;
 
     mod->check_stat = asc_timer_init(1000, on_check_stat, mod);
 }
@@ -839,7 +839,7 @@ static void module_destroy(module_data_t *mod)
         mod->idx_callback = 0;
     }
 
-    for(int i = 0; i < MAX_PID; ++i)
+    for(int i = 0; i < TS_MAX_PID; ++i)
     {
         if(mod->stream[i])
             free(mod->stream[i]);
