@@ -19,15 +19,21 @@
 
 #include "bda.h"
 
-#define BDA_ENUM_THROW(_func) \
+#define ENUM_THROW(_msg) \
     do { \
-        char *const _msg = dshow_error_msg(hr); \
-        lua_pushfstring(L, _func ": %s", _msg); \
-        free(_msg); \
+        char *const _err = dshow_error_msg(hr); \
+        lua_pushfstring(L, _msg ": %s", _err); \
+        free(_err); \
         goto out; \
     } while (0)
 
-#define BDA_ENUM_CATCH() \
+#define ENUM_CHECK_HR(_msg) \
+    do { \
+        if (FAILED(hr)) \
+            ENUM_THROW(_msg); \
+    } while (0)
+
+#define ENUM_CATCH() \
     lua_isstring(L, -1)
 
 /* check if the tuner supports a particular network type */
@@ -36,6 +42,7 @@ bool probe_tuner(lua_State *L, IBaseFilter *tuner_dev
                  , const bda_network_t *net)
 {
     HRESULT hr = E_FAIL;
+
     bool pins_connected = false;
 
     IBaseFilter *net_prov = NULL;
@@ -47,31 +54,25 @@ bool probe_tuner(lua_State *L, IBaseFilter *tuner_dev
 
     /* create network provider */
     hr = bda_net_provider(net, &net_prov);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("couldn't create network provider");
+    ENUM_CHECK_HR("couldn't create network provider");
 
     /* create graph and add filters */
     hr = CoCreateInstance(&CLSID_FilterGraph, NULL, CLSCTX_INPROC
                           , &IID_IGraphBuilder, (void **)&graph);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("couldn't create filter graph");
+    ENUM_CHECK_HR("couldn't create filter graph");
 
     hr = IGraphBuilder_AddFilter(graph, net_prov, NULL);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("couldn't add network provider to graph");
+    ENUM_CHECK_HR("couldn't add network provider to graph");
 
     hr = IGraphBuilder_AddFilter(graph, tuner_dev, NULL);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("couldn't add source filter to graph");
+    ENUM_CHECK_HR("couldn't add source filter to graph");
 
     /* try connecting the pins */
     hr = dshow_find_pin(net_prov, PINDIR_OUTPUT, true, &prov_out);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("couldn't find network provider's output pin");
+    ENUM_CHECK_HR("couldn't find network provider's output pin");
 
     hr = dshow_find_pin(tuner_dev, PINDIR_INPUT, true, &tuner_in);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("couldn't find source filter's input pin");
+    ENUM_CHECK_HR("couldn't find source filter's input pin");
 
     hr = IGraphBuilder_ConnectDirect(graph, prov_out, tuner_in, NULL);
     if (SUCCEEDED(hr))
@@ -79,26 +80,21 @@ bool probe_tuner(lua_State *L, IBaseFilter *tuner_dev
 
     /* create empty tune request */
     hr = bda_tuning_space(net, &spc);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("couldn't initialize tuning space");
+    ENUM_CHECK_HR("couldn't initialize tuning space");
 
     hr = ITuningSpace_CreateTuneRequest(spc, &req);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("couldn't create tune request");
+    ENUM_CHECK_HR("couldn't create tune request");
 
     /* submit request to network provider */
     hr = IBaseFilter_QueryInterface(net_prov, &IID_ITuner
                                     , (void **)&prov_tuner);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("couldn't query ITuner interface");
+    ENUM_CHECK_HR("couldn't query ITuner interface");
 
     hr = ITuner_put_TuningSpace(prov_tuner, spc);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("couldn't assign tuning space to provider");
+    ENUM_CHECK_HR("couldn't assign tuning space to provider");
 
     hr = ITuner_put_TuneRequest(prov_tuner, req);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("couldn't submit tune request to provider");
+    ENUM_CHECK_HR("couldn't submit tune request to provider");
 
     if (!pins_connected)
     {
@@ -107,8 +103,7 @@ bool probe_tuner(lua_State *L, IBaseFilter *tuner_dev
          * before connecting pins.
          */
         hr = IGraphBuilder_ConnectDirect(graph, prov_out, tuner_in, NULL);
-        if (FAILED(hr))
-            BDA_ENUM_THROW("couldn't connect network provider to tuner");
+        ENUM_CHECK_HR("couldn't connect network provider to tuner");
     }
 
 out:
@@ -120,11 +115,9 @@ out:
     SAFE_RELEASE(graph);
     SAFE_RELEASE(net_prov);
 
-    if (BDA_ENUM_CATCH())
+    if (ENUM_CATCH())
     {
-        asc_log_debug("%s", lua_tostring(L, -1));
         lua_pop(L, 1);
-
         return false;
     }
 
@@ -136,76 +129,39 @@ static
 int parse_moniker(lua_State *L, IMoniker *moniker)
 {
     HRESULT hr = E_FAIL;
-    int supported_nets = 0;
 
-    IMalloc *alloc = NULL;
-    IBindCtx *bind_ctx = NULL;
-    IPropertyBag *prop_bag = NULL;
+    int supported_nets = 0;
+    char *buf = NULL;
+
     IBaseFilter *tuner_dev = NULL;
 
-    char *buf = NULL;
-    wchar_t *wbuf = NULL;
+    /* get device path */
+    hr = dshow_get_property(moniker, "DevicePath", &buf);
+    ENUM_CHECK_HR("couldn't retrieve device path");
 
-    hr = CoGetMalloc(1, &alloc);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("CoGetMalloc()");
-
-    hr = CreateBindCtx(0, &bind_ctx);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("CreateBindCtx()");
-
-    /* get friendly name */
-    hr = IMoniker_BindToStorage(moniker, bind_ctx, NULL, &IID_IPropertyBag
-                                , (void **)&prop_bag);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("IMoniker::BindToStorage()");
-
-    VARIANT var_fname;
-    memset(&var_fname, 0, sizeof(var_fname));
-
-    hr = IPropertyBag_Read(prop_bag, L"FriendlyName", &var_fname, NULL);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("IPropertyBag::Read()");
-
-    if (var_fname.bstrVal != NULL)
+    if (buf != NULL)
     {
-        buf = cx_narrow(var_fname.bstrVal);
-
-        /* checking for NULL is not necessary here */
-        asc_log_debug("probing '%s'", buf);
         lua_pushstring(L, buf);
-        lua_setfield(L, -2, "name");
-
-        free(buf);
-    }
-
-    /* get display name */
-    hr = IMoniker_GetDisplayName(moniker, bind_ctx, NULL, &wbuf);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("IMoniker::GetDisplayName()");
-
-    if (wbuf != NULL)
-    {
-        buf = cx_narrow(wbuf);
-        IMalloc_Free(alloc, wbuf);
-
-        lua_pushstring(L, buf);
-        lua_setfield(L, -2, "displayname");
+        lua_setfield(L, -2, "devpath");
         free(buf);
     }
 
     /* probe tuner for supported network types */
-    hr = IMoniker_BindToObject(moniker, bind_ctx, NULL, &IID_IBaseFilter
-                               , (void **)&tuner_dev);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("IMoniker::BindToObject()");
+    hr = dshow_filter_from_moniker(moniker, &tuner_dev, &buf);
+    ENUM_CHECK_HR("couldn't instantiate device filter");
+
+    if (buf != NULL)
+    {
+        lua_pushstring(L, buf);
+        lua_setfield(L, -2, "name");
+        free(buf);
+    }
 
     lua_newtable(L);
     for (const bda_network_t *const *ptr = bda_network_list
          ; *ptr != NULL; ptr++)
     {
         const bda_network_t *const net = *ptr;
-        asc_log_debug("checking if %s is supported", net->name[0]);
 
         if (probe_tuner(L, tuner_dev, net))
         {
@@ -218,11 +174,8 @@ int parse_moniker(lua_State *L, IMoniker *moniker)
 
 out:
     SAFE_RELEASE(tuner_dev);
-    SAFE_RELEASE(prop_bag);
-    SAFE_RELEASE(bind_ctx);
-    SAFE_RELEASE(alloc);
 
-    if (BDA_ENUM_CATCH())
+    if (ENUM_CATCH())
     {
         lua_setfield(L, -2, "error");
         return -1;
@@ -231,29 +184,29 @@ out:
     return supported_nets;
 }
 
+/* return a Lua table containing a list of installed tuners */
 int bda_enumerate(lua_State *L)
 {
     HRESULT hr = E_FAIL;
-    bool co_init = false;
+
+    bool need_uninit = false;
+    int dev_idx = 0;
 
     IEnumMoniker *enum_moniker = NULL;
     IMoniker *moniker = NULL;
-
-    int dev_idx = 0;
 
     lua_newtable(L);
 
     /* initialize COM */
     hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-    if (FAILED(hr))
-        BDA_ENUM_THROW("CoInitializeEx()");
+    ENUM_CHECK_HR("CoInitializeEx() failed");
 
-    co_init = true;
+    need_uninit = true;
 
     /* list BDA tuners */
     hr = dshow_enum(&KSCATEGORY_BDA_NETWORK_TUNER, &enum_moniker);
     if (FAILED(hr))
-        BDA_ENUM_THROW("couldn't create device enumerator");
+        ENUM_THROW("couldn't create device enumerator");
     else if (hr != S_OK)
         goto out; /* no tuners; return empty table */
 
@@ -264,7 +217,7 @@ int bda_enumerate(lua_State *L)
         /* fetch next item */
         hr = IEnumMoniker_Next(enum_moniker, 1, &moniker, NULL);
         if (FAILED(hr))
-            BDA_ENUM_THROW("IEnumMoniker::Next()");
+            ENUM_THROW("couldn't retrieve next device filter");
         else if (hr != S_OK)
             break; /* no more items */
 
@@ -288,10 +241,10 @@ int bda_enumerate(lua_State *L)
 out:
     SAFE_RELEASE(enum_moniker);
 
-    if (co_init)
+    if (need_uninit)
         CoUninitialize();
 
-    if (BDA_ENUM_CATCH())
+    if (ENUM_CATCH())
         lua_error(L);
 
     return 1;

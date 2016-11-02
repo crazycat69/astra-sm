@@ -72,18 +72,20 @@ HRESULT dshow_enum(const CLSID *category, IEnumMoniker **out)
 }
 
 /* return filter that has a specific index in its category */
-HRESULT dshow_filter_by_index(const CLSID *category
-                              , size_t index, IBaseFilter **out)
+HRESULT dshow_filter_by_index(const CLSID *category, size_t index
+                              , IBaseFilter **out, char **fname)
 {
+    HRESULT hr = E_FAIL;
+
     IEnumMoniker *enum_moniker = NULL;
     IMoniker *moniker = NULL;
 
-    if (out == NULL)
+    if (category == NULL || out == NULL)
         return E_POINTER;
 
     *out = NULL;
 
-    HRESULT hr = dshow_enum(category, &enum_moniker);
+    hr = dshow_enum(category, &enum_moniker);
     if (hr != S_OK)
         return hr; /* empty category */
 
@@ -97,11 +99,140 @@ HRESULT dshow_filter_by_index(const CLSID *category
     hr = IEnumMoniker_Next(enum_moniker, 1, &moniker, NULL);
     if (hr != S_OK) goto out;
 
-    hr = dshow_from_moniker(moniker, &IID_IBaseFilter, out);
+    hr = dshow_filter_from_moniker(moniker, out, fname);
 
 out:
     SAFE_RELEASE(moniker);
     SAFE_RELEASE(enum_moniker);
+
+    return hr;
+}
+
+/* return filter with matching device path */
+HRESULT dshow_filter_by_path(const CLSID *category, const char *devpath
+                             , IBaseFilter **out, char **fname)
+{
+    if (category == NULL || devpath == NULL || out == NULL)
+        return E_POINTER;
+
+    *out = NULL;
+
+    IEnumMoniker *enum_moniker = NULL;
+    HRESULT hr = dshow_enum(category, &enum_moniker);
+    if (hr != S_OK)
+        return hr; /* empty category */
+
+    IMoniker *moniker = NULL;
+    do
+    {
+        SAFE_RELEASE(moniker);
+
+        if (*out != NULL)
+            break;
+
+        /* fetch next item */
+        hr = IEnumMoniker_Next(enum_moniker, 1, &moniker, NULL);
+        if (hr != S_OK)
+            break; /* no more filters */
+
+        char *buf = NULL;
+        hr = dshow_get_property(moniker, "DevicePath", &buf);
+        if (SUCCEEDED(hr))
+        {
+            if (strstr(buf, devpath) == buf)
+                hr = dshow_filter_from_moniker(moniker, out, fname);
+
+            free(buf);
+        }
+    } while (true);
+
+    return hr;
+}
+
+/* create filter object from a moniker */
+HRESULT dshow_filter_from_moniker(IMoniker *moniker, IBaseFilter **out
+                                  , char **fname)
+{
+    HRESULT hr = E_FAIL;
+
+    IBindCtx *bind_ctx = NULL;
+    IBaseFilter *filter = NULL;
+
+    if (moniker == NULL || out == NULL)
+        return E_POINTER;
+
+    *out = NULL;
+
+    hr = CreateBindCtx(0, &bind_ctx);
+    if (FAILED(hr)) return hr;
+
+    hr = IMoniker_BindToObject(moniker, bind_ctx, NULL
+                               , &IID_IBaseFilter, (void **)&filter);
+    if (FAILED(hr)) goto out;
+
+    if (fname != NULL)
+    {
+        hr = dshow_get_property(moniker, "FriendlyName", fname);
+        if (FAILED(hr)) goto out;
+    }
+
+    IBaseFilter_AddRef(filter);
+    *out = filter;
+
+out:
+    SAFE_RELEASE(filter);
+    SAFE_RELEASE(bind_ctx);
+
+    return hr;
+}
+
+/* fetch property from a moniker */
+HRESULT dshow_get_property(IMoniker *moniker, const char *prop, char **out)
+{
+    HRESULT hr = E_FAIL;
+
+    wchar_t *wprop = NULL;
+    VARIANT prop_var;
+
+    IBindCtx *bind_ctx = NULL;
+    IPropertyBag *bag = NULL;
+
+    if (moniker == NULL || prop == NULL || out == NULL)
+        return E_POINTER;
+
+    *out = NULL;
+
+    /* convert property name */
+    wprop = cx_widen(prop);
+    if (wprop == NULL)
+        return E_OUTOFMEMORY;
+
+    memset(&prop_var, 0, sizeof(prop_var));
+    prop_var.vt = VT_BSTR;
+
+    /* read property from property bag */
+    hr = CreateBindCtx(0, &bind_ctx);
+    if (FAILED(hr)) goto out;
+
+    hr = IMoniker_BindToStorage(moniker, bind_ctx, NULL
+                                , &IID_IPropertyBag, (void **)&bag);
+    if (FAILED(hr)) goto out;
+
+    hr = IPropertyBag_Read(bag, wprop, &prop_var, NULL);
+    if (FAILED(hr)) goto out;
+
+    if (prop_var.bstrVal != NULL)
+        *out = cx_narrow(prop_var.bstrVal);
+
+    if (*out == NULL)
+        hr = E_OUTOFMEMORY;
+
+out:
+    VariantClear(&prop_var);
+    ASC_FREE(wprop, free);
+
+    SAFE_RELEASE(bag);
+    SAFE_RELEASE(bind_ctx);
 
     return hr;
 }
@@ -157,26 +288,6 @@ HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir, bool free_only
     } while (true);
 
     SAFE_RELEASE(enum_pins);
-
-    return hr;
-}
-
-/* create filter object from a moniker */
-HRESULT dshow_from_moniker(IMoniker *moniker, const IID *iid
-                           , IBaseFilter **out)
-{
-    if (moniker == NULL || out == NULL)
-        return E_POINTER;
-
-    *out = NULL;
-
-    IBindCtx *bind_ctx = NULL;
-    HRESULT hr = CreateBindCtx(0, &bind_ctx);
-    if (FAILED(hr))
-        return hr;
-
-    hr = IMoniker_BindToObject(moniker, bind_ctx, NULL, iid, (void **)out);
-    SAFE_RELEASE(bind_ctx);
 
     return hr;
 }

@@ -104,50 +104,57 @@ void log_hr(const module_data_t *mod, HRESULT hr
  * helper functions for working with the graph
  */
 
-// TODO: move to dshow.c
-/// ----
-#if 1
+/* create a source filter based on user settings and add it to the graph */
 static
-HRESULT dshow_filter_by_name(const CLSID *category
-                             , const char *displayname, IBaseFilter **out)
+HRESULT create_source(const module_data_t *mod, IFilterGraph2 *graph
+                      , IBaseFilter **out)
 {
-    __uarg(category);
-    __uarg(displayname);
-    __uarg(out);
+    HRESULT hr = E_FAIL;
 
-    // TODO: implement this.
-    //       move to dshow.c
-    return E_FAIL;
-}
-#endif
-/// ----
+    char *fname = NULL;
+    wchar_t *wbuf = NULL;
 
-/* create a source filter based on user settings */
-static
-HRESULT create_source(const module_data_t *mod, IBaseFilter **out)
-{
-    if (out == NULL)
+    IBaseFilter *source = NULL;
+
+    if (graph == NULL || out == NULL)
         return E_POINTER;
 
     *out = NULL;
 
+    /* instantiate source filter */
     if (mod->adapter != -1)
     {
         /* search by adapter number */
-        return dshow_filter_by_index(&KSCATEGORY_BDA_NETWORK_TUNER
-                                     , mod->adapter, out);
+        hr = dshow_filter_by_index(&KSCATEGORY_BDA_NETWORK_TUNER
+                                   , mod->adapter, &source, &fname);
     }
     else if (mod->devpath != NULL)
     {
         /* search by unique device path */
-        return dshow_filter_by_name(&KSCATEGORY_BDA_NETWORK_TUNER
-                                    , mod->devpath, out);
+        hr = dshow_filter_by_path(&KSCATEGORY_BDA_NETWORK_TUNER
+                                  , mod->devpath, &source, &fname);
     }
 
-    // TODO: add argument to dshow_filter_by_XXX to return friendly name
-    //       log it here under info level
+    if (hr != S_OK)
+        goto out;
 
-    return S_FALSE;
+    /* log filter name and add it to graph */
+    asc_log_info(MSG("source: %s"), fname);
+
+    wbuf = cx_widen(fname); /* name is non-essential here */
+    hr = IFilterGraph2_AddFilter(graph, source, wbuf);
+    BDA_CHECK_HR_D("couldn't add source filter to graph");
+
+    IBaseFilter_AddRef(source);
+    *out = source;
+
+out:
+    ASC_FREE(wbuf, free);
+    ASC_FREE(fname, free);
+
+    SAFE_RELEASE(source);
+
+    return hr;
 }
 
 /* find a receiver corresponding to the source and connect it to the graph */
@@ -157,10 +164,12 @@ HRESULT create_receiver(const module_data_t *mod, IBaseFilter *source
 {
     HRESULT hr = E_FAIL;
 
+    char *fname = NULL;
+    wchar_t *wbuf = NULL;
+
     IFilterGraph2 *graph = NULL;
     IEnumMoniker *enum_moniker = NULL;
     IPin *source_out = NULL;
-
     IMoniker *moniker = NULL;
     IBaseFilter *rcv = NULL;
     IPin *rcv_in = NULL;
@@ -190,6 +199,9 @@ HRESULT create_receiver(const module_data_t *mod, IBaseFilter *source
         SAFE_RELEASE(rcv);
         SAFE_RELEASE(moniker);
 
+        ASC_FREE(fname, free);
+        ASC_FREE(wbuf, free);
+
         if (*out != NULL)
             break;
 
@@ -200,13 +212,14 @@ HRESULT create_receiver(const module_data_t *mod, IBaseFilter *source
             break; /* no more filters */
 
         /* add filter to graph and try to connect pins */
-        hr = dshow_from_moniker(moniker, &IID_IBaseFilter, &rcv);
+        hr = dshow_filter_from_moniker(moniker, &rcv, &fname);
         if (FAILED(hr)) continue;
 
         hr = dshow_find_pin(rcv, PINDIR_INPUT, true, &rcv_in);
         if (FAILED(hr)) continue;
 
-        hr = IFilterGraph2_AddFilter(graph, rcv, NULL);
+        wbuf = cx_widen(fname);
+        hr = IFilterGraph2_AddFilter(graph, rcv, wbuf);
         if (FAILED(hr)) continue;
 
         hr = IFilterGraph2_ConnectDirect(graph, source_out, rcv_in, NULL);
@@ -215,6 +228,8 @@ HRESULT create_receiver(const module_data_t *mod, IBaseFilter *source
             /* found it. will exit the cycle on next iteration */
             IBaseFilter_AddRef(rcv);
             *out = rcv;
+
+            asc_log_info(MSG("capture: %s"), fname);
         }
         else
         {
@@ -300,15 +315,8 @@ HRESULT create_tif(const module_data_t *mod, IBaseFilter *demux
     BDA_CHECK_HR_D("couldn't get demultiplexer's graph");
 
     /* create first filter from the TIF category */
-    hr = dshow_enum(&KSCATEGORY_BDA_TRANSPORT_INFORMATION, &enum_moniker);
-    if (hr != S_OK)
-        BDA_THROW_D("couldn't enumerate transport information filters");
-
-    hr = IEnumMoniker_Next(enum_moniker, 1, &moniker, NULL);
-    if (hr != S_OK)
-        BDA_THROW_D("couldn't retrieve first transport information filter");
-
-    hr = dshow_from_moniker(moniker, &IID_IBaseFilter, &tif);
+    hr = dshow_filter_by_index(&KSCATEGORY_BDA_TRANSPORT_INFORMATION, 0
+                               , &tif, NULL);
     BDA_CHECK_HR_D("couldn't instantiate transport information filter");
 
     /* connect TIF to demux */
@@ -632,27 +640,26 @@ out:
 
 /* connect network provider to the source filter */
 static
-HRESULT provider_setup(const module_data_t *mod, IFilterGraph2 *graph
-                       , IBaseFilter *provider, IBaseFilter *source)
+HRESULT provider_setup(const module_data_t *mod, IBaseFilter *provider
+                       , IBaseFilter *source)
 {
     HRESULT hr = E_FAIL;
     bool retry_pins = false;
 
+    IFilterGraph2 *graph = NULL;
     IPin *provider_out = NULL;
     IPin *source_in = NULL;
 
-    if (graph == NULL || provider == NULL || source == NULL)
+    if (provider == NULL || source == NULL)
         return E_POINTER;
 
-    /* add filters to the graph and get their pins */
-    hr = IFilterGraph2_AddFilter(graph, provider, L"Provider");
-    BDA_CHECK_HR_D("couldn't add network provider filter to graph");
+    /* get provider's graph */
+    hr = dshow_get_graph(provider, &graph);
+    BDA_CHECK_HR_D("couldn't get network provider's graph");
 
+    /* get filters' pins */
     hr = dshow_find_pin(provider, PINDIR_OUTPUT, true, &provider_out);
     BDA_CHECK_HR_D("couldn't find output pin on network provider filter");
-
-    hr = IFilterGraph2_AddFilter(graph, source, NULL);
-    BDA_CHECK_HR_D("couldn't add source filter to graph");
 
     hr = dshow_find_pin(source, PINDIR_INPUT, true, &source_in);
     BDA_CHECK_HR_D("couldn't find input pin on source filter");
@@ -680,6 +687,7 @@ HRESULT provider_setup(const module_data_t *mod, IFilterGraph2 *graph
 out:
     SAFE_RELEASE(source_in);
     SAFE_RELEASE(provider_out);
+    SAFE_RELEASE(graph);
 
     return hr;
 }
@@ -958,13 +966,16 @@ HRESULT graph_setup(module_data_t *mod)
     hr = bda_net_provider(mod->tune.net, &provider);
     BDA_CHECK_HR("failed to create network provider filter");
 
-    hr = create_source(mod, &source);
+    hr = IFilterGraph2_AddFilter(graph, provider, L"Network Provider");
+    BDA_CHECK_HR("failed to add network provider filter to graph");
+
+    hr = create_source(mod, graph, &source);
     if (FAILED(hr))
         BDA_THROW("failed to create source filter");
     else if (hr != S_OK)
         BDA_THROW("failed to find the requested device");
 
-    hr = provider_setup(mod, graph, provider, source);
+    hr = provider_setup(mod, provider, source);
     BDA_CHECK_HR("failed to connect network provider to source filter");
 
     /* add demodulator and capture filters if this device has them */
@@ -1060,14 +1071,17 @@ HRESULT graph_setup(module_data_t *mod)
     IBaseFilter_AddRef(provider);
     mod->provider = provider;
 
-    if (mod->pidmap != NULL)
+    if (pidmap != NULL)
     {
         IMPEG2PIDMap_AddRef(pidmap);
         mod->pidmap = pidmap;
     }
 
-    IBDA_SignalStatistics_AddRef(signal);
-    mod->signal = signal;
+    if (signal != NULL)
+    {
+        IBDA_SignalStatistics_AddRef(signal);
+        mod->signal = signal;
+    }
 
     need_uninit = false;
     hr = S_OK;
