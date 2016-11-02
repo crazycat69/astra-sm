@@ -178,7 +178,7 @@ struct module_data_t
     /* module configuration */
     const char *name;
     int adapter;
-    const char *displayname;
+    const char *devpath;
     int idx_callback;
     bool budget;
     bool debug;

@@ -21,74 +21,83 @@
 
 #define MSG(_msg) "[dvb_input %s] " _msg, mod->name
 
+/* device reopen timeout, seconds */
+#define COOLDOWN_TICKS 10
+
 /*
  * error handling (a.k.a. the joys of working with COM in plain C)
  */
 
-#define COOLDOWN_TICKS 10
-
-static
-HRESULT throw_log(const module_data_t *mod, HRESULT hr
-                  , bool debug, const char *msg)
+/* logging voodoo */
+static __fmt_printf(4, 5)
+void log_hr(const module_data_t *mod, HRESULT hr
+            , asc_log_type_t level, const char *msg, ...)
 {
+    char fmt[2048] = { 0 };
+    int ret = 0;
+
+    /* cook up a format string */
     if (SUCCEEDED(hr))
     {
         /* success codes won't format properly, nor is there a need */
-        if (debug)
-            asc_log_debug(MSG("%s"), msg);
-        else
-            asc_log_error(MSG("%s"), msg);
-
-        return E_FAIL;
+        ret = snprintf(fmt, sizeof(fmt), MSG("%s"), msg);
     }
     else
     {
+        /* append formatted HRESULT to error message */
         char *const err = dshow_error_msg(hr);
-        if (debug)
-            asc_log_debug(MSG("%s: %s"), msg, err);
-        else
-            asc_log_error(MSG("%s: %s"), msg, err);
-
+        ret = snprintf(fmt, sizeof(fmt), MSG("%s: %s"), msg, err);
         free(err);
-        return hr;
+    }
+
+    if (ret > 0)
+    {
+        va_list ap;
+        va_start(ap, msg);
+        asc_log_va(level, fmt, ap);
+        va_end(ap);
     }
 }
 
 /* go to cleanup, unconditionally */
-#define BDA_THROW(_msg) \
+#define BDA_THROW(...) \
     do { \
-        hr = throw_log(mod, hr, false, _msg); \
+        log_hr(mod, hr, ASC_LOG_ERROR, __VA_ARGS__); \
+        if (SUCCEEDED(hr)) \
+            hr = E_FAIL; \
         goto out; \
     } while (0)
 
-#define BDA_THROW_D(_msg) \
+#define BDA_THROW_D(...) \
     do { \
-        hr = throw_log(mod, hr, true, _msg); \
+        log_hr(mod, hr, ASC_LOG_DEBUG, __VA_ARGS__); \
+        if (SUCCEEDED(hr)) \
+            hr = E_FAIL; \
         goto out; \
     } while (0)
 
 /* go to cleanup if HRESULT indicates failure */
-#define BDA_CHECK_HR(_msg) \
+#define BDA_CHECK_HR(...) \
     do { \
         if (FAILED(hr)) \
-            BDA_THROW(_msg); \
+            BDA_THROW(__VA_ARGS__); \
     } while (0)
 
-#define BDA_CHECK_HR_D(_msg) \
+#define BDA_CHECK_HR_D(...) \
     do { \
         if (FAILED(hr)) \
-            BDA_THROW_D(_msg); \
+            BDA_THROW_D(__VA_ARGS__); \
     } while (0)
 
 /* log formatted error message */
-#define BDA_ERROR(_msg) \
+#define BDA_ERROR(...) \
     do { \
-        throw_log(mod, hr, false, _msg); \
+        log_hr(mod, hr, ASC_LOG_ERROR, __VA_ARGS__); \
     } while (0)
 
-#define BDA_ERROR_D(_msg) \
+#define BDA_ERROR_D(...) \
     do { \
-        throw_log(mod, hr, true, _msg); \
+        log_hr(mod, hr, ASC_LOG_DEBUG, __VA_ARGS__); \
     } while (0)
 
 /*
@@ -128,11 +137,11 @@ HRESULT create_source(const module_data_t *mod, IBaseFilter **out)
         return dshow_filter_by_index(&KSCATEGORY_BDA_NETWORK_TUNER
                                      , mod->adapter, out);
     }
-    else if (mod->displayname != NULL)
+    else if (mod->devpath != NULL)
     {
         /* search by unique device path */
         return dshow_filter_by_name(&KSCATEGORY_BDA_NETWORK_TUNER
-                                    , mod->displayname, out);
+                                    , mod->devpath, out);
     }
 
     // TODO: add argument to dshow_filter_by_XXX to return friendly name
@@ -1018,13 +1027,6 @@ HRESULT graph_setup(module_data_t *mod)
     if (signal == NULL)
         asc_log_warning(MSG("couldn't find signal statistics interface"));
 
-    /*
-     * FIXME: RTL SDR dongle won't start if TIF is attached
-     *        *AND* the provider has a tune request
-     *        This only happens when using the universal provider
-     *        Possible driver issue?
-     */
-
     // -------
     // TODO
     // -------
@@ -1192,12 +1194,8 @@ void graph_set_pid(module_data_t *mod, bool join, uint16_t pid)
 
         if (FAILED(hr))
         {
-            // TODO: add varargs to BDA_ERROR macro
-            char *const err = dshow_error_msg(hr);
-            asc_log_error(MSG("failed to %s pid %hu: %s")
-                          , join ? "join" : "leave", pid, err);
-
-            free(err);
+            BDA_ERROR("failed to %s pid %hu"
+                      , (join ? "join" : "leave"), pid);
         }
     }
 }

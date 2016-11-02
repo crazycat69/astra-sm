@@ -27,7 +27,7 @@
  * Module Options:
  *      name        - string, instance identifier for logging
  *      adapter     - number, device index
- *      displayname - string, unique Windows device path
+ *      devpath     - string, unique Windows device path
  *      budget      - boolean, disable hardware PID filtering
  *      diseqc      - table, command sequence to send on tuner init
  *             - OR - number, port number (alternate syntax)
@@ -120,10 +120,9 @@ void graph_submit(module_data_t *mod, const bda_user_cmd_t *cmd)
 static
 void on_thread_close(void *arg)
 {
-    __uarg(arg);
-
     /* shouldn't happen, ever */
-    asc_log_error("BUG: BDA thread exited on its own");
+    module_data_t *const mod = (module_data_t *)arg;
+    asc_log_error(MSG("BUG: BDA thread exited on its own"));
 }
 
 /* signal statistics callback */
@@ -757,15 +756,15 @@ void module_init(lua_State *L, module_data_t *mod)
         if (mod->adapter < 0)
             luaL_error(L, MSG("adapter number can't be negative"));
     }
-    else if (module_option_string(L, "displayname", &mod->displayname, NULL))
+    else if (module_option_string(L, "devpath", &mod->devpath, NULL))
     {
         /* unique device path */
-        if (strlen(mod->displayname) == 0)
-            luaL_error(L, MSG("display name can't be empty"));
+        if (strlen(mod->devpath) == 0)
+            luaL_error(L, MSG("device path can't be empty"));
     }
     else
     {
-        luaL_error(L, MSG("either adapter or displayname must be set"));
+        luaL_error(L, MSG("either adapter or devpath must be set"));
     }
 
     /* get signal status callback */
