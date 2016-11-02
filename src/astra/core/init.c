@@ -35,11 +35,7 @@ void asc_srand(void)
 {
     unsigned long a = clock();
     unsigned long b = time(NULL);
-#ifndef _WIN32
     unsigned long c = getpid();
-#else /* !_WIN32 */
-    unsigned long c = GetCurrentProcessId();
-#endif /* _WIN32 */
 
     a = a - b;  a = a - c;  a = a ^ (c >> 13);
     b = b - c;  b = b - a;  b = b ^ (a << 8);
