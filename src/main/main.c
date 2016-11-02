@@ -110,6 +110,10 @@ void bootstrap(lua_State *L, int argc, const char *argv[])
 int main(int argc, const char *argv[])
 {
 #ifdef _WIN32
+    /* disable line ending translation */
+    setmode(STDOUT_FILENO, _O_BINARY);
+    setmode(STDERR_FILENO, _O_BINARY);
+
     /* line buffering is not supported on win32 */
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
