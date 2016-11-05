@@ -63,7 +63,7 @@ int create_redirected(const char *command
         return -1;
 
     /* try to run command */
-    STARTUPINFO si;
+    STARTUPINFOW si; // FIXME: remove W suffix (need UNICODE in astra.h)
     memset(&si, 0, sizeof(si));
 
     si.cb = sizeof(si);
@@ -73,15 +73,17 @@ int create_redirected(const char *command
     si.hStdOutput = sout;
     si.hStdError = serr;
 
-    char *const buf = strdup(command);
-    asc_assert(buf != NULL, "[core/spawn] strdup() failed");
-
-    const bool ret = CreateProcess(NULL, buf, NULL, NULL, true
-                                   , (CREATE_NEW_PROCESS_GROUP
-                                      | CREATE_SUSPENDED
-                                      | CREATE_BREAKAWAY_FROM_JOB)
-                                   , NULL, NULL, &si, pi);
-    free(buf);
+    BOOL ret = FALSE;
+    wchar_t *const wbuf = cx_widen(command);
+    if (wbuf != NULL)
+    {
+        ret = CreateProcessW(NULL, wbuf, NULL, NULL, true
+                             , (CREATE_NEW_PROCESS_GROUP
+                                | CREATE_SUSPENDED
+                                | CREATE_BREAKAWAY_FROM_JOB)
+                             , NULL, NULL, &si, pi);
+        free(wbuf);
+    }
 
     if (!ret)
         return -1;

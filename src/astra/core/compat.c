@@ -72,7 +72,7 @@ BOOL cx_IsProcessInJob(HANDLE process, HANDLE job, BOOL *result)
     static HMODULE kern32;
     if (kern32 == NULL)
     {
-        kern32 = LoadLibrary("kernel32.dll");
+        kern32 = LoadLibraryW(L"kernel32.dll");
         if (kern32 == NULL)
             return FALSE;
     }
