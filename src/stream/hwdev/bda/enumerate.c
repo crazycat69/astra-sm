@@ -19,6 +19,7 @@
 
 #include "bda.h"
 
+/* put error message at the top of the stack and go to cleanup */
 #define ENUM_THROW(_msg) \
     do { \
         char *const _err = dshow_error_msg(hr); \
@@ -33,12 +34,13 @@
             ENUM_THROW(_msg); \
     } while (0)
 
+/* check for error condition */
 #define ENUM_CATCH() \
     lua_isstring(L, -1)
 
 /* check if the tuner supports a particular network type */
 static
-bool probe_tuner(lua_State *L, IBaseFilter *tuner_dev
+void probe_tuner(lua_State *L, IBaseFilter *tuner_dev
                  , const bda_network_t *net)
 {
     HRESULT hr = E_FAIL;
@@ -68,10 +70,10 @@ bool probe_tuner(lua_State *L, IBaseFilter *tuner_dev
     ENUM_CHECK_HR("couldn't add source filter to graph");
 
     /* try connecting the pins */
-    hr = dshow_find_pin(net_prov, PINDIR_OUTPUT, true, &prov_out);
+    hr = dshow_find_pin(net_prov, PINDIR_OUTPUT, true, NULL, &prov_out);
     ENUM_CHECK_HR("couldn't find network provider's output pin");
 
-    hr = dshow_find_pin(tuner_dev, PINDIR_INPUT, true, &tuner_in);
+    hr = dshow_find_pin(tuner_dev, PINDIR_INPUT, true, NULL, &tuner_in);
     ENUM_CHECK_HR("couldn't find source filter's input pin");
 
     hr = IGraphBuilder_ConnectDirect(graph, prov_out, tuner_in, NULL);
@@ -117,11 +119,22 @@ out:
 
     if (ENUM_CATCH())
     {
-        lua_pop(L, 1);
-        return false;
+        if (!asc_log_is_debug())
+        {
+            /* set "netname" => nil */
+            lua_pop(L, 1);
+            lua_pushnil(L);
+        }
+        else
+        {
+            /* set "netname" => "error msg" */
+        }
     }
-
-    return true;
+    else
+    {
+        /* set "netname" => true */
+        lua_pushboolean(L, 1);
+    }
 }
 
 /* put device details into Lua table at the top of the stack */
@@ -163,12 +176,11 @@ int parse_moniker(lua_State *L, IMoniker *moniker)
     {
         const bda_network_t *const net = *ptr;
 
-        if (probe_tuner(L, tuner_dev, net))
-        {
-            lua_pushboolean(L, 1);
-            lua_setfield(L, -2, net->name[0]);
+        probe_tuner(L, tuner_dev, net);
+        if (lua_isboolean(L, -1) && lua_toboolean(L, -1))
             supported_nets++;
-        }
+
+        lua_setfield(L, -2, net->name[0]);
     }
     lua_setfield(L, -2, "type");
 

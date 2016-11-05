@@ -39,10 +39,11 @@ HRESULT dshow_filter_by_path(const CLSID *category, const char *devpath
                              , IBaseFilter **out, char **fname);
 HRESULT dshow_filter_from_moniker(IMoniker *moniker, IBaseFilter **out
                                   , char **fname);
-HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir, bool free_only
-                       , IPin **out);
-HRESULT dshow_get_property(IMoniker *moniker, const char *prop, char **out);
+HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir
+                       , bool skip_busy, const char *name, IPin **out);
 HRESULT dshow_get_graph(IBaseFilter *filter, IFilterGraph2 **out);
+HRESULT dshow_get_property(IMoniker *moniker, const char *prop, char **out);
+bool dshow_pin_connected(IPin *pin);
 
 HRESULT dshow_grabber(sample_callback_t callback, void *arg
                       , const AM_MEDIA_TYPE *media_type, IBaseFilter **out);

@@ -190,7 +190,7 @@ HRESULT create_receiver(const module_data_t *mod, IBaseFilter *source
     else if (hr != S_OK)
         goto out; /* no receivers installed */
 
-    hr = dshow_find_pin(source, PINDIR_OUTPUT, true, &source_out);
+    hr = dshow_find_pin(source, PINDIR_OUTPUT, true, NULL, &source_out);
     BDA_CHECK_HR_D("couldn't find output pin on source filter");
 
     do
@@ -215,7 +215,7 @@ HRESULT create_receiver(const module_data_t *mod, IBaseFilter *source
         hr = dshow_filter_from_moniker(moniker, &rcv, &fname);
         if (FAILED(hr)) continue;
 
-        hr = dshow_find_pin(rcv, PINDIR_INPUT, true, &rcv_in);
+        hr = dshow_find_pin(rcv, PINDIR_INPUT, true, NULL, &rcv_in);
         if (FAILED(hr)) continue;
 
         wbuf = cx_widen(fname);
@@ -267,10 +267,10 @@ HRESULT create_demux(const module_data_t *mod, IBaseFilter *tail
                           , &IID_IBaseFilter, (void **)&demux);
     BDA_CHECK_HR_D("couldn't create demultiplexer filter");
 
-    hr = dshow_find_pin(tail, PINDIR_OUTPUT, true, &tail_out);
+    hr = dshow_find_pin(tail, PINDIR_OUTPUT, true, NULL, &tail_out);
     BDA_CHECK_HR_D("couldn't find output pin on capture filter");
 
-    hr = dshow_find_pin(demux, PINDIR_INPUT, true, &demux_in);
+    hr = dshow_find_pin(demux, PINDIR_INPUT, true, NULL, &demux_in);
     BDA_CHECK_HR_D("couldn't find input pin on demultiplexer filter");
 
     hr = IFilterGraph2_AddFilter(graph, demux, L"Demux");
@@ -320,10 +320,10 @@ HRESULT create_tif(const module_data_t *mod, IBaseFilter *demux
     BDA_CHECK_HR_D("couldn't instantiate transport information filter");
 
     /* connect TIF to demux */
-    hr = dshow_find_pin(tif, PINDIR_INPUT, true, &tif_in);
+    hr = dshow_find_pin(tif, PINDIR_INPUT, true, NULL, &tif_in);
     BDA_CHECK_HR_D("couldn't find input pin on TIF");
 
-    hr = dshow_find_pin(demux, PINDIR_OUTPUT, true, &demux_out);
+    hr = dshow_find_pin(demux, PINDIR_OUTPUT, true, NULL, &demux_out);
     BDA_CHECK_HR_D("couldn't find output pin on demultiplexer");
 
     hr = IFilterGraph2_AddFilter(graph, tif, L"TIF");
@@ -407,7 +407,7 @@ HRESULT create_probe(module_data_t *mod, IBaseFilter *tail, IBaseFilter **out)
     hr = dshow_get_graph(tail, &graph);
     BDA_CHECK_HR_D("couldn't get capture filter's graph");
 
-    hr = dshow_find_pin(tail, PINDIR_OUTPUT, true, &tail_out);
+    hr = dshow_find_pin(tail, PINDIR_OUTPUT, true, NULL, &tail_out);
     BDA_CHECK_HR_D("couldn't find output pin on capture filter");
 
     /* try creating and attaching probes with different media subtypes */
@@ -430,7 +430,7 @@ HRESULT create_probe(module_data_t *mod, IBaseFilter *tail, IBaseFilter **out)
         hr = dshow_grabber(on_sample, mod, &mt, &probe);
         BDA_CHECK_HR_D("couldn't instantiate TS probe filter");
 
-        hr = dshow_find_pin(probe, PINDIR_INPUT, true, &probe_in);
+        hr = dshow_find_pin(probe, PINDIR_INPUT, true, NULL, &probe_in);
         BDA_CHECK_HR_D("couldn't find input pin on TS probe");
 
         hr = IFilterGraph2_AddFilter(graph, probe, L"Probe");
@@ -497,7 +497,7 @@ HRESULT create_probe_dmx(module_data_t *mod, IMPEG2PIDMap *pidmap
     hr = dshow_grabber(on_sample, mod, &mt, &probe);
     BDA_CHECK_HR_D("couldn't instantiate TS probe filter");
 
-    hr = dshow_find_pin(probe, PINDIR_INPUT, true, &probe_in);
+    hr = dshow_find_pin(probe, PINDIR_INPUT, true, NULL, &probe_in);
     BDA_CHECK_HR_D("couldn't find input pin on TS probe");
 
     hr = IFilterGraph2_AddFilter(graph, probe, L"Probe");
@@ -658,10 +658,10 @@ HRESULT provider_setup(const module_data_t *mod, IBaseFilter *provider
     BDA_CHECK_HR_D("couldn't get network provider's graph");
 
     /* get filters' pins */
-    hr = dshow_find_pin(provider, PINDIR_OUTPUT, true, &provider_out);
+    hr = dshow_find_pin(provider, PINDIR_OUTPUT, true, NULL, &provider_out);
     BDA_CHECK_HR_D("couldn't find output pin on network provider filter");
 
-    hr = dshow_find_pin(source, PINDIR_INPUT, true, &source_in);
+    hr = dshow_find_pin(source, PINDIR_INPUT, true, NULL, &source_in);
     BDA_CHECK_HR_D("couldn't find input pin on source filter");
 
     /* connect pins and submit tune request to provider */
@@ -813,9 +813,9 @@ HRESULT rot_register(const module_data_t *mod, IFilterGraph2 *graph
      * Create a moniker identifying the graph. The moniker must follow
      * this exact naming convention, otherwise it won't show up in GraphEdt.
      */
-    StringCchPrintf(wbuf, ASC_ARRAY_SIZE(wbuf)
-                    , L"FilterGraph %08x pid %08x"
-                    , (void *)graph, GetCurrentProcessId());
+    StringCchPrintfW(wbuf, ASC_ARRAY_SIZE(wbuf)
+                     , L"FilterGraph %08x pid %08x"
+                     , (void *)graph, GetCurrentProcessId());
 
     hr = CreateItemMoniker(L"!", wbuf, &moniker);
     BDA_CHECK_HR_D("couldn't create an item moniker for ROT registration");

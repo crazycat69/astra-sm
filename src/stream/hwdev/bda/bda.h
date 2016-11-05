@@ -20,11 +20,6 @@
 #ifndef _HWDEV_BDA_H_
 #define _HWDEV_BDA_H_ 1
 
-// FIXME: move these to astra.h
-#define UNICODE
-#define _UNICODE
-// FIXME
-
 #include "../hwdev.h"
 #include <astra/core/list.h>
 #include <astra/core/thread.h>

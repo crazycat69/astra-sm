@@ -17,11 +17,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-// FIXME: move these to astra.h
-#define UNICODE
-#define _UNICODE
-// FIXME
-
 #include <astra/astra.h>
 #include "dshow.h"
 
@@ -29,11 +24,11 @@
 char *dshow_error_msg(HRESULT hr)
 {
     wchar_t buf[MAX_ERROR_TEXT_LEN] = { L'\0' };
-    static const size_t bufsiz = ASC_ARRAY_SIZE(buf);
+    const size_t bufsiz = ASC_ARRAY_SIZE(buf);
 
-    const DWORD ret = AMGetErrorText(hr, buf, bufsiz);
+    const DWORD ret = AMGetErrorTextW(hr, buf, bufsiz);
     if (ret == 0)
-        StringCchPrintf(buf, bufsiz, L"Unknown Error: 0x%2x", hr);
+        StringCchPrintfW(buf, bufsiz, L"Unknown Error: 0x%2x", hr);
 
     char *const msg = cx_narrow(buf);
     if (msg != NULL)
@@ -54,7 +49,7 @@ char *dshow_error_msg(HRESULT hr)
 /* create moniker enumerator for a specified device category */
 HRESULT dshow_enum(const CLSID *category, IEnumMoniker **out)
 {
-    if (out == NULL)
+    if (category == NULL || out == NULL)
         return E_POINTER;
 
     *out = NULL;
@@ -123,6 +118,8 @@ HRESULT dshow_filter_by_path(const CLSID *category, const char *devpath
         return hr; /* empty category */
 
     IMoniker *moniker = NULL;
+    const size_t devlen = strlen(devpath);
+
     do
     {
         SAFE_RELEASE(moniker);
@@ -139,12 +136,15 @@ HRESULT dshow_filter_by_path(const CLSID *category, const char *devpath
         hr = dshow_get_property(moniker, "DevicePath", &buf);
         if (SUCCEEDED(hr))
         {
-            if (strstr(buf, devpath) == buf)
+            /* compare beginning of the device path */
+            if (!strncmp(buf, devpath, devlen))
                 hr = dshow_filter_from_moniker(moniker, out, fname);
 
             free(buf);
         }
     } while (true);
+
+    SAFE_RELEASE(enum_moniker);
 
     return hr;
 }
@@ -164,7 +164,7 @@ HRESULT dshow_filter_from_moniker(IMoniker *moniker, IBaseFilter **out
     *out = NULL;
 
     hr = CreateBindCtx(0, &bind_ctx);
-    if (FAILED(hr)) return hr;
+    if (FAILED(hr)) goto out;
 
     hr = IMoniker_BindToObject(moniker, bind_ctx, NULL
                                , &IID_IBaseFilter, (void **)&filter);
@@ -172,6 +172,7 @@ HRESULT dshow_filter_from_moniker(IMoniker *moniker, IBaseFilter **out
 
     if (fname != NULL)
     {
+        /* NOTE: if fname is set, it must be freed by the caller */
         hr = dshow_get_property(moniker, "FriendlyName", fname);
         if (FAILED(hr)) goto out;
     }
@@ -186,70 +187,32 @@ out:
     return hr;
 }
 
-/* fetch property from a moniker */
-HRESULT dshow_get_property(IMoniker *moniker, const char *prop, char **out)
+/* look for a filter pin with matching parameters */
+HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir
+                       , bool skip_busy, const char *name, IPin **out)
 {
-    HRESULT hr = E_FAIL;
-
-    wchar_t *wprop = NULL;
-    VARIANT prop_var;
-
-    IBindCtx *bind_ctx = NULL;
-    IPropertyBag *bag = NULL;
-
-    if (moniker == NULL || prop == NULL || out == NULL)
+    if (filter == NULL || out == NULL)
         return E_POINTER;
 
     *out = NULL;
 
-    /* convert property name */
-    wprop = cx_widen(prop);
-    if (wprop == NULL)
-        return E_OUTOFMEMORY;
+    /* convert pin name */
+    wchar_t *wname = NULL;
+    if (name != NULL)
+    {
+        wname = cx_widen(name);
+        if (wname == NULL)
+            return E_OUTOFMEMORY;
+    }
 
-    memset(&prop_var, 0, sizeof(prop_var));
-    prop_var.vt = VT_BSTR;
-
-    /* read property from property bag */
-    hr = CreateBindCtx(0, &bind_ctx);
-    if (FAILED(hr)) goto out;
-
-    hr = IMoniker_BindToStorage(moniker, bind_ctx, NULL
-                                , &IID_IPropertyBag, (void **)&bag);
-    if (FAILED(hr)) goto out;
-
-    hr = IPropertyBag_Read(bag, wprop, &prop_var, NULL);
-    if (FAILED(hr)) goto out;
-
-    if (prop_var.bstrVal != NULL)
-        *out = cx_narrow(prop_var.bstrVal);
-
-    if (*out == NULL)
-        hr = E_OUTOFMEMORY;
-
-out:
-    VariantClear(&prop_var);
-    ASC_FREE(wprop, free);
-
-    SAFE_RELEASE(bag);
-    SAFE_RELEASE(bind_ctx);
-
-    return hr;
-}
-
-/* look for a filter pin with matching direction */
-HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir, bool free_only
-                       , IPin **out)
-{
-    if (out == NULL)
-        return E_POINTER;
-
-    *out = NULL;
-
+    /* look for requested pin */
     IEnumPins *enum_pins = NULL;
     HRESULT hr = IBaseFilter_EnumPins(filter, &enum_pins);
     if (FAILED(hr))
+    {
+        free(wname);
         return hr;
+    }
 
     IPin *pin = NULL;
     do
@@ -258,36 +221,34 @@ HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir, bool free_only
 
         hr = IEnumPins_Next(enum_pins, 1, &pin, NULL);
         if (hr != S_OK)
-        {
-            /* no more pins */
-            if (SUCCEEDED(hr))
-                hr = E_NOINTERFACE;
+            break; /* no more pins */
 
-            break;
-        }
+        if (skip_busy && dshow_pin_connected(pin))
+            continue; /* don't want busy pin */
 
-        if (free_only)
-        {
-            /* skip busy pins */
-            IPin *remote = NULL;
-            hr = IPin_ConnectedTo(pin, &remote);
-            if (hr == S_OK)
-            {
-                SAFE_RELEASE(remote);
-                continue;
-            }
-        }
+        PIN_INFO info;
+        memset(&info, 0, sizeof(info));
+        hr = IPin_QueryPinInfo(pin, &info);
+        if (hr != S_OK)
+            continue; /* no info */
 
-        PIN_DIRECTION pin_dir;
-        hr = IPin_QueryDirection(pin, &pin_dir);
-        if (hr == S_OK && pin_dir == dir)
-        {
-            *out = pin;
-            break;
-        }
+        SAFE_RELEASE(info.pFilter);
+        if (info.dir != dir)
+            continue; /* wrong direction */
+
+        if (wname != NULL && wcscmp(wname, info.achName))
+            continue; /* wrong name */
+
+        /* found it */
+        *out = pin;
+        break;
     } while (true);
 
+    if (SUCCEEDED(hr) && hr != S_OK)
+        hr = E_NOINTERFACE; /* don't return S_FALSE */
+
     SAFE_RELEASE(enum_pins);
+    ASC_FREE(wname, free);
 
     return hr;
 }
@@ -317,4 +278,69 @@ HRESULT dshow_get_graph(IBaseFilter *filter, IFilterGraph2 **out)
     SAFE_RELEASE(fi.pGraph);
 
     return hr;
+}
+
+/* fetch property from a moniker */
+HRESULT dshow_get_property(IMoniker *moniker, const char *prop, char **out)
+{
+    HRESULT hr = E_FAIL;
+
+    wchar_t *wprop = NULL;
+    VARIANT prop_var;
+
+    IBindCtx *bind_ctx = NULL;
+    IPropertyBag *bag = NULL;
+
+    if (moniker == NULL || prop == NULL || out == NULL)
+        return E_POINTER;
+
+    *out = NULL;
+    memset(&prop_var, 0, sizeof(prop_var));
+    prop_var.vt = VT_BSTR;
+
+    /* convert property name */
+    wprop = cx_widen(prop);
+    if (wprop == NULL)
+        return E_OUTOFMEMORY;
+
+    /* read property from property bag */
+    hr = CreateBindCtx(0, &bind_ctx);
+    if (FAILED(hr)) goto out;
+
+    hr = IMoniker_BindToStorage(moniker, bind_ctx, NULL
+                                , &IID_IPropertyBag, (void **)&bag);
+    if (FAILED(hr)) goto out;
+
+    hr = IPropertyBag_Read(bag, wprop, &prop_var, NULL);
+    if (FAILED(hr)) goto out;
+
+    if (prop_var.bstrVal != NULL)
+        *out = cx_narrow(prop_var.bstrVal);
+
+    if (*out == NULL)
+        hr = E_OUTOFMEMORY;
+
+out:
+    VariantClear(&prop_var);
+    ASC_FREE(wprop, free);
+
+    SAFE_RELEASE(bag);
+    SAFE_RELEASE(bind_ctx);
+
+    return hr;
+}
+
+/* check whether a pin is connected */
+bool dshow_pin_connected(IPin *pin)
+{
+    IPin *remote = NULL;
+    HRESULT hr = IPin_ConnectedTo(pin, &remote);
+
+    if (SUCCEEDED(hr))
+    {
+        SAFE_RELEASE(remote);
+        return true;
+    }
+
+    return false;
 }
