@@ -180,8 +180,11 @@ HRESULT dshow_grabber(sample_callback_t callback, void *arg
     hr = ISampleGrabber_SetCallback(grabber, cb, 1);
     if (FAILED(hr)) goto out;
 
-    hr = ISampleGrabber_SetMediaType(grabber, media_type);
-    if (FAILED(hr)) goto out;
+    if (media_type != NULL)
+    {
+        hr = ISampleGrabber_SetMediaType(grabber, media_type);
+        if (FAILED(hr)) goto out;
+    }
 
     hr = ISampleGrabber_SetOneShot(grabber, FALSE);
     if (FAILED(hr)) goto out;

@@ -23,6 +23,7 @@
 #include "../hwdev.h"
 #include <astra/core/list.h>
 #include <astra/core/thread.h>
+#include <astra/core/timer.h>
 #include <astra/core/mutex.h>
 #include <astra/core/mainloop.h>
 
@@ -177,6 +178,10 @@ struct module_data_t
     int idx_callback;
     bool budget;
     bool debug;
+    bool log_signal;
+    int timeout;
+
+    asc_timer_t *status_timer;
 
     /*
      * TODO
@@ -185,8 +190,6 @@ struct module_data_t
      * Do we need to implement them?
      *
      * buffer_size - maybe. default to 4mib ?
-     * log_signal - no. handle it via lua callbacks
-     * timeout - timeout waiting for signal lock before re-tuning
      * ca_pmt_delay
      * raw_signal - nope. no way to switch signal readout format
      * no_dvr
@@ -225,12 +228,8 @@ struct module_data_t
 };
 
 void bda_graph_loop(void *arg);
-
 void bda_dump_request(ITuneRequest *request);
-
-void bda_on_stats(void *arg);
 void bda_on_buffer(void *arg);
-
 int bda_enumerate(lua_State *L);
 
 #endif /* _HWDEV_BDA_H_ */

@@ -22,7 +22,7 @@
 #define MSG(_msg) "[dvb_input %s] " _msg, mod->name
 
 /* device reopen timeout, seconds */
-#define COOLDOWN_TICKS 10
+#define ERROR_CD_TICKS 10
 
 /*
  * error handling (a.k.a. the joys of working with COM in plain C)
@@ -377,6 +377,7 @@ HRESULT create_pidmap(const module_data_t *mod, IBaseFilter *demux
 
     /* query pid mapper */
     hr = IPin_QueryInterface(mpeg_out, &IID_IMPEG2PIDMap, (void **)out);
+    BDA_CHECK_HR_D("couldn't query IMPEG2PIDMap interface");
 
 out:
     SAFE_RELEASE(mpeg_out);
@@ -597,10 +598,52 @@ out:
     return hr;
 }
 
+/* request signal statistics from driver */
+static
+HRESULT signal_stats_load(const module_data_t *mod
+                          , IBDA_SignalStatistics *signal
+                          , bda_signal_stats_t *out)
+{
+    HRESULT hr = E_FAIL;
+
+    if (signal == NULL || out == NULL)
+        return E_POINTER;
+
+    memset(out, 0, sizeof(*out));
+
+    hr = signal->lpVtbl->get_SignalLocked(signal, &out->locked);
+    BDA_CHECK_HR_D("couldn't retrieve signal lock status");
+
+    hr = signal->lpVtbl->get_SignalPresent(signal, &out->present);
+    BDA_CHECK_HR_D("couldn't retrieve signal presence status");
+
+    hr = signal->lpVtbl->get_SignalQuality(signal, &out->quality);
+    BDA_CHECK_HR_D("couldn't retrieve signal quality value");
+
+    hr = signal->lpVtbl->get_SignalStrength(signal, &out->strength);
+    BDA_CHECK_HR_D("couldn't retrieve signal strength value");
+
+out:
+    return hr;
+}
+
+/* update last known signal statistics */
+static
+void signal_stats_set(module_data_t *mod, const bda_signal_stats_t *stats)
+{
+    asc_mutex_lock(&mod->signal_lock);
+
+    if (stats != NULL)
+        memcpy(&mod->signal_stats, stats, sizeof(*stats));
+    else
+        memset(&mod->signal_stats, 0, sizeof(mod->signal_stats));
+
+    asc_mutex_unlock(&mod->signal_lock);
+}
+
 /* submit tune request to network provider */
 static
-HRESULT provider_tune(const module_data_t *mod, IBaseFilter *provider
-                      , const bda_tune_cmd_t *tune)
+HRESULT provider_tune(const module_data_t *mod, IBaseFilter *provider)
 {
     HRESULT hr = E_FAIL;
 
@@ -608,11 +651,11 @@ HRESULT provider_tune(const module_data_t *mod, IBaseFilter *provider
     ITuningSpace *space = NULL;
     ITuner *provider_tuner = NULL;
 
-    if (provider == NULL || tune == NULL)
+    if (provider == NULL)
         return E_POINTER;
 
     /* create tune request from user data */
-    hr = bda_tune_request(tune, &request);
+    hr = bda_tune_request(&mod->tune, &request);
     BDA_CHECK_HR_D("couldn't create tune request");
 
     if (mod->debug)
@@ -629,6 +672,7 @@ HRESULT provider_tune(const module_data_t *mod, IBaseFilter *provider
     BDA_CHECK_HR_D("couldn't assign tuning space to provider");
 
     hr = ITuner_put_TuneRequest(provider_tuner, request);
+    BDA_CHECK_HR_D("couldn't submit tune request to provider");
 
 out:
     SAFE_RELEASE(provider_tuner);
@@ -675,8 +719,8 @@ HRESULT provider_setup(const module_data_t *mod, IBaseFilter *provider
         retry_pins = true;
     }
 
-    hr = provider_tune(mod, provider, &mod->tune);
-    BDA_CHECK_HR_D("couldn't submit initial tune request to provider");
+    hr = provider_tune(mod, provider);
+    BDA_CHECK_HR_D("couldn't configure provider with initial tuning data");
 
     if (retry_pins)
     {
@@ -822,6 +866,7 @@ HRESULT rot_register(const module_data_t *mod, IFilterGraph2 *graph
 
     /* register filter graph in the table */
     hr = IRunningObjectTable_Register(rot, 0, (IUnknown *)graph, moniker, out);
+    BDA_CHECK_HR_D("couldn't submit ROT registration data");
 
 out:
     SAFE_RELEASE(moniker);
@@ -1060,6 +1105,10 @@ HRESULT graph_setup(module_data_t *mod)
     hr = control_run(mod, graph);
     BDA_CHECK_HR("failed to run the graph");
 
+    /* set signal lock timer */
+    mod->cooldown = mod->timeout;
+    signal_stats_set(mod, NULL);
+
     /* increase refcount on objects of interest */
     IFilterGraph2_AddRef(graph);
     mod->graph = graph;
@@ -1125,6 +1174,8 @@ void graph_teardown(module_data_t *mod)
     SAFE_RELEASE(mod->graph);
 
     mod->graph_evt = NULL;
+    mod->cooldown = 0;
+    signal_stats_set(mod, NULL);
 
     CoUninitialize();
 }
@@ -1157,8 +1208,9 @@ void graph_set_state(module_data_t *mod, bda_state_t state)
 
     if (state == BDA_STATE_ERROR)
     {
-        asc_log_info(MSG("reopening device in %u seconds"), COOLDOWN_TICKS);
-        mod->cooldown = COOLDOWN_TICKS;
+        /* NOTE: in case of an error, CD timer counts down to reinit */
+        asc_log_info(MSG("reopening device in %u seconds"), ERROR_CD_TICKS);
+        mod->cooldown = ERROR_CD_TICKS;
     }
 }
 
@@ -1170,10 +1222,17 @@ void graph_set_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
 
     if (mod->state == BDA_STATE_RUNNING)
     {
-        const HRESULT hr = provider_tune(mod, mod->provider, &mod->tune);
-        if (FAILED(hr))
+        const HRESULT hr = provider_tune(mod, mod->provider);
+
+        if (SUCCEEDED(hr))
         {
-            BDA_ERROR("failed to submit tune request");
+            /* (re)set signal lock timer */
+            mod->cooldown = mod->timeout;
+            signal_stats_set(mod, NULL);
+        }
+        else
+        {
+            BDA_ERROR("failed to configure device with new tuning data");
 
             graph_teardown(mod);
             graph_set_state(mod, BDA_STATE_ERROR);
@@ -1181,6 +1240,7 @@ void graph_set_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
     }
     else
     {
+        /* schedule device initialization */
         graph_set_state(mod, BDA_STATE_INIT);
     }
 }
@@ -1232,6 +1292,59 @@ void graph_set_diseqc(mod, command sequence)
 }
 */
 
+/* react to change in signal status */
+static
+HRESULT graph_watch_signal(module_data_t *mod)
+{
+    HRESULT hr = E_FAIL;
+
+    bda_signal_stats_t s;
+    const char *str = NULL;
+
+    hr = signal_stats_load(mod, mod->signal, &s);
+    BDA_CHECK_HR("failed to retrieve signal statistics from driver");
+
+    /* continuously tune the device until signal lock is acquired */
+    if (mod->log_signal)
+        str = (s.locked ? "" : " no");
+
+    if (s.locked && !mod->signal_stats.locked)
+    {
+        str = " acquired";
+        mod->cooldown = 0;
+    }
+    else if (mod->signal_stats.locked && !s.locked)
+    {
+        str = " lost";
+        mod->cooldown = mod->timeout;
+    }
+    else if (!s.locked && --mod->cooldown <= 0)
+    {
+        /* time's up, still no lock */
+        asc_log_debug(MSG("resending tuning data"));
+
+        hr = provider_tune(mod, mod->provider);
+        BDA_CHECK_HR("failed to resend tuning data to device");
+
+        mod->cooldown = mod->timeout;
+    }
+
+    /* log signal status */
+    if (str != NULL)
+    {
+        asc_log_info(MSG("tuner has%s lock. status: %c%c, "
+                         "quality: %ld%%, strength: %ld%%")
+                     , str, s.present ? 'S' : '_'
+                     , s.locked ? 'L' : '_'
+                     , s.quality, s.strength);
+    }
+
+    signal_stats_set(mod, &s);
+
+out:
+    return hr;
+}
+
 /* dispatch graph events */
 static
 HRESULT graph_do_events(module_data_t *mod)
@@ -1268,35 +1381,6 @@ HRESULT graph_do_events(module_data_t *mod)
         hr = IMediaEvent_FreeEventParams(mod->event, ec, p1, p2);
         BDA_CHECK_HR("failed to free event parameters");
     } while (true);
-
-    /* update signal statistics */
-    if (mod->signal != NULL)
-    {
-        bda_signal_stats_t s;
-        memset(&s, 0, sizeof(s));
-
-        hr = mod->signal->lpVtbl->get_SignalLocked(mod->signal, &s.locked);
-        BDA_CHECK_HR("failed to retrieve signal lock status");
-
-        hr = mod->signal->lpVtbl->get_SignalPresent(mod->signal, &s.present);
-        BDA_CHECK_HR("failed to retrieve signal presence status");
-
-        hr = mod->signal->lpVtbl->get_SignalQuality(mod->signal, &s.quality);
-        BDA_CHECK_HR("failed to retrieve signal quality value");
-
-        hr = mod->signal->lpVtbl->get_SignalStrength(mod->signal, &s.strength);
-        BDA_CHECK_HR("failed to retrieve signal strength value");
-
-        /* resend tuning request on lock loss */
-        // TODO
-
-        /* notify main thread */
-        asc_mutex_lock(&mod->signal_lock);
-        memcpy(&mod->signal_stats, &s, sizeof(s));
-        asc_mutex_unlock(&mod->signal_lock);
-
-        asc_job_queue(mod, bda_on_stats, mod);
-    }
 
 out:
     return hr;
@@ -1406,7 +1490,7 @@ void bda_graph_loop(void *arg)
         if (quit)
             break;
 
-        /* handle state changes */
+        /* handle state change */
         switch (mod->state)
         {
             case BDA_STATE_INIT:
@@ -1422,7 +1506,11 @@ void bda_graph_loop(void *arg)
 
             case BDA_STATE_RUNNING:
             {
-                const HRESULT hr = graph_do_events(mod);
+                HRESULT hr = graph_do_events(mod);
+
+                if (SUCCEEDED(hr) && mod->signal != NULL)
+                    hr = graph_watch_signal(mod);
+
                 if (FAILED(hr))
                 {
                     graph_teardown(mod);

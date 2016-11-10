@@ -29,12 +29,15 @@
  *      adapter     - number, device index
  *      devpath     - string, unique Windows device path
  *      budget      - boolean, disable hardware PID filtering
+ *      log_signal  - boolean, log signal statistics every second
+ *      timeout     - number, how long to wait for lock before retuning
+ *                      defaults to 5 seconds
  *      diseqc      - table, command sequence to send on tuner init
  *             - OR - number, port number (alternate syntax)
  *
  *      *** Following options are also valid for the tune() method:
  *      type        - string, digital network type. supported types:
- *                    atsc, cqam, c, s, s2, t, t2, isdbs, isdbt
+ *                      atsc, cqam, c, s, s2, t, t2, isdbs, isdbt
  *
  *      frequency   - number, carrier frequency in MHz
  *      symbolrate  - number, symbol rate in KS/s
@@ -116,17 +119,9 @@ void graph_submit(module_data_t *mod, const bda_user_cmd_t *cmd)
     SetEvent(mod->queue_evt);
 }
 
-/* thread exit callback */
-static
-void on_thread_close(void *arg)
-{
-    /* shouldn't happen, ever */
-    module_data_t *const mod = (module_data_t *)arg;
-    asc_log_error(MSG("BUG: BDA thread exited on its own"));
-}
-
 /* signal statistics callback */
-void bda_on_stats(void *arg)
+static
+void on_status_timer(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
 
@@ -150,6 +145,15 @@ void bda_on_stats(void *arg)
         if (lua_tr_call(L, 1, 0) != 0)
             lua_err_log(L);
     }
+}
+
+/* thread exit callback */
+static
+void on_thread_close(void *arg)
+{
+    /* shouldn't happen, ever */
+    module_data_t *const mod = (module_data_t *)arg;
+    asc_log_error(MSG("BUG: BDA thread exited on its own"));
 }
 
 /* buffer callback */
@@ -770,13 +774,26 @@ void module_init(lua_State *L, module_data_t *mod)
     /* get signal status callback */
     lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
     if (lua_isfunction(L, -1))
+    {
         mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
+        mod->status_timer = asc_timer_init(1000, on_status_timer, mod);
+    }
     else
+    {
         lua_pop(L, 1);
+    }
 
     /* miscellaneous options */
     module_option_boolean(L, "budget", &mod->budget);
     module_option_boolean(L, "debug", &mod->debug);
+    module_option_boolean(L, "log_signal", &mod->log_signal);
+
+    mod->timeout = 5;
+    if (module_option_integer(L, "timeout", &mod->timeout))
+    {
+        if (mod->timeout < 1)
+            luaL_error(L, MSG("retune timeout can't be less than a second"));
+    }
 
     /* create command queue */
     asc_mutex_init(&mod->signal_lock);
@@ -832,6 +849,7 @@ void module_destroy(module_data_t *mod)
         asc_mutex_destroy(&mod->signal_lock);
     }
 
+    ASC_FREE(mod->status_timer, asc_timer_destroy);
     ASC_FREE(mod->queue_evt, CloseHandle);
 
     module_stream_destroy(mod);
