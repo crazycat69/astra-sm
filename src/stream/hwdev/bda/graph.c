@@ -386,7 +386,7 @@ out:
     return hr;
 }
 
-/* create TS probe and connect it to the graph */
+/* create TS probe and connect it directly to the capture filter */
 static
 void on_sample(void *arg, const void *buf, size_t len);
 
@@ -713,8 +713,8 @@ HRESULT provider_setup(const module_data_t *mod, IBaseFilter *provider
     if (FAILED(hr))
     {
         /*
-         * With legacy providers, we have to submit a tune request
-         * before connecting pins.
+         * NOTE: With legacy providers, we have to submit a tune request
+         *       before connecting pins.
          */
         retry_pins = true;
     }
@@ -1105,7 +1105,7 @@ HRESULT graph_setup(module_data_t *mod)
     hr = control_run(mod, graph);
     BDA_CHECK_HR("failed to run the graph");
 
-    /* set signal lock timer */
+    /* set signal lock timeout */
     mod->cooldown = mod->timeout;
     signal_stats_set(mod, NULL);
 
@@ -1181,120 +1181,63 @@ void graph_teardown(module_data_t *mod)
 }
 
 /*
- * graph runtime control
+ * TS buffering
  */
 
-/* set new graph state */
+/* called by the probe filter when it has media samples */
 static
-void graph_set_state(module_data_t *mod, bda_state_t state)
+void on_sample(void *arg, const void *buf, size_t len)
 {
-    if (mod->state == state)
-        return;
+    module_data_t *const mod = (module_data_t *)arg;
 
-    const char *str = NULL;
-    switch (state)
-    {
-        case BDA_STATE_INIT:    str = "INIT";    break;
-        case BDA_STATE_RUNNING: str = "RUNNING"; break;
-        case BDA_STATE_STOPPED: str = "STOPPED"; break;
-        case BDA_STATE_ERROR:   str = "ERROR";   break;
-        default:
-            str = "UNKNOWN";
-            break;
-    }
+    /* TODO: implement buffering */
+    __uarg(mod);
+    __uarg(buf);
+    __uarg(len);
 
-    asc_log_debug(MSG("setting state to %s"), str);
-    mod->state = state;
-
-    if (state == BDA_STATE_ERROR)
-    {
-        /* NOTE: in case of an error, CD timer counts down to reinit */
-        asc_log_info(MSG("reopening device in %u seconds"), ERROR_CD_TICKS);
-        mod->cooldown = ERROR_CD_TICKS;
-    }
-}
-
-/* set tuning data, opening the device if necessary */
-static
-void graph_set_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
-{
-    memcpy(&mod->tune, tune, sizeof(*tune));
-
-    if (mod->state == BDA_STATE_RUNNING)
-    {
-        const HRESULT hr = provider_tune(mod, mod->provider);
-
-        if (SUCCEEDED(hr))
-        {
-            /* (re)set signal lock timer */
-            mod->cooldown = mod->timeout;
-            signal_stats_set(mod, NULL);
-        }
-        else
-        {
-            BDA_ERROR("failed to configure device with new tuning data");
-
-            graph_teardown(mod);
-            graph_set_state(mod, BDA_STATE_ERROR);
-        }
-    }
-    else
-    {
-        /* schedule device initialization */
-        graph_set_state(mod, BDA_STATE_INIT);
-    }
-}
-
-/* request demultiplexer to join or leave PID */
-static
-void graph_set_pid(module_data_t *mod, bool join, uint16_t pid)
-{
-    mod->joined_pids[pid] = join;
-
-    if (mod->pidmap != NULL)
-    {
-        ULONG val = pid;
-        HRESULT hr;
-
-        if (join)
-        {
-            hr = IMPEG2PIDMap_MapPID(mod->pidmap, 1, &val
-                                     , MEDIA_TRANSPORT_PACKET);
-        }
-        else
-        {
-            hr = IMPEG2PIDMap_UnmapPID(mod->pidmap, 1, &val);
-        }
-
-        if (FAILED(hr))
-        {
-            BDA_ERROR("failed to %s pid %hu"
-                      , (join ? "join" : "leave"), pid);
-        }
-    }
-}
-
-/* enable or disable CAM descrambling for a specific program */
-static
-void graph_set_ca(module_data_t *mod, bool enable, uint16_t pnr)
-{
-    mod->ca_pmts[pnr] = enable;
-
-    /* TODO: implement CAM support */
-    asc_log_error(MSG("STUB: %s CAM for PNR %hu")
-                  , (enable ? "enable" : "disable"), pnr);
+    /* NOTE: this callback is NOT run by the control thread! */
+    // XXX: is it always the same thread?
 }
 
 /*
+ * runtime graph control
+ */
+
+/* stop the graph, submit tuning data and start it again */
 static
-void graph_set_diseqc(mod, command sequence)
+HRESULT restart_tuning(module_data_t *mod)
 {
+    HRESULT hr = E_FAIL;
+
+    /*
+     * NOTE: Depending on the driver, a graph restart is needed for the
+     *       tuning process to actually begin.
+     */
+
+    hr = control_stop(mod->graph);
+    BDA_CHECK_HR_D("couldn't stop the graph");
+
+    hr = provider_tune(mod, mod->provider);
+    BDA_CHECK_HR_D("couldn't configure provider with tuning data");
+
+    //
+    // TODO: do we need to rejoin PIDs and reissue diseqc cmds?
+    //
+
+    hr = control_run(mod, mod->graph);
+    BDA_CHECK_HR_D("couldn't restart the graph");
+
+    /* reset signal lock timeout */
+    mod->cooldown = mod->timeout;
+    signal_stats_set(mod, NULL);
+
+out:
+    return hr;
 }
-*/
 
 /* react to change in signal status */
 static
-HRESULT graph_watch_signal(module_data_t *mod)
+HRESULT watch_signal(module_data_t *mod)
 {
     HRESULT hr = E_FAIL;
 
@@ -1323,10 +1266,8 @@ HRESULT graph_watch_signal(module_data_t *mod)
         /* time's up, still no lock */
         asc_log_debug(MSG("resending tuning data"));
 
-        hr = provider_tune(mod, mod->provider);
-        BDA_CHECK_HR("failed to resend tuning data to device");
-
-        mod->cooldown = mod->timeout;
+        hr = restart_tuning(mod);
+        BDA_CHECK_HR("failed to restart tuning process");
     }
 
     /* log signal status */
@@ -1345,19 +1286,63 @@ out:
     return hr;
 }
 
-/* dispatch graph events */
+/* list of events to be treated as errors */
+static __func_const
+const char *event_text(long ec)
+{
+    switch (ec)
+    {
+        case EC_COMPLETE:
+            return "all data has been rendered";
+
+        case EC_USERABORT:
+            return "user has terminated playback";
+
+        case EC_ERRORABORT:
+        case EC_ERRORABORTEX:
+            return "operation aborted due to an error";
+
+        case EC_STREAM_ERROR_STOPPED:
+            return "stream stopped due to an error";
+
+        case EC_ERROR_STILLPLAYING:
+            return "command to run the graph has failed";
+
+        case EC_PAUSED:
+            return "pause request has completed";
+
+        case EC_END_OF_SEGMENT:
+            return "end of a segment was reached";
+
+        case EC_DEVICE_LOST:
+            return "device was removed";
+
+        case EC_PLEASE_REOPEN:
+            return "source file has changed";
+
+        case EC_FILE_CLOSED:
+            return "source file was closed";
+
+        case EC_VMR_RECONNECTION_FAILED:
+            return "VMR reconnection failed";
+    }
+
+    return NULL;
+}
+
+/* service graph event queue */
 static
-HRESULT graph_do_events(module_data_t *mod)
+HRESULT handle_events(module_data_t *mod)
 {
     HRESULT hr = E_FAIL;
 
-    /* empty event queue */
     do
     {
+        const char *ev_text = NULL;
         long ec;
         LONG_PTR p1, p2;
 
-        /* wait up to 50ms */
+        /* wait for an event (50ms timeout) */
         hr = IMediaEvent_GetEvent(mod->event, &ec, &p1, &p2, 50);
         if (hr == E_ABORT)
         {
@@ -1365,21 +1350,21 @@ HRESULT graph_do_events(module_data_t *mod)
             hr = S_OK;
             break;
         }
-        else if (FAILED(hr))
+        else if (hr != S_OK)
         {
             BDA_THROW("failed to retrieve next graph event");
         }
 
-        // TODO
-        switch (ec)
-        {
-            default:
-                asc_log_info(MSG("ec = %ld"), ec);
-                break;
-        }
+        /* bail out if the event indicates an error */
+        ev_text = event_text(ec);
+        if (ev_text == NULL)
+            asc_log_debug(MSG("ignoring unknown event: 0x%02lx"), ec);
 
         hr = IMediaEvent_FreeEventParams(mod->event, ec, p1, p2);
         BDA_CHECK_HR("failed to free event parameters");
+
+        if (ev_text != NULL)
+            BDA_THROW("unexpected event: %s (0x%02lx)", ev_text, ec);
     } while (true);
 
 out:
@@ -1388,7 +1373,7 @@ out:
 
 /* wait for graph event or user command */
 static
-void graph_wait_events(module_data_t *mod)
+void wait_events(module_data_t *mod)
 {
     HANDLE ev[2] = { mod->queue_evt, NULL };
     DWORD ev_cnt = 1;
@@ -1402,29 +1387,135 @@ void graph_wait_events(module_data_t *mod)
                , asc_error_msg());
 }
 
+/* set new module state */
+static
+void set_state(module_data_t *mod, bda_state_t state)
+{
+    if (mod->state == state)
+        return;
+
+    const char *str = NULL;
+    switch (state)
+    {
+        case BDA_STATE_INIT:    str = "INIT";    break;
+        case BDA_STATE_RUNNING: str = "RUNNING"; break;
+        case BDA_STATE_STOPPED: str = "STOPPED"; break;
+        case BDA_STATE_ERROR:   str = "ERROR";   break;
+        default:
+            str = "UNKNOWN";
+            break;
+    }
+
+    asc_log_debug(MSG("setting state to %s"), str);
+    mod->state = state;
+
+    if (state == BDA_STATE_ERROR)
+    {
+        /* NOTE: when in an error state, CD timer counts down to reinit */
+        asc_log_info(MSG("reopening device in %u seconds"), ERROR_CD_TICKS);
+        mod->cooldown = ERROR_CD_TICKS;
+    }
+}
+
+/*
+ * user commands
+ */
+
+/* set tuning data, opening the device if necessary */
+static
+void cmd_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
+{
+    memcpy(&mod->tune, tune, sizeof(*tune));
+
+    if (mod->state == BDA_STATE_RUNNING)
+    {
+        const HRESULT hr = restart_tuning(mod);
+
+        if (FAILED(hr))
+        {
+            BDA_ERROR("failed to reconfigure device with new tuning data");
+
+            graph_teardown(mod);
+            set_state(mod, BDA_STATE_ERROR);
+        }
+    }
+    else
+    {
+        /* schedule device initialization */
+        set_state(mod, BDA_STATE_INIT);
+    }
+}
+
+/* request demultiplexer to join or leave PID */
+static
+void cmd_pid(module_data_t *mod, bool join, uint16_t pid)
+{
+    mod->joined_pids[pid] = join;
+
+    if (mod->pidmap != NULL)
+    {
+        ULONG val = pid;
+        HRESULT hr;
+
+        if (join)
+        {
+            hr = IMPEG2PIDMap_MapPID(mod->pidmap, 1, &val
+                                     , MEDIA_TRANSPORT_PACKET);
+        }
+        else
+        {
+            hr = IMPEG2PIDMap_UnmapPID(mod->pidmap, 1, &val);
+        }
+
+        if (FAILED(hr))
+        {
+            BDA_ERROR("failed to %s pid %hu"
+                      , (join ? "join" : "leave"), pid);
+        }
+    }
+}
+
+/* enable or disable CAM descrambling for a specific program */
+static
+void cmd_ca(module_data_t *mod, bool enable, uint16_t pnr)
+{
+    mod->ca_pmts[pnr] = enable;
+
+    /* TODO: implement CAM support */
+    asc_log_error(MSG("STUB: %s CAM for PNR %hu")
+                  , (enable ? "enable" : "disable"), pnr);
+}
+
+/*
+static
+void cmd_diseqc(mod, command sequence)
+{
+}
+*/
+
 /* execute user command */
 static
-void graph_execute(module_data_t *mod, const bda_user_cmd_t *cmd)
+void execute_cmd(module_data_t *mod, const bda_user_cmd_t *cmd)
 {
     switch (cmd->cmd)
     {
         case BDA_COMMAND_TUNE:
-            graph_set_tune(mod, &cmd->tune);
+            cmd_tune(mod, &cmd->tune);
             break;
 
         case BDA_COMMAND_DEMUX:
-            graph_set_pid(mod, cmd->demux.join, cmd->demux.pid);
+            cmd_pid(mod, cmd->demux.join, cmd->demux.pid);
             break;
 
         case BDA_COMMAND_CA:
-            graph_set_ca(mod, cmd->ca.enable, cmd->ca.pnr);
+            cmd_ca(mod, cmd->ca.enable, cmd->ca.pnr);
             break;
 
         case BDA_COMMAND_DISEQC:
             /*
              * TODO: implement sending diseqc commands
              *
-             * graph_set_diseqc(mod, &cmd->diseqc);
+             * cmd_diseqc(mod, &cmd->diseqc);
              */
             break;
 
@@ -1432,25 +1523,9 @@ void graph_execute(module_data_t *mod, const bda_user_cmd_t *cmd)
         case BDA_COMMAND_CLOSE:
         default:
             graph_teardown(mod);
-            graph_set_state(mod, BDA_STATE_STOPPED);
+            set_state(mod, BDA_STATE_STOPPED);
             break;
     }
-}
-
-/*
- * TS buffering
- */
-
-/* called by the probe filter when it has media samples */
-static
-void on_sample(void *arg, const void *buf, size_t len)
-{
-    module_data_t *const mod = (module_data_t *)arg;
-
-    /* TODO: implement buffering */
-    __uarg(mod);
-    __uarg(buf);
-    __uarg(len);
 }
 
 /*
@@ -1480,7 +1555,7 @@ void bda_graph_loop(void *arg)
             if (item->cmd == BDA_COMMAND_QUIT)
                 quit = true;
 
-            graph_execute(mod, item);
+            execute_cmd(mod, item);
             free(item);
 
             asc_mutex_lock(&mod->queue_lock);
@@ -1497,24 +1572,24 @@ void bda_graph_loop(void *arg)
             {
                 const HRESULT hr = graph_setup(mod);
                 if (SUCCEEDED(hr))
-                    graph_set_state(mod, BDA_STATE_RUNNING);
+                    set_state(mod, BDA_STATE_RUNNING);
                 else
-                    graph_set_state(mod, BDA_STATE_ERROR);
+                    set_state(mod, BDA_STATE_ERROR);
 
                 break;
             }
 
             case BDA_STATE_RUNNING:
             {
-                HRESULT hr = graph_do_events(mod);
+                HRESULT hr = handle_events(mod);
 
                 if (SUCCEEDED(hr) && mod->signal != NULL)
-                    hr = graph_watch_signal(mod);
+                    hr = watch_signal(mod);
 
                 if (FAILED(hr))
                 {
                     graph_teardown(mod);
-                    graph_set_state(mod, BDA_STATE_ERROR);
+                    set_state(mod, BDA_STATE_ERROR);
                 }
 
                 break;
@@ -1523,7 +1598,7 @@ void bda_graph_loop(void *arg)
             case BDA_STATE_ERROR:
             {
                 if (--mod->cooldown <= 0)
-                    graph_set_state(mod, BDA_STATE_INIT);
+                    set_state(mod, BDA_STATE_INIT);
 
                 break;
             }
@@ -1537,7 +1612,7 @@ void bda_graph_loop(void *arg)
         }
 
         /* sleep until next event */
-        graph_wait_events(mod);
+        wait_events(mod);
     } while (true);
 
     asc_log_debug(MSG("control thread exiting"));

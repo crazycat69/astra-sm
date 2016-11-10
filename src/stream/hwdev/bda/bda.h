@@ -194,6 +194,8 @@ struct module_data_t
      * raw_signal - nope. no way to switch signal readout format
      * no_dvr
      * tone - 22khz tone. vendor specific
+     * lnb_sharing - LNB power ctl. vendor specific
+     * uni_frequency, uni_scr - Unicable, controlled via Diseqc
      */
 
     /* dedicated graph thread */

@@ -101,8 +101,8 @@ void probe_tuner(lua_State *L, IBaseFilter *tuner_dev
     if (!pins_connected)
     {
         /*
-         * With legacy providers, we have to submit a tune request
-         * before connecting pins.
+         * NOTE: With legacy providers, we have to submit a tune request
+         *       before connecting pins.
          */
         hr = IGraphBuilder_ConnectDirect(graph, prov_out, tuner_in, NULL);
         ENUM_CHECK_HR("couldn't connect network provider to tuner");

@@ -549,14 +549,16 @@ const bda_network_t *const bda_network_list[] =
 /* create network provider for given network type */
 HRESULT bda_net_provider(const bda_network_t *net, IBaseFilter **out)
 {
+    HRESULT hr = E_FAIL;
+
     if (net == NULL || out == NULL)
         return E_POINTER;
 
     *out = NULL;
 
     /* try the universal provider first (available since Windows 7) */
-    HRESULT hr = CoCreateInstance(&CLSID_NetworkProvider, NULL, CLSCTX_INPROC
-                                  , &IID_IBaseFilter, (void **)out);
+    hr = CoCreateInstance(&CLSID_NetworkProvider, NULL, CLSCTX_INPROC
+                          , &IID_IBaseFilter, (void **)out);
 
     if (FAILED(hr) && net->provider != NULL)
     {
