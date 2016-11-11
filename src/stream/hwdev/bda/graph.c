@@ -1106,6 +1106,7 @@ HRESULT graph_setup(module_data_t *mod)
     BDA_CHECK_HR("failed to run the graph");
 
     /* set signal lock timeout */
+    mod->tunefail = 0;
     mod->cooldown = mod->timeout;
     signal_stats_set(mod, NULL);
 
@@ -1260,11 +1261,14 @@ HRESULT watch_signal(module_data_t *mod)
     {
         str = " lost";
         mod->cooldown = mod->timeout;
+        mod->tunefail++;
     }
     else if (!s.locked && --mod->cooldown <= 0)
     {
         /* time's up, still no lock */
-        asc_log_debug(MSG("resending tuning data"));
+        asc_log_debug(MSG("resending tuning data (%u)"), ++mod->tunefail);
+        if (mod->tunefail == 1)
+            str = " no";
 
         hr = restart_tuning(mod);
         BDA_CHECK_HR("failed to restart tuning process");
@@ -1287,7 +1291,7 @@ out:
 }
 
 /* list of events to be treated as errors */
-static __func_const
+static inline __func_const
 const char *event_text(long ec)
 {
     switch (ec)
@@ -1387,6 +1391,22 @@ void wait_events(module_data_t *mod)
                , asc_error_msg());
 }
 
+/* list of state enum strings */
+static inline __func_const
+const char *state_name(bda_state_t state)
+{
+    switch (state)
+    {
+        case BDA_STATE_INIT:    return "INIT";
+        case BDA_STATE_RUNNING: return "RUNNING";
+        case BDA_STATE_STOPPED: return "STOPPED";
+        case BDA_STATE_ERROR:   return "ERROR";
+
+        default:
+            return "UNKNOWN";
+    }
+}
+
 /* set new module state */
 static
 void set_state(module_data_t *mod, bda_state_t state)
@@ -1394,19 +1414,7 @@ void set_state(module_data_t *mod, bda_state_t state)
     if (mod->state == state)
         return;
 
-    const char *str = NULL;
-    switch (state)
-    {
-        case BDA_STATE_INIT:    str = "INIT";    break;
-        case BDA_STATE_RUNNING: str = "RUNNING"; break;
-        case BDA_STATE_STOPPED: str = "STOPPED"; break;
-        case BDA_STATE_ERROR:   str = "ERROR";   break;
-        default:
-            str = "UNKNOWN";
-            break;
-    }
-
-    asc_log_debug(MSG("setting state to %s"), str);
+    asc_log_debug(MSG("setting state to %s"), state_name(state));
     mod->state = state;
 
     if (state == BDA_STATE_ERROR)
@@ -1438,11 +1446,17 @@ void cmd_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
             graph_teardown(mod);
             set_state(mod, BDA_STATE_ERROR);
         }
+        else
+        {
+            /* reset tuning failure counter */
+            mod->tunefail = 0;
+        }
     }
     else
     {
         /* schedule device initialization */
         set_state(mod, BDA_STATE_INIT);
+        SetEvent(mod->queue_evt);
     }
 }
 

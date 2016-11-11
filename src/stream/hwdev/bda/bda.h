@@ -214,6 +214,7 @@ struct module_data_t
     /* TODO: add diseqc sequence */
 
     bda_state_t state;
+    unsigned int tunefail;
     int cooldown;
 
     bda_signal_stats_t signal_stats;
