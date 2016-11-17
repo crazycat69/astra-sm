@@ -59,7 +59,7 @@ void probe_tuner(lua_State *L, IBaseFilter *tuner_dev
     ENUM_CHECK_HR("couldn't create network provider");
 
     /* create graph and add filters */
-    hr = CoCreateInstance(&CLSID_FilterGraph, NULL, CLSCTX_INPROC
+    hr = CoCreateInstance(&CLSID_FilterGraphNoThread, NULL, CLSCTX_INPROC
                           , &IID_IGraphBuilder, (void **)&graph);
     ENUM_CHECK_HR("couldn't create filter graph");
 

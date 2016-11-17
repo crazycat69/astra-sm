@@ -30,6 +30,7 @@
  *      devpath     - string, unique Windows device path
  *      budget      - boolean, disable hardware PID filtering
  *      log_signal  - boolean, log signal statistics every second
+ *      no_dvr      - boolean, monitoring mode (no tuning or TS reception)
  *      timeout     - number, how long to wait for lock before retuning
  *                      defaults to 5 seconds
  *      diseqc      - table, command sequence to send on tuner init
@@ -787,6 +788,7 @@ void module_init(lua_State *L, module_data_t *mod)
     module_option_boolean(L, "budget", &mod->budget);
     module_option_boolean(L, "debug", &mod->debug);
     module_option_boolean(L, "log_signal", &mod->log_signal);
+    module_option_boolean(L, "no_dvr", &mod->no_dvr);
 
     mod->timeout = 5;
     if (module_option_integer(L, "timeout", &mod->timeout))

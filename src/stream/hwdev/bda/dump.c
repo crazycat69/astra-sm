@@ -28,7 +28,7 @@
 static
 void dump_space(ITuningSpace *space)
 {
-    HRESULT hr;
+    HRESULT hr = E_FAIL;
     long l;
 
     if (space == NULL)
@@ -227,7 +227,7 @@ void dump_space(ITuningSpace *space)
 static
 void dump_locator(ILocator *locator)
 {
-    HRESULT hr;
+    HRESULT hr = E_FAIL;
 
     long l;
     ModulationType modval;
@@ -488,7 +488,7 @@ void dump_locator(ILocator *locator)
 static
 void dump_request(ITuneRequest *request)
 {
-    HRESULT hr;
+    HRESULT hr = E_FAIL;
     long l;
 
     /* IATSCChannelTuneRequest */
@@ -578,7 +578,7 @@ void dump_request(ITuneRequest *request)
 /* dump tune request */
 void bda_dump_request(ITuneRequest *request)
 {
-    HRESULT hr;
+    HRESULT hr = E_FAIL;
 
     if (request == NULL)
         return;

@@ -179,6 +179,7 @@ struct module_data_t
     bool budget;
     bool debug;
     bool log_signal;
+    bool no_dvr;
     int timeout;
 
     asc_timer_t *status_timer;
@@ -192,7 +193,6 @@ struct module_data_t
      * buffer_size - maybe. default to 4mib ?
      * ca_pmt_delay
      * raw_signal - nope. no way to switch signal readout format
-     * no_dvr
      * tone - 22khz tone. vendor specific
      * lnb_sharing - LNB power ctl. vendor specific
      * uni_frequency, uni_scr - Unicable, controlled via Diseqc
