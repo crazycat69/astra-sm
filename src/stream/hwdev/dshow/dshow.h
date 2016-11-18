@@ -29,6 +29,20 @@
 
 #include <dshow.h>
 
+/* fix error code if pointer equals NULL */
+#define DS_WANT_PTR(_hr, _ptr) \
+    do { \
+        if (SUCCEEDED(_hr) && _ptr == NULL) \
+            _hr = E_POINTER; \
+    } while (0)
+
+/* same, except S_FALSE code is preserved */
+#define DS_WANT_ENUM(_hr, _ptr) \
+    do { \
+        if (_hr == S_OK && _ptr == NULL) \
+            _hr = E_POINTER; \
+    } while (0)
+
 typedef void (*sample_callback_t)(void *, const void *, size_t);
 
 char *dshow_error_msg(HRESULT hr);

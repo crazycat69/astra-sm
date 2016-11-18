@@ -588,7 +588,7 @@ void bda_dump_request(ITuneRequest *request)
     /* ITuningSpace */
     ITuningSpace *space = NULL;
     hr = ITuneRequest_get_TuningSpace(request, &space);
-    if (SUCCEEDED(hr))
+    if (SUCCEEDED(hr) && space != NULL)
         dump_space(space);
 
     SAFE_RELEASE(space);
@@ -596,7 +596,7 @@ void bda_dump_request(ITuneRequest *request)
     /* ILocator */
     ILocator *locator = NULL;
     hr = ITuneRequest_get_Locator(request, &locator);
-    if (SUCCEEDED(hr))
+    if (SUCCEEDED(hr) && locator != NULL)
         dump_locator(locator);
 
     SAFE_RELEASE(locator);

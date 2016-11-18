@@ -28,7 +28,7 @@
  *      name        - string, instance identifier for logging
  *      adapter     - number, device index
  *      devpath     - string, unique Windows device path
- *      budget      - boolean, disable hardware PID filtering
+ *      budget      - boolean, disable PID filter (get whole transponder)
  *      log_signal  - boolean, log signal statistics every second
  *      no_dvr      - boolean, monitoring mode (no tuning or TS reception)
  *      timeout     - number, how long to wait for lock before retuning

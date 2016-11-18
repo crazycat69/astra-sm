@@ -57,10 +57,12 @@ HRESULT dshow_enum(const CLSID *category, IEnumMoniker **out)
     ICreateDevEnum *dev_enum = NULL;
     HRESULT hr = CoCreateInstance(&CLSID_SystemDeviceEnum, NULL, CLSCTX_INPROC
                                   , &IID_ICreateDevEnum, (void **)&dev_enum);
+    DS_WANT_PTR(hr, dev_enum);
     if (FAILED(hr))
         return hr;
 
     hr = ICreateDevEnum_CreateClassEnumerator(dev_enum, category, out, 0);
+    DS_WANT_ENUM(hr, *out);
     SAFE_RELEASE(dev_enum);
 
     return hr;
@@ -92,6 +94,7 @@ HRESULT dshow_filter_by_index(const CLSID *category, size_t index
     }
 
     hr = IEnumMoniker_Next(enum_moniker, 1, &moniker, NULL);
+    DS_WANT_ENUM(hr, moniker);
     if (hr != S_OK) goto out;
 
     hr = dshow_filter_from_moniker(moniker, out, fname);
@@ -129,6 +132,8 @@ HRESULT dshow_filter_by_path(const CLSID *category, const char *devpath
 
         /* fetch next item */
         hr = IEnumMoniker_Next(enum_moniker, 1, &moniker, NULL);
+        DS_WANT_ENUM(hr, moniker);
+
         if (hr != S_OK)
             break; /* no more filters */
 
@@ -164,10 +169,12 @@ HRESULT dshow_filter_from_moniker(IMoniker *moniker, IBaseFilter **out
     *out = NULL;
 
     hr = CreateBindCtx(0, &bind_ctx);
+    DS_WANT_PTR(hr, bind_ctx);
     if (FAILED(hr)) goto out;
 
     hr = IMoniker_BindToObject(moniker, bind_ctx, NULL
                                , &IID_IBaseFilter, (void **)&filter);
+    DS_WANT_PTR(hr, filter);
     if (FAILED(hr)) goto out;
 
     if (fname != NULL)
@@ -208,6 +215,8 @@ HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir
     /* look for requested pin */
     IEnumPins *enum_pins = NULL;
     HRESULT hr = IBaseFilter_EnumPins(filter, &enum_pins);
+    DS_WANT_PTR(hr, enum_pins);
+
     if (FAILED(hr))
     {
         free(wname);
@@ -219,7 +228,10 @@ HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir
     {
         SAFE_RELEASE(pin);
 
+        /* fetch next item */
         hr = IEnumPins_Next(enum_pins, 1, &pin, NULL);
+        DS_WANT_ENUM(hr, pin);
+
         if (hr != S_OK)
             break; /* no more pins */
 
@@ -275,6 +287,7 @@ HRESULT dshow_get_graph(IBaseFilter *filter, IFilterGraph2 **out)
     /* get extended interface */
     hr = IFilterGraph_QueryInterface(fi.pGraph, &IID_IFilterGraph2
                                      , (void **)out);
+    DS_WANT_PTR(hr, *out);
     SAFE_RELEASE(fi.pGraph);
 
     return hr;
@@ -305,10 +318,12 @@ HRESULT dshow_get_property(IMoniker *moniker, const char *prop, char **out)
 
     /* read property from property bag */
     hr = CreateBindCtx(0, &bind_ctx);
+    DS_WANT_PTR(hr, bind_ctx);
     if (FAILED(hr)) goto out;
 
     hr = IMoniker_BindToStorage(moniker, bind_ctx, NULL
                                 , &IID_IPropertyBag, (void **)&bag);
+    DS_WANT_PTR(hr, bag);
     if (FAILED(hr)) goto out;
 
     hr = IPropertyBag_Read(bag, wprop, &prop_var, NULL);
