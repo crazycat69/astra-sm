@@ -274,8 +274,9 @@ HRESULT create_demux(const module_data_t *mod, IBaseFilter *tail
     hr = dshow_get_graph(tail, &graph);
     BDA_CKHR_D("couldn't get capture filter's graph");
 
-    hr = CoCreateInstance(&CLSID_MPEG2Demultiplexer, NULL, CLSCTX_INPROC
-                          , &IID_IBaseFilter, (void **)&demux);
+    hr = CoCreateInstance(&CLSID_MPEG2Demultiplexer, NULL
+                          , CLSCTX_INPROC_SERVER, &IID_IBaseFilter
+                          , (void **)&demux);
     BDA_CKPTR_D(demux, "couldn't create demultiplexer filter");
 
     hr = dshow_find_pin(tail, PINDIR_OUTPUT, true, NULL, &tail_out);
@@ -997,17 +998,9 @@ HRESULT graph_setup(module_data_t *mod)
 
     need_uninit = true;
 
-    /* create filter graph */
-    hr = CoCreateInstance(&CLSID_FilterGraphNoThread, NULL, CLSCTX_INPROC
-                          , &IID_IFilterGraph2, (void **)&graph);
-    BDA_CKPTR(graph, "failed to create filter graph");
-
-    hr = IFilterGraph2_QueryInterface(graph, &IID_IMediaEvent
-                                      , (void **)&event);
-    BDA_CKPTR(event, "failed to query IMediaEvent interface");
-
-    hr = IMediaEvent_GetEventHandle(event, (OAEVENT *)&graph_evt);
-    BDA_CKPTR(graph_evt, "failed to retrieve graph's event handle");
+    /* set up graph and event interface */
+    hr = dshow_filter_graph(&graph, &event, &graph_evt);
+    BDA_CKHR("failed to create filter graph");
 
     if (mod->debug)
     {
@@ -1060,7 +1053,7 @@ HRESULT graph_setup(module_data_t *mod)
 
     if (!mod->no_dvr)
     {
-        /* add TS probe (no PID filtering) */
+        /* add TS probe */
         IBaseFilter *tail;
         if (capture != NULL)
             tail = capture;
@@ -1069,7 +1062,7 @@ HRESULT graph_setup(module_data_t *mod)
 
         if (mod->budget)
         {
-            /* insert probe between capture filter and demux */
+            /* insert probe after capture filter (no PID filter) */
             hr = create_probe(mod, tail, &probe);
             BDA_CKHR("failed to create TS probe");
 
@@ -1083,9 +1076,9 @@ HRESULT graph_setup(module_data_t *mod)
         hr = create_tif(mod, demux, &tif);
         BDA_CKHR("failed to initialize transport information filter");
 
-        /* add TS probe (PID filtering enabled) */
         if (!mod->budget)
         {
+            /* insert probe after demux (PID filter enabled) */
             hr = create_pidmap(mod, demux, &pidmap);
             BDA_CKHR("failed to initialize PID mapper");
 
@@ -1219,7 +1212,6 @@ void on_sample(void *arg, const void *buf, size_t len)
     __uarg(len);
 
     /* NOTE: this callback is NOT run by the control thread! */
-    // XXX: is it always the same thread?
 }
 
 /*

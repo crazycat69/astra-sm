@@ -55,8 +55,9 @@ HRESULT dshow_enum(const CLSID *category, IEnumMoniker **out)
     *out = NULL;
 
     ICreateDevEnum *dev_enum = NULL;
-    HRESULT hr = CoCreateInstance(&CLSID_SystemDeviceEnum, NULL, CLSCTX_INPROC
-                                  , &IID_ICreateDevEnum, (void **)&dev_enum);
+    HRESULT hr = CoCreateInstance(&CLSID_SystemDeviceEnum, NULL
+                                  , CLSCTX_INPROC_SERVER, &IID_ICreateDevEnum
+                                  , (void **)&dev_enum);
     DS_WANT_PTR(hr, dev_enum);
     if (FAILED(hr))
         return hr;
@@ -190,6 +191,78 @@ HRESULT dshow_filter_from_moniker(IMoniker *moniker, IBaseFilter **out
 out:
     SAFE_RELEASE(filter);
     SAFE_RELEASE(bind_ctx);
+
+    return hr;
+}
+
+/* create filter graph and its associated interfaces */
+HRESULT dshow_filter_graph(IFilterGraph2 **out_graph, IMediaEvent **out_event
+                           , HANDLE *out_evhdl)
+{
+    HRESULT hr = E_FAIL;
+
+    IFilterGraph2 *graph = NULL;
+    IUnknown *dummy = NULL;
+    IRegisterServiceProvider *regsvc = NULL;
+    IMediaEvent *event = NULL;
+
+    if (out_graph == NULL)
+        return E_POINTER;
+
+    *out_graph = NULL;
+
+    /* create graph */
+    hr = CoCreateInstance(&CLSID_FilterGraphNoThread, NULL
+                          , CLSCTX_INPROC_SERVER, &IID_IFilterGraph2
+                          , (void **)&graph);
+    DS_WANT_PTR(hr, graph);
+    if (FAILED(hr)) return hr;
+
+    /*
+     * Apply memory leak "fix" for universal NP. Dummy object doesn't
+     * have to be a locator; in fact, anything that doesn't support
+     * the IESEventService interface will do.
+     */
+    hr = CoCreateInstance(&CLSID_DVBTLocator, NULL, CLSCTX_INPROC_SERVER
+                          , &IID_IUnknown, (void **)&dummy);
+    DS_WANT_PTR(hr, dummy);
+    if (FAILED(hr)) goto out;
+
+    hr = IFilterGraph2_QueryInterface(graph, &IID_IRegisterServiceProvider
+                                      , (void **)&regsvc);
+    DS_WANT_PTR(hr, regsvc);
+    if (FAILED(hr)) goto out;
+
+    hr = regsvc->lpVtbl->RegisterService(regsvc, &CLSID_ESEventService
+                                         , dummy);
+    if (FAILED(hr)) goto out;
+
+    /* return graph and friends */
+    if (out_event != NULL)
+    {
+        hr = IFilterGraph2_QueryInterface(graph, &IID_IMediaEvent
+                                          , (void **)&event);
+        DS_WANT_PTR(hr, event);
+        if (FAILED(hr)) goto out;
+
+        if (out_evhdl != NULL)
+        {
+            hr = IMediaEvent_GetEventHandle(event, (OAEVENT *)out_evhdl);
+            if (FAILED(hr)) goto out;
+        }
+
+        IMediaEvent_AddRef(event);
+        *out_event = event;
+    }
+
+    IFilterGraph2_AddRef(graph);
+    *out_graph = graph;
+
+out:
+    SAFE_RELEASE(event);
+    SAFE_RELEASE(regsvc);
+    SAFE_RELEASE(dummy);
+    SAFE_RELEASE(graph);
 
     return hr;
 }

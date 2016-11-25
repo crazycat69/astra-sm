@@ -557,14 +557,14 @@ HRESULT bda_net_provider(const bda_network_t *net, IBaseFilter **out)
     *out = NULL;
 
     /* try the universal provider first (available since Windows 7) */
-    hr = CoCreateInstance(&CLSID_NetworkProvider, NULL, CLSCTX_INPROC
+    hr = CoCreateInstance(&CLSID_NetworkProvider, NULL, CLSCTX_INPROC_SERVER
                           , &IID_IBaseFilter, (void **)out);
     DS_WANT_PTR(hr, *out);
 
     if (FAILED(hr) && net->provider != NULL)
     {
         /* fall back to legacy provider if the network type supports it */
-        hr = CoCreateInstance(net->provider, NULL, CLSCTX_INPROC
+        hr = CoCreateInstance(net->provider, NULL, CLSCTX_INPROC_SERVER
                               , &IID_IBaseFilter, (void **)out);
         DS_WANT_PTR(hr, *out);
     }
@@ -598,7 +598,7 @@ HRESULT bda_tuning_space(const bda_network_t *net, ITuningSpace **out)
     }
 
     /* create default locator */
-    hr = CoCreateInstance(net->locator, NULL, CLSCTX_INPROC
+    hr = CoCreateInstance(net->locator, NULL, CLSCTX_INPROC_SERVER
                           , &IID_ILocator, (void **)&locator);
     DS_WANT_PTR(hr, locator);
     if (FAILED(hr)) goto out;
@@ -610,7 +610,7 @@ HRESULT bda_tuning_space(const bda_network_t *net, ITuningSpace **out)
     }
 
     /* set up tuning space */
-    hr = CoCreateInstance(net->tuning_space, NULL, CLSCTX_INPROC
+    hr = CoCreateInstance(net->tuning_space, NULL, CLSCTX_INPROC_SERVER
                           , &IID_ITuningSpace, (void **)&space);
     DS_WANT_PTR(hr, space);
     if (FAILED(hr)) goto out;

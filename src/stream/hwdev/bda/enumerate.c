@@ -55,7 +55,7 @@ void probe_tuner(lua_State *L, IBaseFilter *source, const bda_network_t *net)
     bool pins_connected = false;
 
     IBaseFilter *provider = NULL;
-    IGraphBuilder *graph = NULL;
+    IFilterGraph2 *graph = NULL;
     IPin *provider_out = NULL, *source_in = NULL;
     ITuningSpace *space = NULL;
     ITuneRequest *request = NULL;
@@ -66,14 +66,13 @@ void probe_tuner(lua_State *L, IBaseFilter *source, const bda_network_t *net)
     ENUM_CKHR("couldn't create network provider");
 
     /* create graph and add filters */
-    hr = CoCreateInstance(&CLSID_FilterGraphNoThread, NULL, CLSCTX_INPROC
-                          , &IID_IGraphBuilder, (void **)&graph);
-    ENUM_CKPTR(graph, "couldn't create filter graph");
+    hr = dshow_filter_graph(&graph, NULL, NULL);
+    ENUM_CKHR("couldn't create filter graph");
 
-    hr = IGraphBuilder_AddFilter(graph, provider, NULL);
+    hr = IFilterGraph2_AddFilter(graph, provider, NULL);
     ENUM_CKHR("couldn't add network provider to graph");
 
-    hr = IGraphBuilder_AddFilter(graph, source, NULL);
+    hr = IFilterGraph2_AddFilter(graph, source, NULL);
     ENUM_CKHR("couldn't add source filter to graph");
 
     /* try connecting the pins */
@@ -83,7 +82,7 @@ void probe_tuner(lua_State *L, IBaseFilter *source, const bda_network_t *net)
     hr = dshow_find_pin(source, PINDIR_INPUT, true, NULL, &source_in);
     ENUM_CKHR("couldn't find source filter's input pin");
 
-    hr = IGraphBuilder_ConnectDirect(graph, provider_out, source_in, NULL);
+    hr = IFilterGraph2_ConnectDirect(graph, provider_out, source_in, NULL);
     if (SUCCEEDED(hr))
         pins_connected = true;
 
@@ -111,7 +110,7 @@ void probe_tuner(lua_State *L, IBaseFilter *source, const bda_network_t *net)
          * NOTE: With legacy providers, we have to submit a tune request
          *       before connecting pins.
          */
-        hr = IGraphBuilder_ConnectDirect(graph, provider_out, source_in, NULL);
+        hr = IFilterGraph2_ConnectDirect(graph, provider_out, source_in, NULL);
         ENUM_CKHR("couldn't connect network provider to tuner");
     }
 

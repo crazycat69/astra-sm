@@ -170,7 +170,7 @@ HRESULT dshow_grabber(sample_callback_t callback, void *arg
     if (FAILED(hr)) goto out;
 
     /* create grabber */
-    hr = CoCreateInstance(&CLSID_SampleGrabber, NULL, CLSCTX_INPROC
+    hr = CoCreateInstance(&CLSID_SampleGrabber, NULL, CLSCTX_INPROC_SERVER
                           , &IID_ISampleGrabber, (void **)&grabber);
     DS_WANT_PTR(hr, grabber);
     if (FAILED(hr)) goto out;

@@ -53,6 +53,8 @@ HRESULT dshow_filter_by_path(const CLSID *category, const char *devpath
                              , IBaseFilter **out, char **fname);
 HRESULT dshow_filter_from_moniker(IMoniker *moniker, IBaseFilter **out
                                   , char **fname);
+HRESULT dshow_filter_graph(IFilterGraph2 **out_graph, IMediaEvent **out_event
+                           , HANDLE *out_evhdl);
 HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir
                        , bool skip_busy, const char *name, IPin **out);
 HRESULT dshow_get_graph(IBaseFilter *filter, IFilterGraph2 **out);
