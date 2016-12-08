@@ -746,12 +746,21 @@ void module_init(lua_State *L, module_data_t *mod)
 {
     mod->idx_callback = LUA_REFNIL;
 
+    /* create command queue */
+    asc_mutex_init(&mod->signal_lock);
+    asc_mutex_init(&mod->queue_lock);
+    mod->queue = asc_list_init();
+
+    asc_wake_open();
+
+    mod->queue_evt = CreateEvent(NULL, FALSE, FALSE, NULL);
+    if (mod->queue_evt == NULL)
+        luaL_error(L, MSG("CreateEvent() failed: %s"), asc_error_msg());
+
+    /* get instance name */
     module_option_string(L, "name", &mod->name, NULL);
     if (mod->name == NULL)
         luaL_error(L, "[dvb_input] option 'name' is required");
-
-    module_stream_init(L, mod, NULL);
-    module_demux_set(mod, join_pid, leave_pid);
 
     /* get device identifier */
     mod->adapter = -1;
@@ -797,15 +806,6 @@ void module_init(lua_State *L, module_data_t *mod)
             luaL_error(L, MSG("retune timeout can't be less than a second"));
     }
 
-    /* create command queue */
-    asc_mutex_init(&mod->signal_lock);
-    asc_mutex_init(&mod->queue_lock);
-    mod->queue = asc_list_init();
-
-    mod->queue_evt = CreateEvent(NULL, FALSE, FALSE, NULL);
-    if (mod->queue_evt == NULL)
-        luaL_error(L, MSG("CreateEvent() failed: %s"), asc_error_msg());
-
     /* send initial tuning commands */
     method_tune(L, mod);
 
@@ -816,7 +816,9 @@ void module_init(lua_State *L, module_data_t *mod)
     lua_pop(L, 1);
 
     /* start dedicated thread for BDA graph */
-    asc_wake_open();
+    module_stream_init(L, mod, NULL);
+    module_demux_set(mod, join_pid, leave_pid);
+
     mod->thr = asc_thread_init();
     asc_thread_start(mod->thr, mod, bda_graph_loop, on_thread_close);
 }
@@ -824,12 +826,6 @@ void module_init(lua_State *L, module_data_t *mod)
 static
 void module_destroy(module_data_t *mod)
 {
-    if (mod->idx_callback != LUA_REFNIL)
-    {
-        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, mod->idx_callback);
-        mod->idx_callback = LUA_REFNIL;
-    }
-
     if (mod->thr != NULL)
     {
         const bda_user_cmd_t cmd = {
@@ -838,21 +834,28 @@ void module_destroy(module_data_t *mod)
         graph_submit(mod, &cmd);
 
         ASC_FREE(mod->thr, asc_thread_join);
-        asc_wake_close(); // move this outside if block
+    }
 
-        asc_job_prune(mod); // this too
+    if (mod->idx_callback != LUA_REFNIL)
+    {
+        luaL_unref(module_lua(mod), LUA_REGISTRYINDEX, mod->idx_callback);
+        mod->idx_callback = LUA_REFNIL;
     }
 
     if (mod->queue != NULL)
     {
         asc_list_clear(mod->queue);
-        ASC_FREE(mod->queue, asc_list_destroy);
-        asc_mutex_destroy(&mod->queue_lock);
-        asc_mutex_destroy(&mod->signal_lock);
+        asc_list_destroy(mod->queue);
     }
+
+    asc_wake_close();
+    asc_job_prune(mod);
 
     ASC_FREE(mod->status_timer, asc_timer_destroy);
     ASC_FREE(mod->queue_evt, CloseHandle);
+
+    asc_mutex_destroy(&mod->queue_lock);
+    asc_mutex_destroy(&mod->signal_lock);
 
     module_stream_destroy(mod);
 }

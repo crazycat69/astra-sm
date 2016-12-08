@@ -289,7 +289,11 @@ HRESULT create_demux(const module_data_t *mod, IBaseFilter *tail
     BDA_CKHR_D("couldn't add demultiplexer to the graph");
 
     hr = IFilterGraph2_ConnectDirect(graph, tail_out, demux_in, NULL);
-    BDA_CKHR_D("couldn't connect capture filter to demultiplexer");
+    if (FAILED(hr))
+    {
+        IFilterGraph2_RemoveFilter(graph, demux);
+        BDA_THROW_D("couldn't connect capture filter to demultiplexer");
+    }
 
     IBaseFilter_AddRef(demux);
     *out = demux;
@@ -338,8 +342,17 @@ HRESULT create_tif(const module_data_t *mod, IBaseFilter *demux
     hr = IFilterGraph2_AddFilter(graph, tif, L"TIF");
     BDA_CKHR_D("couldn't add transport information filter to graph");
 
+    /*
+     * NOTE: There's a handle leak somewhere inside psisdecd.dll.
+     *       No way to fix it except to throw out the standard TIF
+     *       and reimplement its interfaces from scratch.
+     */
     hr = IFilterGraph2_ConnectDirect(graph, demux_out, tif_in, NULL);
-    BDA_CKHR_D("couldn't connect TIF to demultiplexer");
+    if (FAILED(hr))
+    {
+        IFilterGraph2_RemoveFilter(graph, tif);
+        BDA_THROW_D("couldn't connect TIF to demultiplexer");
+    }
 
     IBaseFilter_AddRef(tif);
     *out = tif;
@@ -516,7 +529,11 @@ HRESULT create_probe_dmx(module_data_t *mod, IMPEG2PIDMap *pidmap
     BDA_CKHR_D("couldn't add TS probe to graph");
 
     hr = IFilterGraph2_ConnectDirect(graph, demux_out, probe_in, NULL);
-    BDA_CKHR_D("couldn't connect TS probe to demultiplexer");
+    if (FAILED(hr))
+    {
+        IFilterGraph2_RemoveFilter(graph, probe);
+        BDA_THROW_D("couldn't connect TS probe to demultiplexer");
+    }
 
     IBaseFilter_AddRef(probe);
     *out = probe;
