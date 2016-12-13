@@ -1,5 +1,5 @@
 /*
- * Astra Module: Hardware Device
+ * Astra Module: Hardware Enumerator
  *
  * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
  *
@@ -17,11 +17,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _HWDEV_H_
-#define _HWDEV_H_ 1
+#ifndef _HWDEV_ENUM_H_
+#define _HWDEV_ENUM_H_ 1
 
 #include <astra/astra.h>
-#include <astra/luaapi/stream.h>
+#include <astra/luaapi/module.h>
 
 typedef struct
 {
@@ -29,6 +29,6 @@ typedef struct
     const char *description;
 
     int (*enumerate)(lua_State *);
-} hw_driver_t;
+} hwdev_module_t;
 
-#endif /* _HWDEV_H_ */
+#endif /* _HWDEV_ENUM_H_ */

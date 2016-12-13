@@ -1,5 +1,5 @@
 /*
- * Astra Module: BDA
+ * Astra Module: BDA (Request dumping)
  *
  * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
  *

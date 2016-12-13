@@ -1,5 +1,5 @@
 /*
- * Astra Module: BDA
+ * Astra Module: Hardware Enumerator (BDA)
  *
  * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
  *
@@ -17,7 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "bda.h"
+#include "enum.h"
+#include "../bda/bda.h"
 
 /* put error message at the top of the stack and go to cleanup */
 #define ENUM_THROW(_msg) \
@@ -264,7 +265,7 @@ out:
     return 1;
 }
 
-const hw_driver_t hw_driver_bda =
+const hwdev_module_t hwdev_bda =
 {
     .name = "dvb_input",
     .description = "DVB Input (DirectShow BDA)",

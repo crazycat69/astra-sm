@@ -1,5 +1,5 @@
 /*
- * Astra Module: Hardware Device (Enumeration)
+ * Astra Module: Hardware Enumerator
  *
  * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
  *
@@ -27,20 +27,31 @@
  *                  - list devices currently present in the system
  */
 
-#include "hwdev.h"
-#include "enumerate.h"
+#include "enum.h"
 
 #define MSG(_msg) "[hw_enum] " _msg
 
-static
-const hw_driver_t *hw_find_driver(const char *drvname)
+#ifdef _WIN32
+extern const hwdev_module_t hwdev_bda;
+#endif
+
+static const hwdev_module_t *hwdev_modules[] =
 {
-    const hw_driver_t *drv = NULL;
-    for (size_t i = 0; hw_drivers[i] != NULL; i++)
+#ifdef _WIN32
+    &hwdev_bda,
+#endif
+    NULL,
+};
+
+static
+const hwdev_module_t *hw_find_driver(const char *drvname)
+{
+    const hwdev_module_t *drv = NULL;
+    for (size_t i = 0; hwdev_modules[i] != NULL; i++)
     {
-        if (!strcmp(hw_drivers[i]->name, drvname))
+        if (!strcmp(hwdev_modules[i]->name, drvname))
         {
-            drv = hw_drivers[i];
+            drv = hwdev_modules[i];
             break;
         }
     }
@@ -52,7 +63,7 @@ static
 int method_drivers(lua_State *L)
 {
     lua_newtable(L);
-    for (const hw_driver_t **drv = hw_drivers; *drv != NULL; drv++)
+    for (const hwdev_module_t **drv = hwdev_modules; *drv != NULL; drv++)
     {
         lua_pushstring(L, (*drv)->name);
         lua_pushstring(L, (*drv)->description);
@@ -66,7 +77,7 @@ static
 int method_devices(lua_State *L)
 {
     const char *const drvname = luaL_checkstring(L, 1);
-    const hw_driver_t *const drv = hw_find_driver(drvname);
+    const hwdev_module_t *const drv = hw_find_driver(drvname);
 
     if (drv == NULL)
     {

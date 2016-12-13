@@ -20,7 +20,8 @@
 #ifndef _HWDEV_BDA_H_
 #define _HWDEV_BDA_H_ 1
 
-#include "../hwdev.h"
+#include <astra/astra.h>
+#include <astra/luaapi/stream.h>
 #include <astra/core/list.h>
 #include <astra/core/thread.h>
 #include <astra/core/timer.h>

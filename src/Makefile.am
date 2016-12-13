@@ -263,16 +263,14 @@ endif
 
 # Hardware devices
 libstream_la_SOURCES += \
-    hwdev/enumerate.c \
-    hwdev/enumerate.h \
-    hwdev/hwdev.h
+    hwdev/enum/enum.c \
+    hwdev/enum/enum.h
 
 # DVB reception (Windows)
 if HAVE_WIN32
 libstream_la_SOURCES += \
     hwdev/bda/bda.h \
     hwdev/bda/dump.c \
-    hwdev/bda/enumerate.c \
     hwdev/bda/graph.c \
     hwdev/bda/module.c \
     hwdev/bda/networks.c \
@@ -280,7 +278,8 @@ libstream_la_SOURCES += \
     hwdev/dshow/dshow.h \
     hwdev/dshow/grabber.c \
     hwdev/dshow/guids.c \
-    hwdev/dshow/guids.h
+    hwdev/dshow/guids.h \
+    hwdev/enum/bda.c
 endif
 
 # manifest list

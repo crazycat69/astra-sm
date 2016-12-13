@@ -1,5 +1,5 @@
 /*
- * Astra Module: BDA
+ * Astra Module: BDA (Lua interface)
  *
  * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
  *
