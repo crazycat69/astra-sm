@@ -102,6 +102,12 @@
 
 #define MSG(_msg) "[dvb_input %s] " _msg, mod->name
 
+/* default buffer size, MiB */
+#define BDA_BUFFER_SIZE 4
+
+/* default retune timeout, seconds */
+#define BDA_RETUNE_TIMEOUT 5
+
 /*
  * BDA thread communication
  */
@@ -677,7 +683,7 @@ int method_ca(lua_State *L, module_data_t *mod)
     const bool enable = lua_toboolean(L, -1);
     const int pnr = luaL_checkinteger(L, -2);
 
-    if (pnr < 1 || pnr > UINT16_MAX)
+    if (pnr < 1 || pnr >= TS_MAX_PNR)
         luaL_error(L, MSG("program number %d out of range"), pnr);
 
     const bda_user_cmd_t cmd = {
@@ -747,6 +753,7 @@ void module_init(lua_State *L, module_data_t *mod)
     mod->idx_callback = LUA_REFNIL;
 
     /* create command queue */
+    asc_mutex_init(&mod->buf_lock);
     asc_mutex_init(&mod->signal_lock);
     asc_mutex_init(&mod->queue_lock);
     mod->queue = asc_list_init();
@@ -793,18 +800,27 @@ void module_init(lua_State *L, module_data_t *mod)
         lua_pop(L, 1);
     }
 
+    /* create TS buffer */
+    mod->buffer_size = BDA_BUFFER_SIZE;
+    module_option_integer(L, "buffer_size", &mod->buffer_size);
+    if (mod->buffer_size < 1 || mod->buffer_size > 1024)
+        luaL_error(L, MSG("buffer size out of range"));
+
+    mod->buf_size = (mod->buffer_size * 1024UL * 1024UL) / TS_PACKET_SIZE;
+    asc_assert(mod->buf_size > 0, MSG("invalid buffer size"));
+
+    mod->buf = ASC_ALLOC(mod->buf_size, ts_packet_t);
+
     /* miscellaneous options */
     module_option_boolean(L, "budget", &mod->budget);
     module_option_boolean(L, "debug", &mod->debug);
     module_option_boolean(L, "log_signal", &mod->log_signal);
     module_option_boolean(L, "no_dvr", &mod->no_dvr);
 
-    mod->timeout = 5;
-    if (module_option_integer(L, "timeout", &mod->timeout))
-    {
-        if (mod->timeout < 1)
-            luaL_error(L, MSG("retune timeout can't be less than a second"));
-    }
+    mod->timeout = BDA_RETUNE_TIMEOUT;
+    module_option_integer(L, "timeout", &mod->timeout);
+    if (mod->timeout < 1)
+        luaL_error(L, MSG("retune timeout can't be less than a second"));
 
     /* send initial tuning commands */
     method_tune(L, mod);
@@ -851,11 +867,13 @@ void module_destroy(module_data_t *mod)
     asc_wake_close();
     asc_job_prune(mod);
 
+    ASC_FREE(mod->buf, free);
     ASC_FREE(mod->status_timer, asc_timer_destroy);
     ASC_FREE(mod->queue_evt, CloseHandle);
 
     asc_mutex_destroy(&mod->queue_lock);
     asc_mutex_destroy(&mod->signal_lock);
+    asc_mutex_destroy(&mod->buf_lock);
 
     module_stream_destroy(mod);
 }

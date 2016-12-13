@@ -43,7 +43,7 @@
             _hr = E_POINTER; \
     } while (0)
 
-typedef void (*sample_callback_t)(void *, const void *, size_t);
+typedef void (*sample_callback_t)(void *, const uint8_t *, size_t);
 
 char *dshow_error_msg(HRESULT hr);
 HRESULT dshow_enum(const CLSID *category, IEnumMoniker **out);

@@ -408,7 +408,7 @@ out:
 
 /* create TS probe and connect it directly to the capture filter */
 static
-void on_sample(void *arg, const void *buf, size_t len);
+void on_sample(void *arg, const uint8_t *buf, size_t len);
 
 static
 HRESULT create_probe(module_data_t *mod, IBaseFilter *tail, IBaseFilter **out)
@@ -1219,7 +1219,7 @@ void graph_teardown(module_data_t *mod)
 
 /* called by the probe filter when it has media samples */
 static
-void on_sample(void *arg, const void *buf, size_t len)
+void on_sample(void *arg, const uint8_t *buf, size_t len)
 {
     module_data_t *const mod = (module_data_t *)arg;
 

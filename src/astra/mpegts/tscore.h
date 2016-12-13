@@ -74,4 +74,11 @@
 
 typedef void (*ts_callback_t)(void *, const uint8_t *);
 
+/*
+ * An array type representing a 188-byte TS packet, meant for ring
+ * buffers and the like. That way there's no need to manually calculate
+ * byte offsets for each packet in the buffer.
+ */
+typedef uint8_t ts_packet_t[TS_PACKET_SIZE];
+
 #endif /* _TS_CORE_ */

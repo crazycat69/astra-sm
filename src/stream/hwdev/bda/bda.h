@@ -176,6 +176,7 @@ struct module_data_t
     int adapter;
     const char *devpath;
     int idx_callback;
+    int buffer_size;
     bool budget;
     bool debug;
     bool log_signal;
@@ -190,7 +191,6 @@ struct module_data_t
      * Linux DVB input module also has these extra options.
      * Do we need to implement them?
      *
-     * buffer_size - maybe. default to 4mib ?
      * ca_pmt_delay
      * raw_signal - nope. no way to switch signal readout format
      * tone - 22khz tone. vendor specific
@@ -205,9 +205,16 @@ struct module_data_t
     HANDLE queue_evt;
 
     /* TS ring buffer */
-    // TODO
+    ts_packet_t *buf;
+    asc_mutex_t buf_lock;
+    uint32_t buf_size;
+    uint32_t buf_head;
+    uint32_t buf_tail;
 
-    /* graph objects and parameters */
+    uint8_t frag[TS_PACKET_SIZE];
+    unsigned int frag_pos;
+
+    /* state and tuning data */
     bda_tune_cmd_t tune;
     bool joined_pids[TS_MAX_PID];
     bool ca_pmts[TS_MAX_PNR];
@@ -220,6 +227,7 @@ struct module_data_t
     bda_signal_stats_t signal_stats;
     asc_mutex_t signal_lock;
 
+    /* COM objects */
     IFilterGraph2 *graph;
     IMediaEvent *event;
     IBaseFilter *provider;

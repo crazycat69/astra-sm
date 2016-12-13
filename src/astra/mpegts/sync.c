@@ -43,8 +43,6 @@
 /* timeout for new block arrival */
 #define MAX_IDLE_TIME (200 * 1000) /* 200ms */
 
-typedef uint8_t ts_packet_t[TS_PACKET_SIZE];
-
 struct mpegts_sync_t
 {
     char name[128];
