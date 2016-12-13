@@ -192,9 +192,6 @@ libstream_la_SOURCES = \
     stream/http/modules/static.c \
     stream/http/modules/upstream.c \
     stream/http/modules/websocket.c \
-    stream/hwdev/enumerate.c \
-    stream/hwdev/enumerate.h \
-    stream/hwdev/hwdev.h \
     stream/pipe/pipe.c \
     stream/remux/remux.c \
     stream/remux/remux.h \
@@ -235,22 +232,6 @@ libstream_la_SOURCES += \
     stream/dvb/input.c
 endif
 
-# DVB reception (Windows)
-if HAVE_WIN32
-libstream_la_SOURCES += \
-    stream/hwdev/bda/bda.h \
-    stream/hwdev/bda/dump.c \
-    stream/hwdev/bda/enumerate.c \
-    stream/hwdev/bda/graph.c \
-    stream/hwdev/bda/module.c \
-    stream/hwdev/bda/networks.c \
-    stream/hwdev/dshow/dshow.c \
-    stream/hwdev/dshow/dshow.h \
-    stream/hwdev/dshow/grabber.c \
-    stream/hwdev/dshow/guids.c \
-    stream/hwdev/dshow/guids.h
-endif
-
 # CSA scrambling and descrambling
 if HAVE_DVBCSA
 libstream_la_SOURCES += \
@@ -280,12 +261,34 @@ libstream_la_SOURCES += \
 endif
 endif
 
+# Hardware devices
+libstream_la_SOURCES += \
+    hwdev/enumerate.c \
+    hwdev/enumerate.h \
+    hwdev/hwdev.h
+
+# DVB reception (Windows)
+if HAVE_WIN32
+libstream_la_SOURCES += \
+    hwdev/bda/bda.h \
+    hwdev/bda/dump.c \
+    hwdev/bda/enumerate.c \
+    hwdev/bda/graph.c \
+    hwdev/bda/module.c \
+    hwdev/bda/networks.c \
+    hwdev/dshow/dshow.c \
+    hwdev/dshow/dshow.h \
+    hwdev/dshow/grabber.c \
+    hwdev/dshow/guids.c \
+    hwdev/dshow/guids.h
+endif
+
 # manifest list
-BUILT_SOURCES += stream/list.h
-CLEANFILES += stream/list.h
+BUILT_SOURCES += stream_list.h
+CLEANFILES += stream_list.h
 
 GEN_MANIFEST_LIST = $(top_srcdir)/build-aux/gen-manifest-list
-stream/list.h: $(GEN_MANIFEST_LIST) config.h
+stream_list.h: $(GEN_MANIFEST_LIST) config.h
 	$(AM_V_GEN)$(GEN_MANIFEST_LIST) $(srcdir) $(libstream_la_SOURCES) \
 	    >$@ || exit $$?
 

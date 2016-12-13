@@ -10,7 +10,7 @@
 
 # generated files
 /scripts/prepared.h
-/src/stream/list.h
+/src/stream_list.h
 /testcards/*.ts
 /testcards/*.wav
 

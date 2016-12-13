@@ -25,7 +25,7 @@
 #include <astra/luaapi/module.h>
 #include <astra/luaapi/state.h>
 
-#include "stream/list.h"
+#include "stream_list.h"
 
 #ifdef HAVE_INSCRIPT
 #   include "inscript.h"
