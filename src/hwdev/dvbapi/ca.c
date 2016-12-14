@@ -1781,7 +1781,7 @@ void ca_open(dvb_ca_t *ca)
     ca->ca_pmt_list_del = asc_list_init();
 
     ca->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0x00);
-    ca->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, MAX_PID);
+    ca->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, TS_MAX_PID);
 
     ca->stream[0] = MPEGTS_PACKET_PAT;
 }

@@ -265,7 +265,7 @@ out:
     return 1;
 }
 
-const hwdev_module_t hwdev_bda =
+const hw_enum_t hw_enum_bda =
 {
     .name = "dvb_input",
     .description = "DVB Input (DirectShow BDA)",

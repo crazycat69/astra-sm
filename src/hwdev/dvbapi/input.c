@@ -287,9 +287,9 @@ static void dmx_set_pid(module_data_t *mod, uint16_t pid, int is_set)
     if(mod->dmx_budget)
         return;
 
-    if(pid >= MAX_PID)
+    if(pid >= TS_MAX_PID)
     {
-        asc_log_error(MSG("demux: PID value must be less then %d"), MAX_PID);
+        asc_log_error(MSG("demux: PID value must be less then %d"), TS_MAX_PID);
         asc_lib_abort();
     }
 
@@ -322,7 +322,7 @@ static void dmx_bounce(module_data_t *mod)
     if(!mod->dmx_fd_list)
         return;
 
-    const int fd_max = (mod->dmx_budget) ? 1 : MAX_PID;
+    const int fd_max = (mod->dmx_budget) ? 1 : TS_MAX_PID;
     for(int i = 0; i < fd_max; ++i)
     {
         if(mod->dmx_fd_list[i])
@@ -348,12 +348,12 @@ static void dmx_open(module_data_t *mod)
     {
         mod->dmx_fd_list = ASC_ALLOC(1, int);
         mod->dmx_fd_list[0] = fd;
-        __dmx_join_pid(mod, fd, MAX_PID);
+        __dmx_join_pid(mod, fd, TS_MAX_PID);
     }
     else
     {
         close(fd);
-        mod->dmx_fd_list = ASC_ALLOC(MAX_PID, int);
+        mod->dmx_fd_list = ASC_ALLOC(TS_MAX_PID, int);
     }
 }
 
@@ -362,7 +362,7 @@ static void dmx_close(module_data_t *mod)
     if(!mod->dmx_fd_list)
         return;
 
-    const int fd_max = (mod->dmx_budget) ? 1 : MAX_PID;
+    const int fd_max = (mod->dmx_budget) ? 1 : TS_MAX_PID;
     for(int i = 0; i < fd_max; ++i)
     {
         if(mod->dmx_fd_list[i])
@@ -885,7 +885,7 @@ static void thread_loop(void *arg)
         {
             dmx_check_timeout = current_time;
 
-            for(int i = 0; i < MAX_PID; ++i)
+            for(int i = 0; i < TS_MAX_PID; ++i)
             {
                 if(module_demux_check(mod, i) && (mod->dmx_fd_list[i] == 0))
                     dmx_set_pid(mod, i, 1);
@@ -964,7 +964,7 @@ static void thread_loop_slave(void *arg)
         {
             dmx_check_timeout = current_time;
 
-            for(int i = 0; i < MAX_PID; ++i)
+            for(int i = 0; i < TS_MAX_PID; ++i)
             {
                 if(module_demux_check(mod, i) && (mod->dmx_fd_list[i] == 0))
                     dmx_set_pid(mod, i, 1);

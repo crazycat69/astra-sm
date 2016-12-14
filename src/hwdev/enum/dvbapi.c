@@ -1,5 +1,5 @@
 /*
- * Astra Utils (DVB enumeration)
+ * Astra Module: Hardware Enumerator (DVB API)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
@@ -18,8 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <astra/astra.h>
-#include <astra/luaapi/module.h>
+#include "enum.h"
 
 #include <sys/ioctl.h>
 #include <net/if.h>
@@ -258,12 +257,10 @@ static int dvbls_scan(lua_State *L)
     return 1;
 }
 
-static void module_load(lua_State *L)
+const hw_enum_t hw_enum_dvbapi =
 {
-    lua_register(L, "dvbls", dvbls_scan);
-}
+    .name = "dvb_input",
+    .description = "DVB Input (Linux DVB API)",
 
-BINDING_REGISTER(dvbls)
-{
-    .load = module_load,
+    .enumerate = dvbls_scan,
 };

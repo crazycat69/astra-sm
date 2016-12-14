@@ -18,55 +18,44 @@
  */
 
 /*
- * Device enumerator
+ * Interface to device-specific enumerators
  *
  * Methods:
- *      hw_enum.drivers()
+ *      hw_enum.modules()
  *                  - return table containing a list of supported device types
- *      hw_enum.devices(driver)
+ *      hw_enum.devices(module)
  *                  - list devices currently present in the system
  */
 
 #include "enum.h"
+#include "list.h"
 
 #define MSG(_msg) "[hw_enum] " _msg
 
-#ifdef _WIN32
-extern const hwdev_module_t hwdev_bda;
-#endif
-
-static const hwdev_module_t *hwdev_modules[] =
-{
-#ifdef _WIN32
-    &hwdev_bda,
-#endif
-    NULL,
-};
-
 static
-const hwdev_module_t *hw_find_driver(const char *drvname)
+const hw_enum_t *hw_find_enum(const char *name)
 {
-    const hwdev_module_t *drv = NULL;
-    for (size_t i = 0; hwdev_modules[i] != NULL; i++)
+    const hw_enum_t *hw_enum = NULL;
+    for (size_t i = 0; enum_list[i] != NULL; i++)
     {
-        if (!strcmp(hwdev_modules[i]->name, drvname))
+        if (!strcmp(enum_list[i]->name, name))
         {
-            drv = hwdev_modules[i];
+            hw_enum = enum_list[i];
             break;
         }
     }
 
-    return drv;
+    return hw_enum;
 }
 
 static
-int method_drivers(lua_State *L)
+int method_modules(lua_State *L)
 {
     lua_newtable(L);
-    for (const hwdev_module_t **drv = hwdev_modules; *drv != NULL; drv++)
+    for (const hw_enum_t **hw_enum = enum_list; *hw_enum != NULL; hw_enum++)
     {
-        lua_pushstring(L, (*drv)->name);
-        lua_pushstring(L, (*drv)->description);
+        lua_pushstring(L, (*hw_enum)->name);
+        lua_pushstring(L, (*hw_enum)->description);
         lua_settable(L, -3);
     }
 
@@ -76,17 +65,17 @@ int method_drivers(lua_State *L)
 static
 int method_devices(lua_State *L)
 {
-    const char *const drvname = luaL_checkstring(L, 1);
-    const hwdev_module_t *const drv = hw_find_driver(drvname);
+    const char *const mod_name = luaL_checkstring(L, 1);
+    const hw_enum_t *const hw_enum = hw_find_enum(mod_name);
 
-    if (drv == NULL)
+    if (hw_enum == NULL)
     {
-        luaL_error(L, MSG("driver '%s' is not available in this build")
-                   , drvname);
+        luaL_error(L, MSG("module '%s' is not available in this build")
+                   , mod_name);
     }
 
-    /* call driver-specific enumerator function */
-    lua_pushcfunction(L, drv->enumerate);
+    /* call module-specific enumerator function */
+    lua_pushcfunction(L, hw_enum->enumerate);
     lua_call(L, 0, 1);
     luaL_checktype(L, -1, LUA_TTABLE);
 
@@ -98,7 +87,7 @@ void module_load(lua_State *L)
 {
     static const luaL_Reg api[] =
     {
-        { "drivers", method_drivers },
+        { "modules", method_modules },
         { "devices", method_devices },
         { NULL, NULL },
     };

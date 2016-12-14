@@ -29,6 +29,6 @@ typedef struct
     const char *description;
 
     int (*enumerate)(lua_State *);
-} hwdev_module_t;
+} hw_enum_t;
 
 #endif /* _HWDEV_ENUM_H_ */

@@ -46,7 +46,7 @@ struct module_data_t
 
     int fd;
     asc_event_t *event;
-    uint8_t filter[MAX_PID / 8];
+    uint8_t filter[TS_MAX_PID / 8];
 
     uint8_t buffer[ASI_BUFFER_SIZE];
 };
@@ -83,9 +83,9 @@ static void set_pid(module_data_t *mod, uint16_t pid, int is_set)
     if(mod->budget)
         return;
 
-    if(pid >= MAX_PID)
+    if(pid >= TS_MAX_PID)
     {
-        asc_log_error(MSG("PID value must be less then %d"), MAX_PID);
+        asc_log_error(MSG("PID value must be less then %d"), TS_MAX_PID);
         asc_lib_abort();
     }
 
@@ -148,7 +148,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     else
     {
         memset(mod->filter, 0xFF, sizeof(mod->filter));
-        mod->filter[NULL_TS_PID / 8] &= ~(0x01 << (NULL_TS_PID % 8));
+        mod->filter[TS_NULL_PID / 8] &= ~(0x01 << (TS_NULL_PID % 8));
     }
 
     if(ioctl(mod->fd, ASI_IOC_RXSETPF, mod->filter) < 0)

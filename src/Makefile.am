@@ -213,25 +213,6 @@ if HAVE_LIBAIO
 libstream_la_LIBADD += $(LIBAIO_LIBS)
 endif
 
-# DVB-ASI input
-if !HAVE_WIN32
-libstream_la_SOURCES += \
-    stream/asi/input.c
-endif
-
-# DVB reception (Linux)
-if HAVE_DVBAPI
-libstream_la_SOURCES += \
-    stream/dvb/ca.c \
-    stream/dvb/ca.h \
-    stream/dvb/dvb.h \
-    stream/dvb/dvbls.c \
-    stream/dvb/frontend.c \
-    stream/dvb/frontend.h \
-    stream/dvb/ddci.c \
-    stream/dvb/input.c
-endif
-
 # CSA scrambling and descrambling
 if HAVE_DVBCSA
 libstream_la_SOURCES += \
@@ -264,7 +245,28 @@ endif
 # Hardware devices
 libstream_la_SOURCES += \
     hwdev/enum/enum.c \
-    hwdev/enum/enum.h
+    hwdev/enum/enum.h \
+    hwdev/enum/list.h
+# FIXME: generate list.h dynamically
+
+# DVB-ASI input
+if !HAVE_WIN32
+libstream_la_SOURCES += \
+    hwdev/asi/input.c
+endif
+
+# DVB reception (Linux)
+if HAVE_DVBAPI
+libstream_la_SOURCES += \
+    hwdev/dvbapi/ca.c \
+    hwdev/dvbapi/ca.h \
+    hwdev/dvbapi/dvb.h \
+    hwdev/dvbapi/frontend.c \
+    hwdev/dvbapi/frontend.h \
+    hwdev/dvbapi/ddci.c \
+    hwdev/dvbapi/input.c \
+    hwdev/enum/dvbapi.c
+endif
 
 # DVB reception (Windows)
 if HAVE_WIN32
@@ -283,11 +285,11 @@ libstream_la_SOURCES += \
 endif
 
 # manifest list
-BUILT_SOURCES += stream_list.h
-CLEANFILES += stream_list.h
+BUILT_SOURCES += stream/list.h
+CLEANFILES += stream/list.h
 
 GEN_MANIFEST_LIST = $(top_srcdir)/build-aux/gen-manifest-list
-stream_list.h: $(GEN_MANIFEST_LIST) config.h
+stream/list.h: $(GEN_MANIFEST_LIST) config.h
 	$(AM_V_GEN)$(GEN_MANIFEST_LIST) $(srcdir) $(libstream_la_SOURCES) \
 	    >$@ || exit $$?
 
