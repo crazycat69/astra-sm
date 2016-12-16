@@ -153,7 +153,7 @@ START_TEST(basic)
 {
     lua_State *const L = lua;
 
-    module_register(L, &MODULE_SYMBOL(my_module));
+    module_register(L, &MODULE_MANIFEST_SYMBOL(my_module));
     ck_assert(lua_gettop(L) == 0);
 
     /* create module instance */
@@ -255,7 +255,7 @@ START_TEST(basic_error)
 {
     lua_State *const L = lua;
 
-    module_register(L, &MODULE_SYMBOL(my_module));
+    module_register(L, &MODULE_MANIFEST_SYMBOL(my_module));
     ck_assert(lua_gettop(L) == 0);
 
     /* lua error */
@@ -301,7 +301,7 @@ START_TEST(basic_extra)
 {
     lua_State *const L = lua;
 
-    module_register(L, &MODULE_SYMBOL(my_module));
+    module_register(L, &MODULE_MANIFEST_SYMBOL(my_module));
     ck_assert(lua_gettop(L) == 0);
 
     /* three args */
@@ -361,7 +361,7 @@ START_TEST(binding)
     lua_State *const L = lua;
 
     my_lib_loaded = false;
-    module_register(L, &MODULE_SYMBOL(my_lib));
+    module_register(L, &MODULE_MANIFEST_SYMBOL(my_lib));
     ck_assert(my_lib_loaded == true);
 
     lua_getglobal(L, "my_lib");

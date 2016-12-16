@@ -25,6 +25,7 @@
 #include <astra/luaapi/module.h>
 #include <astra/luaapi/state.h>
 
+/* this gets put in builddir, not srcdir */
 #include "stream/list.h"
 
 #ifdef HAVE_INSCRIPT

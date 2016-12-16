@@ -245,9 +245,7 @@ endif
 # Hardware devices
 libstream_la_SOURCES += \
     hwdev/enum/enum.c \
-    hwdev/enum/enum.h \
-    hwdev/enum/list.h
-# FIXME: generate list.h dynamically
+    hwdev/enum/enum.h
 
 # DVB-ASI input
 if !HAVE_WIN32
@@ -284,14 +282,18 @@ libstream_la_SOURCES += \
     hwdev/enum/bda.c
 endif
 
-# manifest list
-BUILT_SOURCES += stream/list.h
-CLEANFILES += stream/list.h
+# dynamically generated symbol lists
+DYNAMIC_HDR_LIST = \
+    stream/list.h \
+    hwdev/enum/list.h
 
-GEN_MANIFEST_LIST = $(top_srcdir)/build-aux/gen-manifest-list
-stream/list.h: $(GEN_MANIFEST_LIST) config.h
-	$(AM_V_GEN)$(GEN_MANIFEST_LIST) $(srcdir) $(libstream_la_SOURCES) \
+GEN_DYNAMIC_LIST = $(top_srcdir)/build-aux/gen-dynamic-list
+$(DYNAMIC_HDR_LIST): $(GEN_DYNAMIC_LIST) config.h
+	$(AM_V_GEN)$(GEN_DYNAMIC_LIST) $(srcdir) $@ $(libstream_la_SOURCES) \
 	    >$@ || exit $$?
+
+BUILT_SOURCES += $(DYNAMIC_HDR_LIST)
+CLEANFILES += $(DYNAMIC_HDR_LIST)
 
 ##
 ## Main binary

@@ -239,7 +239,7 @@ int bda_enumerate(lua_State *L)
         /* add tuner to list */
         lua_newtable(L);
         lua_pushinteger(L, dev_idx++);
-        lua_setfield(L, -2, "device");
+        lua_setfield(L, -2, "adapter");
 
         if (parse_moniker(L, moniker) != 0)
         {
@@ -265,10 +265,9 @@ out:
     return 1;
 }
 
-const hw_enum_t hw_enum_bda =
+HW_ENUM_REGISTER(bda)
 {
     .name = "dvb_input",
     .description = "DVB Input (DirectShow BDA)",
-
     .enumerate = bda_enumerate,
 };

@@ -78,11 +78,15 @@ bool module_option_boolean(lua_State *L, const char *name, bool *boolean);
 #define MODULE_DATA() \
     char __padding[MODULE_DATA_SIZE]
 
-#define MODULE_SYMBOL(_name) \
+/* macros for auto-generated module list */
+#define MODULE_MANIFEST_LIST() \
+    static const module_manifest_t *manifest_list[] =
+
+#define MODULE_MANIFEST_SYMBOL(_name) \
     __manifest_##_name
 
 #define MODULE_MANIFEST_DEF(_name) \
-    const module_manifest_t MODULE_SYMBOL(_name)
+    const module_manifest_t MODULE_MANIFEST_SYMBOL(_name)
 
 #define MODULE_MANIFEST_DECL(_name) \
     extern MODULE_MANIFEST_DEF(_name)

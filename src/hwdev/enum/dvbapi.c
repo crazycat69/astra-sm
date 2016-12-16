@@ -257,10 +257,9 @@ static int dvbls_scan(lua_State *L)
     return 1;
 }
 
-const hw_enum_t hw_enum_dvbapi =
+HW_ENUM_REGISTER(dvbapi)
 {
     .name = "dvb_input",
     .description = "DVB Input (Linux DVB API)",
-
     .enumerate = dvbls_scan,
 };

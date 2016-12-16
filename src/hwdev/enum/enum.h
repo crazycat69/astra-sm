@@ -27,8 +27,23 @@ typedef struct
 {
     const char *name;
     const char *description;
-
     int (*enumerate)(lua_State *);
 } hw_enum_t;
+
+/* macros for auto-generated enumerator list */
+#define HW_ENUM_LIST() \
+    static const hw_enum_t *enum_list[] =
+
+#define HW_ENUM_SYMBOL(_name) \
+    __hw_enum_##__name
+
+#define HW_ENUM_DEF(_name) \
+    const hw_enum_t HW_ENUM_SYMBOL(_name)
+
+#define HW_ENUM_DECL(_name) \
+    extern HW_ENUM_DEF(_name)
+
+#define HW_ENUM_REGISTER(_name) \
+    HW_ENUM_DEF(_name) =
 
 #endif /* _HWDEV_ENUM_H_ */

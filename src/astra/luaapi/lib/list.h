@@ -47,20 +47,20 @@ MODULE_MANIFEST_DECL(winsvc);
 /* manifest list */
 static const module_manifest_t *lua_lib_list[] =
 {
-    &MODULE_SYMBOL(astra),
-    &MODULE_SYMBOL(base64),
-    &MODULE_SYMBOL(iso8859),
-    &MODULE_SYMBOL(json),
-    &MODULE_SYMBOL(log),
-    &MODULE_SYMBOL(md5),
-    &MODULE_SYMBOL(pidfile),
-    &MODULE_SYMBOL(rc4),
-    &MODULE_SYMBOL(sha1),
-    &MODULE_SYMBOL(strhex),
-    &MODULE_SYMBOL(timer),
-    &MODULE_SYMBOL(utils),
+    &MODULE_MANIFEST_SYMBOL(astra),
+    &MODULE_MANIFEST_SYMBOL(base64),
+    &MODULE_MANIFEST_SYMBOL(iso8859),
+    &MODULE_MANIFEST_SYMBOL(json),
+    &MODULE_MANIFEST_SYMBOL(log),
+    &MODULE_MANIFEST_SYMBOL(md5),
+    &MODULE_MANIFEST_SYMBOL(pidfile),
+    &MODULE_MANIFEST_SYMBOL(rc4),
+    &MODULE_MANIFEST_SYMBOL(sha1),
+    &MODULE_MANIFEST_SYMBOL(strhex),
+    &MODULE_MANIFEST_SYMBOL(timer),
+    &MODULE_MANIFEST_SYMBOL(utils),
 #ifdef _WIN32
-    &MODULE_SYMBOL(winsvc),
+    &MODULE_MANIFEST_SYMBOL(winsvc),
 #endif
     NULL,
 };

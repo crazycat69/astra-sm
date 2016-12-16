@@ -10,7 +10,7 @@
 
 # generated files
 /scripts/prepared.h
-#/src/hwdev/enum/list.h
+/src/hwdev/enum/list.h
 /src/stream/list.h
 /testcards/*.ts
 /testcards/*.wav

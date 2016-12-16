@@ -28,7 +28,9 @@
  */
 
 #include "enum.h"
-#include "list.h"
+
+/* this gets put in builddir, not srcdir */
+#include "hwdev/enum/list.h"
 
 #define MSG(_msg) "[hw_enum] " _msg
 

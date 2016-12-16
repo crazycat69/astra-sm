@@ -1,0 +1,67 @@
+#! /bin/sh
+
+set -e
+
+if [ -z "$1" -o -z "$2" ]; then
+    echo "usage: $0 <srcdir> <target> [src...]" 1>&2
+    exit 1
+fi
+
+srcdir=$1
+target=$2
+shift 2
+
+case "$target" in
+    stream/list.h)
+        # streaming modules
+        list_base="MODULE_MANIFEST"
+        list_filter='s/^\s*(MODULE|STREAM_MODULE|BINDING)_REGISTER\((.*)\)\s*$/\2/p'
+        ;;
+
+    hwdev/enum/list.h)
+        # hardware enumerators
+        list_base="HW_ENUM"
+        list_filter='s/^\s*HW_ENUM_REGISTER\((.*)\)\s*$/\1/p'
+        ;;
+
+    *)
+        echo "unknown target: $target" 1>&2
+        exit 1
+esac
+
+filter_names()
+{
+    for src in $@; do
+        src="$srcdir/$src"
+        list=`sed -rn -e "$list_filter" "$src"`
+        for item in $list; do
+            echo $item
+        done
+    done
+}
+
+list=`filter_names $@`
+list=`echo $list | sort`
+
+echo "/* automatically generated file; do not edit */"
+echo "#ifndef _${list_base}_LIST_H_"
+echo "#define _${list_base}_LIST_H_ 1"
+echo
+
+echo "/* extern declarations */"
+for item in $list; do
+    echo "${list_base}_DECL(${item});"
+done
+echo
+
+echo "/* NULL-terminated array */"
+echo "${list_base}_LIST()"
+echo "{"
+for item in $list; do
+    echo "    &${list_base}_SYMBOL(${item}),"
+done
+echo "    NULL,"
+echo "};"
+
+echo
+echo "#endif /* _${list_base}_LIST_H_ */"
