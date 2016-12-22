@@ -94,7 +94,7 @@ void log_hr(const module_data_t *mod, HRESULT hr
 /* go to cleanup if a NULL pointer is detected */
 #define __BDA_CKPTR(_level, _ptr, ...) \
     do { \
-        DS_WANT_PTR(hr, _ptr); \
+        ASC_WANT_PTR(hr, _ptr); \
         __BDA_CKHR(_level, __VA_ARGS__); \
     } while (0)
 
@@ -157,7 +157,7 @@ out:
     ASC_FREE(wbuf, free);
     ASC_FREE(fname, free);
 
-    SAFE_RELEASE(source);
+    ASC_RELEASE(source);
 
     return hr;
 }
@@ -200,9 +200,9 @@ HRESULT create_receiver(const module_data_t *mod, IBaseFilter *source
 
     do
     {
-        SAFE_RELEASE(rcv_in);
-        SAFE_RELEASE(rcv);
-        SAFE_RELEASE(moniker);
+        ASC_RELEASE(rcv_in);
+        ASC_RELEASE(rcv);
+        ASC_RELEASE(moniker);
 
         ASC_FREE(fname, free);
         ASC_FREE(wbuf, free);
@@ -212,7 +212,7 @@ HRESULT create_receiver(const module_data_t *mod, IBaseFilter *source
 
         /* fetch next item */
         hr = IEnumMoniker_Next(enum_moniker, 1, &moniker, NULL);
-        DS_WANT_ENUM(hr, moniker);
+        ASC_WANT_ENUM(hr, moniker);
 
         if (FAILED(hr))
             BDA_THROW_D("couldn't retrieve next receiver filter");
@@ -251,9 +251,9 @@ HRESULT create_receiver(const module_data_t *mod, IBaseFilter *source
     } while (true);
 
 out:
-    SAFE_RELEASE(enum_moniker);
-    SAFE_RELEASE(source_out);
-    SAFE_RELEASE(graph);
+    ASC_RELEASE(enum_moniker);
+    ASC_RELEASE(source_out);
+    ASC_RELEASE(graph);
 
     return hr;
 }
@@ -302,10 +302,10 @@ HRESULT create_demux(const module_data_t *mod, IBaseFilter *tail
     *out = demux;
 
 out:
-    SAFE_RELEASE(demux_in);
-    SAFE_RELEASE(tail_out);
-    SAFE_RELEASE(demux);
-    SAFE_RELEASE(graph);
+    ASC_RELEASE(demux_in);
+    ASC_RELEASE(tail_out);
+    ASC_RELEASE(demux);
+    ASC_RELEASE(graph);
 
     return hr;
 }
@@ -361,10 +361,10 @@ HRESULT create_tif(const module_data_t *mod, IBaseFilter *demux
     *out = tif;
 
 out:
-    SAFE_RELEASE(demux_out);
-    SAFE_RELEASE(tif_in);
-    SAFE_RELEASE(tif);
-    SAFE_RELEASE(graph);
+    ASC_RELEASE(demux_out);
+    ASC_RELEASE(tif_in);
+    ASC_RELEASE(tif);
+    ASC_RELEASE(graph);
 
     return hr;
 }
@@ -403,8 +403,8 @@ HRESULT create_pidmap(const module_data_t *mod, IBaseFilter *demux
     BDA_CKPTR_D(*out, "couldn't query IMPEG2PIDMap interface");
 
 out:
-    SAFE_RELEASE(mpeg_out);
-    SAFE_RELEASE(mpeg);
+    ASC_RELEASE(mpeg_out);
+    ASC_RELEASE(mpeg);
 
     return hr;
 }
@@ -437,8 +437,8 @@ HRESULT create_probe(module_data_t *mod, IBaseFilter *tail, IBaseFilter **out)
     /* try creating and attaching probes with different media subtypes */
     for (unsigned int i = 0; ; i++)
     {
-        SAFE_RELEASE(probe);
-        SAFE_RELEASE(probe_in);
+        ASC_RELEASE(probe);
+        ASC_RELEASE(probe_in);
 
         if (*out != NULL)
             break;
@@ -479,8 +479,8 @@ HRESULT create_probe(module_data_t *mod, IBaseFilter *tail, IBaseFilter **out)
     BDA_CKHR_D("couldn't connect TS probe to capture filter");
 
 out:
-    SAFE_RELEASE(tail_out);
-    SAFE_RELEASE(graph);
+    ASC_RELEASE(tail_out);
+    ASC_RELEASE(graph);
 
     return hr;
 }
@@ -542,11 +542,11 @@ HRESULT create_probe_dmx(module_data_t *mod, IMPEG2PIDMap *pidmap
     *out = probe;
 
 out:
-    SAFE_RELEASE(probe_in);
-    SAFE_RELEASE(probe);
-    SAFE_RELEASE(graph);
-    SAFE_RELEASE(demux);
-    SAFE_RELEASE(demux_out);
+    ASC_RELEASE(probe_in);
+    ASC_RELEASE(probe);
+    ASC_RELEASE(graph);
+    ASC_RELEASE(demux);
+    ASC_RELEASE(demux_out);
 
     return hr;
 }
@@ -613,8 +613,8 @@ HRESULT find_control_node(const module_data_t *mod, IBaseFilter *filter
     hr = S_FALSE;
 
 out:
-    SAFE_RELEASE(node);
-    SAFE_RELEASE(topology);
+    ASC_RELEASE(node);
+    ASC_RELEASE(topology);
 
     return hr;
 }
@@ -696,9 +696,9 @@ HRESULT provider_tune(const module_data_t *mod, IBaseFilter *provider)
     BDA_CKHR_D("couldn't submit tune request to provider");
 
 out:
-    SAFE_RELEASE(provider_tuner);
-    SAFE_RELEASE(space);
-    SAFE_RELEASE(request);
+    ASC_RELEASE(provider_tuner);
+    ASC_RELEASE(space);
+    ASC_RELEASE(request);
 
     return hr;
 }
@@ -750,9 +750,9 @@ HRESULT provider_setup(const module_data_t *mod, IBaseFilter *provider
     }
 
 out:
-    SAFE_RELEASE(source_in);
-    SAFE_RELEASE(provider_out);
-    SAFE_RELEASE(graph);
+    ASC_RELEASE(source_in);
+    ASC_RELEASE(provider_out);
+    ASC_RELEASE(graph);
 
     return hr;
 }
@@ -784,7 +784,7 @@ HRESULT restore_pids(const module_data_t *mod, IMPEG2PIDMap *pidmap)
         }
     }
 
-    SAFE_RELEASE(enum_pid);
+    ASC_RELEASE(enum_pid);
 
     /* create and submit PID array */
     ULONG pids[TS_MAX_PID] = { 0 };
@@ -821,10 +821,10 @@ HRESULT remove_filters(const module_data_t *mod, IFilterGraph2 *graph)
 
     do
     {
-        SAFE_RELEASE(filter);
+        ASC_RELEASE(filter);
 
         hr = IEnumFilters_Next(enum_filters, 1, &filter, NULL);
-        DS_WANT_ENUM(hr, filter);
+        ASC_WANT_ENUM(hr, filter);
 
         if (hr == VFW_E_ENUM_OUT_OF_SYNC)
         {
@@ -848,7 +848,7 @@ out:
     if (hr == S_FALSE)
         hr = S_OK;
 
-    SAFE_RELEASE(enum_filters);
+    ASC_RELEASE(enum_filters);
 
     return hr;
 }
@@ -892,8 +892,8 @@ HRESULT rot_register(const module_data_t *mod, IFilterGraph2 *graph
         hr = E_INVALIDARG;
 
 out:
-    SAFE_RELEASE(moniker);
-    SAFE_RELEASE(rot);
+    ASC_RELEASE(moniker);
+    ASC_RELEASE(rot);
 
     return hr;
 }
@@ -910,12 +910,12 @@ HRESULT rot_unregister(DWORD *reg)
 
     IRunningObjectTable *rot = NULL;
     HRESULT hr = GetRunningObjectTable(0, &rot);
-    DS_WANT_PTR(hr, rot);
+    ASC_WANT_PTR(hr, rot);
     if (FAILED(hr))
         return hr;
 
     hr = IRunningObjectTable_Revoke(rot, *reg);
-    SAFE_RELEASE(rot);
+    ASC_RELEASE(rot);
     *reg = 0;
 
     return hr;
@@ -978,12 +978,12 @@ HRESULT control_stop(IFilterGraph2 *graph)
     IMediaControl *control = NULL;
     HRESULT hr = IFilterGraph2_QueryInterface(graph, &IID_IMediaControl
                                               , (void **)&control);
-    DS_WANT_PTR(hr, control);
+    ASC_WANT_PTR(hr, control);
     if (FAILED(hr)) return hr;
 
     /* asynchronously switch graph into stopped state */
     hr = IMediaControl_StopWhenReady(control);
-    SAFE_RELEASE(control);
+    ASC_RELEASE(control);
 
     return hr;
 }
@@ -1161,17 +1161,17 @@ out:
         remove_filters(mod, graph);
     }
 
-    SAFE_RELEASE(pidmap);
-    SAFE_RELEASE(tif);
-    SAFE_RELEASE(demux);
-    SAFE_RELEASE(probe);
-    SAFE_RELEASE(signal);
-    SAFE_RELEASE(capture);
-    SAFE_RELEASE(demod);
-    SAFE_RELEASE(source);
-    SAFE_RELEASE(provider);
-    SAFE_RELEASE(event);
-    SAFE_RELEASE(graph);
+    ASC_RELEASE(pidmap);
+    ASC_RELEASE(tif);
+    ASC_RELEASE(demux);
+    ASC_RELEASE(probe);
+    ASC_RELEASE(signal);
+    ASC_RELEASE(capture);
+    ASC_RELEASE(demod);
+    ASC_RELEASE(source);
+    ASC_RELEASE(provider);
+    ASC_RELEASE(event);
+    ASC_RELEASE(graph);
 
     if (need_uninit)
         CoUninitialize();
@@ -1187,14 +1187,14 @@ void graph_teardown(module_data_t *mod)
     // TODO: bda_ext_destroy()
     //       vendor extension deinit
 
-    SAFE_RELEASE(mod->signal);
-    SAFE_RELEASE(mod->pidmap);
-    SAFE_RELEASE(mod->provider);
-    SAFE_RELEASE(mod->event);
+    ASC_RELEASE(mod->signal);
+    ASC_RELEASE(mod->pidmap);
+    ASC_RELEASE(mod->provider);
+    ASC_RELEASE(mod->event);
 
     remove_filters(mod, mod->graph);
     rot_unregister(&mod->rot_reg);
-    SAFE_RELEASE(mod->graph);
+    ASC_RELEASE(mod->graph);
 
     mod->graph_evt = NULL;
     mod->cooldown = 0;

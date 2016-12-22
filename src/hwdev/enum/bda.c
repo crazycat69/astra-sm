@@ -39,7 +39,7 @@
 /* "throw" if a NULL pointer is detected */
 #define ENUM_CKPTR(_ptr, _msg) \
     do { \
-        DS_WANT_PTR(hr, _ptr); \
+        ASC_WANT_PTR(hr, _ptr); \
         ENUM_CKHR(_msg); \
     } while (0)
 
@@ -116,13 +116,13 @@ void probe_tuner(lua_State *L, IBaseFilter *source, const bda_network_t *net)
     }
 
 out:
-    SAFE_RELEASE(provider_tuner);
-    SAFE_RELEASE(request);
-    SAFE_RELEASE(space);
-    SAFE_RELEASE(source_in);
-    SAFE_RELEASE(provider_out);
-    SAFE_RELEASE(graph);
-    SAFE_RELEASE(provider);
+    ASC_RELEASE(provider_tuner);
+    ASC_RELEASE(request);
+    ASC_RELEASE(space);
+    ASC_RELEASE(source_in);
+    ASC_RELEASE(provider_out);
+    ASC_RELEASE(graph);
+    ASC_RELEASE(provider);
 
     if (ENUM_CATCH())
     {
@@ -186,7 +186,7 @@ int parse_moniker(lua_State *L, IMoniker *moniker)
     lua_setfield(L, -2, "type");
 
 out:
-    SAFE_RELEASE(source);
+    ASC_RELEASE(source);
 
     if (ENUM_CATCH())
     {
@@ -226,11 +226,11 @@ int bda_enumerate(lua_State *L)
 
     do
     {
-        SAFE_RELEASE(moniker);
+        ASC_RELEASE(moniker);
 
         /* fetch next item */
         hr = IEnumMoniker_Next(enum_moniker, 1, &moniker, NULL);
-        DS_WANT_ENUM(hr, moniker);
+        ASC_WANT_ENUM(hr, moniker);
 
         if (FAILED(hr))
             ENUM_THROW("couldn't retrieve next device filter");
@@ -255,7 +255,7 @@ int bda_enumerate(lua_State *L)
     } while (true);
 
 out:
-    SAFE_RELEASE(enum_moniker);
+    ASC_RELEASE(enum_moniker);
 
     if (need_uninit)
         CoUninitialize();

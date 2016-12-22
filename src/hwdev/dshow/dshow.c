@@ -58,13 +58,13 @@ HRESULT dshow_enum(const CLSID *category, IEnumMoniker **out)
     HRESULT hr = CoCreateInstance(&CLSID_SystemDeviceEnum, NULL
                                   , CLSCTX_INPROC_SERVER, &IID_ICreateDevEnum
                                   , (void **)&dev_enum);
-    DS_WANT_PTR(hr, dev_enum);
+    ASC_WANT_PTR(hr, dev_enum);
     if (FAILED(hr))
         return hr;
 
     hr = ICreateDevEnum_CreateClassEnumerator(dev_enum, category, out, 0);
-    DS_WANT_ENUM(hr, *out);
-    SAFE_RELEASE(dev_enum);
+    ASC_WANT_ENUM(hr, *out);
+    ASC_RELEASE(dev_enum);
 
     return hr;
 }
@@ -95,14 +95,14 @@ HRESULT dshow_filter_by_index(const CLSID *category, size_t index
     }
 
     hr = IEnumMoniker_Next(enum_moniker, 1, &moniker, NULL);
-    DS_WANT_ENUM(hr, moniker);
+    ASC_WANT_ENUM(hr, moniker);
     if (hr != S_OK) goto out;
 
     hr = dshow_filter_from_moniker(moniker, out, fname);
 
 out:
-    SAFE_RELEASE(moniker);
-    SAFE_RELEASE(enum_moniker);
+    ASC_RELEASE(moniker);
+    ASC_RELEASE(enum_moniker);
 
     return hr;
 }
@@ -126,14 +126,14 @@ HRESULT dshow_filter_by_path(const CLSID *category, const char *devpath
 
     do
     {
-        SAFE_RELEASE(moniker);
+        ASC_RELEASE(moniker);
 
         if (*out != NULL)
             break;
 
         /* fetch next item */
         hr = IEnumMoniker_Next(enum_moniker, 1, &moniker, NULL);
-        DS_WANT_ENUM(hr, moniker);
+        ASC_WANT_ENUM(hr, moniker);
 
         if (hr != S_OK)
             break; /* no more filters */
@@ -150,7 +150,7 @@ HRESULT dshow_filter_by_path(const CLSID *category, const char *devpath
         }
     } while (true);
 
-    SAFE_RELEASE(enum_moniker);
+    ASC_RELEASE(enum_moniker);
 
     return hr;
 }
@@ -170,12 +170,12 @@ HRESULT dshow_filter_from_moniker(IMoniker *moniker, IBaseFilter **out
     *out = NULL;
 
     hr = CreateBindCtx(0, &bind_ctx);
-    DS_WANT_PTR(hr, bind_ctx);
+    ASC_WANT_PTR(hr, bind_ctx);
     if (FAILED(hr)) goto out;
 
     hr = IMoniker_BindToObject(moniker, bind_ctx, NULL
                                , &IID_IBaseFilter, (void **)&filter);
-    DS_WANT_PTR(hr, filter);
+    ASC_WANT_PTR(hr, filter);
     if (FAILED(hr)) goto out;
 
     if (fname != NULL)
@@ -189,8 +189,8 @@ HRESULT dshow_filter_from_moniker(IMoniker *moniker, IBaseFilter **out
     *out = filter;
 
 out:
-    SAFE_RELEASE(filter);
-    SAFE_RELEASE(bind_ctx);
+    ASC_RELEASE(filter);
+    ASC_RELEASE(bind_ctx);
 
     return hr;
 }
@@ -215,7 +215,7 @@ HRESULT dshow_filter_graph(IFilterGraph2 **out_graph, IMediaEvent **out_event
     hr = CoCreateInstance(&CLSID_FilterGraphNoThread, NULL
                           , CLSCTX_INPROC_SERVER, &IID_IFilterGraph2
                           , (void **)&graph);
-    DS_WANT_PTR(hr, graph);
+    ASC_WANT_PTR(hr, graph);
     if (FAILED(hr)) return hr;
 
     /*
@@ -225,12 +225,12 @@ HRESULT dshow_filter_graph(IFilterGraph2 **out_graph, IMediaEvent **out_event
      */
     hr = CoCreateInstance(&CLSID_DVBTLocator, NULL, CLSCTX_INPROC_SERVER
                           , &IID_IUnknown, (void **)&dummy);
-    DS_WANT_PTR(hr, dummy);
+    ASC_WANT_PTR(hr, dummy);
     if (FAILED(hr)) goto out;
 
     hr = IFilterGraph2_QueryInterface(graph, &IID_IRegisterServiceProvider
                                       , (void **)&regsvc);
-    DS_WANT_PTR(hr, regsvc);
+    ASC_WANT_PTR(hr, regsvc);
     if (FAILED(hr)) goto out;
 
     hr = regsvc->lpVtbl->RegisterService(regsvc, &CLSID_ESEventService
@@ -242,7 +242,7 @@ HRESULT dshow_filter_graph(IFilterGraph2 **out_graph, IMediaEvent **out_event
     {
         hr = IFilterGraph2_QueryInterface(graph, &IID_IMediaEvent
                                           , (void **)&event);
-        DS_WANT_PTR(hr, event);
+        ASC_WANT_PTR(hr, event);
         if (FAILED(hr)) goto out;
 
         if (out_evhdl != NULL)
@@ -259,10 +259,10 @@ HRESULT dshow_filter_graph(IFilterGraph2 **out_graph, IMediaEvent **out_event
     *out_graph = graph;
 
 out:
-    SAFE_RELEASE(event);
-    SAFE_RELEASE(regsvc);
-    SAFE_RELEASE(dummy);
-    SAFE_RELEASE(graph);
+    ASC_RELEASE(event);
+    ASC_RELEASE(regsvc);
+    ASC_RELEASE(dummy);
+    ASC_RELEASE(graph);
 
     return hr;
 }
@@ -288,7 +288,7 @@ HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir
     /* look for requested pin */
     IEnumPins *enum_pins = NULL;
     HRESULT hr = IBaseFilter_EnumPins(filter, &enum_pins);
-    DS_WANT_PTR(hr, enum_pins);
+    ASC_WANT_PTR(hr, enum_pins);
 
     if (FAILED(hr))
     {
@@ -299,11 +299,11 @@ HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir
     IPin *pin = NULL;
     do
     {
-        SAFE_RELEASE(pin);
+        ASC_RELEASE(pin);
 
         /* fetch next item */
         hr = IEnumPins_Next(enum_pins, 1, &pin, NULL);
-        DS_WANT_ENUM(hr, pin);
+        ASC_WANT_ENUM(hr, pin);
 
         if (hr != S_OK)
             break; /* no more pins */
@@ -317,7 +317,7 @@ HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir
         if (hr != S_OK)
             continue; /* no info */
 
-        SAFE_RELEASE(info.pFilter);
+        ASC_RELEASE(info.pFilter);
         if (info.dir != dir)
             continue; /* wrong direction */
 
@@ -332,7 +332,7 @@ HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir
     if (SUCCEEDED(hr) && hr != S_OK)
         hr = E_NOINTERFACE; /* don't return S_FALSE */
 
-    SAFE_RELEASE(enum_pins);
+    ASC_RELEASE(enum_pins);
     ASC_FREE(wname, free);
 
     return hr;
@@ -360,8 +360,8 @@ HRESULT dshow_get_graph(IBaseFilter *filter, IFilterGraph2 **out)
     /* get extended interface */
     hr = IFilterGraph_QueryInterface(fi.pGraph, &IID_IFilterGraph2
                                      , (void **)out);
-    DS_WANT_PTR(hr, *out);
-    SAFE_RELEASE(fi.pGraph);
+    ASC_WANT_PTR(hr, *out);
+    ASC_RELEASE(fi.pGraph);
 
     return hr;
 }
@@ -391,12 +391,12 @@ HRESULT dshow_get_property(IMoniker *moniker, const char *prop, char **out)
 
     /* read property from property bag */
     hr = CreateBindCtx(0, &bind_ctx);
-    DS_WANT_PTR(hr, bind_ctx);
+    ASC_WANT_PTR(hr, bind_ctx);
     if (FAILED(hr)) goto out;
 
     hr = IMoniker_BindToStorage(moniker, bind_ctx, NULL
                                 , &IID_IPropertyBag, (void **)&bag);
-    DS_WANT_PTR(hr, bag);
+    ASC_WANT_PTR(hr, bag);
     if (FAILED(hr)) goto out;
 
     hr = IPropertyBag_Read(bag, wprop, &prop_var, NULL);
@@ -412,8 +412,8 @@ out:
     VariantClear(&prop_var);
     ASC_FREE(wprop, free);
 
-    SAFE_RELEASE(bag);
-    SAFE_RELEASE(bind_ctx);
+    ASC_RELEASE(bag);
+    ASC_RELEASE(bind_ctx);
 
     return hr;
 }
@@ -426,7 +426,7 @@ bool dshow_pin_connected(IPin *pin)
 
     if (SUCCEEDED(hr))
     {
-        SAFE_RELEASE(remote);
+        ASC_RELEASE(remote);
         return true;
     }
 

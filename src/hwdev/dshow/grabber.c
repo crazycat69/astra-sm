@@ -172,7 +172,7 @@ HRESULT dshow_grabber(sample_callback_t callback, void *arg
     /* create grabber */
     hr = CoCreateInstance(&CLSID_SampleGrabber, NULL, CLSCTX_INPROC_SERVER
                           , &IID_ISampleGrabber, (void **)&grabber);
-    DS_WANT_PTR(hr, grabber);
+    ASC_WANT_PTR(hr, grabber);
     if (FAILED(hr)) goto out;
 
     hr = ISampleGrabber_SetBufferSamples(grabber, FALSE);
@@ -193,11 +193,11 @@ HRESULT dshow_grabber(sample_callback_t callback, void *arg
     /* query filter interface */
     hr = ISampleGrabber_QueryInterface(grabber, &IID_IBaseFilter
                                        , (void **)out);
-    DS_WANT_PTR(hr, *out);
+    ASC_WANT_PTR(hr, *out);
 
 out:
-    SAFE_RELEASE(grabber);
-    SAFE_RELEASE(cb);
+    ASC_RELEASE(grabber);
+    ASC_RELEASE(cb);
 
     return hr;
 }

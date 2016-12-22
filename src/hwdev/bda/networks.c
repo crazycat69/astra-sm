@@ -26,11 +26,11 @@ HRESULT init_space_dvbx(ITuningSpace *space, DVBSystemType type)
     IDVBTuningSpace2 *space_dvb = NULL;
     HRESULT hr = ITuningSpace_QueryInterface(space, &IID_IDVBTuningSpace2
                                              , (void **)&space_dvb);
-    DS_WANT_PTR(hr, space_dvb);
+    ASC_WANT_PTR(hr, space_dvb);
     if (FAILED(hr)) return hr;
 
     hr = IDVBTuningSpace2_put_SystemType(space_dvb, type);
-    SAFE_RELEASE(space_dvb);
+    ASC_RELEASE(space_dvb);
 
     return hr;
 }
@@ -71,7 +71,7 @@ HRESULT init_space_atsc(ITuningSpace *space)
     IATSCTuningSpace *space_atsc = NULL;
     HRESULT hr = ITuningSpace_QueryInterface(space, &IID_IATSCTuningSpace
                                              , (void **)&space_atsc);
-    DS_WANT_PTR(hr, space_atsc);
+    ASC_WANT_PTR(hr, space_atsc);
     if (FAILED(hr)) return hr;
 
     hr = IATSCTuningSpace_put_MaxChannel(space_atsc, 9999);
@@ -91,7 +91,7 @@ HRESULT init_space_atsc(ITuningSpace *space)
 
     hr = IATSCTuningSpace_put_MinPhysicalChannel(space_atsc, 0);
 out:
-    SAFE_RELEASE(space_atsc);
+    ASC_RELEASE(space_atsc);
     return hr;
 }
 
@@ -101,7 +101,7 @@ HRESULT set_space_atsc(const bda_tune_cmd_t *tune, ITuningSpace *space)
     IATSCTuningSpace *space_atsc = NULL;
     HRESULT hr = ITuningSpace_QueryInterface(space, &IID_IATSCTuningSpace
                                              , (void **)&space_atsc);
-    DS_WANT_PTR(hr, space_atsc);
+    ASC_WANT_PTR(hr, space_atsc);
     if (FAILED(hr)) return hr;
 
     hr = IATSCTuningSpace_put_CountryCode(space_atsc, tune->country_code);
@@ -109,7 +109,7 @@ HRESULT set_space_atsc(const bda_tune_cmd_t *tune, ITuningSpace *space)
 
     hr = IATSCTuningSpace_put_InputType(space_atsc, tune->input_type);
 out:
-    SAFE_RELEASE(space_atsc);
+    ASC_RELEASE(space_atsc);
     return hr;
 }
 
@@ -120,7 +120,7 @@ HRESULT set_request_atsc(const bda_tune_cmd_t *tune, ITuneRequest *request)
     HRESULT hr = ITuneRequest_QueryInterface(request
                                              , &IID_IATSCChannelTuneRequest
                                              , (void **)&request_atsc);
-    DS_WANT_PTR(hr, request_atsc);
+    ASC_WANT_PTR(hr, request_atsc);
     if (FAILED(hr)) return hr;
 
     hr = request_atsc->lpVtbl->put_Channel(request_atsc
@@ -130,7 +130,7 @@ HRESULT set_request_atsc(const bda_tune_cmd_t *tune, ITuneRequest *request)
     hr = request_atsc->lpVtbl->put_MinorChannel(request_atsc
                                                 , tune->minor_channel);
 out:
-    SAFE_RELEASE(request_atsc);
+    ASC_RELEASE(request_atsc);
     return hr;
 }
 
@@ -140,12 +140,12 @@ HRESULT set_locator_atsc(const bda_tune_cmd_t *tune, ILocator *locator)
     IATSCLocator *locator_atsc = NULL;
     HRESULT hr = ILocator_QueryInterface(locator, &IID_IATSCLocator
                                          , (void **)&locator_atsc);
-    DS_WANT_PTR(hr, locator_atsc);
+    ASC_WANT_PTR(hr, locator_atsc);
     if (FAILED(hr)) return hr;
 
     hr = IATSCLocator_put_PhysicalChannel(locator_atsc, tune->stream_id);
 
-    SAFE_RELEASE(locator_atsc);
+    ASC_RELEASE(locator_atsc);
     return hr;
 }
 
@@ -177,7 +177,7 @@ HRESULT init_space_cqam(ITuningSpace *space)
     HRESULT hr = ITuningSpace_QueryInterface(space
                                              , &IID_IDigitalCableTuningSpace
                                              , (void **)&space_cqam);
-    DS_WANT_PTR(hr, space_cqam);
+    ASC_WANT_PTR(hr, space_cqam);
     if (FAILED(hr)) return hr;
 
     hr = space_cqam->lpVtbl->put_MaxMajorChannel(space_cqam, 9999);
@@ -194,7 +194,7 @@ HRESULT init_space_cqam(ITuningSpace *space)
 
     hr = init_space_atsc(space); /* delegate to ATSC */
 out:
-    SAFE_RELEASE(space_cqam);
+    ASC_RELEASE(space_cqam);
     return hr;
 }
 
@@ -205,7 +205,7 @@ HRESULT set_request_cqam(const bda_tune_cmd_t *tune, ITuneRequest *request)
     HRESULT hr = ITuneRequest_QueryInterface(request
                                              , &IID_IDigitalCableTuneRequest
                                              , (void **)&request_cqam);
-    DS_WANT_PTR(hr, request_cqam);
+    ASC_WANT_PTR(hr, request_cqam);
     if (FAILED(hr)) return hr;
 
     hr = request_cqam->lpVtbl->put_MajorChannel(request_cqam
@@ -219,7 +219,7 @@ HRESULT set_request_cqam(const bda_tune_cmd_t *tune, ITuneRequest *request)
     hr = request_cqam->lpVtbl->put_Channel(request_cqam
                                            , tune->virtual_channel);
 out:
-    SAFE_RELEASE(request_cqam);
+    ASC_RELEASE(request_cqam);
     return hr;
 }
 
@@ -279,7 +279,7 @@ HRESULT set_space_dvbs(const bda_tune_cmd_t *tune, ITuningSpace *space)
     IDVBSTuningSpace *space_s = NULL;
     HRESULT hr = ITuningSpace_QueryInterface(space, &IID_IDVBSTuningSpace
                                              , (void **)&space_s);
-    DS_WANT_PTR(hr, space_s);
+    ASC_WANT_PTR(hr, space_s);
     if (FAILED(hr)) return hr;
 
     hr = IDVBSTuningSpace_put_LowOscillator(space_s, tune->lof1);
@@ -293,7 +293,7 @@ HRESULT set_space_dvbs(const bda_tune_cmd_t *tune, ITuningSpace *space)
 
     hr = IDVBSTuningSpace_put_SpectralInversion(space_s, tune->inversion);
 out:
-    SAFE_RELEASE(space_s);
+    ASC_RELEASE(space_s);
     return hr;
 }
 
@@ -303,12 +303,12 @@ HRESULT set_locator_dvbs(const bda_tune_cmd_t *tune, ILocator *locator)
     IDVBSLocator *locator_s = NULL;
     HRESULT hr = ILocator_QueryInterface(locator, &IID_IDVBSLocator
                                          , (void **)&locator_s);
-    DS_WANT_PTR(hr, locator_s);
+    ASC_WANT_PTR(hr, locator_s);
     if (FAILED(hr)) return hr;
 
     hr = IDVBSLocator_put_SignalPolarisation(locator_s, tune->polarization);
 
-    SAFE_RELEASE(locator_s);
+    ASC_RELEASE(locator_s);
     return hr;
 }
 
@@ -339,10 +339,10 @@ HRESULT init_locator_dvbs2(ILocator *locator)
     IDVBSLocator2 *locator_s2 = NULL;
     HRESULT hr = ILocator_QueryInterface(locator, &IID_IDVBSLocator2
                                          , (void **)&locator_s2);
-    DS_WANT_PTR(hr, locator_s2);
+    ASC_WANT_PTR(hr, locator_s2);
     if (FAILED(hr)) return hr;
 
-    SAFE_RELEASE(locator_s2);
+    ASC_RELEASE(locator_s2);
     return S_OK;
 }
 
@@ -352,7 +352,7 @@ HRESULT set_locator_dvbs2(const bda_tune_cmd_t *tune, ILocator *locator)
     IDVBSLocator2 *locator_s2 = NULL;
     HRESULT hr = ILocator_QueryInterface(locator, &IID_IDVBSLocator2
                                          , (void **)&locator_s2);
-    DS_WANT_PTR(hr, locator_s2);
+    ASC_WANT_PTR(hr, locator_s2);
     if (FAILED(hr)) return hr;
 
     hr = IDVBSLocator2_put_SignalPilot(locator_s2, tune->pilot);
@@ -363,7 +363,7 @@ HRESULT set_locator_dvbs2(const bda_tune_cmd_t *tune, ILocator *locator)
 
     hr = set_locator_dvbs(tune, locator); /* delegate to DVB-S */
 out:
-    SAFE_RELEASE(locator_s2);
+    ASC_RELEASE(locator_s2);
     return hr;
 }
 
@@ -400,7 +400,7 @@ HRESULT set_locator_dvbt(const bda_tune_cmd_t *tune, ILocator *locator)
     IDVBTLocator *locator_t = NULL;
     HRESULT hr = ILocator_QueryInterface(locator, &IID_IDVBTLocator
                                          , (void **)&locator_t);
-    DS_WANT_PTR(hr, locator_t);
+    ASC_WANT_PTR(hr, locator_t);
     if (FAILED(hr)) return hr;
 
     hr = IDVBTLocator_put_Bandwidth(locator_t, tune->bandwidth);
@@ -420,7 +420,7 @@ HRESULT set_locator_dvbt(const bda_tune_cmd_t *tune, ILocator *locator)
 
     hr = IDVBTLocator_put_Mode(locator_t, tune->transmitmode);
 out:
-    SAFE_RELEASE(locator_t);
+    ASC_RELEASE(locator_t);
     return hr;
 }
 
@@ -449,7 +449,7 @@ HRESULT set_locator_dvbt2(const bda_tune_cmd_t *tune, ILocator *locator)
     IDVBTLocator2 *locator_t2 = NULL;
     HRESULT hr = ILocator_QueryInterface(locator, &IID_IDVBTLocator2
                                          , (void **)&locator_t2);
-    DS_WANT_PTR(hr, locator_t2);
+    ASC_WANT_PTR(hr, locator_t2);
     if (FAILED(hr)) return hr;
 
     hr = IDVBTLocator2_put_PhysicalLayerPipeId(locator_t2, tune->stream_id);
@@ -457,7 +457,7 @@ HRESULT set_locator_dvbt2(const bda_tune_cmd_t *tune, ILocator *locator)
 
     hr = set_locator_dvbt(tune, locator); /* delegate to DVB-T */
 out:
-    SAFE_RELEASE(locator_t2);
+    ASC_RELEASE(locator_t2);
     return hr;
 }
 
@@ -559,14 +559,14 @@ HRESULT bda_net_provider(const bda_network_t *net, IBaseFilter **out)
     /* try the universal provider first (available since Windows 7) */
     hr = CoCreateInstance(&CLSID_NetworkProvider, NULL, CLSCTX_INPROC_SERVER
                           , &IID_IBaseFilter, (void **)out);
-    DS_WANT_PTR(hr, *out);
+    ASC_WANT_PTR(hr, *out);
 
     if (FAILED(hr) && net->provider != NULL)
     {
         /* fall back to legacy provider if the network type supports it */
         hr = CoCreateInstance(net->provider, NULL, CLSCTX_INPROC_SERVER
                               , &IID_IBaseFilter, (void **)out);
-        DS_WANT_PTR(hr, *out);
+        ASC_WANT_PTR(hr, *out);
     }
 
     return hr;
@@ -600,7 +600,7 @@ HRESULT bda_tuning_space(const bda_network_t *net, ITuningSpace **out)
     /* create default locator */
     hr = CoCreateInstance(net->locator, NULL, CLSCTX_INPROC_SERVER
                           , &IID_ILocator, (void **)&locator);
-    DS_WANT_PTR(hr, locator);
+    ASC_WANT_PTR(hr, locator);
     if (FAILED(hr)) goto out;
 
     if (net->init_default_locator != NULL)
@@ -612,7 +612,7 @@ HRESULT bda_tuning_space(const bda_network_t *net, ITuningSpace **out)
     /* set up tuning space */
     hr = CoCreateInstance(net->tuning_space, NULL, CLSCTX_INPROC_SERVER
                           , &IID_ITuningSpace, (void **)&space);
-    DS_WANT_PTR(hr, space);
+    ASC_WANT_PTR(hr, space);
     if (FAILED(hr)) goto out;
 
     hr = ITuningSpace_put__NetworkType(space, net->network_type);
@@ -637,8 +637,8 @@ HRESULT bda_tuning_space(const bda_network_t *net, ITuningSpace **out)
     *out = space;
 
 out:
-    SAFE_RELEASE(space);
-    SAFE_RELEASE(locator);
+    ASC_RELEASE(space);
+    ASC_RELEASE(locator);
 
     ASC_FREE(name, SysFreeString);
 
@@ -671,7 +671,7 @@ HRESULT bda_tune_request(const bda_tune_cmd_t *tune, ITuneRequest **out)
 
     /* create tune request */
     hr = ITuningSpace_CreateTuneRequest(space, &request);
-    DS_WANT_PTR(hr, request);
+    ASC_WANT_PTR(hr, request);
     if (FAILED(hr)) goto out;
 
     if (tune->net->set_request != NULL)
@@ -682,7 +682,7 @@ HRESULT bda_tune_request(const bda_tune_cmd_t *tune, ITuneRequest **out)
 
     /* set up locator */
     hr = ITuningSpace_get_DefaultLocator(space, &locator);
-    DS_WANT_PTR(hr, locator);
+    ASC_WANT_PTR(hr, locator);
     if (FAILED(hr)) goto out;
 
     hr = set_locator_generic(tune, locator);
@@ -702,9 +702,9 @@ HRESULT bda_tune_request(const bda_tune_cmd_t *tune, ITuneRequest **out)
     *out = request;
 
 out:
-    SAFE_RELEASE(locator);
-    SAFE_RELEASE(request);
-    SAFE_RELEASE(space);
+    ASC_RELEASE(locator);
+    ASC_RELEASE(request);
+    ASC_RELEASE(space);
 
     return hr;
 }

@@ -75,7 +75,7 @@ void dump_space(ITuningSpace *space)
             BDA_DUMP("  IATSCTuningSpace::MinPhysicalChannel = %ld", l);
     }
 
-    SAFE_RELEASE(space_atsc);
+    ASC_RELEASE(space_atsc);
 
     /* IAnalogTVTuningSpace */
     IAnalogTVTuningSpace *space_analog = NULL;
@@ -108,7 +108,7 @@ void dump_space(ITuningSpace *space)
             BDA_DUMP("  IAnalogTVTuningSpace::MinChannel = %ld", l);
     }
 
-    SAFE_RELEASE(space_analog);
+    ASC_RELEASE(space_analog);
 
     /* IDigitalCableTuningSpace */
     IDigitalCableTuningSpace *space_cqam = NULL;
@@ -140,7 +140,7 @@ void dump_space(ITuningSpace *space)
             BDA_DUMP("  IDigitalCableTuningSpace::MinSourceID = %ld", l);
     }
 
-    SAFE_RELEASE(space_cqam);
+    ASC_RELEASE(space_cqam);
 
     /* IDVBSTuningSpace */
     IDVBSTuningSpace *space_dvbs = NULL;
@@ -185,7 +185,7 @@ void dump_space(ITuningSpace *space)
             BDA_DUMP("  IDVBSTuningSpace::SpectralInversion = %d", si);
     }
 
-    SAFE_RELEASE(space_dvbs);
+    ASC_RELEASE(space_dvbs);
 
     /* IDVBTuningSpace */
     IDVBTuningSpace *space_dvb = NULL;
@@ -203,7 +203,7 @@ void dump_space(ITuningSpace *space)
             BDA_DUMP("  IDVBTuningSpace::SystemType = %d", st);
     }
 
-    SAFE_RELEASE(space_dvb);
+    ASC_RELEASE(space_dvb);
 
     /* IDVBTuningSpace2 */
     IDVBTuningSpace2 *space_dvb2 = NULL;
@@ -220,7 +220,7 @@ void dump_space(ITuningSpace *space)
             BDA_DUMP("  IDVBTuningSpace2::NetworkID = %ld", l);
     }
 
-    SAFE_RELEASE(space_dvb2);
+    ASC_RELEASE(space_dvb2);
 }
 
 /* dump ILocator properties */
@@ -289,7 +289,7 @@ void dump_locator(ILocator *locator)
             BDA_DUMP("  IATSCLocator2::ProgramNumber = %ld", l);
     }
 
-    SAFE_RELEASE(locator_atsc2);
+    ASC_RELEASE(locator_atsc2);
 
     /* IATSCLocator */
     IATSCLocator *locator_atsc = NULL;
@@ -311,7 +311,7 @@ void dump_locator(ILocator *locator)
             BDA_DUMP("  IATSCLocator::TSID = %ld", l);
     }
 
-    SAFE_RELEASE(locator_atsc);
+    ASC_RELEASE(locator_atsc);
 
     /* IDVBSLocator */
     IDVBSLocator *locator_dvbs = NULL;
@@ -351,7 +351,7 @@ void dump_locator(ILocator *locator)
             BDA_DUMP("  IDVBSLocator::WestPosition = %d", west);
     }
 
-    SAFE_RELEASE(locator_dvbs);
+    ASC_RELEASE(locator_dvbs);
 
     /* IDVBSLocator2 */
     IDVBSLocator2 *locator_dvbs2 = NULL;
@@ -410,7 +410,7 @@ void dump_locator(ILocator *locator)
             BDA_DUMP("  IDVBSLocator2::SignalRollOff = %d", sr);
     }
 
-    SAFE_RELEASE(locator_dvbs2);
+    ASC_RELEASE(locator_dvbs2);
 
     /* IDVBTLocator */
     IDVBTLocator *locator_dvbt = NULL;
@@ -464,7 +464,7 @@ void dump_locator(ILocator *locator)
             BDA_DUMP("  IDVBTLocator::OtherFrequencyInUse = %d", oth);
     }
 
-    SAFE_RELEASE(locator_dvbt);
+    ASC_RELEASE(locator_dvbt);
 
     /* IDVBTLocator2 */
     IDVBTLocator2 *locator_dvbt2 = NULL;
@@ -481,7 +481,7 @@ void dump_locator(ILocator *locator)
             BDA_DUMP("  IDVBTLocator2::PhysicalLayerPipeId = %ld", l);
     }
 
-    SAFE_RELEASE(locator_dvbt2);
+    ASC_RELEASE(locator_dvbt2);
 }
 
 /* dump ITuneRequest properties */
@@ -506,7 +506,7 @@ void dump_request(ITuneRequest *request)
             BDA_DUMP("  IATSCChannelTuneRequest::MinorChannel = %ld", l);
     }
 
-    SAFE_RELEASE(request_atsc);
+    ASC_RELEASE(request_atsc);
 
     /* IChannelTuneRequest */
     IChannelTuneRequest *request_ch = NULL;
@@ -523,7 +523,7 @@ void dump_request(ITuneRequest *request)
             BDA_DUMP("  IChannelTuneRequest::Channel = %ld", l);
     }
 
-    SAFE_RELEASE(request_ch);
+    ASC_RELEASE(request_ch);
 
     /* IDigitalCableTuneRequest */
     IDigitalCableTuneRequest *request_cqam = NULL;
@@ -545,7 +545,7 @@ void dump_request(ITuneRequest *request)
             BDA_DUMP("  IDigitalCableTuneRequest::SourceID = %ld", l);
     }
 
-    SAFE_RELEASE(request_cqam);
+    ASC_RELEASE(request_cqam);
 
     /* IDVBTuneRequest */
     IDVBTuneRequest *request_dvb = NULL;
@@ -572,7 +572,7 @@ void dump_request(ITuneRequest *request)
             BDA_DUMP("  IDVBTuneRequest::TSID = %ld", l);
     }
 
-    SAFE_RELEASE(request_dvb);
+    ASC_RELEASE(request_dvb);
 }
 
 /* dump tune request */
@@ -591,7 +591,7 @@ void bda_dump_request(ITuneRequest *request)
     if (SUCCEEDED(hr) && space != NULL)
         dump_space(space);
 
-    SAFE_RELEASE(space);
+    ASC_RELEASE(space);
 
     /* ILocator */
     ILocator *locator = NULL;
@@ -599,7 +599,7 @@ void bda_dump_request(ITuneRequest *request)
     if (SUCCEEDED(hr) && locator != NULL)
         dump_locator(locator);
 
-    SAFE_RELEASE(locator);
+    ASC_RELEASE(locator);
 
     /* ITuneRequest */
     dump_request(request);
