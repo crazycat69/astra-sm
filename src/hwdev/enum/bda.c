@@ -198,6 +198,7 @@ out:
 }
 
 /* return a Lua table containing a list of installed tuners */
+static
 int bda_enumerate(lua_State *L)
 {
     HRESULT hr = E_FAIL;

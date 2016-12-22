@@ -22,7 +22,10 @@
 #define MSG(_msg) "[dvb_input %s] " _msg, mod->name
 
 /* device reopen timeout, seconds */
-#define ERROR_CD_TICKS 10
+#define BDA_REINIT_TICKS 10
+
+/* buffer dequeue threshold, packets */
+#define BDA_BUFFER_THRESH 10
 
 /*
  * error handling (a.k.a. the joys of working with COM in plain C)
@@ -1107,15 +1110,6 @@ HRESULT graph_setup(module_data_t *mod)
                 BDA_ERROR("failed to load joined PID list into PID mapper");
         }
 
-        // -------
-        // TODO
-        // -------
-        // - samplegrabber with callbacks
-        //   - how to handle buffering?
-        //     - buffer in callback is not necessarily aligned on
-        //       TS packet boundary
-        // -------
-
         // TODO: call bda_ext_init()
         //       probe extensions on source/demod/capture
         //       CAM, diseq, etc
@@ -1191,31 +1185,49 @@ void graph_teardown(module_data_t *mod)
     control_stop(mod->graph);
 
     // TODO: bda_ext_destroy()
-    rot_unregister(&mod->rot_reg);
-    remove_filters(mod, mod->graph);
+    //       vendor extension deinit
 
     SAFE_RELEASE(mod->signal);
     SAFE_RELEASE(mod->pidmap);
     SAFE_RELEASE(mod->provider);
     SAFE_RELEASE(mod->event);
+
+    remove_filters(mod, mod->graph);
+    rot_unregister(&mod->rot_reg);
     SAFE_RELEASE(mod->graph);
 
     mod->graph_evt = NULL;
     mod->cooldown = 0;
     signal_stats_set(mod, NULL);
 
+    mod->frag_pos = 0;
+
     CoUninitialize();
 }
 
 /*
- * TS buffering
+ * TS buffering and frame alignment
+ *
+ * NOTE: these are run by a "data" thread, managed internally by the OS.
  */
 
-// TODO: on_pat, on_pmt for CAM
-//       ! if mod->extension_flags & BDA_EXTENSION_CA
-//       called from on_sample via mpegts_psi_t
-//       on_pmt queues CA user cmd w/pid list to control thread
-//       ctl thread talks to CAM via vendor extension
+/* push single packet to ring buffer */
+static
+void buffer_push(module_data_t *mod, const uint8_t *ts)
+{
+    const size_t next = (mod->buf.head + 1) % mod->buf.size;
+
+    if (next == mod->buf.tail)
+    {
+        asc_log_debug(MSG("buffer is full, dropping packet"));
+        return;
+    }
+
+    memcpy(mod->buf.data[next], ts, TS_PACKET_SIZE);
+    mod->buf.head = next;
+
+    mod->buf.pending++;
+}
 
 /* called by the probe filter when it has media samples */
 static
@@ -1223,12 +1235,64 @@ void on_sample(void *arg, const uint8_t *buf, size_t len)
 {
     module_data_t *const mod = (module_data_t *)arg;
 
-    /* TODO: implement buffering */
-    __uarg(mod);
-    __uarg(buf);
-    __uarg(len);
+    asc_mutex_lock(&mod->buf.lock);
 
-    /* NOTE: this callback is NOT run by the control thread! */
+    /* reunite packet head and tail */
+    if (mod->frag_pos > 0)
+    {
+        size_t more = TS_PACKET_SIZE - mod->frag_pos;
+        if (len < more)
+            more = len;
+
+        memcpy(&mod->frag[mod->frag_pos], buf, more);
+        mod->frag_pos += more;
+
+        if (mod->frag_pos >= TS_PACKET_SIZE)
+        {
+            if (TS_IS_SYNC(mod->frag))
+                buffer_push(mod, mod->frag);
+
+            mod->frag_pos = 0;
+        }
+
+        buf += more;
+        len -= more;
+    }
+
+    /* push full packets */
+    while (len >= TS_PACKET_SIZE)
+    {
+        if (TS_IS_SYNC(buf))
+        {
+            buffer_push(mod, buf);
+
+            buf += TS_PACKET_SIZE;
+            len -= TS_PACKET_SIZE;
+        }
+        else
+        {
+            buf++;
+            len--;
+        }
+    }
+
+    asc_mutex_unlock(&mod->buf.lock);
+
+    /* put remainder into frag storage */
+    if (len > 0)
+    {
+        memcpy(mod->frag, buf, len);
+        mod->frag_pos = len;
+    }
+
+    /* ask main thread to dequeue */
+    if (mod->buf.pending >= BDA_BUFFER_THRESH)
+    {
+        asc_job_queue(mod, bda_buffer_pop, mod);
+        asc_wake();
+
+        mod->buf.pending = 0;
+    }
 }
 
 /*
@@ -1457,8 +1521,8 @@ void set_state(module_data_t *mod, bda_state_t state)
     if (state == BDA_STATE_ERROR)
     {
         /* NOTE: when in an error state, CD timer counts down to reinit */
-        asc_log_info(MSG("reopening device in %u seconds"), ERROR_CD_TICKS);
-        mod->cooldown = ERROR_CD_TICKS;
+        asc_log_info(MSG("reopening device in %u seconds"), BDA_REINIT_TICKS);
+        mod->cooldown = BDA_REINIT_TICKS;
     }
 }
 

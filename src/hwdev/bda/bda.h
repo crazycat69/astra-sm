@@ -148,6 +148,8 @@ HRESULT bda_net_provider(const bda_network_t *net, IBaseFilter **out);
 HRESULT bda_tuning_space(const bda_network_t *net, ITuningSpace **out);
 HRESULT bda_tune_request(const bda_tune_cmd_t *cmd, ITuneRequest **out);
 
+void bda_dump_request(ITuneRequest *request);
+
 /*
  * BDA graph
  */
@@ -206,16 +208,22 @@ struct module_data_t
     HANDLE queue_evt;
 
     /* TS ring buffer */
-    ts_packet_t *buf;
-    asc_mutex_t buf_lock;
-    uint32_t buf_size;
-    uint32_t buf_head;
-    uint32_t buf_tail;
+    struct {
+        ts_packet_t *data;
+        asc_mutex_t lock;
+        size_t size;
+
+        size_t head;
+        size_t claim;
+        size_t tail;
+
+        unsigned int pending;
+    } buf;
 
     uint8_t frag[TS_PACKET_SIZE];
-    unsigned int frag_pos;
+    size_t frag_pos;
 
-    /* state and tuning data */
+    /* module state and tuning data */
     bda_tune_cmd_t tune;
     bool joined_pids[TS_MAX_PID];
     bool ca_pmts[TS_MAX_PNR];
@@ -240,8 +248,7 @@ struct module_data_t
 };
 
 void bda_graph_loop(void *arg);
-void bda_dump_request(ITuneRequest *request);
-void bda_on_buffer(void *arg);
-int bda_enumerate(lua_State *L);
+
+void bda_buffer_pop(void *arg);
 
 #endif /* _HWDEV_BDA_H_ */

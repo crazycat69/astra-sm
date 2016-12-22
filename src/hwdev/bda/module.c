@@ -163,13 +163,30 @@ void on_thread_close(void *arg)
     asc_log_error(MSG("BUG: BDA thread exited on its own"));
 }
 
-/* buffer callback */
-void bda_on_buffer(void *arg)
+/* called when there's packets queued in the ring buffer */
+void bda_buffer_pop(void *arg)
 {
-    const module_data_t *const mod = (module_data_t *)arg;
+    module_data_t *const mod = (module_data_t *)arg;
+    size_t tail, claim;
 
-    /* TODO */
-    __uarg(mod);
+    asc_mutex_lock(&mod->buf.lock);
+    tail = mod->buf.tail = mod->buf.claim;
+    claim = mod->buf.claim = mod->buf.head;
+    asc_mutex_unlock(&mod->buf.lock);
+
+    /* dequeue claimed packets */
+    for (size_t i = tail; i != claim; i++, i %= mod->buf.size)
+    {
+        /*
+         * TODO: parse PAT and PMTs for hardware CAMs.
+         *
+         *       on_pat(): list programs and create PSI objects for req'd PNRs
+         *       on_pmt(): send pid list to ctl thread via CA user command
+         *
+         *       Control thread then talks to CAM via vendor extension.
+         */
+        module_stream_send(mod, mod->buf.data[i]);
+    }
 }
 
 /*
@@ -753,7 +770,7 @@ void module_init(lua_State *L, module_data_t *mod)
     mod->idx_callback = LUA_REFNIL;
 
     /* create command queue */
-    asc_mutex_init(&mod->buf_lock);
+    asc_mutex_init(&mod->buf.lock);
     asc_mutex_init(&mod->signal_lock);
     asc_mutex_init(&mod->queue_lock);
     mod->queue = asc_list_init();
@@ -806,10 +823,10 @@ void module_init(lua_State *L, module_data_t *mod)
     if (mod->buffer_size < 1 || mod->buffer_size > 1024)
         luaL_error(L, MSG("buffer size out of range"));
 
-    mod->buf_size = (mod->buffer_size * 1024UL * 1024UL) / TS_PACKET_SIZE;
-    asc_assert(mod->buf_size > 0, MSG("invalid buffer size"));
+    mod->buf.size = (mod->buffer_size * 1024UL * 1024UL) / TS_PACKET_SIZE;
+    asc_assert(mod->buf.size > 0, MSG("invalid buffer size"));
 
-    mod->buf = ASC_ALLOC(mod->buf_size, ts_packet_t);
+    mod->buf.data = ASC_ALLOC(mod->buf.size, ts_packet_t);
 
     /* miscellaneous options */
     module_option_boolean(L, "budget", &mod->budget);
@@ -867,13 +884,13 @@ void module_destroy(module_data_t *mod)
     asc_wake_close();
     asc_job_prune(mod);
 
-    ASC_FREE(mod->buf, free);
+    ASC_FREE(mod->buf.data, free);
     ASC_FREE(mod->status_timer, asc_timer_destroy);
     ASC_FREE(mod->queue_evt, CloseHandle);
 
     asc_mutex_destroy(&mod->queue_lock);
     asc_mutex_destroy(&mod->signal_lock);
-    asc_mutex_destroy(&mod->buf_lock);
+    asc_mutex_destroy(&mod->buf.lock);
 
     module_stream_destroy(mod);
 }
