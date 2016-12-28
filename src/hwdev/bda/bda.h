@@ -218,6 +218,7 @@ struct module_data_t
         size_t tail;
 
         unsigned int pending;
+        unsigned int dropped;
     } buf;
 
     uint8_t frag[TS_PACKET_SIZE];

@@ -167,12 +167,21 @@ void on_thread_close(void *arg)
 void bda_buffer_pop(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
-    size_t tail, claim;
 
     asc_mutex_lock(&mod->buf.lock);
-    tail = mod->buf.tail = mod->buf.claim;
-    claim = mod->buf.claim = mod->buf.head;
+
+    const size_t tail = mod->buf.tail = mod->buf.claim;
+    const size_t claim = mod->buf.claim = mod->buf.head;
+    const unsigned int dropped = mod->buf.dropped;
+    mod->buf.dropped = 0;
+
     asc_mutex_unlock(&mod->buf.lock);
+
+    if (dropped > 0)
+    {
+        asc_log_error(MSG("dropped %u packets due to buffer overflow")
+                      , dropped);
+    }
 
     /* dequeue claimed packets */
     for (size_t i = tail; i != claim; i++, i %= mod->buf.size)

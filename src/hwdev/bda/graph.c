@@ -1215,18 +1215,17 @@ void graph_teardown(module_data_t *mod)
 static
 void buffer_push(module_data_t *mod, const uint8_t *ts)
 {
-    const size_t next = (mod->buf.head + 1) % mod->buf.size;
+    mod->buf.pending++;
 
+    const size_t next = (mod->buf.head + 1) % mod->buf.size;
     if (next == mod->buf.tail)
     {
-        asc_log_debug(MSG("buffer is full, dropping packet"));
+        mod->buf.dropped++;
         return;
     }
 
     memcpy(mod->buf.data[next], ts, TS_PACKET_SIZE);
     mod->buf.head = next;
-
-    mod->buf.pending++;
 }
 
 /* called by the probe filter when it has media samples */
