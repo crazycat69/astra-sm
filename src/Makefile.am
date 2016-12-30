@@ -274,6 +274,7 @@ libstream_la_SOURCES += \
     hwdev/bda/graph.c \
     hwdev/bda/module.c \
     hwdev/bda/networks.c \
+    hwdev/bda/vendor.c \
     hwdev/dshow/dshow.c \
     hwdev/dshow/dshow.h \
     hwdev/dshow/grabber.c \

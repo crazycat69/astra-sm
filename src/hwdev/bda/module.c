@@ -100,8 +100,6 @@
 
 #include "bda.h"
 
-#define MSG(_msg) "[dvb_input %s] " _msg, mod->name
-
 /* default buffer size, MiB */
 #define BDA_BUFFER_SIZE 4
 
@@ -783,6 +781,7 @@ void module_init(lua_State *L, module_data_t *mod)
     asc_mutex_init(&mod->signal_lock);
     asc_mutex_init(&mod->queue_lock);
     mod->queue = asc_list_init();
+    mod->extensions = asc_list_init();
 
     asc_wake_open();
 
@@ -884,9 +883,23 @@ void module_destroy(module_data_t *mod)
         mod->idx_callback = LUA_REFNIL;
     }
 
+    if (mod->extensions != NULL)
+    {
+        asc_list_clear(mod->extensions)
+        {
+            asc_log_warning(MSG("BUG: expected extension list to be empty"));
+        }
+
+        asc_list_destroy(mod->extensions);
+    }
+
     if (mod->queue != NULL)
     {
-        asc_list_clear(mod->queue);
+        asc_list_clear(mod->queue)
+        {
+            asc_log_warning(MSG("BUG: expected command queue to be empty"));
+        }
+
         asc_list_destroy(mod->queue);
     }
 

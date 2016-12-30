@@ -606,3 +606,33 @@ void bda_dump_request(ITuneRequest *request)
 
     BDA_DUMP("end tune request dump");
 }
+
+/* log formatted error message */
+void bda_log_hr(const module_data_t *mod, HRESULT hr, asc_log_type_t level
+                , const char *msg, ...)
+{
+    char fmt[2048] = { '\0' };
+    int ret = 0;
+
+    /* cook up a format string */
+    if (SUCCEEDED(hr))
+    {
+        /* success codes won't format properly, nor is there a need */
+        ret = snprintf(fmt, sizeof(fmt), MSG("%s"), msg);
+    }
+    else
+    {
+        /* append formatted HRESULT to error message */
+        char *const err = dshow_error_msg(hr);
+        ret = snprintf(fmt, sizeof(fmt), MSG("%s: %s"), msg, err);
+        free(err);
+    }
+
+    if (ret > 0)
+    {
+        va_list ap;
+        va_start(ap, msg);
+        asc_log_va(level, fmt, ap);
+        va_end(ap);
+    }
+}

@@ -19,87 +19,11 @@
 
 #include "bda.h"
 
-#define MSG(_msg) "[dvb_input %s] " _msg, mod->name
-
 /* device reopen timeout, seconds */
 #define BDA_REINIT_TICKS 10
 
 /* buffer dequeue threshold, packets */
 #define BDA_BUFFER_THRESH 10
-
-/*
- * error handling (a.k.a. the joys of working with COM in plain C)
- */
-
-/* logging voodoo */
-static __fmt_printf(4, 5)
-void log_hr(const module_data_t *mod, HRESULT hr
-            , asc_log_type_t level, const char *msg, ...)
-{
-    char fmt[2048] = { '\0' };
-    int ret = 0;
-
-    /* cook up a format string */
-    if (SUCCEEDED(hr))
-    {
-        /* success codes won't format properly, nor is there a need */
-        ret = snprintf(fmt, sizeof(fmt), MSG("%s"), msg);
-    }
-    else
-    {
-        /* append formatted HRESULT to error message */
-        char *const err = dshow_error_msg(hr);
-        ret = snprintf(fmt, sizeof(fmt), MSG("%s: %s"), msg, err);
-        free(err);
-    }
-
-    if (ret > 0)
-    {
-        va_list ap;
-        va_start(ap, msg);
-        asc_log_va(level, fmt, ap);
-        va_end(ap);
-    }
-}
-
-/* log formatted error message */
-#define __BDA_LOG(_level, ...) \
-    do { log_hr(mod, hr, _level, __VA_ARGS__); } while (0)
-
-#define BDA_ERROR(...) __BDA_LOG(ASC_LOG_ERROR, __VA_ARGS__)
-#define BDA_DEBUG(...) __BDA_LOG(ASC_LOG_DEBUG, __VA_ARGS__)
-
-/* go to cleanup, unconditionally */
-#define __BDA_THROW(_level, ...) \
-    do { \
-        __BDA_LOG(_level, __VA_ARGS__); \
-        if (SUCCEEDED(hr)) \
-            hr = E_FAIL; \
-        goto out; \
-    } while (0)
-
-#define BDA_THROW(...) __BDA_THROW(ASC_LOG_ERROR, __VA_ARGS__)
-#define BDA_THROW_D(...) __BDA_THROW(ASC_LOG_DEBUG, __VA_ARGS__)
-
-/* go to cleanup if HRESULT indicates failure */
-#define __BDA_CKHR(_level, ...) \
-    do { \
-        if (FAILED(hr)) \
-            __BDA_THROW(_level, __VA_ARGS__); \
-    } while (0)
-
-#define BDA_CKHR(...) __BDA_CKHR(ASC_LOG_ERROR, __VA_ARGS__)
-#define BDA_CKHR_D(...) __BDA_CKHR(ASC_LOG_DEBUG, __VA_ARGS__)
-
-/* go to cleanup if a NULL pointer is detected */
-#define __BDA_CKPTR(_level, _ptr, ...) \
-    do { \
-        ASC_WANT_PTR(hr, _ptr); \
-        __BDA_CKHR(_level, __VA_ARGS__); \
-    } while (0)
-
-#define BDA_CKPTR(_ptr, ...) __BDA_CKPTR(ASC_LOG_ERROR, _ptr, __VA_ARGS__)
-#define BDA_CKPTR_D(_ptr, ...) __BDA_CKPTR(ASC_LOG_DEBUG, _ptr, __VA_ARGS__)
 
 /*
  * helper functions for working with the graph
@@ -804,6 +728,10 @@ HRESULT restore_pids(const module_data_t *mod, IMPEG2PIDMap *pidmap)
     return hr;
 }
 
+// TODO: restore_diseqc()
+
+// TODO: restore_ca()
+
 /* remove all filters from the graph */
 static
 HRESULT remove_filters(const module_data_t *mod, IFilterGraph2 *graph)
@@ -1110,11 +1038,25 @@ HRESULT graph_setup(module_data_t *mod)
                 BDA_ERROR("failed to load joined PID list into PID mapper");
         }
 
-        // TODO: call bda_ext_init()
-        //       probe extensions on source/demod/capture
-        //       CAM, diseq, etc
+        /* scan for vendor-specific BDA extensions */
+        IBaseFilter *flt_list[4];
+        flt_list[0] = source;
+        flt_list[1] = capture;
+        flt_list[2] = demod;
+        flt_list[3] = NULL;
 
-        // TODO: call bda_ext_tune()
+        hr = bda_ext_init(mod, flt_list);
+        if (FAILED(hr))
+            BDA_ERROR("error while probing for vendor extensions");
+
+        hr = bda_ext_tune(mod, &mod->tune);
+        if (FAILED(hr))
+            BDA_ERROR("error while sending extension-specific tuning data");
+
+        // TODO: send stored diseqc sequence
+        // TODO: restore CA pid state
+        //
+        // XXX: do it after control_run() ?
 
         /* start the graph */
         hr = control_run(mod, graph);
@@ -1156,9 +1098,9 @@ HRESULT graph_setup(module_data_t *mod)
 out:
     if (need_uninit)
     {
-        // TODO: bda_ext_destroy()
-        rot_unregister(&mod->rot_reg);
+        bda_ext_destroy(mod);
         remove_filters(mod, graph);
+        rot_unregister(&mod->rot_reg);
     }
 
     ASC_RELEASE(pidmap);
@@ -1183,9 +1125,7 @@ static
 void graph_teardown(module_data_t *mod)
 {
     control_stop(mod->graph);
-
-    // TODO: bda_ext_destroy()
-    //       vendor extension deinit
+    bda_ext_destroy(mod);
 
     ASC_RELEASE(mod->signal);
     ASC_RELEASE(mod->pidmap);
@@ -1316,8 +1256,9 @@ HRESULT restart_tuning(module_data_t *mod)
     BDA_CKHR_D("couldn't configure provider with tuning data");
 
     // XXX: do we need to rejoin PIDs and reissue diseqc cmds?
-
-    // TODO: call bda_ext_tune()
+    hr = bda_ext_tune(mod, &mod->tune);
+    if (FAILED(hr))
+        BDA_ERROR("error while sending extension-specific tuning data");
 
     hr = control_run(mod, mod->graph);
     BDA_CKHR_D("couldn't restart the graph");

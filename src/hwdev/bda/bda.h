@@ -31,6 +31,8 @@
 #include "../dshow/dshow.h"
 #include <tuner.h>
 
+#define MSG(_msg) "[dvb_input %s] " _msg, mod->name
+
 /*
  * user commands for controlling the tuner
  */
@@ -148,7 +150,37 @@ HRESULT bda_net_provider(const bda_network_t *net, IBaseFilter **out);
 HRESULT bda_tuning_space(const bda_network_t *net, ITuningSpace **out);
 HRESULT bda_tune_request(const bda_tune_cmd_t *cmd, ITuneRequest **out);
 
-void bda_dump_request(ITuneRequest *request);
+/*
+ * vendor extensions
+ */
+
+typedef enum
+{
+    BDA_EXTENSION_DISEQC    = 0x00000001,
+    // XXX: add separate flag for toneburst?
+    BDA_EXTENSION_CA        = 0x00000002,
+} bda_extension_type_t;
+
+typedef struct
+{
+    const char *name;
+    const char *description;
+    bda_extension_type_t type;
+
+    HRESULT (*init)(IBaseFilter *[], void **);
+    void (*destroy)(void *);
+
+    HRESULT (*tune)(void *, const bda_tune_cmd_t *);
+    HRESULT (*diseqc)(void *, const uint8_t[6]); // XXX: kill magic number
+
+    void *data;
+} bda_extension_t;
+
+HRESULT bda_ext_init(module_data_t *mod, IBaseFilter *filters[]);
+void bda_ext_destroy(module_data_t *mod);
+
+HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune);
+HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t cmd[6]);
 
 /*
  * BDA graph
@@ -246,10 +278,61 @@ struct module_data_t
 
     HANDLE graph_evt;
     DWORD rot_reg;
+
+    /* vendor extensions */
+    asc_list_t *extensions;
+    uint32_t ext_flags;
 };
 
 void bda_graph_loop(void *arg);
 
 void bda_buffer_pop(void *arg);
+
+/*
+ * error handling (a.k.a. the joys of working with COM in plain C)
+ */
+
+/* log formatted error message */
+#define __BDA_LOG(_level, ...) \
+    do { bda_log_hr(mod, hr, _level, __VA_ARGS__); } while (0)
+
+#define BDA_ERROR(...) __BDA_LOG(ASC_LOG_ERROR, __VA_ARGS__)
+#define BDA_DEBUG(...) __BDA_LOG(ASC_LOG_DEBUG, __VA_ARGS__)
+
+/* go to cleanup, unconditionally */
+#define __BDA_THROW(_level, ...) \
+    do { \
+        __BDA_LOG(_level, __VA_ARGS__); \
+        if (SUCCEEDED(hr)) \
+            hr = E_FAIL; \
+        goto out; \
+    } while (0)
+
+#define BDA_THROW(...) __BDA_THROW(ASC_LOG_ERROR, __VA_ARGS__)
+#define BDA_THROW_D(...) __BDA_THROW(ASC_LOG_DEBUG, __VA_ARGS__)
+
+/* go to cleanup if HRESULT indicates failure */
+#define __BDA_CKHR(_level, ...) \
+    do { \
+        if (FAILED(hr)) \
+            __BDA_THROW(_level, __VA_ARGS__); \
+    } while (0)
+
+#define BDA_CKHR(...) __BDA_CKHR(ASC_LOG_ERROR, __VA_ARGS__)
+#define BDA_CKHR_D(...) __BDA_CKHR(ASC_LOG_DEBUG, __VA_ARGS__)
+
+/* go to cleanup if a NULL pointer is detected */
+#define __BDA_CKPTR(_level, _ptr, ...) \
+    do { \
+        ASC_WANT_PTR(hr, _ptr); \
+        __BDA_CKHR(_level, __VA_ARGS__); \
+    } while (0)
+
+#define BDA_CKPTR(_ptr, ...) __BDA_CKPTR(ASC_LOG_ERROR, _ptr, __VA_ARGS__)
+#define BDA_CKPTR_D(_ptr, ...) __BDA_CKPTR(ASC_LOG_DEBUG, _ptr, __VA_ARGS__)
+
+void bda_dump_request(ITuneRequest *request);
+void bda_log_hr(const module_data_t *mod, HRESULT hr, asc_log_type_t level
+                , const char *msg, ...) __fmt_printf(4, 5);
 
 #endif /* _HWDEV_BDA_H_ */
