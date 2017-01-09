@@ -2,7 +2,7 @@
  * Astra (OS signal handling)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -23,19 +23,19 @@
 
 #include "sig.h"
 
-#define lock_enter() \
+#define SIGNAL_LOCK() \
     WaitForSingleObject(signal_lock, INFINITE)
 
-#define lock_enter_timed() \
+#define SIGNAL_TIMEDLOCK() \
     (WaitForSingleObject(signal_lock, SIGNAL_LOCK_WAIT) == WAIT_OBJECT_0)
 
-#define lock_leave() \
+#define SIGNAL_UNLOCK() \
     do { \
         while (ReleaseMutex(signal_lock)) \
             ; /* nothing */ \
     } while (0)
 
-#define SERVICE_NAME (char *)PACKAGE_NAME
+#define SERVICE_NAME L""PACKAGE_NAME
 
 static SERVICE_STATUS service_status;
 static SERVICE_STATUS_HANDLE service_status_handle = NULL;
@@ -46,10 +46,22 @@ static HANDLE signal_lock = NULL;
 static bool ignore_ctrl = true;
 
 #ifdef DEBUG
+/* redirect a single stream to file */
 static
 void reopen(const char *path, FILE *origfile, int origfd)
 {
-    FILE *const newfile = freopen(path, "ab", origfile);
+    // TODO: overload freopen() with a UTF-8 wrapper version
+    // newfile = freopen(path, "ab", origfile);
+
+    wchar_t *const wpath = cx_widen(path);
+    FILE *newfile = NULL;
+
+    if (wpath != NULL)
+    {
+        newfile = _wfreopen(wpath, L"ab", origfile);
+        free(wpath);
+    }
+
     if (newfile != NULL)
     {
         setvbuf(origfile, NULL, _IONBF, 0);
@@ -57,36 +69,47 @@ void reopen(const char *path, FILE *origfile, int origfd)
     }
 }
 
+/* redirect stdout and stderr to file in executable path */
 static
 void redirect_stdio(void)
 {
-    char buf[MAX_PATH] = { 0 };
-    const DWORD ret = GetModuleFileName(NULL, buf, sizeof(buf));
+    char *const path = cx_exepath();
+    char *sl = NULL;
 
-    if (ret == 0 || ret >= sizeof(buf))
-        buf[0] = '\0';
+    if (path != NULL && (sl = strrchr(path, '\\')) != NULL)
+    {
+        *sl = '\0';
 
-    char *const p = strrchr(buf, '\\');
-    if (p != NULL)
-        *p = '\0';
-    else
-        memcpy(buf, ".", sizeof("."));
+        static const char logfile[] = "\\stdio.log";
+        const size_t pathlen = strlen(path);
+        const size_t bufsiz = pathlen + sizeof(logfile);
 
-    static const char logfile[] = "\\stdio.log";
-    strncat(buf, logfile, sizeof(buf) - strlen(buf) - 1);
+        char *const buf = (char *)calloc(bufsiz, sizeof(*buf));
+        if (buf != NULL)
+        {
+            memcpy(buf, path, pathlen);
+            memcpy(&buf[pathlen], logfile, sizeof(logfile));
 
-    reopen(buf, stdout, STDOUT_FILENO);
-    reopen(buf, stderr, STDERR_FILENO);
+            reopen(buf, stdout, STDOUT_FILENO);
+            reopen(buf, stderr, STDERR_FILENO);
+
+            free(buf);
+        }
+    }
+
+    free(path);
 }
 #endif /* DEBUG */
 
-static inline
+/* update SCM's status information */
+static
 void service_set_state(DWORD state)
 {
     service_status.dwCurrentState = state;
     SetServiceStatus(service_status_handle, &service_status);
 }
 
+/* handle service control requests from SCM */
 static WINAPI
 void service_handler(DWORD control)
 {
@@ -96,18 +119,18 @@ void service_handler(DWORD control)
             if (service_status.dwCurrentState == SERVICE_RUNNING)
             {
                 /*
-                 * NOTE: stop pending state should really be set by
+                 * NOTE: "stop pending" state should really be set by
                  *       signal_enable(), but then we'd have to somehow
                  *       filter out soft restart requests.
                  */
                 service_set_state(SERVICE_STOP_PENDING);
 
-                if (lock_enter_timed())
+                if (SIGNAL_TIMEDLOCK())
                 {
                     if (!ignore_ctrl)
                         asc_main_loop_shutdown();
 
-                    lock_leave();
+                    SIGNAL_UNLOCK();
                 }
                 else
                 {
@@ -125,21 +148,22 @@ void service_handler(DWORD control)
     }
 }
 
+/* handle signals sent via console window */
 static WINAPI
 BOOL console_handler(DWORD type)
 {
-    /* NOTE: handlers are run in separate threads */
+    /* NOTE: new thread is created every time a signal is sent */
     switch (type)
     {
         case CTRL_C_EVENT:
         case CTRL_BREAK_EVENT:
         case CTRL_CLOSE_EVENT:
-            if (lock_enter_timed())
+            if (SIGNAL_TIMEDLOCK())
             {
                 if (!ignore_ctrl)
                     asc_main_loop_shutdown();
 
-                lock_leave();
+                SIGNAL_UNLOCK();
             }
             else
             {
@@ -152,8 +176,9 @@ BOOL console_handler(DWORD type)
     }
 }
 
+/* finalize service initialization */
 static WINAPI
-void service_main(DWORD argc, LPTSTR *argv)
+void service_main(DWORD argc, LPWSTR *argv)
 {
     __uarg(argc);
     __uarg(argv);
@@ -161,7 +186,7 @@ void service_main(DWORD argc, LPTSTR *argv)
     /* register control handler */
     ignore_ctrl = false;
     service_status_handle =
-        RegisterServiceCtrlHandler(SERVICE_NAME, service_handler);
+        RegisterServiceCtrlHandlerW(SERVICE_NAME, service_handler);
 
     if (service_status_handle == NULL)
         signal_perror(GetLastError(), "RegisterServiceCtrlHandler()");
@@ -173,6 +198,7 @@ void service_main(DWORD argc, LPTSTR *argv)
     SetEvent(service_event);
 }
 
+/* entry point for dedicated SCM dispatcher thread */
 static __stdcall
 unsigned int service_thread_proc(void *arg)
 {
@@ -183,17 +209,20 @@ unsigned int service_thread_proc(void *arg)
      *       to StartServiceCtrlDispatcher(), which allows us to keep
      *       the normal startup routine unaltered.
      */
-    static const SERVICE_TABLE_ENTRY svclist[] = {
-        { SERVICE_NAME, service_main },
+    wchar_t svcname[] = SERVICE_NAME;
+
+    const SERVICE_TABLE_ENTRYW svclist[] = {
+        { svcname, service_main },
         { NULL, NULL },
     };
 
-    if (!StartServiceCtrlDispatcher(svclist))
+    if (!StartServiceCtrlDispatcherW(svclist))
         return GetLastError();
 
     return ERROR_SUCCESS;
 }
 
+/* begin SCM handshake */
 static
 bool service_initialize(void)
 {
@@ -204,7 +233,7 @@ bool service_initialize(void)
     service_status.dwCurrentState = SERVICE_STOPPED;
 
     /* attempt to connect to SCM */
-    service_event = CreateEvent(NULL, false, false, NULL);
+    service_event = CreateEventW(NULL, false, false, NULL);
     if (service_event == NULL)
         signal_perror(GetLastError(), "CreateEvent()");
 
@@ -233,8 +262,10 @@ bool service_initialize(void)
         if (GetExitCodeThread(service_thread, &exit_code))
         {
             if (exit_code == ERROR_SUCCESS)
+            {
                 /* shouldn't return success this early */
                 exit_code = ERROR_INTERNAL_ERROR;
+            }
         }
 
         ASC_FREE(service_thread, CloseHandle);
@@ -253,6 +284,7 @@ bool service_initialize(void)
     return false;
 }
 
+/* clean up SCM dispatcher thread */
 static
 bool service_destroy(void)
 {
@@ -284,13 +316,14 @@ bool service_destroy(void)
     return false;
 }
 
+/* clean up console handlers/SCM threads */
 static
 void signal_cleanup(void)
 {
     /* dismiss any threads waiting for lock */
-    lock_enter();
+    SIGNAL_LOCK();
     ignore_ctrl = true;
-    lock_leave();
+    SIGNAL_UNLOCK();
 
     if (!service_destroy())
     {
@@ -303,10 +336,11 @@ void signal_cleanup(void)
     ASC_FREE(signal_lock, CloseHandle);
 }
 
+/* initialize signal handling either as a service or console application */
 void signal_setup(void)
 {
     /* create and lock signal handling mutex */
-    signal_lock = CreateMutex(NULL, true, NULL);
+    signal_lock = CreateMutexW(NULL, TRUE, NULL);
     if (signal_lock == NULL)
         signal_perror(GetLastError(), "CreateMutex()");
 
@@ -341,9 +375,10 @@ void signal_setup(void)
     atexit(signal_cleanup);
 }
 
+/* block or unblock signal handling via mutex */
 void signal_enable(bool running)
 {
-    lock_enter();
+    SIGNAL_LOCK();
 
     if (running)
     {
@@ -351,6 +386,6 @@ void signal_enable(bool running)
         if (service_status.dwCurrentState == SERVICE_START_PENDING)
             service_set_state(SERVICE_RUNNING);
 
-        lock_leave();
+        SIGNAL_UNLOCK();
     }
 }
