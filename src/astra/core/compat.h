@@ -2,7 +2,7 @@
  * Astra Core (Compatibility library)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -139,17 +139,14 @@ size_t strnlen(const char *str, size_t max) __func_pure;
 #endif
 
 #ifdef _WIN32
-/* IsProcessInJob() wrapper for legacy builds */
 #if _WIN32_WINNT <= _WIN32_WINNT_WIN2K
 BOOL cx_IsProcessInJob(HANDLE process, HANDLE job, BOOL *result);
 #define IsProcessInJob(...) cx_IsProcessInJob(__VA_ARGS__)
 #endif /* _WIN32_WINNT <= _WIN32_WINNT_WIN2K */
 
-/* convert from char (UTF-8) to wchar_t (UTF-16) */
 wchar_t *cx_widen(const char *str);
-
-/* convert from wchar_t (UTF-16) to char (UTF-8) */
 char *cx_narrow(const wchar_t *str);
+char *cx_exepath(void);
 #endif /* _WIN32 */
 
 /*
