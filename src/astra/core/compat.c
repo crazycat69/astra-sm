@@ -108,6 +108,10 @@ wchar_t *cx_widen(const char *str)
             buf = NULL;
         }
     }
+    else
+    {
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+    }
 
     return buf;
 }
@@ -128,6 +132,10 @@ char *cx_narrow(const wchar_t *str)
             free(buf);
             buf = NULL;
         }
+    }
+    else
+    {
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
     }
 
     return buf;
