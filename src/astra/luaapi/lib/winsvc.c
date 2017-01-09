@@ -2,7 +2,7 @@
  * Astra Lua Library (Windows Service Installer)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2016-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,7 +64,7 @@
     if (__opt == NULL || strlen(__opt) == 0) \
         luaL_error(L, MSG("option '" #__opt "' cannot be empty"));
 
-/* push error string before cleanup to get correct last error */
+/* push error string before cleanup to get correct last error no. */
 #define SVC_ERROR(...) \
     do { \
         lua_pushfstring(L, __VA_ARGS__); \
@@ -74,74 +74,140 @@
 #define SVC_PERROR(_func) \
     SVC_ERROR(_func ": %s", asc_error_msg())
 
+/* check if a user account exists on the local system */
+static
+bool check_account(const char *acct)
+{
+    wchar_t *const wacct = cx_widen(acct);
+    if (wacct == NULL)
+        return false;
+
+    /* first call should fail and set required buffer sizes */
+    bool found = false;
+
+    DWORD sidbuf = 0, rdnbuf = 0;
+    SID_NAME_USE type;
+
+    BOOL ret = LookupAccountNameW(NULL, wacct, NULL, &sidbuf
+                                  , NULL, &rdnbuf, &type);
+
+    if (!ret && GetLastError() == ERROR_INSUFFICIENT_BUFFER
+        && sidbuf > 0 && rdnbuf > 0)
+    {
+        /* create buffers and get account SID */
+        wchar_t *const rdn = (wchar_t *)calloc(rdnbuf, sizeof(*rdn));
+        SID *const sid = (SID *)calloc(1, sidbuf);
+
+        if (rdn != NULL && sid != NULL)
+        {
+            ret = LookupAccountNameW(NULL, wacct, sid, &sidbuf
+                                     , rdn, &rdnbuf, &type);
+
+            found = (ret && IsValidSid(sid));
+        }
+        else
+        {
+            SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+        }
+
+        free(sid);
+        free(rdn);
+    }
+
+    free(wacct);
+
+    return found;
+}
+
 /* return full .exe path, quoted and followed by a space */
 static
-char *quoted_exe_path(void)
+char *quoted_exepath(void)
 {
-    char path[MAX_PATH] = { 0 };
-    const DWORD ret = GetModuleFileName(NULL, path, sizeof(path));
-
-    if (ret == 0 || ret >= sizeof(path))
+    char *const path = cx_exepath();
+    if (path == NULL)
         return NULL;
 
-    /* escape double quotes */
-    char *const quoted = ASC_ALLOC(4 + (strlen(path) * 2), char);
-    char *s = path, *d = quoted;
-
-    *d++ = '"';
-    while (*s != '\0')
+    char *const quoted = (char *)malloc(4 + (strlen(path) * 2));
+    if (quoted != NULL)
     {
-        if (*s == '"')
-            *d++ = '\\';
+        const char *s = path;
+        char *d = quoted;
 
-        *d++ = *s++;
+        *d++ = '"';
+        while (*s != '\0')
+        {
+            if (*s == '"')
+                *d++ = '\\';
+
+            *d++ = *s++;
+        }
+        *d++ = '"';
+        *d++ = ' ';
+        *d++ = '\0';
     }
-    *d++ = '"';
-    *d++ = ' ';
+    else
+    {
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+    }
+
+    free(path);
 
     return quoted;
 }
 
-/* check if a user account exists on the system */
+/* install service after converting arguments into wide strings */
 static
-bool check_account(const char *acct)
+SC_HANDLE create_service(SC_HANDLE scm, const char *name
+                         , const char *displayname, DWORD stype
+                         , const char *cmdline, const char *startname)
 {
-    /* get required buffer size */
-    DWORD sidbuf = 0, rdnbuf = 0;
-    SID_NAME_USE type;
+    SC_HANDLE svc = NULL;
 
-    if (LookupAccountName(NULL, acct, NULL, &sidbuf, NULL, &rdnbuf, &type)
-        || GetLastError() != ERROR_INSUFFICIENT_BUFFER
-        || sidbuf == 0 || rdnbuf == 0) /* should fail and set buffer sizes */
+    wchar_t *wname = NULL, *wdisplayname = NULL;
+    wchar_t *wcmdline = NULL, *wstartname = NULL;
+
+    wname = cx_widen(name);
+    if (wname == NULL) return NULL;
+
+    if (displayname != NULL)
     {
-        return false;
+        wdisplayname = cx_widen(displayname);
+        if (wdisplayname == NULL) goto out;
     }
 
-    /* create buffers and get account SID */
-    TCHAR *const rdn = ASC_ALLOC(rdnbuf, TCHAR);
-    SID *const sid = (SID *)calloc(1, sidbuf);
-    asc_assert(sid != NULL, MSG("calloc() failed"));
-
-    bool ok = false;
-    if (LookupAccountName(NULL, acct, sid, &sidbuf, rdn, &rdnbuf, &type)
-        && IsValidSid(sid))
+    if (cmdline != NULL)
     {
-        ok = true;
+        wcmdline = cx_widen(cmdline);
+        if (wcmdline == NULL) goto out;
     }
 
-    free(sid);
-    free(rdn);
+    if (startname != NULL)
+    {
+        wstartname = cx_widen(startname);
+        if (wstartname == NULL) goto out;
+    }
 
-    return ok;
+    svc = CreateServiceW(scm, wname, wdisplayname
+                         , SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS
+                         , stype, SERVICE_ERROR_NORMAL, wcmdline, NULL, NULL
+                         , L"" SVC_DEPENDENCIES, wstartname, NULL);
+
+out:
+    free(wstartname);
+    free(wcmdline);
+    free(wdisplayname);
+    free(wname);
+
+    return svc;
 }
 
 static
 int method_install(lua_State *L)
 {
-    SC_HANDLE scm = NULL, svc = NULL;
-    SERVICE_DESCRIPTION info = { NULL };
     char *exepath = NULL, *cmdline = NULL;
-    size_t cmdsize = 0;
+    size_t exelen = 0, arglen = 0;
+    SC_HANDLE scm = NULL, svc = NULL;
+    SERVICE_DESCRIPTIONW info = { NULL };
 
     lua_pushvalue(L, -1);
     SVC_OPTION(name, SVC_DEFAULT_NAME);
@@ -166,34 +232,35 @@ int method_install(lua_State *L)
     else
         SVC_ERROR(MSG("invalid service startup mode: '%s'"), start);
 
-    /* open SCM database */
-    scm = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+    /* build command line */
+    exepath = quoted_exepath();
+    if (exepath == NULL)
+        SVC_PERROR(MSG("quoted_exepath()"));
+
+    exelen = strlen(exepath);
+    arglen = strlen(arguments) + 1; /* terminator */
+
+    cmdline = (char *)malloc(exelen + arglen);
+    if (cmdline == NULL)
+        SVC_ERROR(MSG("malloc() failed"));
+
+    memcpy(cmdline, exepath, exelen);
+    memcpy(&cmdline[exelen], arguments, arglen);
+
+    /* register service in the database */
+    scm = OpenSCManagerW(NULL, NULL, SC_MANAGER_ALL_ACCESS);
     if (scm == NULL)
         SVC_PERROR(MSG("OpenSCManager()"));
 
-    /* build command line */
-    exepath = quoted_exe_path();
-    if (exepath == NULL)
-        SVC_PERROR(MSG("GetModuleFileName()"));
-
-    cmdsize = strlen(exepath) + strlen(arguments) + 1;
-    cmdline = ASC_ALLOC(cmdsize, char);
-    snprintf(cmdline, cmdsize, "%s%s", exepath, arguments);
-
-    /* register service in the database */
-    svc = CreateService(scm, name, displayname
-                        , SERVICE_ALL_ACCESS, SERVICE_WIN32_OWN_PROCESS
-                        , stype, SERVICE_ERROR_NORMAL, cmdline, NULL, NULL
-                        , SVC_DEPENDENCIES, startname, NULL);
+    svc = create_service(scm, name, displayname, stype, cmdline, startname);
     if (svc == NULL)
-        SVC_PERROR(MSG("CreateService()"));
+        SVC_PERROR(MSG("create_service()"));
 
-    /* set description string */
-    info.lpDescription = strdup(description);
+    info.lpDescription = cx_widen(description);
     if (info.lpDescription == NULL)
-        SVC_ERROR(MSG("strdup() failed"));
+        SVC_PERROR(MSG("cx_widen()"));
 
-    if (!ChangeServiceConfig2(svc, SERVICE_CONFIG_DESCRIPTION, &info))
+    if (!ChangeServiceConfig2W(svc, SERVICE_CONFIG_DESCRIPTION, &info))
         SVC_PERROR(MSG("ChangeServiceConfig2()"));
 
     /* that's all, folks */
@@ -201,10 +268,10 @@ int method_install(lua_State *L)
 
 out:
     ASC_FREE(info.lpDescription, free);
-    ASC_FREE(cmdline, free);
-    ASC_FREE(exepath, free);
     ASC_FREE(svc, CloseServiceHandle);
     ASC_FREE(scm, CloseServiceHandle);
+    ASC_FREE(cmdline, free);
+    ASC_FREE(exepath, free);
 
     if (lua_isstring(L, -1))
         lua_error(L);
@@ -215,22 +282,28 @@ out:
 static
 int method_uninstall(lua_State *L)
 {
+    wchar_t *wname = NULL;
     SC_HANDLE scm = NULL, svc = NULL;
     DWORD qbuf = 0, qbufwant = 0;
-    QUERY_SERVICE_CONFIG *query = NULL;
-    char *exepath = NULL;
-    bool force = false;
+    QUERY_SERVICE_CONFIGW *query = NULL;
+    char *exepath = NULL, *binpath = NULL;
 
     lua_pushvalue(L, -1);
     SVC_OPTION(name, SVC_DEFAULT_NAME);
+
+    bool force = false;
     module_option_boolean(L, "force", &force);
 
     /* open SCM database and service */
-    scm = OpenSCManager(NULL, NULL, SC_MANAGER_ALL_ACCESS);
+    wname = cx_widen(name);
+    if (wname == NULL)
+        SVC_PERROR(MSG("cx_widen()"));
+
+    scm = OpenSCManagerW(NULL, NULL, SC_MANAGER_ALL_ACCESS);
     if (scm == NULL)
         SVC_PERROR(MSG("OpenSCManager()"));
 
-    svc = OpenService(scm, name, SC_MANAGER_ALL_ACCESS);
+    svc = OpenServiceW(scm, wname, SC_MANAGER_ALL_ACCESS);
     if (svc == NULL)
         SVC_PERROR(MSG("OpenService()"));
 
@@ -238,7 +311,7 @@ int method_uninstall(lua_State *L)
     if (!force)
     {
         /* get command line from registry */
-        if (QueryServiceConfig(svc, NULL, 0, &qbufwant)
+        if (QueryServiceConfigW(svc, NULL, 0, &qbufwant)
             || GetLastError() != ERROR_INSUFFICIENT_BUFFER
             || qbufwant == 0) /* should fail and set qbufwant */
         {
@@ -246,19 +319,23 @@ int method_uninstall(lua_State *L)
         }
 
         qbuf = qbufwant;
-        query = (QUERY_SERVICE_CONFIG *)LocalAlloc(LMEM_FIXED, qbuf);
+        query = (QUERY_SERVICE_CONFIGW *)LocalAlloc(LMEM_FIXED, qbuf);
         if (query == NULL)
             SVC_PERROR(MSG("LocalAlloc()"));
 
-        if (!QueryServiceConfig(svc, query, qbuf, &qbufwant))
+        if (!QueryServiceConfigW(svc, query, qbuf, &qbufwant))
             SVC_PERROR(MSG("QueryServiceConfig()"));
 
         /* compare with actual binary path */
-        exepath = quoted_exe_path();
+        exepath = quoted_exepath();
         if (exepath == NULL)
-            SVC_PERROR(MSG("GetModuleFileName()"));
+            SVC_PERROR(MSG("quoted_exepath()"));
 
-        if (strncmp(exepath, query->lpBinaryPathName, strlen(exepath)))
+        binpath = cx_narrow(query->lpBinaryPathName);
+        if (binpath == NULL)
+            SVC_PERROR(MSG("cx_narrow()"));
+
+        if (strncmp(exepath, binpath, strlen(exepath)))
         {
             SVC_ERROR(MSG("ImagePath in service '%s' points to a different "
                           "binary; use 'force' to override"), name);
@@ -272,10 +349,12 @@ int method_uninstall(lua_State *L)
     lua_pushboolean(L, 1);
 
 out:
+    ASC_FREE(binpath, free);
     ASC_FREE(exepath, free);
     ASC_FREE(query, LocalFree);
     ASC_FREE(svc, CloseServiceHandle);
     ASC_FREE(scm, CloseServiceHandle);
+    ASC_FREE(wname, free);
 
     if (lua_isstring(L, -1))
         lua_error(L);
