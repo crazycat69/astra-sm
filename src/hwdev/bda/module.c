@@ -785,7 +785,7 @@ void module_init(lua_State *L, module_data_t *mod)
 
     asc_wake_open();
 
-    mod->queue_evt = CreateEvent(NULL, FALSE, FALSE, NULL);
+    mod->queue_evt = CreateEventW(NULL, FALSE, FALSE, NULL);
     if (mod->queue_evt == NULL)
         luaL_error(L, MSG("CreateEvent() failed: %s"), asc_error_msg());
 

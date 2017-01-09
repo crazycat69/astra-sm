@@ -109,7 +109,7 @@ void wait_register(asc_event_t *event)
 {
     HANDLE wait = NULL;
 
-    const HANDLE conn_evt = CreateEvent(NULL, TRUE, FALSE, NULL);
+    const HANDLE conn_evt = CreateEventW(NULL, TRUE, FALSE, NULL);
     if (conn_evt == NULL)
     {
         asc_log_error(MSG("CreateEvent(): %s"), asc_error_msg());

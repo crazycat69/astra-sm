@@ -311,7 +311,7 @@ int cx_socket(int family, int type, int protocol)
         return fd;
 
     /* probably pre-7/SP1 version of Windows */
-    fd = WSASocket(family, type, protocol, NULL, 0, 0);
+    fd = WSASocketW(family, type, protocol, NULL, 0, 0);
     if (fd == -1)
         return fd;
 

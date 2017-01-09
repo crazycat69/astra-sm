@@ -30,7 +30,7 @@
 static
 HANDLE create_kill_job(void)
 {
-    HANDLE jo = CreateJobObject(NULL, NULL);
+    HANDLE jo = CreateJobObjectW(NULL, NULL);
     if (jo == NULL)
         return NULL;
 
@@ -254,7 +254,7 @@ static BOOL CALLBACK enum_proc(HWND hwnd, LPARAM lparam)
     if (GetWindowThreadProcessId(hwnd, &pid) != 0)
     {
         if (pid == proc->pi.dwProcessId)
-            SendMessage(hwnd, WM_CLOSE, 0, 0);
+            SendMessageW(hwnd, WM_CLOSE, 0, 0);
     }
 
     return true;
