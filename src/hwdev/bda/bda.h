@@ -154,24 +154,34 @@ HRESULT bda_tune_request(const bda_tune_cmd_t *cmd, ITuneRequest **out);
  * vendor extensions
  */
 
-typedef enum
+/* DiSEqC command length, bytes */
+#define BDA_DISEQC_LEN 6
+
+enum
 {
-    BDA_EXTENSION_DISEQC    = 0x00000001,
-    // XXX: add separate flag for toneburst?
-    BDA_EXTENSION_CA        = 0x00000002,
-} bda_extension_type_t;
+    BDA_EXTENSION_DISEQC    = 0x00000001, /* send DiSEqC raw command */
+    BDA_EXTENSION_CA        = 0x00000002, /* CI CAM slot support */
+
+    // TODO:
+    // LNB power on/off
+    // 22khz tone on/off
+    // toneburst
+};
 
 typedef struct
 {
     const char *name;
     const char *description;
-    bda_extension_type_t type;
+    uint32_t flags;
 
     HRESULT (*init)(IBaseFilter *[], void **);
     void (*destroy)(void *);
 
     HRESULT (*tune)(void *, const bda_tune_cmd_t *);
-    HRESULT (*diseqc)(void *, const uint8_t[6]); // XXX: kill magic number
+    HRESULT (*diseqc)(void *, const uint8_t[BDA_DISEQC_LEN]);
+    HRESULT (*lnb)(void *, bool);
+    HRESULT (*t22khz)(void *, bool);
+    // XXX: voltage/polarization ?
 
     void *data;
 } bda_extension_t;
@@ -180,7 +190,7 @@ HRESULT bda_ext_init(module_data_t *mod, IBaseFilter *filters[]);
 void bda_ext_destroy(module_data_t *mod);
 
 HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune);
-HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t cmd[6]);
+HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t cmd[BDA_DISEQC_LEN]);
 
 /*
  * BDA graph

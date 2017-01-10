@@ -1,7 +1,7 @@
 /*
  * Astra Module: DirectShow
  *
- * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2016-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -263,6 +263,94 @@ out:
     ASC_RELEASE(regsvc);
     ASC_RELEASE(dummy);
     ASC_RELEASE(graph);
+
+    return hr;
+}
+
+/* scan filter and its pins for a specific KS property set */
+static inline
+bool valid_ksprop(DWORD support)
+{
+    return ((support & KSPROPERTY_SUPPORT_GET)
+            || (support & KSPROPERTY_SUPPORT_SET));
+}
+
+HRESULT dshow_find_ksprop(IBaseFilter *filter, const GUID *prop_set
+                          , DWORD prop_id, IKsPropertySet **out)
+{
+    if (filter == NULL || prop_set == NULL || out == NULL)
+        return E_POINTER;
+
+    *out = NULL;
+
+    /* try the filter itself */
+    IKsPropertySet *prop = NULL;
+    HRESULT hr = IBaseFilter_QueryInterface(filter, &IID_IKsPropertySet
+                                            , (void **)&prop);
+    ASC_WANT_PTR(hr, prop);
+
+    if (SUCCEEDED(hr))
+    {
+        DWORD rw = 0;
+        hr = IKsPropertySet_QuerySupported(prop, prop_set, prop_id, &rw);
+
+        if (SUCCEEDED(hr) && valid_ksprop(rw))
+        {
+            *out = prop;
+            return S_OK;
+        }
+
+        ASC_RELEASE(prop);
+    }
+
+    /* try each of its pins */
+    IEnumPins *enum_pins = NULL;
+    hr = IBaseFilter_EnumPins(filter, &enum_pins);
+    ASC_WANT_PTR(hr, enum_pins);
+
+    if (FAILED(hr))
+        return hr;
+
+    IPin *pin = NULL;
+    do
+    {
+        ASC_RELEASE(prop);
+        ASC_RELEASE(pin);
+
+        if (*out != NULL)
+        {
+            hr = S_OK;
+            break;
+        }
+
+        /* fetch next item */
+        hr = IEnumPins_Next(enum_pins, 1, &pin, NULL);
+        ASC_WANT_ENUM(hr, pin);
+
+        if (hr != S_OK)
+        {
+            /* no more pins */
+            hr = E_NOTIMPL;
+            break;
+        }
+
+        hr = IPin_QueryInterface(pin, &IID_IKsPropertySet, (void **)&prop);
+        ASC_WANT_PTR(hr, prop);
+
+        if (SUCCEEDED(hr))
+        {
+            DWORD rw = 0;
+            hr = IKsPropertySet_QuerySupported(prop, prop_set, prop_id, &rw);
+
+            if (SUCCEEDED(hr) && valid_ksprop(rw))
+            {
+                IKsPropertySet_AddRef(prop);
+                *out = prop;
+            }
+        }
+    } while (true);
+
+    ASC_RELEASE(enum_pins);
 
     return hr;
 }

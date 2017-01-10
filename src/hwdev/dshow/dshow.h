@@ -1,7 +1,7 @@
 /*
  * Astra Module: DirectShow
  *
- * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2016-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,6 +41,8 @@ HRESULT dshow_filter_from_moniker(IMoniker *moniker, IBaseFilter **out
                                   , char **fname);
 HRESULT dshow_filter_graph(IFilterGraph2 **out_graph, IMediaEvent **out_event
                            , HANDLE *out_evhdl);
+HRESULT dshow_find_ksprop(IBaseFilter *filter, const GUID *prop_set
+                          , DWORD prop_id, IKsPropertySet **out);
 HRESULT dshow_find_pin(IBaseFilter *filter, PIN_DIRECTION dir
                        , bool skip_busy, const char *name, IPin **out);
 HRESULT dshow_get_graph(IBaseFilter *filter, IFilterGraph2 **out);
