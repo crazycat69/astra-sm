@@ -1049,10 +1049,6 @@ HRESULT graph_setup(module_data_t *mod)
         if (FAILED(hr))
             BDA_ERROR("error while probing for vendor extensions");
 
-        hr = bda_ext_tune(mod, &mod->tune);
-        if (FAILED(hr))
-            BDA_ERROR("error while sending extension-specific tuning data");
-
         // TODO: send stored diseqc sequence
         // TODO: restore CA pid state
         //
@@ -1061,6 +1057,10 @@ HRESULT graph_setup(module_data_t *mod)
         /* start the graph */
         hr = control_run(mod, graph);
         BDA_CKHR("failed to run the graph");
+
+        hr = bda_ext_tune(mod, &mod->tune);
+        if (FAILED(hr))
+            BDA_ERROR("error while sending extension-specific tuning data");
 
         /* set signal lock timeout */
         mod->tunefail = 0;
@@ -1255,13 +1255,14 @@ HRESULT restart_tuning(module_data_t *mod)
     hr = provider_tune(mod, mod->provider);
     BDA_CKHR_D("couldn't configure provider with tuning data");
 
+
+    hr = control_run(mod, mod->graph);
+    BDA_CKHR_D("couldn't restart the graph");
+
     // XXX: do we need to rejoin PIDs and reissue diseqc cmds?
     hr = bda_ext_tune(mod, &mod->tune);
     if (FAILED(hr))
         BDA_ERROR("error while sending extension-specific tuning data");
-
-    hr = control_run(mod, mod->graph);
-    BDA_CKHR_D("couldn't restart the graph");
 
     /* reset signal lock timeout */
     mod->cooldown = mod->timeout;
@@ -1544,15 +1545,11 @@ void cmd_ca(module_data_t *mod, bool enable, uint16_t pnr)
     // TODO: call bda_ext_ca()
 }
 
-/*
 static
-void cmd_diseqc(mod, command sequence)
+void cmd_diseqc(module_data_t *mod, const bda_diseqc_cmd_t *cmd)
 {
-    mod->sequence = sequence
-
-    call bda_ext_diseqc()
+    bda_ext_diseqc(mod,cmd);
 }
-*/
 
 /* execute user command */
 static
@@ -1573,11 +1570,7 @@ void execute_cmd(module_data_t *mod, const bda_user_cmd_t *cmd)
             break;
 
         case BDA_COMMAND_DISEQC:
-            /*
-             * TODO: implement sending diseqc commands
-             *
-             * cmd_diseqc(mod, &cmd->diseqc);
-             */
+              cmd_diseqc(mod, &cmd->diseqc);
             break;
 
         case BDA_COMMAND_QUIT:

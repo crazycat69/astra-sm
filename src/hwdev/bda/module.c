@@ -42,7 +42,9 @@
  *
  *      frequency   - number, carrier frequency in MHz
  *      symbolrate  - number, symbol rate in KS/s
- *      stream_id   - number, PLP ID or physical channel number
+ *      stream_id   - number, ISI/PLP ID
+ *      pls_code   -  number, Physical Layer Scrambling code
+ *      pls_mode   -  number, Physical Layer Scrambling mode
  *      modulation  - string, modulation type
  *      fec         - string, inner FEC rate
  *      outer_fec   - string, outer FEC rate
@@ -438,14 +440,38 @@ void parse_tune_options(lua_State *L, module_data_t *mod
             tune->symbolrate *= 1000;
     }
 
-    /* stream_id: PLP ID or physical channel number */
+    /* lnb_source: LNB source selection */
+    tune->lnb_source = -1;
+    if (module_option_integer(L, "diseqc", &tune->lnb_source))
+    {
+        if (tune->lnb_source < 0)
+            luaL_error(L, MSG("lnb_source can't be negative"));
+    }
+
+    /* stream_id: ISI/PLP ID*/
     tune->stream_id = -1;
     if (module_option_integer(L, "stream_id", &tune->stream_id))
     {
-        if (tune->stream_id < 0)
-            luaL_error(L, MSG("stream ID can't be negative"));
+        if (tune->stream_id < 0 || tune->stream_id > 255)
+            luaL_error(L, MSG("stream ID must be 0-255"));
     }
 
+	/* pls_code: Physical Layer Scrambling code */
+    tune->pls_code = 0;
+    if (module_option_integer(L, "pls_code", &tune->pls_code))
+    {
+        if (tune->pls_code < 0 || tune->pls_code > 262143)
+            luaL_error(L, MSG("PLS code must be 0-262143"));
+    }
+
+	/* pls_mode: Physical Layer Scrambling mode */
+    tune->pls_mode = 0;
+    if (module_option_integer(L, "pls_mode", &tune->pls_mode))
+    {
+        if (tune->pls_mode < 0 || tune->pls_mode > 2)
+            luaL_error(L, MSG("PLS mode must be 0-2"));
+    }
+	
     /* modulation: modulation type */
     tune->modulation = BDA_MOD_NOT_SET;
     if (module_option_string(L, "modulation", &opt, NULL))
@@ -725,9 +751,7 @@ int method_ca(lua_State *L, module_data_t *mod)
 static
 int method_diseqc(lua_State *L, module_data_t *mod)
 {
-    // TODO: isnumber() for old syntax (set diseqc port)
     __uarg(mod);
-    luaL_error(L, MSG("DiSEqC support is not implemented yet"));
     return 0;
 }
 
@@ -850,11 +874,13 @@ void module_init(lua_State *L, module_data_t *mod)
     /* send initial tuning commands */
     method_tune(L, mod);
 
+#if 0
     lua_getfield(L, MODULE_OPTIONS_IDX, "diseqc");
     if (!lua_isnil(L, -1))
         method_diseqc(L, mod);
 
     lua_pop(L, 1);
+#endif
 
     /* start dedicated thread for BDA graph */
     module_stream_init(L, mod, NULL);

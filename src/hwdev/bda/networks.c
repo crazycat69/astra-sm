@@ -361,6 +361,9 @@ HRESULT set_locator_dvbs2(const bda_tune_cmd_t *tune, ILocator *locator)
     hr = IDVBSLocator2_put_SignalRollOff(locator_s2, tune->rolloff);
     if (FAILED(hr)) goto out;
 
+    hr = IDVBSLocator2_put_DiseqLNBSource(locator_s2, tune->lnb_source);
+    if (FAILED(hr)) goto out;
+
     hr = set_locator_dvbs(tune, locator); /* delegate to DVB-S */
 out:
     ASC_RELEASE(locator_s2);

@@ -58,6 +58,8 @@ typedef struct
     int frequency;
     int symbolrate;
     int stream_id;
+	int pls_code;
+	int pls_mode;
     ModulationType modulation;
     BinaryConvolutionCodeRate fec;
     BinaryConvolutionCodeRate outer_fec;
@@ -79,6 +81,7 @@ typedef struct
     SpectralInversion inversion;
     RollOff rolloff;
     Pilot pilot;
+    int lnb_source;
 
     /* dvb-t */
     int bandwidth;
@@ -105,17 +108,19 @@ typedef struct
     uint16_t pnr;
 } bda_ca_cmd_t;
 
+/* DiSEqC command length, bytes */
+#define BDA_DISEQC_LEN 6
+
 typedef struct
 {
     bda_command_t cmd;
-
-    /* TODO: add diseqc command sequence */
+    uint8_t diseqc_cmd[BDA_DISEQC_LEN];
+    uint8_t diseqc_len;
 } bda_diseqc_cmd_t;
 
 typedef union
 {
     bda_command_t cmd;
-
     bda_tune_cmd_t tune;
     bda_demux_cmd_t demux;
     bda_ca_cmd_t ca;
@@ -154,9 +159,6 @@ HRESULT bda_tune_request(const bda_tune_cmd_t *cmd, ITuneRequest **out);
  * vendor extensions
  */
 
-/* DiSEqC command length, bytes */
-#define BDA_DISEQC_LEN 6
-
 enum
 {
     BDA_EXTENSION_DISEQC    = 0x00000001, /* send DiSEqC raw command */
@@ -178,7 +180,7 @@ typedef struct
     void (*destroy)(void *);
 
     HRESULT (*tune)(void *, const bda_tune_cmd_t *);
-    HRESULT (*diseqc)(void *, const uint8_t[BDA_DISEQC_LEN]);
+    HRESULT (*diseqc)(void *, const bda_diseqc_cmd_t *);
     HRESULT (*lnb)(void *, bool);
     HRESULT (*t22khz)(void *, bool);
     // XXX: voltage/polarization ?
@@ -190,7 +192,7 @@ HRESULT bda_ext_init(module_data_t *mod, IBaseFilter *filters[]);
 void bda_ext_destroy(module_data_t *mod);
 
 HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune);
-HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t cmd[BDA_DISEQC_LEN]);
+HRESULT bda_ext_diseqc(module_data_t *mod, const const bda_diseqc_cmd_t *cmd);
 
 /*
  * BDA graph
