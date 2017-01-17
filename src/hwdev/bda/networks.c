@@ -57,7 +57,7 @@ HRESULT set_locator_generic(const bda_tune_cmd_t *tune, ILocator *locator)
     hr = ILocator_put_OuterFECRate(locator, tune->outer_fec);
     if (FAILED(hr)) return hr;
 
-    hr = ILocator_put_SymbolRate(locator, tune->symbolrate);
+    hr = ILocator_put_SymbolRate(locator, tune->symbolrate/1000);
     return hr;
 }
 

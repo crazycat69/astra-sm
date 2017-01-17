@@ -213,10 +213,35 @@ const GUID KSPROPSETID_QBOXControlProperties =
 
 enum
 {
+    KSPROPERTY_CTRL_TUNER,
+	KSPROPERTY_CTRL_IR,
+	KSPROPERTY_CTRL_22K_TONE,
+	KSPROPERTY_CTRL_MOTOR,
+	KSPROPERTY_CTRL_LNBPW,
+	KSPROPERTY_CTRL_LOCK_TUNER,
     KSPROPERTY_CTRL_ACCESS = 18,
     KSPROPERTY_CTRL_PLPINFO = 19,
     KSPROPERTY_CTRL_PLS = 20,
 };
+
+typedef struct {	
+	uint32_t	freq;
+	uint32_t	lof_low;
+	uint32_t	lof_high;
+	uint32_t	sr;
+	uint8_t		pol;
+	uint8_t		lnb_pwr;
+	uint8_t		tone_22khz;
+	uint8_t		tone_burst;
+	uint8_t		lnb_source;
+
+	uint8_t 	diseqc_cmd[5];
+	uint8_t		ir_code;
+	uint8_t		lock;
+	uint8_t		strength;
+	uint8_t 	quality;
+	uint8_t 	reserved[256];
+} tbs_usb_cmd_t;
 
 static
 HRESULT tbs_usb_tune(void *data, const bda_tune_cmd_t *tune)
@@ -240,7 +265,7 @@ HRESULT tbs_usb_tune(void *data, const bda_tune_cmd_t *tune)
                           plp.id, (int)hr);
 	}
 
-	if (hr) return hr;	
+	if (hr) return hr;
 
 	if (tune->pls_mode || tune->pls_code)
 	{
@@ -312,7 +337,7 @@ const GUID KSPROPSETID_OmcDiSEqCProperties =
 
 enum
 {
-	KSPROPERTY_OMC_DISEQC_WRITE	= 0,
+	KSPROPERTY_OMC_DISEQC_WRITE,
 	KSPROPERTY_OMC_DISEQC_READ,				
 	KSPROPERTY_OMC_DISEQC_SET22K,
 	KSPROPERTY_OMC_DISEQC_ENCABLOSSCOMP,
@@ -338,7 +363,7 @@ struct omc_pls_info
 
 enum
 {
-	KSPROPERTY_OMC_CUSTOM_SIGNAL_OFFSET	= 0,
+	KSPROPERTY_OMC_CUSTOM_SIGNAL_OFFSET,
 	KSPROPERTY_OMC_CUSTOM_SEARCH_MODE,
 	KSPROPERTY_OMC_CUSTOM_SEARCH_RANGE,
 	KSPROPERTY_OMC_CUSTOM_SEARCH,
@@ -453,6 +478,121 @@ const bda_extension_t ext_omc_pci =
 };
 
 /*
+ * TurboSight USB
+ */
+
+static
+const GUID KSPROPERTYSET_CCTunerControl =
+    {0xA3E871E9,0x1F10,0x473e,{0x99,0xBD,0xEE,0x70,0xE0,0xD2,0xF0,0x70}};
+
+enum
+{
+	KSPROPERTY_CC_SET_FREQUENCY,
+	KSPROPERTY_CC_SET_DISEQC,
+	KSPROPERTY_CC_GET_SIGNAL_STATS,
+};
+
+typedef struct {	
+	uint32_t freq;
+	uint32_t lof1;
+	uint32_t lof2;
+	uint32_t slof;
+	uint32_t sr;
+
+	Polarisation pol;
+	uint32_t std;
+	ModulationType mod;
+	BinaryConvolutionCodeRate fec;
+	RollOff rolloff;
+	Pilot pilot;
+	uint32_t stream_id;
+	uint32_t lnb_source;
+
+	uint32_t diseqc_len;
+	uint8_t diseqc_cmd[8];
+
+	uint32_t strength;
+	uint32_t quality;
+	bool locked;
+
+	int32_t rflevel;/* dBm */
+	int32_t snr10;/* dB, snr * 10 */
+	uint32_t ber10e7;
+} cc_tuner_cmd_t;
+
+static
+HRESULT cc_tune(void *data, const bda_tune_cmd_t *tune)
+{
+    HRESULT hr = S_OK;
+    IKsPropertySet *const prop = (IKsPropertySet *)data;
+
+	cc_tuner_cmd_t cc_cmd;
+	cc_cmd.freq = tune->frequency/1000;
+	cc_cmd.lof1 = tune->lof1/1000;
+	cc_cmd.lof2 = tune->lof2/1000;
+	cc_cmd.slof = tune->slof/1000;
+	cc_cmd.sr = tune->symbolrate/1000;
+	cc_cmd.pol = tune->polarization;
+	cc_cmd.std = 0;
+	cc_cmd.mod = tune->modulation;
+	cc_cmd.rolloff = tune->rolloff;
+	cc_cmd.pilot = tune->pilot;
+	cc_cmd.lnb_source = tune->lnb_source;
+	cc_cmd.stream_id = (tune->pls_mode << 26) | (tune->pls_code << 8) | tune->stream_id;
+	
+	hr = IKsPropertySet_Set(prop
+							, &KSPROPERTYSET_CCTunerControl
+							, KSPROPERTY_CC_SET_FREQUENCY
+							, NULL, 0, &cc_cmd, sizeof(cc_cmd));
+
+    asc_log_debug("cc_tune: stream_id %d, lnb_source %d - result %d",
+                          cc_cmd.stream_id, cc_cmd.lnb_source, (int)hr);		
+	
+    return hr;
+}
+
+static
+HRESULT cc_diseqc(void *data, const bda_diseqc_cmd_t *cmd)
+{
+    HRESULT hr = S_OK;
+
+    cc_tuner_cmd_t cc_cmd;
+    cc_cmd.diseqc_len = cmd->diseqc_len;
+    memcpy(cc_cmd.diseqc_cmd,cmd->diseqc_cmd,cmd->diseqc_len);
+
+    IKsPropertySet *const prop = (IKsPropertySet *)data;
+    hr = IKsPropertySet_Set(prop
+                                , &KSPROPERTYSET_CCTunerControl
+                                , KSPROPERTY_CC_SET_DISEQC
+                                , NULL, 0, &cc_cmd, sizeof(cc_cmd));
+
+	asc_log_debug("cc_diseqc - result %d", (int)hr);		
+
+    return hr;
+}
+
+static
+HRESULT cc_init(IBaseFilter *filters[], void **data)
+{
+    return generic_init(filters, data
+                        , &KSPROPERTYSET_CCTunerControl
+                        , KSPROPERTY_CC_SET_FREQUENCY);
+}
+
+static
+const bda_extension_t ext_cc =
+{
+    .name = "cc",
+    .description = "CrazyBDA",
+
+    .init = cc_init,
+    .destroy = generic_destroy,
+
+    .tune = cc_tune,
+    .diseqc = cc_diseqc,
+};
+
+/*
  * public API
  */
 
@@ -463,6 +603,7 @@ const bda_extension_t *const ext_list[] =
     &ext_tbs_pcie,
     &ext_tbs_usb,
 	&ext_omc_pci,
+	&ext_cc,
     NULL,
 };
 
