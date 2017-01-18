@@ -686,7 +686,7 @@ dvb_list = nil
 function dvb_tune(conf)
     if conf.mac then
         conf.adapter = nil
-        conf.device = nil
+        conf.frontend = nil
 
         if dvb_list == nil then
             log.warning("[dvb_tune] dvb_list is not set; searching adapters by MAC will not work")
@@ -695,10 +695,10 @@ function dvb_tune(conf)
         local mac = conf.mac:upper()
         for _, a in ipairs(dvb_list) do
             if a.mac == mac then
-                log.info("[dvb_tune] adapter: " .. a.adapter .. "." .. a.device .. ". " ..
+                log.info("[dvb_tune] adapter: " .. a.adapter .. "." .. a.frontend .. ". " ..
                          "MAC address: " .. mac)
                 conf.adapter = a.adapter
-                conf.device = a.device
+                conf.frontend = a.frontend
                 break
             end
         end
@@ -714,14 +714,14 @@ function dvb_tune(conf)
         local a = string.split(tostring(conf.adapter), "%.")
         if #a == 1 then
             conf.adapter = tonumber(a[1])
-            if conf.device == nil then conf.device = 0 end
+            if conf.frontend == nil then conf.frontend = 0 end
         elseif #a == 2 then
             conf.adapter = tonumber(a[1])
-            conf.device = tonumber(a[2])
+            conf.frontend = tonumber(a[2])
         end
     end
 
-    local instance_id = conf.adapter .. "." .. conf.device
+    local instance_id = conf.adapter .. "." .. conf.frontend
     local instance = dvb_input_instance_list[instance_id]
     if not instance then
         if not conf.type then
@@ -814,7 +814,7 @@ kill_input_module.dvb = function(module, conf)
         module.__options.channels = module.__options.channels - 1
         if module.__options.channels == 0 then
             module:close()
-            local instance_id = module.__options.adapter .. "." .. module.__options.device
+            local instance_id = module.__options.adapter .. "." .. module.__options.frontend
             dvb_input_instance_list[instance_id] = nil
         end
     end

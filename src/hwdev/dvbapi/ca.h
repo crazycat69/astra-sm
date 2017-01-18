@@ -89,7 +89,7 @@ typedef struct
 struct dvb_ca_t
 {
     int adapter;
-    int device;
+    int frontend;
 
     /* CA Base */
     int ca_fd;
