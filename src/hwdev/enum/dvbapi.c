@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,230 +30,300 @@
 #   include <linux/dvb/net.h>
 #endif
 
-#define MSG(_msg) "[dvbls] " _msg
+/* directory containing DVB device nodes */
+#define DVB_ROOT "/dev/dvb"
 
-static int count;
-static char dev_name[512];
+/* buffer size for MAC address' text form */
+#define MAC_BUFSIZ 18
 
-static int adapter;
-static int device;
-
-static const char __adapter[] = "adapter";
-static const char __device[] = "device";
-
-static void iterate_dir(lua_State *L, const char *dir, const char *filter
-                        , void (*callback)(lua_State *, const char *))
+struct dvb_enum
 {
-    DIR *dirp = opendir(dir);
-    if(!dirp)
-    {
-        if(errno != ENOENT)
-        {
-            asc_log_error(MSG("opendir() failed: %s: %s"),
-                          dir, strerror(errno));
-        }
-        return;
-    }
+    lua_State *lua;
+    const char *path;
+    int adapter;
+    int frontend;
+};
 
-    char item[64];
-    const int item_len = sprintf(item, "%s/", dir);
-    const int filter_len = strlen(filter);
-    do
+/* run callback for every entry in `path' matching `filter' */
+static
+int iterate_dir(const char *path, const char *filter, void *arg
+                , void (*callback)(void *, const char *))
+{
+    DIR *const dirp = opendir(path);
+    if (dirp == NULL)
+        return -1;
+
+    const size_t filter_len = strlen(filter);
+    const struct dirent *entry = NULL;
+    size_t count = 0;
+
+    while ((entry = readdir(dirp)) != NULL)
     {
-        struct dirent *entry = readdir(dirp);
-        if(!entry)
-            break;
-        if(strncmp(entry->d_name, filter, filter_len) != 0)
+        if (strncmp(entry->d_name, filter, filter_len))
             continue;
-        sprintf(&item[item_len], "%s", entry->d_name);
-        callback(L, item);
-    } while(1);
+
+        char item[PATH_MAX] = { '\0' };
+        snprintf(item, sizeof(item), "%s/%s", path, entry->d_name);
+
+        callback(arg, item);
+        count++;
+    }
 
     closedir(dirp);
-}
 
-static int get_last_int(const char *str)
-{
-    int i = 0;
-    int i_pos = -1;
-    for(; str[i]; ++i)
+    if (count == 0)
     {
-        const char c = str[i];
-        if(c >= '0' && c <= '9')
-        {
-            if(i_pos == -1)
-                i_pos = i;
-        }
-        else if(i_pos >= 0)
-            i_pos = -1;
+        errno = ENOENT;
+        return -1;
     }
 
-    if(i_pos == -1)
-        return 0;
-
-    return atoi(&str[i_pos]);
+    return 0;
 }
 
-static void check_device_net(lua_State *L)
+/* convert number at the end of `str' to int */
+static
+int get_last_int(const char *str)
 {
+    const char *p = strrchr(str, '\0');
+
+    for (; p > str; p--)
+    {
+        const int c = *(p - 1);
+        if (!(c >= '0' && c <= '9'))
+            break;
+    }
+
+    return atoi(p);
+}
+
 #ifdef HAVE_LINUX_DVB_NET_H
-    sprintf(dev_name, "/dev/dvb/adapter%d/net%d", adapter, device);
-
-    const int fd = open(dev_name, O_RDWR | O_NONBLOCK);
-    int success = 0;
-
-    do
-    {
-        if(fd == -1)
-        {
-            lua_pushfstring(L, "failed to open [%s]", strerror(errno));
-            break;
-        }
-
-        struct dvb_net_if net;
-        memset(&net, 0, sizeof(net));
-        if(ioctl(fd, NET_ADD_IF, &net) != 0)
-        {
-            lua_pushfstring(L, "NET_ADD_IF failed [%s]", strerror(errno));
-            break;
-        }
-
-        struct ifreq ifr;
-        memset(&ifr, 0, sizeof(ifr));
-        sprintf(ifr.ifr_name, "dvb%d_%d", adapter, device);
-
-        int sock = socket(PF_INET, SOCK_DGRAM, 0);
-        if(ioctl(sock, SIOCGIFHWADDR, &ifr) != 0)
-            lua_pushfstring(L, "SIOCGIFHWADDR failed [%s]", strerror(errno));
-        else
-        {
-            const uint8_t *const p = (uint8_t *)ifr.ifr_hwaddr.sa_data;
-
-            char mac[32];
-            snprintf(mac, sizeof(mac), "%02X:%02X:%02X:%02X:%02X:%02X"
-                     , p[0], p[1], p[2], p[3], p[4], p[5]);
-
-            lua_pushstring(L, mac);
-        }
-        close(sock);
-
-        if(ioctl(fd, NET_REMOVE_IF, net.if_num) != 0)
-        {
-            lua_pop(L, 1);
-            lua_pushfstring(L, "NET_REMOVE_IF failed [%s]", strerror(errno));
-            break;
-        }
-
-        success = 1;
-    } while(0);
-
-    if(fd != -1)
-        close(fd);
-
-    if (!success)
-    {
-        lua_setfield(L, -2, "net_error");
-        lua_pushstring(L, "ERROR");
-    }
-#else
-    static const char dummy_mac[] = "DE:AD:00:00:BE:EF";
-    lua_pushstring(L, dummy_mac);
-#endif /* HAVE_LINUX_DVB_NET_H */
-
-    lua_setfield(L, -2, "mac");
-}
-
-static void check_device_fe(lua_State *L)
+/* read network interface's MAC address in text form */
+static
+int get_mac(const char *ifname, char mac[MAC_BUFSIZ])
 {
-    sprintf(dev_name, "/dev/dvb/adapter%d/frontend%d", adapter, device);
+    const int fd = socket(PF_INET, SOCK_DGRAM, 0);
+    if (fd == -1)
+        return -1;
 
-    bool is_busy = false;
+    struct ifreq ifr;
+    memset(&ifr, 0, sizeof(ifr));
+    strncpy(ifr.ifr_name, ifname, sizeof(ifr.ifr_name) - 1);
 
-    int fd = open(dev_name, O_RDWR | O_NONBLOCK);
-    if(fd == -1)
-    {
-        is_busy = true;
-        fd = open(dev_name, O_RDONLY | O_NONBLOCK);
-    }
-
-    static const char _error[] = "error";
-
-    if(fd == -1)
-    {
-        lua_pushfstring(L, "failed to open [%s]", strerror(errno));
-        lua_setfield(L, -2, _error);
-        return;
-    }
-
-    lua_pushboolean(L, is_busy);
-    lua_setfield(L, -2, "busy");
-
-    struct dvb_frontend_info feinfo;
-    if(ioctl(fd, FE_GET_INFO, &feinfo) != 0)
-    {
-        lua_pushstring(L, "failed to get frontend type");
-        lua_setfield(L, -2, _error);
-        close(fd);
-        return;
-    }
+    const int ret = ioctl(fd, SIOCGIFHWADDR, &ifr);
     close(fd);
 
-    switch(feinfo.type)
+    if (ret != 0)
+        return -1;
+
+    const uint8_t *const p = (uint8_t *)ifr.ifr_hwaddr.sa_data;
+    snprintf(mac, MAC_BUFSIZ, "%02X:%02X:%02X:%02X:%02X:%02X"
+             , p[0], p[1], p[2], p[3], p[4], p[5]);
+
+    return 0;
+}
+#endif /* HAVE_LINUX_DVB_NET_H */
+
+/* retrieve DVB card's MAC address */
+static
+void get_net_info(struct dvb_enum *ctx)
+{
+    lua_State *const L = ctx->lua;
+    char mac[MAC_BUFSIZ] = { '\0' };
+
+#ifdef HAVE_LINUX_DVB_NET_H
+    char dev[PATH_MAX] = { '\0' };
+    snprintf(dev, sizeof(dev), "%s/net%d", ctx->path, ctx->frontend);
+
+    const int fd = open(dev, O_RDWR | O_NONBLOCK);
+    if (fd != -1)
     {
-        case FE_QPSK:
-            lua_pushstring(L, "S");
-            break;
-        case FE_OFDM:
-            lua_pushstring(L, "T");
-            break;
-        case FE_QAM:
-            lua_pushstring(L, "C");
-            break;
-        case FE_ATSC:
-            lua_pushstring(L, "ATSC");
-            break;
-        default:
-            lua_pushfstring(L, "unknown frontend type [%d]", feinfo.type);
-            lua_setfield(L, -2, _error);
-            return;
+        struct dvb_net_if net;
+        memset(&net, 0, sizeof(net));
+
+        if (ioctl(fd, NET_ADD_IF, &net) == 0)
+        {
+            char ifname[IFNAMSIZ] = { '\0' };
+            snprintf(ifname, sizeof(ifname), "dvb%d_%d"
+                     , ctx->adapter, ctx->frontend);
+
+            if (get_mac(ifname, mac) != 0)
+            {
+                lua_pushfstring(L, "get_mac(): %s: %s"
+                                , ifname, strerror(errno));
+                lua_setfield(L, -2, "net_error");
+            }
+
+            ioctl(fd, NET_REMOVE_IF, net.if_num);
+        }
+        else
+        {
+            lua_pushfstring(L, "ioctl(): NET_ADD_IF: %s", strerror(errno));
+            lua_setfield(L, -2, "net_error");
+        }
+
+        close(fd);
     }
+    else
+    {
+        lua_pushfstring(L, "open(): %s: %s", dev, strerror(errno));
+        lua_setfield(L, -2, "net_error");
+    }
+#else /* HAVE_LINUX_DVB_NET_H */
+    lua_pushstring(L, "DVB networking is not supported by the OS");
+    lua_setfield(L, -2, "net_error");
+#endif /* !HAVE_LINUX_DVB_NET_H */
+
+    if (strlen(mac) > 0)
+    {
+        lua_pushstring(L, mac);
+        lua_setfield(L, -2, "mac");
+    }
+}
+
+/* retrieve frontend name and type */
+static
+bool get_frontend_info(struct dvb_enum *ctx)
+{
+    lua_State *const L = ctx->lua;
+
+    /* open device node */
+    char dev[PATH_MAX] = { '\0' };
+    snprintf(dev, sizeof(dev), "%s/frontend%d", ctx->path, ctx->frontend);
+
+    bool is_busy = false;
+    int fd = open(dev, O_RDWR | O_NONBLOCK);
+
+    if (fd == -1 && errno == EBUSY)
+    {
+        is_busy = true;
+        fd = open(dev, O_RDONLY | O_NONBLOCK);
+    }
+
+    if (fd == -1)
+    {
+        lua_pushfstring(L, "open(): %s: %s", dev, strerror(errno));
+        lua_setfield(L, -2, "error");
+
+        return false;
+    }
+
+    if (is_busy)
+    {
+        lua_pushboolean(L, 1);
+        lua_setfield(L, -2, "busy");
+    }
+
+    /* query basic parameters */
+    struct dvb_frontend_info feinfo;
+    const int ret = ioctl(fd, FE_GET_INFO, &feinfo);
+    close(fd);
+
+    if (ret != 0)
+    {
+        lua_pushfstring(L, "ioctl(): FE_GET_INFO: %s", strerror(errno));
+        lua_setfield(L, -2, "error");
+
+        return false;
+    }
+
+    /* description string */
+    lua_pushstring(L, feinfo.name);
+    lua_setfield(L, -2, "name");
+
+    /* delivery system */
+    const char *type = NULL;
+    switch (feinfo.type)
+    {
+        case FE_QPSK: type = "S";    break;
+        case FE_OFDM: type = "T";    break;
+        case FE_QAM:  type = "C";    break;
+        case FE_ATSC: type = "ATSC"; break;
+
+        default:
+            break;
+    }
+
+    if (type == NULL)
+    {
+        lua_pushfstring(L, "unknown frontend type: %d", feinfo.type);
+        lua_setfield(L, -2, "error");
+
+        return false;
+    }
+
+    lua_pushstring(L, type);
     lua_setfield(L, -2, "type");
 
-    lua_pushstring(L, feinfo.name);
+    return true;
+}
+
+/* probe frontend for parameters */
+static
+void probe_frontend(void *arg, const char *path)
+{
+    struct dvb_enum *const ctx = (struct dvb_enum *)arg;
+    lua_State *const L = ctx->lua;
+
+    ctx->frontend = get_last_int(path);
+
+    lua_newtable(L);
+    lua_pushinteger(L, ctx->adapter);
+    lua_setfield(L, -2, "adapter");
+    lua_pushinteger(L, ctx->frontend);
     lua_setfield(L, -2, "frontend");
 
-    check_device_net(L);
+    if (get_frontend_info(ctx))
+    {
+        get_net_info(ctx);
+    }
+
+    const int pos = luaL_len(L, -2) + 1;
+    lua_rawseti(L, -2, pos);
 }
 
-static void check_device(lua_State *L, const char *item)
+/* list adapter's frontends */
+static
+void probe_adapter(void *arg, const char *path)
 {
-    device = get_last_int(&item[(sizeof("/dev/dvb/adapter") - 1) + (sizeof("/net") - 1)]);
+    lua_State *const L = (lua_State *)arg;
 
+    struct dvb_enum ctx =
+    {
+        .lua = L,
+        .path = path,
+        .adapter = get_last_int(path),
+    };
+
+    /* list /dev/dvb/adapterX/frontendY */
+    const int ret = iterate_dir(path, "frontend", &ctx, probe_frontend);
+    if (ret != 0)
+    {
+        /* add fake adapter entry */
+        lua_newtable(L);
+        lua_pushinteger(L, ctx.adapter);
+        lua_setfield(L, -2, "adapter");
+        lua_pushfstring(L, "iterate_dir(): %s/frontend*: %s"
+                        , path, strerror(errno));
+        lua_setfield(L, -2, "error");
+
+        const int pos = luaL_len(L, -2) + 1;
+        lua_rawseti(L, -2, pos);
+    }
+}
+
+/* return list of detected DVB adapters and frontends */
+static
+int dvbapi_enumerate(lua_State *L)
+{
     lua_newtable(L);
-    lua_pushinteger(L, adapter);
-    lua_setfield(L, -2, __adapter);
-    lua_pushinteger(L, device);
-    lua_setfield(L, -2, __device);
-    check_device_fe(L);
 
-    ++count;
-    lua_rawseti(L, -2, count);
-}
-
-static void check_adapter(lua_State *L, const char *item)
-{
-    adapter = get_last_int(&item[sizeof("/dev/dvb/adapter") - 1]);
-    iterate_dir(L, item, "net", check_device);
-}
-
-static int dvbls_scan(lua_State *L)
-{
-    count = 0;
-    lua_newtable(L);
-    iterate_dir(L, "/dev/dvb", __adapter, check_adapter);
-
-    if(count == 0)
-        asc_log_debug(MSG("no DVB adapters found"));
+    /* list /dev/dvb/adapterX */
+    const int ret = iterate_dir(DVB_ROOT, "adapter", L, probe_adapter);
+    if (ret != 0 && errno != ENOENT)
+    {
+        luaL_error(L, "iterate_dir(): %s/adapter*: %s"
+                   , DVB_ROOT, strerror(errno));
+    }
 
     return 1;
 }
@@ -261,5 +332,5 @@ HW_ENUM_REGISTER(dvbapi)
 {
     .name = "dvb_input",
     .description = "DVB Input (Linux DVB API)",
-    .enumerate = dvbls_scan,
+    .enumerate = dvbapi_enumerate,
 };
