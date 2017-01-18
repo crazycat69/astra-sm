@@ -1,7 +1,7 @@
 -- Astra Lua Library (Application list)
 -- https://cesbo.com/astra/
 --
--- Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
+-- Copyright (C) 2016-2017, Artem Kharitonov <artem@3phase.pw>
 --
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -32,15 +32,12 @@ local list = {
         arg = "--analyze",
         txt = "command line MPEG TS analyzer",
     },
+    {
+        pkg = "apps/devices",
+        arg = "--devices",
+        txt = "list detected hardware",
+    },
 }
-
-if dvbls ~= nil then
-    table.insert(list, {
-        pkg = "apps/dvbls",
-        arg = "--dvbls",
-        txt = "list installed DVB adapters",
-    })
-end
 
 if dvb_input ~= nil then
     table.insert(list, {
