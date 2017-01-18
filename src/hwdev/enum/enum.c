@@ -1,7 +1,7 @@
 /*
  * Astra Module: Hardware Enumerator
  *
- * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2016-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,13 +18,13 @@
  */
 
 /*
- * Interface to device-specific enumerators
+ * Interface to hardware-specific enumerators
  *
- * Methods:
- *      hw_enum.modules()
- *                  - return table containing a list of supported device types
- *      hw_enum.devices(module)
- *                  - list devices currently present in the system
+ * Table structure:
+ *      hw_enum[module_name].description
+ *                  - short text describing the module
+ *      hw_enum[module_name].enumerate()
+ *                  - function to list devices currently present in the system
  */
 
 #include "enum.h"
@@ -35,66 +35,22 @@
 #define MSG(_msg) "[hw_enum] " _msg
 
 static
-const hw_enum_t *hw_find_enum(const char *name)
-{
-    const hw_enum_t *hw_enum = NULL;
-    for (size_t i = 0; enum_list[i] != NULL; i++)
-    {
-        if (!strcmp(enum_list[i]->name, name))
-        {
-            hw_enum = enum_list[i];
-            break;
-        }
-    }
-
-    return hw_enum;
-}
-
-static
-int method_modules(lua_State *L)
-{
-    lua_newtable(L);
-    for (const hw_enum_t **hw_enum = enum_list; *hw_enum != NULL; hw_enum++)
-    {
-        lua_pushstring(L, (*hw_enum)->name);
-        lua_pushstring(L, (*hw_enum)->description);
-        lua_settable(L, -3);
-    }
-
-    return 1;
-}
-
-static
-int method_devices(lua_State *L)
-{
-    const char *const mod_name = luaL_checkstring(L, 1);
-    const hw_enum_t *const hw_enum = hw_find_enum(mod_name);
-
-    if (hw_enum == NULL)
-    {
-        luaL_error(L, MSG("module '%s' is not available in this build")
-                   , mod_name);
-    }
-
-    /* call module-specific enumerator function */
-    lua_pushcfunction(L, hw_enum->enumerate);
-    lua_call(L, 0, 1);
-    luaL_checktype(L, -1, LUA_TTABLE);
-
-    return 1;
-}
-
-static
 void module_load(lua_State *L)
 {
-    static const luaL_Reg api[] =
-    {
-        { "modules", method_modules },
-        { "devices", method_devices },
-        { NULL, NULL },
-    };
+    lua_newtable(L);
 
-    luaL_newlib(L, api);
+    for (size_t i = 0; enum_list[i] != NULL; i++)
+    {
+        lua_newtable(L);
+
+        lua_pushstring(L, enum_list[i]->description);
+        lua_setfield(L, -2, "description");
+        lua_pushcfunction(L, enum_list[i]->enumerate);
+        lua_setfield(L, -2, "enumerate");
+
+        lua_setfield(L, -2, enum_list[i]->name);
+    }
+
     lua_setglobal(L, "hw_enum");
 }
 
