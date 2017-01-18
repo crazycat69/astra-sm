@@ -10,7 +10,7 @@ SCRIPT_FILES += \
 # applications
 SCRIPT_FILES += \
     apps/analyze.lua \
-    apps/dvbls.lua \
+    apps/devices.lua \
     apps/femon.lua \
     apps/relay.lua \
     apps/service.lua \

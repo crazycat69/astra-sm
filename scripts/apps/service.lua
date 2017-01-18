@@ -81,10 +81,10 @@ function main()
     end
 
     func = winsvc[svc_action]
-    local success, errstr = pcall(func, svc_opts)
-    if not success then
+    local ret, err = pcall(func, svc_opts)
+    if not ret then
         print("Couldn't " .. svc_action .. " service:")
-        print(errstr)
+        print(err)
         astra.exit(1)
     else
         print("Service successfully " .. svc_action .. "ed.")

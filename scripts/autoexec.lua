@@ -26,6 +26,7 @@
 --
 require("common/base")
 require("common/stream")
+app_list = require("applist")
 
 -- scan package path for autoexec directories
 local auto_files = {}
@@ -68,7 +69,6 @@ if #argv == 0 then
     astra_usage()
 end
 
-local app_list = require("applist")
 local app_pkg = app_list[1].pkg
 local arg_idx = 0
 
