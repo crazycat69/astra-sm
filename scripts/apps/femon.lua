@@ -20,23 +20,23 @@ log.set({ color = true })
 
 options_usage = [[
     -a ADAPTER          DVB adapter number: /dev/dvb/adapter0
-    -d DEVICE           DVB frontend number: /dev/dvb/adapter0/fe0
-    -r                  signal/snr values in dBm
+    -f FRONTEND         DVB frontend number: /dev/dvb/adapter0/frontend0
+    -r                  show signal/SNR values in dBm
 
-    URL                 address to tune DVB:
-                        astra --femon dvb://#adapter=0&type=S2&tp=...
-                        read more: http://info.cesbo.com
+    URL                 dvb:// address
+                        Example: "dvb://#adapter=0&type=S2&tp=..."
 ]]
 
-dvb_conf = {}
+local dvb_conf = {}
+local dvb_femon = nil
 
 options = {
     ["-a"] = function(idx)
         dvb_conf.adapter = tonumber(argv[idx + 1])
         return 1
     end,
-    ["-d"] = function(idx)
-        dvb_conf.device = tonumber(argv[idx + 1])
+    ["-f"] = function(idx)
+        dvb_conf.frontend = tonumber(argv[idx + 1])
         return 1
     end,
     ["-r"] = function(idx)
@@ -64,5 +64,5 @@ function main()
     dvb_conf.log_signal = true
     dvb_conf.no_dvr = true
 
-    _G.a = dvb_tune(dvb_conf)
+    dvb_femon = dvb_tune(dvb_conf)
 end

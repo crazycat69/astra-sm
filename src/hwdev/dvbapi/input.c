@@ -31,7 +31,7 @@
 #include <astra/core/thread.h>
 #include <astra/core/timer.h>
 
-#define MSG(_msg) "[dvb_input %d:%d] " _msg, mod->adapter, mod->device
+#define MSG(_msg) "[dvb_input %d:%d] " _msg, mod->adapter, mod->frontend
 
 #define DVR_RETRY 10
 
@@ -40,7 +40,7 @@ struct module_data_t
     STREAM_MODULE_DATA();
 
     int adapter;
-    int device;
+    int frontend;
 
     /* Base */
     asc_thread_t *thread;
@@ -205,7 +205,7 @@ static void dvr_open(module_data_t *mod)
 {
     char dev_name[64];
     snprintf(dev_name, sizeof(dev_name), "/dev/dvb/adapter%d/dvr%d"
-             , mod->adapter, mod->device);
+             , mod->adapter, mod->frontend);
 
     mod->dvr_fd = open(dev_name, O_RDONLY | O_NONBLOCK);
     if(mod->dvr_fd <= 0)
@@ -335,7 +335,7 @@ static void dmx_bounce(module_data_t *mod)
 
 static void dmx_open(module_data_t *mod)
 {
-    sprintf(mod->dmx_dev_name, "/dev/dvb/adapter%d/demux%d", mod->adapter, mod->device);
+    sprintf(mod->dmx_dev_name, "/dev/dvb/adapter%d/demux%d", mod->adapter, mod->frontend);
 
     const int fd = __dmx_open(mod);
     if(fd <= 0)
@@ -652,12 +652,12 @@ static void module_options(lua_State *L, module_data_t *mod)
     static const char __adapter[] = "adapter";
     if(!module_option_integer(L, __adapter, &mod->adapter))
         option_required(mod, __adapter);
-    module_option_integer(L, "device", &mod->device);
+    module_option_integer(L, "frontend", &mod->frontend);
 
     mod->fe->adapter = mod->adapter;
     mod->ca->adapter = mod->adapter;
-    mod->fe->device = mod->device;
-    mod->ca->device = mod->device;
+    mod->fe->frontend = mod->frontend;
+    mod->ca->frontend = mod->frontend;
 
     const char *string_val = NULL;
 
