@@ -689,11 +689,8 @@ function dvb_tune(conf)
         conf.device = nil
 
         if dvb_list == nil then
-            if dvbls then
-                dvb_list = dvbls()
-            else
-                dvb_list = {}
-            end
+            log.warning("[dvb_tune] dvb_list is not set; searching adapters by MAC will not work")
+            dvb_list = {}
         end
         local mac = conf.mac:upper()
         for _, a in ipairs(dvb_list) do
