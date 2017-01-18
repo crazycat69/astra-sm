@@ -526,6 +526,10 @@ static void module_options_s(lua_State *L, module_data_t *mod)
 
     mod->fe->stream_id = -1;
     module_option_integer(L, "stream_id", &mod->fe->stream_id);
+    mod->fe->pls_code = 0;
+    module_option_integer(L, "pls_code", &mod->fe->pls_code);
+    mod->fe->pls_mode = 0;
+    module_option_integer(L, "pls_mode", &mod->fe->pls_mode);
 }
 
 /*

@@ -65,6 +65,8 @@ struct dvb_fe_t
     fe_code_rate_t fec;
     fe_rolloff_t rolloff;
     int stream_id;
+    int pls_code;
+    int pls_mode;
 
     fe_bandwidth_t bandwidth;
     fe_guard_interval_t guardinterval;

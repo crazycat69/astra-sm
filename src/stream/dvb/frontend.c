@@ -328,7 +328,7 @@ static void fe_tune_s(dvb_fe_t *fe)
     }
     if(fe->stream_id != -1)
     {
-        DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_STREAM_ID,     fe->stream_id);
+        DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_STREAM_ID,     (fe->pls_mode << 26) | (fe->pls_code << 8) | fe->stream_id);
     }
     if(fe->diseqc == 0 && fe->uni_scr == 0)
     {
