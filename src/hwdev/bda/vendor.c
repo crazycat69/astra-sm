@@ -120,7 +120,7 @@ typedef struct
 } tbs_pls_t;
 
 static
-HRESULT tbs_pcie_tune(void *data, const bda_tune_cmd_t *tune)
+HRESULT tbs_pcie_pre_tune(void *data, const bda_tune_cmd_t *tune)
 {
     HRESULT hr = S_OK;
     IKsPropertySet *const prop = (IKsPropertySet *)data;
@@ -137,7 +137,7 @@ HRESULT tbs_pcie_tune(void *data, const bda_tune_cmd_t *tune)
                                 , KSPROPERTY_BDA_PLPINFO
                                 , NULL, 0, &plp, sizeof(plp));
 
-        asc_log_debug("tbs_pcie_tune: PLP/ISI %d - result %d",
+        asc_log_debug("tbs_pcie_pre_tune: PLP/ISI %d - result %d",
                           plp.id, (int)hr);
 	}
 
@@ -156,7 +156,7 @@ HRESULT tbs_pcie_tune(void *data, const bda_tune_cmd_t *tune)
                                 , KSPROPERTY_BDA_PLS
                                 , NULL, 0, &pls, sizeof(pls));
 
-			asc_log_debug("tbs_pcie_tune: PLS mode %d, code %d - result %d",
+			asc_log_debug("tbs_pcie_pre_tune: PLS mode %d, code %d - result %d",
 						pls.pls_mode, pls.pls_code, (int)hr);
 	}
 
@@ -199,7 +199,7 @@ const bda_extension_t ext_tbs_pcie =
     .init = tbs_pcie_init,
     .destroy = generic_destroy,
 
-    .tune = tbs_pcie_tune,
+    .pre_tune = tbs_pcie_pre_tune,
     .diseqc = tbs_pcie_diseqc,
 };
 
@@ -244,7 +244,7 @@ typedef struct {
 } tbs_usb_cmd_t;
 
 static
-HRESULT tbs_usb_tune(void *data, const bda_tune_cmd_t *tune)
+HRESULT tbs_usb_pre_tune(void *data, const bda_tune_cmd_t *tune)
 {
     HRESULT hr = S_OK;
     IKsPropertySet *const prop = (IKsPropertySet *)data;
@@ -261,7 +261,7 @@ HRESULT tbs_usb_tune(void *data, const bda_tune_cmd_t *tune)
                                 , KSPROPERTY_CTRL_PLPINFO
                                 , NULL, 0, &plp, sizeof(plp));
 
-        asc_log_debug("tbs_usb_tune: PLP/ISI %d - result %d",
+        asc_log_debug("tbs_usb_pre_tune: PLP/ISI %d - result %d",
                           plp.id, (int)hr);
 	}
 
@@ -280,7 +280,7 @@ HRESULT tbs_usb_tune(void *data, const bda_tune_cmd_t *tune)
                                 , KSPROPERTY_CTRL_PLS
                                 , NULL, 0, &pls, sizeof(pls));
 
-			asc_log_debug("tbs_usb_tune: PLS mode %d, code %d - result %d",
+			asc_log_debug("tbs_usb_pre_tune: PLS mode %d, code %d - result %d",
 						pls.pls_mode, pls.pls_code, (int)hr);
 	}
 
@@ -323,7 +323,7 @@ const bda_extension_t ext_tbs_usb =
     .init = tbs_usb_init,
     .destroy = generic_destroy,
 
-    .tune = tbs_usb_tune,
+    .pre_tune = tbs_usb_pre_tune,
     .diseqc = tbs_usb_diseqc,
 };
 
@@ -376,30 +376,10 @@ enum
 };
 
 static
-HRESULT omc_pci_tune(void *data, const bda_tune_cmd_t *tune)
+HRESULT omc_pci_post_tune(void *data, const bda_tune_cmd_t *tune)
 {
     HRESULT hr = S_OK;
     IKsPropertySet *const prop = (IKsPropertySet *)data;
-
-    if (tune->lnb_source != -1)
-    {
-		struct omc_diseqc_info omc_diseqc_cmd;
-		omc_diseqc_cmd.pBuffer[0] = 0xE0;
-		omc_diseqc_cmd.pBuffer[1] = 0x10;
-		omc_diseqc_cmd.pBuffer[2] = 0x38;
-		omc_diseqc_cmd.pBuffer[3] = 0xF0 | ((tune->lnb_source-1) << 2);
-		omc_diseqc_cmd.nLen = 4;
-		omc_diseqc_cmd.nRepeatCount = 1;
-		
-        hr = IKsPropertySet_Set(prop
-                                , &KSPROPSETID_OmcDiSEqCProperties
-                                , KSPROPERTY_OMC_DISEQC_WRITE
-                                , NULL, 0, &omc_diseqc_cmd, sizeof(omc_diseqc_cmd));
-
-        asc_log_debug("omc_pci_tune: send DiSEqC - result %d", (int)hr);		
-	}
-
-	if (hr) return hr;
 
     if (tune->stream_id != -1)
     {
@@ -411,7 +391,7 @@ HRESULT omc_pci_tune(void *data, const bda_tune_cmd_t *tune)
                                 , KSPROPERTY_OMC_CUSTOM_MIS_FILTER
                                 , NULL, 0, &isi, sizeof(isi));
 
-        asc_log_debug("omc_pci_tune: PLP/ISI %d - result %d",
+        asc_log_debug("omc_pci_post_tune: PLP/ISI %d - result %d",
                           isi, (int)hr);		
 	}
 
@@ -430,11 +410,11 @@ HRESULT omc_pci_tune(void *data, const bda_tune_cmd_t *tune)
                                 , KSPROPERTY_OMC_CUSTOM_PLS_SCRAM
                                 , NULL, 0, &pls, sizeof(pls));
 
-		asc_log_debug("omc_pci_tune: PLS mode %d, code %d - result %d",
+		asc_log_debug("omc_pci_post_tune: PLS mode %d, code %d - result %d",
                           pls.pls_mode, pls.pls_code, (int)hr);
     }
 
-    return hr;
+    return S_OK;
 }
 
 static
@@ -473,7 +453,7 @@ const bda_extension_t ext_omc_pci =
     .init = omc_pci_init,
     .destroy = generic_destroy,
 
-    .tune = omc_pci_tune,
+    .post_tune = omc_pci_post_tune,
     .diseqc = omc_pci_diseqc,
 };
 
@@ -521,7 +501,7 @@ typedef struct {
 } cc_tuner_cmd_t;
 
 static
-HRESULT cc_tune(void *data, const bda_tune_cmd_t *tune)
+HRESULT cc_post_tune(void *data, const bda_tune_cmd_t *tune)
 {
     HRESULT hr = S_OK;
     IKsPropertySet *const prop = (IKsPropertySet *)data;
@@ -545,7 +525,7 @@ HRESULT cc_tune(void *data, const bda_tune_cmd_t *tune)
 							, KSPROPERTY_CC_SET_FREQUENCY
 							, NULL, 0, &cc_cmd, sizeof(cc_cmd));
 
-    asc_log_debug("cc_tune: stream_id %d, lnb_source %d - result %d",
+    asc_log_debug("cc_post_tune: stream_id %d, lnb_source %d - result %d",
                           cc_cmd.stream_id, cc_cmd.lnb_source, (int)hr);		
 	
     return hr;
@@ -588,7 +568,7 @@ const bda_extension_t ext_cc =
     .init = cc_init,
     .destroy = generic_destroy,
 
-    .tune = cc_tune,
+    .post_tune = cc_post_tune,
     .diseqc = cc_diseqc,
 };
 
@@ -664,7 +644,7 @@ void bda_ext_destroy(module_data_t *mod)
 }
 
 /* send additional tuning data */
-HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
+HRESULT bda_ext_pre_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
 {
     HRESULT out_hr = S_OK;
 
@@ -673,13 +653,37 @@ HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
         bda_extension_t *const ext =
             (bda_extension_t *)asc_list_data(mod->extensions);
 
-        if (ext->tune != NULL)
+        if (ext->pre_tune != NULL)
         {
-            const HRESULT hr = ext->tune(ext->data, tune);
+            const HRESULT hr = ext->pre_tune(ext->data, tune);
 
             if (FAILED(hr))
             {
-                BDA_DEBUG("couldn't send tuning data for %s", ext->name);
+                BDA_DEBUG("couldn't send pre-tuning data for %s", ext->name);
+                out_hr = hr;
+            }
+        }
+    }
+
+    return out_hr;
+}
+
+HRESULT bda_ext_post_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
+{
+    HRESULT out_hr = S_OK;
+
+    asc_list_for(mod->extensions)
+    {
+        bda_extension_t *const ext =
+            (bda_extension_t *)asc_list_data(mod->extensions);
+
+        if (ext->post_tune != NULL)
+        {
+            const HRESULT hr = ext->post_tune(ext->data, tune);
+
+            if (FAILED(hr))
+            {
+                BDA_DEBUG("couldn't send post-tuning data for %s", ext->name);
                 out_hr = hr;
             }
         }

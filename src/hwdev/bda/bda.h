@@ -179,7 +179,8 @@ typedef struct
     HRESULT (*init)(IBaseFilter *[], void **);
     void (*destroy)(void *);
 
-    HRESULT (*tune)(void *, const bda_tune_cmd_t *);
+    HRESULT (*pre_tune)(void *, const bda_tune_cmd_t *);
+	HRESULT (*post_tune)(void *, const bda_tune_cmd_t *);
     HRESULT (*diseqc)(void *, const bda_diseqc_cmd_t *);
     HRESULT (*lnb)(void *, bool);
     HRESULT (*t22khz)(void *, bool);
@@ -191,7 +192,8 @@ typedef struct
 HRESULT bda_ext_init(module_data_t *mod, IBaseFilter *filters[]);
 void bda_ext_destroy(module_data_t *mod);
 
-HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune);
+HRESULT bda_ext_pre_tune(module_data_t *mod, const bda_tune_cmd_t *tune);
+HRESULT bda_ext_post_tune(module_data_t *mod, const bda_tune_cmd_t *tune);
 HRESULT bda_ext_diseqc(module_data_t *mod, const const bda_diseqc_cmd_t *cmd);
 
 /*

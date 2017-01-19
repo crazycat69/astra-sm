@@ -1054,11 +1054,15 @@ HRESULT graph_setup(module_data_t *mod)
         //
         // XXX: do it after control_run() ?
 
+        hr = bda_ext_pre_tune(mod, &mod->tune);
+        if (FAILED(hr))
+            BDA_ERROR("error while sending extension-specific tuning data");
+
         /* start the graph */
         hr = control_run(mod, graph);
         BDA_CKHR("failed to run the graph");
 
-        hr = bda_ext_tune(mod, &mod->tune);
+        hr = bda_ext_post_tune(mod, &mod->tune);
         if (FAILED(hr))
             BDA_ERROR("error while sending extension-specific tuning data");
 
@@ -1255,12 +1259,15 @@ HRESULT restart_tuning(module_data_t *mod)
     hr = provider_tune(mod, mod->provider);
     BDA_CKHR_D("couldn't configure provider with tuning data");
 
+    hr = bda_ext_pre_tune(mod, &mod->tune);
+    if (FAILED(hr))
+        BDA_ERROR("error while sending extension-specific tuning data");
 
     hr = control_run(mod, mod->graph);
     BDA_CKHR_D("couldn't restart the graph");
 
     // XXX: do we need to rejoin PIDs and reissue diseqc cmds?
-    hr = bda_ext_tune(mod, &mod->tune);
+    hr = bda_ext_post_tune(mod, &mod->tune);
     if (FAILED(hr))
         BDA_ERROR("error while sending extension-specific tuning data");
 
