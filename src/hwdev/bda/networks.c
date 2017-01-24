@@ -1,7 +1,7 @@
 /*
  * Astra Module: BDA (Request generator)
  *
- * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2016-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -359,6 +359,9 @@ HRESULT set_locator_dvbs2(const bda_tune_cmd_t *tune, ILocator *locator)
     if (FAILED(hr)) goto out;
 
     hr = IDVBSLocator2_put_SignalRollOff(locator_s2, tune->rolloff);
+    if (FAILED(hr)) goto out;
+
+    hr = IDVBSLocator2_put_DiseqLNBSource(locator_s2, tune->lnb_source);
     if (FAILED(hr)) goto out;
 
     hr = set_locator_dvbs(tune, locator); /* delegate to DVB-S */

@@ -1,7 +1,7 @@
 /*
  * Astra Module: BDA
  *
- * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2016-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,6 +36,12 @@
 /*
  * user commands for controlling the tuner
  */
+
+/* DiSEqC command length, bytes */
+#define BDA_DISEQC_LEN 6
+
+/* maximum DiSEqC sequence size */
+#define BDA_DISEQC_MAX_SEQ 64
 
 typedef enum
 {
@@ -75,10 +81,13 @@ typedef struct
     int lof1;
     int lof2;
     int slof;
+    LNB_Source lnb_source;
     Polarisation polarization;
     SpectralInversion inversion;
     RollOff rolloff;
     Pilot pilot;
+    int pls_code;
+    int pls_mode;
 
     /* dvb-t */
     int bandwidth;
@@ -105,11 +114,55 @@ typedef struct
     uint16_t pnr;
 } bda_ca_cmd_t;
 
+typedef enum
+{
+    BDA_EXT_LNBPOWER_NOT_SET = -1,
+    BDA_EXT_LNBPOWER_NOT_DEFINED = 0,
+    BDA_EXT_LNBPOWER_OFF,
+    BDA_EXT_LNBPOWER_ON, /* auto voltage */
+    BDA_EXT_LNBPOWER_18V,
+    BDA_EXT_LNBPOWER_13V,
+} bda_lnbpower_mode_t;
+
+typedef enum
+{
+    BDA_EXT_22K_NOT_SET = -1,
+    BDA_EXT_22K_NOT_DEFINED = 0,
+    BDA_EXT_22K_OFF,
+    BDA_EXT_22K_ON,
+} bda_22k_mode_t;
+
+typedef enum
+{
+    BDA_EXT_TONEBURST_NOT_SET = -1,
+    BDA_EXT_TONEBURST_NOT_DEFINED = 0,
+    BDA_EXT_TONEBURST_OFF,
+    BDA_EXT_TONEBURST_UNMODULATED, /* mini-A */
+    BDA_EXT_TONEBURST_MODULATED, /* mini-B */
+} bda_toneburst_mode_t;
+
+typedef struct
+{
+    uint8_t data[BDA_DISEQC_LEN];
+    unsigned int data_len;
+
+    bda_lnbpower_mode_t lnbpower;
+    bda_22k_mode_t t22k;
+    bda_toneburst_mode_t toneburst;
+
+    int delay;
+} bda_diseqc_seq_t;
+
 typedef struct
 {
     bda_command_t cmd;
 
-    /* TODO: add diseqc command sequence */
+    /* table syntax: a:diseqc({...},{...}) */
+    bda_diseqc_seq_t seq[BDA_DISEQC_MAX_SEQ];
+    unsigned int seq_size;
+
+    /* number syntax: a:diseqc(n) */
+    LNB_Source port;
 } bda_diseqc_cmd_t;
 
 typedef union
@@ -154,19 +207,22 @@ HRESULT bda_tune_request(const bda_tune_cmd_t *cmd, ITuneRequest **out);
  * vendor extensions
  */
 
-/* DiSEqC command length, bytes */
-#define BDA_DISEQC_LEN 6
-
+/* extension types */
 enum
 {
-    BDA_EXTENSION_DISEQC    = 0x00000001, /* send DiSEqC raw command */
-    BDA_EXTENSION_CA        = 0x00000002, /* CI CAM slot support */
-
-    // TODO:
-    // LNB power on/off
-    // 22khz tone on/off
-    // toneburst
+    BDA_EXT_DISEQC    = 0x00000001, /* send DiSEqC raw command */
+    BDA_EXT_LNBPOWER  = 0x00000002, /* set LNB power and voltage */
+    BDA_EXT_22K       = 0x00000004, /* switch 22kHz tone on and off */
+    BDA_EXT_TONEBURST = 0x00000008, /* switch mini-DiSEqC input (A/B) */
+    BDA_EXT_CA        = 0x00000010, /* CI CAM slot support */
 };
+
+/* tuning data hooks */
+typedef enum
+{
+    BDA_TUNE_PRE = 0,   /* call before starting the graph */
+    BDA_TUNE_POST,      /* call after the graph has started */
+} bda_tune_hook_t;
 
 typedef struct
 {
@@ -177,11 +233,19 @@ typedef struct
     HRESULT (*init)(IBaseFilter *[], void **);
     void (*destroy)(void *);
 
-    HRESULT (*tune)(void *, const bda_tune_cmd_t *);
-    HRESULT (*diseqc)(void *, const uint8_t[BDA_DISEQC_LEN]);
-    HRESULT (*lnb)(void *, bool);
-    HRESULT (*t22khz)(void *, bool);
-    // XXX: voltage/polarization ?
+    /* called before and after starting the graph */
+    HRESULT (*tune_pre)(void *, const bda_tune_cmd_t *);
+    HRESULT (*tune_post)(void *, const bda_tune_cmd_t *);
+
+    /* send DiSEqC command */
+    HRESULT (*diseqc)(void *, const uint8_t *, unsigned int);
+
+    /* LNB power and voltage */
+    HRESULT (*lnbpower)(void *, bda_lnbpower_mode_t);
+
+    /* 22kHz tone */
+    HRESULT (*t22k)(void *, bda_22k_mode_t);
+    HRESULT (*toneburst)(void *, bda_toneburst_mode_t);
 
     void *data;
 } bda_extension_t;
@@ -189,8 +253,13 @@ typedef struct
 HRESULT bda_ext_init(module_data_t *mod, IBaseFilter *filters[]);
 void bda_ext_destroy(module_data_t *mod);
 
-HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune);
-HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t cmd[BDA_DISEQC_LEN]);
+HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune
+                     , bda_tune_hook_t when);
+HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t *cmd
+                       , unsigned int len);
+HRESULT bda_ext_lnbpower(module_data_t *mod, bda_lnbpower_mode_t mode);
+HRESULT bda_ext_22k(module_data_t *mod, bda_22k_mode_t mode);
+HRESULT bda_ext_toneburst(module_data_t *mod, bda_toneburst_mode_t mode);
 
 /*
  * BDA graph
@@ -268,9 +337,9 @@ struct module_data_t
 
     /* module state and tuning data */
     bda_tune_cmd_t tune;
+    bda_diseqc_cmd_t diseqc;
     bool joined_pids[TS_MAX_PID];
     bool ca_pmts[TS_MAX_PNR];
-    /* TODO: add diseqc sequence */
 
     bda_state_t state;
     unsigned int tunefail;

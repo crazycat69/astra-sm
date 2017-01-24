@@ -1,7 +1,7 @@
 /*
  * Astra Module: BDA (Graph builder)
  *
- * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2016-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -338,7 +338,8 @@ static
 void on_sample(void *arg, const uint8_t *buf, size_t len);
 
 static
-HRESULT create_probe(module_data_t *mod, IBaseFilter *tail, IBaseFilter **out)
+HRESULT create_probe(const module_data_t *mod, IBaseFilter *tail
+                     , void *arg, IBaseFilter **out)
 {
     HRESULT hr = E_FAIL;
 
@@ -380,7 +381,7 @@ HRESULT create_probe(module_data_t *mod, IBaseFilter *tail, IBaseFilter **out)
             break;
 
         /* attach probe */
-        hr = dshow_grabber(on_sample, mod, &mt, &probe);
+        hr = dshow_grabber(on_sample, arg, &mt, &probe);
         if (FAILED(hr)) continue;
 
         hr = dshow_find_pin(probe, PINDIR_INPUT, true, NULL, &probe_in);
@@ -411,8 +412,8 @@ out:
 
 /* create TS probe and connect it to demux PID mapper */
 static
-HRESULT create_probe_dmx(module_data_t *mod, IMPEG2PIDMap *pidmap
-                         , IBaseFilter **out)
+HRESULT create_probe_dmx(const module_data_t *mod, IMPEG2PIDMap *pidmap
+                         , void *arg, IBaseFilter **out)
 {
     HRESULT hr = E_FAIL;
 
@@ -446,7 +447,7 @@ HRESULT create_probe_dmx(module_data_t *mod, IMPEG2PIDMap *pidmap
     mt.majortype = MEDIATYPE_Stream;
     mt.subtype = MEDIASUBTYPE_MPEG2_TRANSPORT;
 
-    hr = dshow_grabber(on_sample, mod, &mt, &probe);
+    hr = dshow_grabber(on_sample, arg, &mt, &probe);
     BDA_CKHR_D("couldn't instantiate TS probe filter");
 
     hr = dshow_find_pin(probe, PINDIR_INPUT, true, NULL, &probe_in);
@@ -543,52 +544,10 @@ out:
     return hr;
 }
 
-/* request signal statistics from driver */
+/* submit user tuning data to network provider */
 static
-HRESULT signal_stats_load(const module_data_t *mod
-                          , IBDA_SignalStatistics *signal
-                          , bda_signal_stats_t *out)
-{
-    HRESULT hr = E_FAIL;
-
-    if (signal == NULL || out == NULL)
-        return E_POINTER;
-
-    memset(out, 0, sizeof(*out));
-
-    hr = signal->lpVtbl->get_SignalLocked(signal, &out->locked);
-    BDA_CKHR_D("couldn't retrieve signal lock status");
-
-    hr = signal->lpVtbl->get_SignalPresent(signal, &out->present);
-    BDA_CKHR_D("couldn't retrieve signal presence status");
-
-    hr = signal->lpVtbl->get_SignalQuality(signal, &out->quality);
-    BDA_CKHR_D("couldn't retrieve signal quality value");
-
-    hr = signal->lpVtbl->get_SignalStrength(signal, &out->strength);
-    BDA_CKHR_D("couldn't retrieve signal strength value");
-
-out:
-    return hr;
-}
-
-/* update last known signal statistics */
-static
-void signal_stats_set(module_data_t *mod, const bda_signal_stats_t *stats)
-{
-    asc_mutex_lock(&mod->signal_lock);
-
-    if (stats != NULL)
-        memcpy(&mod->signal_stats, stats, sizeof(mod->signal_stats));
-    else
-        memset(&mod->signal_stats, 0, sizeof(mod->signal_stats));
-
-    asc_mutex_unlock(&mod->signal_lock);
-}
-
-/* submit tune request to network provider */
-static
-HRESULT provider_tune(const module_data_t *mod, IBaseFilter *provider)
+HRESULT provider_tune(const module_data_t *mod, IBaseFilter *provider
+                      , const bda_tune_cmd_t *tune)
 {
     HRESULT hr = E_FAIL;
 
@@ -596,16 +555,17 @@ HRESULT provider_tune(const module_data_t *mod, IBaseFilter *provider)
     ITuningSpace *space = NULL;
     ITuner *provider_tuner = NULL;
 
-    if (provider == NULL)
+    if (provider == NULL || tune == NULL)
         return E_POINTER;
 
     /* create tune request from user data */
-    hr = bda_tune_request(&mod->tune, &request);
+    hr = bda_tune_request(tune, &request);
     BDA_CKHR_D("couldn't create tune request");
 
     if (mod->debug)
         bda_dump_request(request);
 
+    /* load it into provider */
     hr = ITuneRequest_get_TuningSpace(request, &space);
     BDA_CKPTR_D(space, "couldn't retrieve tuning space");
 
@@ -630,7 +590,7 @@ out:
 /* connect network provider to the source filter */
 static
 HRESULT provider_setup(const module_data_t *mod, IBaseFilter *provider
-                       , IBaseFilter *source)
+                       , IBaseFilter *source, const bda_tune_cmd_t *tune)
 {
     HRESULT hr = E_FAIL;
     bool retry_pins = false;
@@ -639,7 +599,7 @@ HRESULT provider_setup(const module_data_t *mod, IBaseFilter *provider
     IPin *provider_out = NULL;
     IPin *source_in = NULL;
 
-    if (provider == NULL || source == NULL)
+    if (provider == NULL || source == NULL || tune == NULL)
         return E_POINTER;
 
     /* get provider's graph */
@@ -653,7 +613,7 @@ HRESULT provider_setup(const module_data_t *mod, IBaseFilter *provider
     hr = dshow_find_pin(source, PINDIR_INPUT, true, NULL, &source_in);
     BDA_CKHR_D("couldn't find input pin on source filter");
 
-    /* connect pins and submit tune request to provider */
+    /* connect pins and submit initial tuning data to provider */
     hr = IFilterGraph2_ConnectDirect(graph, provider_out, source_in, NULL);
     if (FAILED(hr))
     {
@@ -664,7 +624,7 @@ HRESULT provider_setup(const module_data_t *mod, IBaseFilter *provider
         retry_pins = true;
     }
 
-    hr = provider_tune(mod, provider);
+    hr = provider_tune(mod, provider, tune);
     BDA_CKHR_D("couldn't configure provider with initial tuning data");
 
     if (retry_pins)
@@ -683,7 +643,7 @@ out:
 
 /* load saved PID list into demultiplexer's PID mapper */
 static
-HRESULT restore_pids(const module_data_t *mod, IMPEG2PIDMap *pidmap)
+HRESULT restore_pids(IMPEG2PIDMap *pidmap, const bool join[TS_MAX_PID])
 {
     if (pidmap == NULL)
         return E_POINTER;
@@ -714,10 +674,13 @@ HRESULT restore_pids(const module_data_t *mod, IMPEG2PIDMap *pidmap)
     ULONG pids[TS_MAX_PID] = { 0 };
     unsigned int cnt = 0;
 
-    for (unsigned int i = 0; i < ASC_ARRAY_SIZE(pids); i++)
+    if (join != NULL)
     {
-        if (mod->joined_pids[i])
-            pids[cnt++] = i;
+        for (unsigned int i = 0; i < TS_MAX_PID; i++)
+        {
+            if (join[i])
+                pids[cnt++] = i;
+        }
     }
 
     if (cnt > 0)
@@ -727,10 +690,6 @@ HRESULT restore_pids(const module_data_t *mod, IMPEG2PIDMap *pidmap)
 
     return hr;
 }
-
-// TODO: restore_diseqc()
-
-// TODO: restore_ca()
 
 /* remove all filters from the graph */
 static
@@ -917,6 +876,69 @@ HRESULT control_stop(IFilterGraph2 *graph)
 }
 
 /*
+ * device data exchange
+ */
+
+/* request signal statistics from driver */
+static
+HRESULT signal_stats_load(module_data_t *mod, bda_signal_stats_t *out)
+{
+    HRESULT hr = E_FAIL;
+
+    if (out == NULL)
+        return E_POINTER;
+
+    memset(out, 0, sizeof(*out));
+
+    hr = mod->signal->lpVtbl->get_SignalLocked(mod->signal, &out->locked);
+    BDA_CKHR_D("couldn't retrieve signal lock status");
+
+    hr = mod->signal->lpVtbl->get_SignalPresent(mod->signal, &out->present);
+    BDA_CKHR_D("couldn't retrieve signal presence status");
+
+    hr = mod->signal->lpVtbl->get_SignalQuality(mod->signal, &out->quality);
+    BDA_CKHR_D("couldn't retrieve signal quality value");
+
+    hr = mod->signal->lpVtbl->get_SignalStrength(mod->signal, &out->strength);
+    BDA_CKHR_D("couldn't retrieve signal strength value");
+
+out:
+    return hr;
+}
+
+/* update last known signal statistics */
+static
+void signal_stats_set(module_data_t *mod, const bda_signal_stats_t *stats)
+{
+    asc_mutex_lock(&mod->signal_lock);
+
+    if (stats != NULL)
+        memcpy(&mod->signal_stats, stats, sizeof(mod->signal_stats));
+    else
+        memset(&mod->signal_stats, 0, sizeof(mod->signal_stats));
+
+    asc_mutex_unlock(&mod->signal_lock);
+}
+
+/* run saved DiSEqC sequence through available extensions */
+static
+HRESULT diseqc_sequence_run(module_data_t *mod)
+{
+    HRESULT hr = S_OK;
+
+    for (unsigned int i = 0; i < mod->diseqc.seq_size; i++)
+    {
+        /* TODO */
+        hr = E_NOTIMPL;
+        break;
+    }
+
+    return hr;
+}
+
+// TODO: restore_ca() / CAM reset function
+
+/*
  * graph initialization and cleanup (uses above functions)
  */
 
@@ -959,7 +981,13 @@ HRESULT graph_setup(module_data_t *mod)
     }
 
     /* set up network provider and source filter */
-    hr = bda_net_provider(mod->tune.net, &provider);
+    bda_tune_cmd_t tune;
+    memcpy(&tune, &mod->tune, sizeof(tune));
+
+    if (mod->diseqc.port != BDA_LNB_SOURCE_NOT_DEFINED)
+        tune.lnb_source = mod->diseqc.port;
+
+    hr = bda_net_provider(tune.net, &provider);
     BDA_CKHR("failed to create network provider filter");
 
     hr = IFilterGraph2_AddFilter(graph, provider, L"Network Provider");
@@ -971,7 +999,7 @@ HRESULT graph_setup(module_data_t *mod)
     else if (hr != S_OK)
         BDA_THROW("failed to find the requested device");
 
-    hr = provider_setup(mod, provider, source);
+    hr = provider_setup(mod, provider, source, &tune);
     BDA_CKHR("failed to connect network provider to source filter");
 
     /* add demodulator and capture filters if this device has them */
@@ -1011,7 +1039,7 @@ HRESULT graph_setup(module_data_t *mod)
         if (mod->budget)
         {
             /* insert probe after capture filter (no PID filter) */
-            hr = create_probe(mod, tail, &probe);
+            hr = create_probe(mod, tail, mod, &probe);
             BDA_CKHR("failed to create TS probe");
 
             tail = probe;
@@ -1030,10 +1058,10 @@ HRESULT graph_setup(module_data_t *mod)
             hr = create_pidmap(mod, demux, &pidmap);
             BDA_CKHR("failed to initialize PID mapper");
 
-            hr = create_probe_dmx(mod, pidmap, &probe);
+            hr = create_probe_dmx(mod, pidmap, mod, &probe);
             BDA_CKHR("failed to create TS probe");
 
-            hr = restore_pids(mod, pidmap);
+            hr = restore_pids(pidmap, mod->joined_pids);
             if (FAILED(hr))
                 BDA_ERROR("failed to load joined PID list into PID mapper");
         }
@@ -1049,18 +1077,26 @@ HRESULT graph_setup(module_data_t *mod)
         if (FAILED(hr))
             BDA_ERROR("error while probing for vendor extensions");
 
-        hr = bda_ext_tune(mod, &mod->tune);
+        /* call pre-tuning hooks */
+        hr = bda_ext_tune(mod, &tune, BDA_TUNE_PRE);
         if (FAILED(hr))
-            BDA_ERROR("error while sending extension-specific tuning data");
-
-        // TODO: send stored diseqc sequence
-        // TODO: restore CA pid state
-        //
-        // XXX: do it after control_run() ?
+            BDA_ERROR("error while sending extension pre-tuning data");
 
         /* start the graph */
         hr = control_run(mod, graph);
         BDA_CKHR("failed to run the graph");
+
+        /* call post-tuning hooks */
+        hr = bda_ext_tune(mod, &tune, BDA_TUNE_POST);
+        if (FAILED(hr))
+            BDA_ERROR("error while sending extension post-tuning data");
+
+        /* run stored DiSEqC sequence */
+        hr = diseqc_sequence_run(mod);
+        if (FAILED(hr))
+            BDA_ERROR("failed to run DiSEqC command sequence");
+
+        /* TODO: reset CAM state / reset_cam() */
 
         /* set signal lock timeout */
         mod->tunefail = 0;
@@ -1252,16 +1288,33 @@ HRESULT restart_tuning(module_data_t *mod)
     hr = control_stop(mod->graph);
     BDA_CKHR_D("couldn't stop the graph");
 
-    hr = provider_tune(mod, mod->provider);
+    /* same tuning routine as graph_setup() */
+    bda_tune_cmd_t tune;
+    memcpy(&tune, &mod->tune, sizeof(tune));
+
+    if (mod->diseqc.port != BDA_LNB_SOURCE_NOT_DEFINED)
+        tune.lnb_source = mod->diseqc.port;
+
+    hr = provider_tune(mod, mod->provider, &tune);
     BDA_CKHR_D("couldn't configure provider with tuning data");
 
-    // XXX: do we need to rejoin PIDs and reissue diseqc cmds?
-    hr = bda_ext_tune(mod, &mod->tune);
+    hr = bda_ext_tune(mod, &tune, BDA_TUNE_PRE);
     if (FAILED(hr))
-        BDA_ERROR("error while sending extension-specific tuning data");
+        BDA_ERROR("error while sending extension pre-tuning data");
 
     hr = control_run(mod, mod->graph);
-    BDA_CKHR_D("couldn't restart the graph");
+    BDA_CKHR_D("couldn't run the graph");
+
+    hr = bda_ext_tune(mod, &tune, BDA_TUNE_POST);
+    if (FAILED(hr))
+        BDA_ERROR("error while sending extension post-tuning data");
+
+    hr = diseqc_sequence_run(mod);
+    if (FAILED(hr))
+        BDA_ERROR("failed to run DiSEqC command sequence");
+
+    /* TODO: reset CAM / reset_cam() */
+    // XXX: rejoin pids?
 
     /* reset signal lock timeout */
     mod->cooldown = mod->timeout;
@@ -1280,7 +1333,7 @@ HRESULT watch_signal(module_data_t *mod)
     bda_signal_stats_t s;
     const char *str = NULL;
 
-    hr = signal_stats_load(mod, mod->signal, &s);
+    hr = signal_stats_load(mod, &s);
     BDA_CKHR("failed to retrieve signal statistics from driver");
 
     if (!mod->no_dvr)
@@ -1542,17 +1595,38 @@ void cmd_ca(module_data_t *mod, bool enable, uint16_t pnr)
                   , (enable ? "enable" : "disable"), pnr);
 
     // TODO: call bda_ext_ca()
+    // check for state & !no_dvr
 }
 
-/*
+/* apply user DiSEqC setting */
 static
-void cmd_diseqc(mod, command sequence)
+void cmd_diseqc(module_data_t *mod, const bda_diseqc_cmd_t *diseqc)
 {
-    mod->sequence = sequence
+    memcpy(&mod->diseqc, diseqc, sizeof(*diseqc));
 
-    call bda_ext_diseqc()
+    if (mod->state != BDA_STATE_RUNNING || mod->no_dvr)
+        return;
+
+    if (mod->diseqc.port != BDA_LNB_SOURCE_NOT_DEFINED)
+    {
+        /* DiSEqC 1.0 port number; have to send it as part of tuning data */
+        const HRESULT hr = restart_tuning(mod);
+        if (FAILED(hr))
+        {
+            BDA_ERROR("failed to change DiSEqC port");
+
+            graph_teardown(mod);
+            set_state(mod, BDA_STATE_ERROR);
+        }
+    }
+    else
+    {
+        /* array of DiSEqC commands */
+        const HRESULT hr = diseqc_sequence_run(mod);
+        if (FAILED(hr))
+            BDA_ERROR("failed to run DiSEqC command sequence");
+    }
 }
-*/
 
 /* execute user command */
 static
@@ -1573,11 +1647,7 @@ void execute_cmd(module_data_t *mod, const bda_user_cmd_t *cmd)
             break;
 
         case BDA_COMMAND_DISEQC:
-            /*
-             * TODO: implement sending diseqc commands
-             *
-             * cmd_diseqc(mod, &cmd->diseqc);
-             */
+            cmd_diseqc(mod, &cmd->diseqc);
             break;
 
         case BDA_COMMAND_QUIT:

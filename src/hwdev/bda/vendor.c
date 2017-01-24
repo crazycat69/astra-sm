@@ -53,43 +53,125 @@ void generic_destroy(void *data)
 }
 
 /*
- * TurboSight PLP ID
+ * TurboSight
  */
 
+/* property set for PCIe devices */
 static
 const GUID KSPROPSETID_BdaTunerExtensionProperties =
     {0xfaa8f3e5,0x31d4,0x4e41,{0x88,0xef,0xd9,0xeb,0x71,0x6f,0x6e,0xc9}};
 
 enum
 {
+    KSPROPERTY_BDA_ACCESS = 18,
     KSPROPERTY_BDA_PLPINFO = 22,
+    KSPROPERTY_BDA_PLS = 23,
 };
 
-struct tbs_plp_info
+/* property set for USB devices */
+static
+const GUID KSPROPSETID_QBOXControlProperties =
+    {0xc6efe5eb,0x855a,0x4f1b,{0xb7,0xaa,0x87,0xb5,0xe1,0xdc,0x41,0x13}};
+
+enum
+{
+    KSPROPERTY_CTRL_TUNER = 0,
+    KSPROPERTY_CTRL_IR,
+    KSPROPERTY_CTRL_22K_TONE,
+    KSPROPERTY_CTRL_MOTOR,
+    KSPROPERTY_CTRL_LNBPW,
+    KSPROPERTY_CTRL_LOCK_TUNER,
+    KSPROPERTY_CTRL_ACCESS = 18,
+    KSPROPERTY_CTRL_PLPINFO = 19,
+    KSPROPERTY_CTRL_PLS = 20,
+};
+
+typedef struct
+{
+    uint32_t freq;
+    uint32_t lof_low;
+    uint32_t lof_high;
+    uint32_t sr;
+    uint8_t pol;
+    uint8_t lnb_pwr;
+    uint8_t tone_22khz;
+    uint8_t tone_burst;
+    uint8_t lnb_source;
+    uint8_t diseqc_cmd[5];
+    uint8_t ir_code;
+    uint8_t lock;
+    uint8_t strength;
+    uint8_t quality;
+    uint8_t reserved[256];
+} tbs_usb_cmd_t;
+
+enum
+{
+    TBS_ACCESS_LNBPOWER = 0,
+    TBS_ACCESS_DISEQC,
+    TBS_ACCESS_22K,
+};
+
+enum
+{
+    TBS_LNBPOWER_OFF = 0,
+    TBS_LNBPOWER_18V,
+    TBS_LNBPOWER_13V,
+    TBS_LNBPOWER_ON,
+};
+
+enum
+{
+    TBS_BURST_OFF = 0,
+    TBS_BURST_ON,
+    TBS_BURST_UNMODULATED,
+    TBS_BURST_MODULATED,
+};
+
+typedef struct
+{
+    uint32_t access_mode;
+    uint32_t tone_mode;
+    uint8_t on_off;
+    uint32_t lnbpower_mode;
+    uint8_t diseqc_send[128];
+    uint32_t diseqc_send_len;
+    uint8_t diseqc_rcv[128];
+    uint32_t diseqc_rcv_len;
+    uint8_t reserved[256];
+} tbs_access_t;
+
+typedef struct
 {
     uint8_t id;
     uint8_t count;
     uint8_t reserved1;
     uint8_t reserved2;
     uint8_t id_list[256];
-};
+} tbs_plp_t;
+
+typedef struct
+{
+    uint32_t pls_code;
+    uint32_t pls_mode;
+    uint8_t id_list[256];
+} tbs_pls_t;
 
 static
-HRESULT tbs_plp_tune(void *data, const bda_tune_cmd_t *tune)
+HRESULT tbs_plp_set(void *data, const bda_tune_cmd_t *tune
+                    , const GUID *prop_set, DWORD prop_id)
 {
     HRESULT hr = S_OK;
 
     if (tune->stream_id != -1)
     {
-        struct tbs_plp_info plp =
+        tbs_plp_t plp =
         {
             .id = tune->stream_id,
         };
 
         IKsPropertySet *const prop = (IKsPropertySet *)data;
-        hr = IKsPropertySet_Set(prop
-                                , &KSPROPSETID_BdaTunerExtensionProperties
-                                , KSPROPERTY_BDA_PLPINFO
+        hr = IKsPropertySet_Set(prop, prop_set, prop_id
                                 , NULL, 0, &plp, sizeof(plp));
     }
 
@@ -97,7 +179,60 @@ HRESULT tbs_plp_tune(void *data, const bda_tune_cmd_t *tune)
 }
 
 static
-HRESULT tbs_plp_init(IBaseFilter *filters[], void **data)
+HRESULT tbs_pls_set(void *data, const bda_tune_cmd_t *tune
+                    , const GUID *prop_set, DWORD prop_id)
+{
+    HRESULT hr = S_OK;
+
+    if (tune->pls_mode != -1 || tune->pls_code != -1)
+    {
+        tbs_pls_t pls;
+        memset(&pls, 0, sizeof(pls));
+
+        if (tune->pls_code != -1)
+            pls.pls_code = tune->pls_code;
+
+        if (tune->pls_mode != -1)
+            pls.pls_mode = tune->pls_mode;
+
+        IKsPropertySet *const prop = (IKsPropertySet *)data;
+        hr = IKsPropertySet_Set(prop, prop_set, prop_id
+                                , NULL, 0, &pls, sizeof(pls));
+    }
+
+    return hr;
+}
+
+static
+HRESULT tbs_diseqc_send(void *data, const uint8_t *cmd, unsigned int len
+                        , const GUID *prop_set, DWORD prop_id)
+{
+    tbs_access_t access =
+    {
+        .access_mode = TBS_ACCESS_DISEQC,
+        .diseqc_send_len = len,
+    };
+    memcpy(access.diseqc_send, cmd, len);
+
+    IKsPropertySet *const prop = (IKsPropertySet *)data;
+    return IKsPropertySet_Set(prop, prop_set, prop_id
+                              , NULL, 0, &access, sizeof(access));
+}
+
+/*
+ * TurboSight PCIe PLP ID
+ */
+
+static
+HRESULT tbs_pcie_plp_set(void *data, const bda_tune_cmd_t *tune)
+{
+    return tbs_plp_set(data, tune
+                       , &KSPROPSETID_BdaTunerExtensionProperties
+                       , KSPROPERTY_BDA_PLPINFO);
+}
+
+static
+HRESULT tbs_pcie_plp_init(IBaseFilter *filters[], void **data)
 {
     return generic_init(filters, data
                         , &KSPROPSETID_BdaTunerExtensionProperties
@@ -105,15 +240,369 @@ HRESULT tbs_plp_init(IBaseFilter *filters[], void **data)
 }
 
 static
-const bda_extension_t ext_tbs_plp =
+const bda_extension_t tbs_pcie_plp =
 {
-    .name = "tbs_plp",
-    .description = "TurboSight PLP ID",
+    .name = "tbs_pcie_plp",
+    .description = "TurboSight PCIe PLP ID",
 
-    .init = tbs_plp_init,
+    .init = tbs_pcie_plp_init,
     .destroy = generic_destroy,
 
-    .tune = tbs_plp_tune,
+    .tune_pre = tbs_pcie_plp_set,
+};
+
+/*
+ * TurboSight PCIe PLS
+ */
+
+static
+HRESULT tbs_pcie_pls_set(void *data, const bda_tune_cmd_t *tune)
+{
+    return tbs_pls_set(data, tune
+                       , &KSPROPSETID_BdaTunerExtensionProperties
+                       , KSPROPERTY_BDA_PLS);
+}
+
+static
+HRESULT tbs_pcie_pls_init(IBaseFilter *filters[], void **data)
+{
+    return generic_init(filters, data
+                        , &KSPROPSETID_BdaTunerExtensionProperties
+                        , KSPROPERTY_BDA_PLS);
+}
+
+static
+const bda_extension_t tbs_pcie_pls =
+{
+    .name = "tbs_pcie_pls",
+    .description = "TurboSight PCIe PLS",
+
+    .init = tbs_pcie_pls_init,
+    .destroy = generic_destroy,
+
+    .tune_pre = tbs_pcie_pls_set,
+};
+
+/*
+ * TurboSight PCIe DiSEqC
+ */
+
+static
+HRESULT tbs_pcie_diseqc_send(void *data, const uint8_t *cmd, unsigned int len)
+{
+    return tbs_diseqc_send(data, cmd, len
+                           , &KSPROPSETID_BdaTunerExtensionProperties
+                           , KSPROPERTY_BDA_ACCESS);
+}
+
+static
+HRESULT tbs_pcie_diseqc_init(IBaseFilter *filters[], void **data)
+{
+    return generic_init(filters, data
+                        , &KSPROPSETID_BdaTunerExtensionProperties
+                        , KSPROPERTY_BDA_ACCESS);
+}
+
+static
+const bda_extension_t tbs_pcie_diseqc =
+{
+    .name = "tbs_pcie_diseqc",
+    .description = "TurboSight PCIe DiSEqC",
+    .flags = BDA_EXT_DISEQC,
+
+    //
+    // TODO: add lnb power, tone burst, 22k
+    //
+
+    .init = tbs_pcie_diseqc_init,
+    .destroy = generic_destroy,
+
+    .diseqc = tbs_pcie_diseqc_send,
+};
+
+/*
+ * TurboSight USB PLP ID
+ */
+
+static
+HRESULT tbs_usb_plp_set(void *data, const bda_tune_cmd_t *tune)
+{
+    return tbs_plp_set(data, tune
+                       , &KSPROPSETID_QBOXControlProperties
+                       , KSPROPERTY_CTRL_PLPINFO);
+}
+
+static
+HRESULT tbs_usb_plp_init(IBaseFilter *filters[], void **data)
+{
+    return generic_init(filters, data
+                        , &KSPROPSETID_QBOXControlProperties
+                        , KSPROPERTY_CTRL_PLPINFO);
+}
+
+static
+const bda_extension_t tbs_usb_plp =
+{
+    .name = "tbs_usb_plp",
+    .description = "TurboSight USB PLP ID",
+
+    .init = tbs_usb_plp_init,
+    .destroy = generic_destroy,
+
+    .tune_pre = tbs_usb_plp_set,
+};
+
+/*
+ * TurboSight USB PLS
+ */
+
+static
+HRESULT tbs_usb_pls_set(void *data, const bda_tune_cmd_t *tune)
+{
+    return tbs_pls_set(data, tune
+                       , &KSPROPSETID_QBOXControlProperties
+                       , KSPROPERTY_CTRL_PLS);
+}
+
+static
+HRESULT tbs_usb_pls_init(IBaseFilter *filters[], void **data)
+{
+    return generic_init(filters, data
+                        , &KSPROPSETID_QBOXControlProperties
+                        , KSPROPERTY_CTRL_PLS);
+}
+
+static
+const bda_extension_t tbs_usb_pls =
+{
+    .name = "tbs_usb_pls",
+    .description = "TurboSight USB PLS",
+
+    .init = tbs_usb_pls_init,
+    .destroy = generic_destroy,
+
+    .tune_pre = tbs_usb_pls_set,
+};
+
+/*
+ * TurboSight USB DiSEqC
+ */
+
+static
+HRESULT tbs_usb_diseqc_send(void *data, const uint8_t *cmd, unsigned int len)
+{
+    return tbs_diseqc_send(data, cmd, len
+                           , &KSPROPSETID_QBOXControlProperties
+                           , KSPROPERTY_CTRL_ACCESS);
+}
+
+static
+HRESULT tbs_usb_diseqc_init(IBaseFilter *filters[], void **data)
+{
+    return generic_init(filters, data
+                        , &KSPROPSETID_QBOXControlProperties
+                        , KSPROPERTY_CTRL_ACCESS);
+}
+
+static
+const bda_extension_t tbs_usb_diseqc =
+{
+    .name = "tbs_usb_diseqc",
+    .description = "TurboSight USB DiSEqC",
+    .flags = BDA_EXT_DISEQC,
+
+    // TODO: see tbs_pcie_diseqc
+
+    .init = tbs_usb_diseqc_init,
+    .destroy = generic_destroy,
+
+    .diseqc = tbs_usb_diseqc_send,
+};
+
+/*
+ * Omicom S2 PCI
+ */
+
+/* DiSEqC */
+static
+const GUID KSPROPSETID_OmcDiSEqCProperties =
+    {0x7DB2DEEAL,0x42B4,0x423d,{0xA2,0xF7,0x19,0xC3,0x2E,0x51,0xCC,0xC1}};
+
+enum
+{
+    KSPROPERTY_OMC_DISEQC_WRITE = 0,
+    KSPROPERTY_OMC_DISEQC_READ,
+    KSPROPERTY_OMC_DISEQC_SET22K,
+    KSPROPERTY_OMC_DISEQC_ENCABLOSSCOMP,
+    KSPROPERTY_OMC_DISEQC_TONEBURST,
+};
+
+typedef struct
+{
+    uint32_t len;
+    uint8_t buf[64];
+    uint32_t repeat;
+} omc_diseqc_t;
+
+/* custom properties */
+static
+const GUID KSPROPSETID_OmcCustomProperties =
+    {0x7DB2DEE6L,0x42B4,0x423d,{0xA2,0xF7,0x19,0xC3,0x2E,0x51,0xCC,0xC1}};
+
+enum
+{
+    KSPROPERTY_OMC_CUSTOM_SIGNAL_OFFSET = 0,
+    KSPROPERTY_OMC_CUSTOM_SEARCH_MODE,
+    KSPROPERTY_OMC_CUSTOM_SEARCH_RANGE,
+    KSPROPERTY_OMC_CUSTOM_SEARCH,
+    KSPROPERTY_OMC_CUSTOM_SIGNAL_INFO,
+    KSPROPERTY_OMC_CUSTOM_STREAM_INFO,
+    KSPROPERTY_OMC_CUSTOM_MIS_FILTER,
+    KSPROPERTY_OMC_CUSTOM_RFSCAN,
+    KSPROPERTY_OMC_CUSTOM_IQSCAN,
+    KSPROPERTY_OMC_CUSTOM_PLS_SCRAM,
+};
+
+typedef struct
+{
+    uint32_t pls_mode;
+    uint32_t pls_code;
+} omc_pls_t;
+
+/*
+ * Omicom S2 PCI ISI
+ */
+
+static
+HRESULT omc_pci_isi_set(void *data, const bda_tune_cmd_t *tune)
+{
+    HRESULT hr = S_OK;
+
+    if (tune->stream_id != -1)
+    {
+        uint32_t isi = tune->stream_id & 0xff;
+
+        IKsPropertySet *const prop = (IKsPropertySet *)data;
+        hr = IKsPropertySet_Set(prop
+                                , &KSPROPSETID_OmcCustomProperties
+                                , KSPROPERTY_OMC_CUSTOM_MIS_FILTER
+                                , NULL, 0, &isi, sizeof(isi));
+    }
+
+    return hr;
+}
+
+static
+HRESULT omc_pci_isi_init(IBaseFilter *filters[], void **data)
+{
+    return generic_init(filters, data
+                        , &KSPROPSETID_OmcCustomProperties
+                        , KSPROPERTY_OMC_CUSTOM_MIS_FILTER);
+}
+
+static
+const bda_extension_t omc_pci_isi =
+{
+    .name = "omc_pci_isi",
+    .description = "Omicom S2 PCI ISI",
+
+    .init = omc_pci_isi_init,
+    .destroy = generic_destroy,
+
+    .tune_post = omc_pci_isi_set,
+};
+
+/*
+ * Omicom S2 PCI PLS
+ */
+
+static
+HRESULT omc_pci_pls_set(void *data, const bda_tune_cmd_t *tune)
+{
+    HRESULT hr = S_OK;
+
+    if (tune->pls_mode != -1 || tune->pls_code != -1)
+    {
+        omc_pls_t pls;
+        memset(&pls, 0, sizeof(pls));
+
+        if (tune->pls_code != -1)
+            pls.pls_code = tune->pls_code;
+
+        if (tune->pls_mode != -1)
+            pls.pls_mode = tune->pls_mode;
+
+        IKsPropertySet *const prop = (IKsPropertySet *)data;
+        hr = IKsPropertySet_Set(prop
+                                , &KSPROPSETID_OmcCustomProperties
+                                , KSPROPERTY_OMC_CUSTOM_PLS_SCRAM
+                                , NULL, 0, &pls, sizeof(pls));
+    }
+
+    return hr;
+}
+
+static
+HRESULT omc_pci_pls_init(IBaseFilter *filters[], void **data)
+{
+    return generic_init(filters, data
+                        , &KSPROPSETID_OmcCustomProperties
+                        , KSPROPERTY_OMC_CUSTOM_PLS_SCRAM);
+}
+
+static
+const bda_extension_t omc_pci_pls =
+{
+    .name = "omc_pci_pls",
+    .description = "Omicom S2 PCI PLS",
+
+    .init = omc_pci_pls_init,
+    .destroy = generic_destroy,
+
+    .tune_post = omc_pci_pls_set,
+};
+
+/*
+ * Omicom S2 PCI DiSEqC
+ */
+
+static
+HRESULT omc_pci_diseqc_send(void *data, const uint8_t *cmd, unsigned int len)
+{
+    omc_diseqc_t diseqc =
+    {
+        .len = len,
+        .repeat = 1,
+    };
+    memcpy(&diseqc.buf, cmd, len);
+
+    IKsPropertySet *const prop = (IKsPropertySet *)data;
+    return IKsPropertySet_Set(prop, &KSPROPSETID_OmcDiSEqCProperties
+                              , KSPROPERTY_OMC_DISEQC_WRITE, NULL, 0
+                              , &diseqc, sizeof(diseqc));
+}
+
+static
+HRESULT omc_pci_diseqc_init(IBaseFilter *filters[], void **data)
+{
+    return generic_init(filters, data
+                        , &KSPROPSETID_OmcDiSEqCProperties
+                        , KSPROPERTY_OMC_DISEQC_WRITE);
+}
+
+static
+const bda_extension_t omc_pci_diseqc =
+{
+    .name = "omc_pci_diseqc",
+    .description = "Omicom S2 PCI DiSEqC",
+    .flags = BDA_EXT_DISEQC,
+
+    // TODO: add 22kHz, tone burst
+
+    .init = omc_pci_diseqc_init,
+    .destroy = generic_destroy,
+
+    .diseqc = omc_pci_diseqc_send,
 };
 
 /*
@@ -124,7 +613,19 @@ const bda_extension_t ext_tbs_plp =
 static
 const bda_extension_t *const ext_list[] =
 {
-    &ext_tbs_plp,
+    /* TurboSight */
+    &tbs_pcie_plp,
+    &tbs_pcie_pls,
+    &tbs_pcie_diseqc,
+    &tbs_usb_plp,
+    &tbs_usb_pls,
+    &tbs_usb_diseqc,
+
+    /* Omicom */
+    &omc_pci_isi,
+    &omc_pci_pls,
+    &omc_pci_diseqc,
+
     NULL,
 };
 
@@ -185,8 +686,10 @@ void bda_ext_destroy(module_data_t *mod)
 }
 
 /* send additional tuning data */
-HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
+HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune
+                     , bda_tune_hook_t when)
 {
+    /* don't report error if no extensions provide tuning hooks */
     HRESULT out_hr = S_OK;
 
     asc_list_for(mod->extensions)
@@ -194,15 +697,18 @@ HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
         bda_extension_t *const ext =
             (bda_extension_t *)asc_list_data(mod->extensions);
 
-        if (ext->tune != NULL)
-        {
-            const HRESULT hr = ext->tune(ext->data, tune);
+        HRESULT hr = S_OK;
 
-            if (FAILED(hr))
-            {
-                BDA_DEBUG("couldn't send tuning data for %s", ext->name);
-                out_hr = hr;
-            }
+        if (when == BDA_TUNE_PRE && ext->tune_pre != NULL)
+            hr = ext->tune_pre(ext->data, tune);
+
+        if (when == BDA_TUNE_POST && ext->tune_post != NULL)
+            hr = ext->tune_post(ext->data, tune);
+
+        if (FAILED(hr))
+        {
+            BDA_DEBUG("couldn't send tuning data for %s", ext->name);
+            out_hr = hr;
         }
     }
 
@@ -210,9 +716,10 @@ HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
 }
 
 /* send raw DiSEqC command */
-HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t cmd[BDA_DISEQC_LEN])
+HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t *cmd
+                       , unsigned int len)
 {
-    HRESULT out_hr = S_OK;
+    HRESULT hr = E_NOTIMPL;
 
     asc_list_for(mod->extensions)
     {
@@ -221,15 +728,74 @@ HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t cmd[BDA_DISEQC_LEN])
 
         if (ext->diseqc != NULL)
         {
-            const HRESULT hr = ext->diseqc(ext->data, cmd);
-
+            hr = ext->diseqc(ext->data, cmd, len);
             if (FAILED(hr))
-            {
-                BDA_DEBUG("couldn't send DiSEqC command for %s", ext->name);
-                out_hr = hr;
-            }
+                BDA_DEBUG("couldn't send DiSEqC command via %s", ext->name);
         }
     }
 
-    return out_hr;
+    return hr;
+}
+
+/* switch LNB power and voltage */
+HRESULT bda_ext_lnbpower(module_data_t *mod, bda_lnbpower_mode_t mode)
+{
+    HRESULT hr = E_NOTIMPL;
+
+    asc_list_for(mod->extensions)
+    {
+        bda_extension_t *const ext =
+                (bda_extension_t *)asc_list_data(mod->extensions);
+
+        if (ext->lnbpower != NULL)
+        {
+            hr = ext->lnbpower(ext->data, mode);
+            if (FAILED(hr))
+                BDA_DEBUG("couldn't set LNB power via %s", ext->name);
+        }
+    }
+
+    return hr;
+}
+
+/* toggle 22kHz tone */
+HRESULT bda_ext_22k(module_data_t *mod, bda_22k_mode_t mode)
+{
+    HRESULT hr = E_NOTIMPL;
+
+    asc_list_for(mod->extensions)
+    {
+        bda_extension_t *const ext =
+                (bda_extension_t *)asc_list_data(mod->extensions);
+
+        if (ext->t22k != NULL)
+        {
+            hr = ext->t22k(ext->data, mode);
+            if (FAILED(hr))
+                BDA_DEBUG("couldn't switch 22kHz tone via %s", ext->name);
+        }
+    }
+
+    return hr;
+}
+
+/* switch mini-DiSEqC input */
+HRESULT bda_ext_toneburst(module_data_t *mod, bda_toneburst_mode_t mode)
+{
+    HRESULT hr = E_NOTIMPL;
+
+    asc_list_for(mod->extensions)
+    {
+        bda_extension_t *const ext =
+                (bda_extension_t *)asc_list_data(mod->extensions);
+
+        if (ext->toneburst != NULL)
+        {
+            hr = ext->toneburst(ext->data, mode);
+            if (FAILED(hr))
+                BDA_DEBUG("couldn't switch tone burst mode via %s", ext->name);
+        }
+    }
+
+    return hr;
 }

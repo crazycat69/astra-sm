@@ -1,7 +1,7 @@
 /*
  * Astra Module: BDA (Lua interface)
  *
- * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2016-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,7 +42,7 @@
  *
  *      frequency   - number, carrier frequency in MHz
  *      symbolrate  - number, symbol rate in KS/s
- *      stream_id   - number, PLP ID or physical channel number
+ *      stream_id   - number, ISI, PLP ID or physical channel number
  *      modulation  - string, modulation type
  *      fec         - string, inner FEC rate
  *      outer_fec   - string, outer FEC rate
@@ -71,6 +71,8 @@
  *      inversion   - boolean, spectral inversion (or AUTO)
  *      rolloff     - number, DVB-S2 roll-off factor (20, 25, 35)
  *      pilot       - boolean, DVB-S2 pilot mode
+ *      pls_code   -  number, Physical Layer Scrambling code
+ *      pls_mode   -  number, Physical Layer Scrambling mode
  *
  *      *** Options specific to DVB-T/T2:
  *      bandwidth   - number, signal bandwidth in MHz (normally 6, 7 or 8)
@@ -302,6 +304,22 @@ ModulationType val_modulation(const char *str)
 }
 
 static
+LNB_Source val_lnb_source(const char *str)
+{
+    if (!strcmp(str, "1"))              return BDA_LNB_SOURCE_A;
+    else if (!strcasecmp(str, "A"))     return BDA_LNB_SOURCE_A;
+    else if (!strcmp(str, "2"))         return BDA_LNB_SOURCE_B;
+    else if (!strcasecmp(str, "B"))     return BDA_LNB_SOURCE_B;
+    else if (!strcmp(str, "3"))         return BDA_LNB_SOURCE_C;
+    else if (!strcasecmp(str, "C"))     return BDA_LNB_SOURCE_C;
+    else if (!strcmp(str, "4"))         return BDA_LNB_SOURCE_D;
+    else if (!strcasecmp(str, "D"))     return BDA_LNB_SOURCE_D;
+    else if (!strcasecmp(str, "AUTO"))  return BDA_LNB_SOURCE_NOT_SET;
+
+    return BDA_LNB_SOURCE_NOT_DEFINED;
+}
+
+static
 Polarisation val_polarization(const char *str)
 {
     if (!strcasecmp(str, "H"))          return BDA_POLARISATION_LINEAR_H;
@@ -438,7 +456,7 @@ void parse_tune_options(lua_State *L, module_data_t *mod
             tune->symbolrate *= 1000;
     }
 
-    /* stream_id: PLP ID or physical channel number */
+    /* stream_id: ISI, PLP ID or physical channel number */
     tune->stream_id = -1;
     if (module_option_integer(L, "stream_id", &tune->stream_id))
     {
@@ -523,7 +541,6 @@ void parse_tune_options(lua_State *L, module_data_t *mod
     tune->input_type = TunerInputCable;
     if (module_option_string(L, "input_type", &opt, NULL))
     {
-        // FIXME: add val_input_type()
         if (!strcasecmp(opt, "cable"))
             ; /* do nothing */
         else if (!strcasecmp(opt, "antenna"))
@@ -577,6 +594,10 @@ void parse_tune_options(lua_State *L, module_data_t *mod
             tune->slof *= 1000;
     }
 
+    /* lnb_source: DiSEqC input source (simple) */
+    tune->lnb_source = BDA_LNB_SOURCE_NOT_SET;
+    /* NOTE: this is filled in by control thread */
+
     /* polarization: signal polarization */
     tune->polarization = BDA_POLARISATION_NOT_SET;
     if (module_option_string(L, "polarization", &opt, NULL))
@@ -611,6 +632,22 @@ void parse_tune_options(lua_State *L, module_data_t *mod
         tune->pilot = val_pilot(opt);
         if (tune->pilot == BDA_PILOT_NOT_DEFINED)
             luaL_error(L, MSG("invalid pilot setting: '%s'"), opt);
+    }
+
+    /* pls_code: Physical Layer Scrambling code */
+    tune->pls_code = -1;
+    if (module_option_integer(L, "pls_code", &tune->pls_code))
+    {
+        if (tune->pls_code < 0 || tune->pls_code > 262143)
+            luaL_error(L, MSG("PLS code must be 0-262143"));
+    }
+
+    /* pls_mode: Physical Layer Scrambling mode */
+    tune->pls_mode = -1;
+    if (module_option_integer(L, "pls_mode", &tune->pls_mode))
+    {
+        if (tune->pls_mode < 0 || tune->pls_mode > 2)
+            luaL_error(L, MSG("PLS mode must be 0-2"));
     }
 
     /*
@@ -692,7 +729,8 @@ int method_close(lua_State *L, module_data_t *mod)
 {
     __uarg(L);
 
-    const bda_user_cmd_t cmd = {
+    const bda_user_cmd_t cmd =
+    {
         .cmd = BDA_COMMAND_CLOSE,
     };
     graph_submit(mod, &cmd);
@@ -710,7 +748,8 @@ int method_ca(lua_State *L, module_data_t *mod)
     if (pnr < 1 || pnr >= TS_MAX_PNR)
         luaL_error(L, MSG("program number %d out of range"), pnr);
 
-    const bda_user_cmd_t cmd = {
+    const bda_user_cmd_t cmd =
+    {
         .ca = {
             .cmd = BDA_COMMAND_CA,
             .enable = enable,
@@ -725,9 +764,34 @@ int method_ca(lua_State *L, module_data_t *mod)
 static
 int method_diseqc(lua_State *L, module_data_t *mod)
 {
-    // TODO: isnumber() for old syntax (set diseqc port)
-    __uarg(mod);
-    luaL_error(L, MSG("DiSEqC support is not implemented yet"));
+    bda_user_cmd_t cmd =
+    {
+        .diseqc = {
+            .cmd = BDA_COMMAND_DISEQC,
+            .port = BDA_LNB_SOURCE_NOT_DEFINED,
+        },
+    };
+
+    if (lua_istable(L, -1))
+    {
+        /* a:diseqc({...},{...}) */
+        luaL_error(L, MSG("DiSEqC table syntax is not implemented yet"));
+        /* TODO */
+    }
+    else if (!lua_isnil(L, -1))
+    {
+        /* a:diseqc(n) */
+        const char *const str = luaL_checkstring(L, -1);
+        const LNB_Source val = val_lnb_source(str);
+
+        if (val == BDA_LNB_SOURCE_NOT_DEFINED)
+            luaL_error(L, MSG("invalid DiSEqC port number: '%s'"), str);
+
+        cmd.diseqc.port = val;
+    }
+
+    graph_submit(mod, &cmd);
+
     return 0;
 }
 
@@ -738,7 +802,8 @@ int method_diseqc(lua_State *L, module_data_t *mod)
 static
 void set_pid(module_data_t *mod, uint16_t pid, bool join)
 {
-    const bda_user_cmd_t cmd = {
+    const bda_user_cmd_t cmd =
+    {
         .demux = {
             .cmd = BDA_COMMAND_DEMUX,
             .join = join,
@@ -847,14 +912,13 @@ void module_init(lua_State *L, module_data_t *mod)
     if (mod->timeout < 1)
         luaL_error(L, MSG("retune timeout can't be less than a second"));
 
-    /* send initial tuning commands */
-    method_tune(L, mod);
-
+    /* send diseqc first to avoid tuning twice */
     lua_getfield(L, MODULE_OPTIONS_IDX, "diseqc");
-    if (!lua_isnil(L, -1))
-        method_diseqc(L, mod);
-
+    method_diseqc(L, mod);
     lua_pop(L, 1);
+
+    /* send initial tuning data */
+    method_tune(L, mod);
 
     /* start dedicated thread for BDA graph */
     module_stream_init(L, mod, NULL);
@@ -869,7 +933,8 @@ void module_destroy(module_data_t *mod)
 {
     if (mod->thr != NULL)
     {
-        const bda_user_cmd_t cmd = {
+        const bda_user_cmd_t cmd =
+        {
             .cmd = BDA_COMMAND_QUIT,
         };
         graph_submit(mod, &cmd);
