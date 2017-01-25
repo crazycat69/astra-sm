@@ -23,8 +23,8 @@ if [ ! -d ".git" ]; then
 fi
 
 # get current branch
-ref=`git symbolic-ref HEAD 2>/dev/null`
-branch=`echo -n "$ref" | sed -e 's/^.*\///'`
+branch=`git symbolic-ref --short HEAD 2>/dev/null \
+        || (git symbolic-ref HEAD | sed -e 's/^refs\/heads\///') 2>/dev/null`
 
 if [ -z "$branch" ]; then
     fatal "couldn't get branch name"
@@ -53,7 +53,7 @@ if [ -z "$hash" -o -z "$vtag" -o -z "$commitno" ]; then
 fi
 
 # print version string
-if [ "$branch" = "master" ]; then
+if [ "$branch" = "master" -o "$branch" = "maintenance/${vtag}" ]; then
     # tag and commit no.
     if [ "$commitno" = "0" ]; then
         version="${vtag}"
