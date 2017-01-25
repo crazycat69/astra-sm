@@ -34,7 +34,7 @@
  *      timeout     - number, how long to wait for lock before retuning
  *                      defaults to 5 seconds
  *      diseqc      - table, command sequence to send on tuner init
- *             - OR - number, port number (alternate syntax)
+ *             - OR - number, DiSEqC 1.0 port number (alternate syntax)
  *
  *      *** Following options are also valid for the tune() method:
  *      type        - string, digital network type. supported types:
@@ -94,10 +94,71 @@
  *      diseqc({ {cmd1}, {cmd2}, ... })
  *                  - send DiSEqC command sequence when tuner is ready
  *      diseqc(port)
- *                  - set port number (alternate syntax)
+ *                  - set DiSEqC 1.0 port number (alternate syntax)
  *
- * DiSEqC Options:
- *      TODO
+ * DiSEqC Commands:
+ *      data        - string, hex DiSEqC command (6 bytes/12 chars max)
+ *      lnbpower    - number, LNB power setting (true, false, 13, 18)
+ *      22k         - boolean, enable or disable 22kHz tone
+ *      toneburst   - number, mini-DiSEqC port number (1-2 or A-B)
+ *      delay       - number, insert sleep (milliseconds, no more than 500)
+ *
+ * DiSEqC Examples:
+ *      --
+ *      -- #1: port number
+ *      --
+ *
+ *      -- set input at module initialization time:
+ *      local a = dvb_input({
+ *          ...
+ *          diseqc = "A",
+ *          ...
+ *      })
+ *
+ *      -- change input at run time (restarts tuning process):
+ *      a:diseqc(2) -- same as "B"
+ *
+ *      -- remove port setting and restart tuning:
+ *      a:diseqc("auto")
+ *
+ *      -- remove port setting without restarting:
+ *      -- (future tuning attempts will not set DiSEqC port)
+ *      a:diseqc()
+ *
+ *      --
+ *      -- #2: command sequence
+ *      --
+ *      -- 64 commands max. Last used sequence is reissued every time
+ *      -- tuning process is restarted. Not all commands are supported
+ *      -- by every adapter and OS version.
+ *      --
+ *      -- 15ms sleep is inserted automatically after each command.
+ *      -- Add delay commands if you need longer sleep periods.
+ *      --
+ *
+ *      -- set sequence at module initialization time:
+ *      local a = dvb_input({
+ *          ...
+ *          diseqc = {
+ *              { toneburst = "B" },
+ *          },
+ *          ...
+ *      })
+ *
+ *      -- issue commands at run time:
+ *      a:diseqc({
+ *          { toneburst = false },
+ *          { 22k = false },
+ *          { lnbpower = 13 },
+ *          { data = "e01038f0" },
+ *          { delay = 150 },
+ *      })
+ *
+ *      -- erase stored sequence and restart tuning:
+ *      a:diseqc("auto")
+ *
+ *      -- same, without restarting:
+ *      a:diseqc()
  */
 
 #include "bda.h"
