@@ -98,9 +98,9 @@
  *
  * DiSEqC Commands:
  *      data        - string, hex DiSEqC command (6 bytes/12 chars max)
- *      lnbpower    - number, LNB power setting (true, false, 13, 18)
- *      22k         - boolean, enable or disable 22kHz tone
- *      toneburst   - number, mini-DiSEqC port number (1-2 or A-B)
+ *      lnbpower    - number/boolean, LNB power setting (true, false, 13, 18)
+ *      t22k        - boolean, enable or disable 22kHz tone
+ *      toneburst   - number/boolean, mini-DiSEqC port (false, 1-2, A-B)
  *      delay       - number, insert sleep (milliseconds, no more than 500)
  *
  * DiSEqC Examples:
@@ -148,7 +148,7 @@
  *      -- issue commands at run time:
  *      a:diseqc({
  *          { toneburst = false },
- *          { 22k = false },
+ *          { t22k = false },
  *          { lnbpower = 13 },
  *          { data = "e01038f0" },
  *          { delay = 150 },
@@ -162,6 +162,8 @@
  */
 
 #include "bda.h"
+#include <astra/core/mainloop.h>
+#include <astra/utils/strhex.h>
 
 /* default buffer size, MiB */
 #define BDA_BUFFER_SIZE 4
@@ -446,39 +448,61 @@ Pilot val_pilot(const char *str)
     return BDA_PILOT_NOT_DEFINED;
 }
 
+static
+bda_lnbpower_mode_t val_lnbpower(const char *str)
+{
+    if (!strcasecmp(str, "true"))       return BDA_EXT_LNBPOWER_ON;
+    else if (!strcasecmp(str, "false")) return BDA_EXT_LNBPOWER_OFF;
+    else if (!strcmp(str, "13"))        return BDA_EXT_LNBPOWER_13V;
+    else if (!strcmp(str, "18"))        return BDA_EXT_LNBPOWER_18V;
+    else if (!strcasecmp(str, "AUTO"))  return BDA_EXT_LNBPOWER_NOT_SET;
+
+    return BDA_EXT_LNBPOWER_NOT_DEFINED;
+}
+
+static
+bda_22k_mode_t val_t22k(const char *str)
+{
+    if (!strcasecmp(str, "true"))       return BDA_EXT_22K_ON;
+    else if (!strcasecmp(str, "false")) return BDA_EXT_22K_OFF;
+    else if (!strcasecmp(str, "AUTO"))  return BDA_EXT_22K_NOT_SET;
+
+    return BDA_EXT_22K_NOT_DEFINED;
+}
+
+static
+bda_toneburst_mode_t val_toneburst(const char *str)
+{
+    if (!strcasecmp(str, "false"))      return BDA_EXT_TONEBURST_OFF;
+    else if (!strcmp(str, "1"))         return BDA_EXT_TONEBURST_UNMODULATED;
+    else if (!strcasecmp(str, "A"))     return BDA_EXT_TONEBURST_UNMODULATED;
+    else if (!strcmp(str, "2"))         return BDA_EXT_TONEBURST_MODULATED;
+    else if (!strcasecmp(str, "B"))     return BDA_EXT_TONEBURST_MODULATED;
+    else if (!strcasecmp(str, "AUTO"))  return BDA_EXT_TONEBURST_NOT_SET;
+
+    return BDA_EXT_TONEBURST_NOT_DEFINED;
+}
+
 /* parse Lua table at stack index 2 containing tuning data */
 static
-void parse_tune_options(lua_State *L, module_data_t *mod
+void parse_tune_options(lua_State *L, const module_data_t *mod
                         , bda_tune_cmd_t *tune)
 {
-    /* fix up Lua stack for option getters */
-    if (lua_gettop(L) < MODULE_OPTIONS_IDX)
-    {
-        lua_pushnil(L);
-        lua_insert(L, 1);
-    }
-    luaL_checktype(L, MODULE_OPTIONS_IDX, LUA_TTABLE);
-
-    /* initialize tuning command */
-    memset(tune, 0, sizeof(*tune));
-    tune->cmd = BDA_COMMAND_TUNE;
-
     /* get network type */
     const char *opt = NULL;
     if (!module_option_string(L, "type", &opt, NULL) || opt == NULL)
         luaL_error(L, MSG("option 'type' is required"));
 
-    for (const bda_network_t *const *ptr = bda_network_list
-         ; *ptr != NULL; ptr++)
+    for (size_t i = 0; bda_network_list[i] != NULL; i++)
     {
-        const bda_network_t *const net = *ptr;
+        const bda_network_t *const net = bda_network_list[i];
 
-        for (unsigned int i = 0; i < ASC_ARRAY_SIZE(net->name); i++)
+        for (size_t j = 0; j < ASC_ARRAY_SIZE(net->name); j++)
         {
-            if (net->name[i] == NULL)
+            if (net->name[j] == NULL)
                 break;
 
-            if (!strcasecmp(opt, net->name[i]))
+            if (!strcasecmp(opt, net->name[j]))
                 tune->net = net;
         }
 
@@ -771,6 +795,61 @@ void parse_tune_options(lua_State *L, module_data_t *mod
     }
 }
 
+/* parse Lua table at stack index 2 containing DiSEqC command */
+static
+void parse_diseqc_options(lua_State *L, const module_data_t *mod
+                          , bda_diseqc_seq_t *seq)
+{
+    /* data: hex DiSEqC command */
+    const char *opt = NULL;
+    size_t opt_len = 0;
+
+    if (module_option_string(L, "data", &opt, &opt_len))
+    {
+        if (opt_len % 2)
+            luaL_error(L, MSG("command must have an even number of digits"));
+        else if (opt_len < 2 || opt_len > (BDA_DISEQC_LEN * 2))
+            luaL_error(L, MSG("command must be 1 to 6 bytes long"));
+
+        au_str2hex(opt, seq->data, sizeof(seq->data));
+        seq->data_len = opt_len / 2;
+    }
+
+    /* lnbpower: LNB power setting */
+    seq->lnbpower = BDA_EXT_LNBPOWER_NOT_SET;
+    if (module_option_string(L, "lnbpower", &opt, NULL))
+    {
+        seq->lnbpower = val_lnbpower(opt);
+        if (seq->lnbpower == BDA_EXT_LNBPOWER_NOT_DEFINED)
+            luaL_error(L, MSG("invalid LNB power setting: '%s'"), opt);
+    }
+
+    /* t22k: enable or disable 22kHz tone */
+    seq->t22k = BDA_EXT_22K_NOT_SET;
+    if (module_option_string(L, "t22k", &opt, NULL))
+    {
+        seq->t22k = val_t22k(opt);
+        if (seq->t22k == BDA_EXT_22K_NOT_DEFINED)
+            luaL_error(L, MSG("invalid 22kHz tone setting: '%s'"), opt);
+    }
+
+    /* toneburst: mini-DiSEqC port */
+    seq->toneburst = BDA_EXT_TONEBURST_NOT_SET;
+    if (module_option_string(L, "toneburst", &opt, NULL))
+    {
+        seq->toneburst = val_toneburst(opt);
+        if (seq->toneburst == BDA_EXT_TONEBURST_NOT_DEFINED)
+            luaL_error(L, MSG("invalid mini-DiSEqC port: '%s'"), opt);
+    }
+
+    /* delay: insert sleep */
+    if (module_option_integer(L, "delay", &seq->delay))
+    {
+        if (seq->delay < 0 || seq->delay > 500)
+            luaL_error(L, MSG("delay must be 0-500 ms"));
+    }
+}
+
 /*
  * module methods
  */
@@ -778,7 +857,20 @@ void parse_tune_options(lua_State *L, module_data_t *mod
 static
 int method_tune(lua_State *L, module_data_t *mod)
 {
-    bda_user_cmd_t cmd;
+    /* fix up Lua stack for option getters */
+    if (lua_gettop(L) < MODULE_OPTIONS_IDX)
+    {
+        lua_pushnil(L);
+        lua_insert(L, 1);
+    }
+    luaL_checktype(L, MODULE_OPTIONS_IDX, LUA_TTABLE);
+
+    /* generate tuning command */
+    bda_user_cmd_t cmd =
+    {
+        .cmd = BDA_COMMAND_TUNE,
+    };
+
     parse_tune_options(L, mod, &cmd.tune);
     graph_submit(mod, &cmd);
 
@@ -825,6 +917,12 @@ int method_ca(lua_State *L, module_data_t *mod)
 static
 int method_diseqc(lua_State *L, module_data_t *mod)
 {
+    if (lua_gettop(L) < 2)
+    {
+        /* called with no arguments */
+        lua_pushnil(L);
+    }
+
     bda_user_cmd_t cmd =
     {
         .diseqc = {
@@ -835,9 +933,26 @@ int method_diseqc(lua_State *L, module_data_t *mod)
 
     if (lua_istable(L, -1))
     {
-        /* a:diseqc({...},{...}) */
-        luaL_error(L, MSG("DiSEqC table syntax is not implemented yet"));
-        /* TODO */
+        /* a:diseqc({{...},{...}}) */
+        unsigned int size = 0;
+
+        lua_foreach(L, -2)
+        {
+            if (!lua_istable(L, -1))
+                luaL_error(L, MSG("invalid format for DiSEqC sequence"));
+            else if (size >= ASC_ARRAY_SIZE(cmd.diseqc.seq))
+                luaL_error(L, MSG("DiSEqC sequence is too long"));
+
+            lua_insert(L, MODULE_OPTIONS_IDX);
+
+            parse_diseqc_options(L, mod, &cmd.diseqc.seq[size]);
+            size++;
+
+            lua_pushvalue(L, MODULE_OPTIONS_IDX);
+            lua_remove(L, MODULE_OPTIONS_IDX);
+        }
+
+        cmd.diseqc.seq_size = size;
     }
     else if (!lua_isnil(L, -1))
     {

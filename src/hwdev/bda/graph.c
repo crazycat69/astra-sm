@@ -18,12 +18,16 @@
  */
 
 #include "bda.h"
+#include <astra/core/mainloop.h>
 
 /* device reopen timeout, seconds */
 #define BDA_REINIT_TICKS 10
 
 /* buffer dequeue threshold, packets */
 #define BDA_BUFFER_THRESH 10
+
+/* minimum delay between DiSEqC commands, milliseconds */
+#define BDA_DISEQC_DELAY 15
 
 /*
  * helper functions for working with the graph
@@ -928,11 +932,36 @@ HRESULT diseqc_sequence_run(module_data_t *mod)
 
     for (unsigned int i = 0; i < mod->diseqc.seq_size; i++)
     {
-        /* TODO */
-        hr = E_NOTIMPL;
-        break;
+        const bda_diseqc_seq_t *const seq = &mod->diseqc.seq[i];
+
+        if (seq->data_len > 0)
+        {
+            hr = bda_ext_diseqc(mod, seq->data, seq->data_len);
+            BDA_CKHR_D("couldn't send DiSEqC command");
+        }
+
+        if (seq->lnbpower != BDA_EXT_LNBPOWER_NOT_SET)
+        {
+            hr = bda_ext_lnbpower(mod, seq->lnbpower);
+            BDA_CKHR_D("couldn't set LNB power mode");
+        }
+
+        if (seq->t22k != BDA_EXT_22K_NOT_SET)
+        {
+            hr = bda_ext_22k(mod, seq->t22k);
+            BDA_CKHR_D("couldn't set 22kHz tone mode");
+        }
+
+        if (seq->toneburst != BDA_EXT_TONEBURST_NOT_SET)
+        {
+            hr = bda_ext_toneburst(mod, seq->toneburst);
+            BDA_CKHR_D("couldn't set tone burst mode");
+        }
+
+        asc_usleep(BDA_DISEQC_DELAY + seq->delay);
     }
 
+out:
     return hr;
 }
 
@@ -1094,7 +1123,7 @@ HRESULT graph_setup(module_data_t *mod)
         /* run stored DiSEqC sequence */
         hr = diseqc_sequence_run(mod);
         if (FAILED(hr))
-            BDA_ERROR("failed to run DiSEqC command sequence");
+            BDA_ERROR("error while running DiSEqC command sequence");
 
         /* TODO: reset CAM state / reset_cam() */
 
@@ -1311,7 +1340,7 @@ HRESULT restart_tuning(module_data_t *mod)
 
     hr = diseqc_sequence_run(mod);
     if (FAILED(hr))
-        BDA_ERROR("failed to run DiSEqC command sequence");
+        BDA_ERROR("error while running DiSEqC command sequence");
 
     /* TODO: reset CAM / reset_cam() */
     // XXX: rejoin pids?
@@ -1624,7 +1653,7 @@ void cmd_diseqc(module_data_t *mod, const bda_diseqc_cmd_t *diseqc)
         /* array of DiSEqC commands */
         const HRESULT hr = diseqc_sequence_run(mod);
         if (FAILED(hr))
-            BDA_ERROR("failed to run DiSEqC command sequence");
+            BDA_ERROR("error while running DiSEqC command sequence");
     }
 }
 

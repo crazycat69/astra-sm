@@ -730,7 +730,7 @@ HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t *cmd
         {
             hr = ext->diseqc(ext->data, cmd, len);
             if (FAILED(hr))
-                BDA_DEBUG("couldn't send DiSEqC command via %s", ext->name);
+                BDA_DEBUG("couldn't send DiSEqC command via '%s'", ext->name);
         }
     }
 
@@ -751,7 +751,7 @@ HRESULT bda_ext_lnbpower(module_data_t *mod, bda_lnbpower_mode_t mode)
         {
             hr = ext->lnbpower(ext->data, mode);
             if (FAILED(hr))
-                BDA_DEBUG("couldn't set LNB power via %s", ext->name);
+                BDA_DEBUG("couldn't set LNB power mode via '%s'", ext->name);
         }
     }
 
@@ -772,7 +772,7 @@ HRESULT bda_ext_22k(module_data_t *mod, bda_22k_mode_t mode)
         {
             hr = ext->t22k(ext->data, mode);
             if (FAILED(hr))
-                BDA_DEBUG("couldn't switch 22kHz tone via %s", ext->name);
+                BDA_DEBUG("couldn't set 22kHz tone mode via '%s'", ext->name);
         }
     }
 
@@ -793,7 +793,7 @@ HRESULT bda_ext_toneburst(module_data_t *mod, bda_toneburst_mode_t mode)
         {
             hr = ext->toneburst(ext->data, mode);
             if (FAILED(hr))
-                BDA_DEBUG("couldn't switch tone burst mode via %s", ext->name);
+                BDA_DEBUG("couldn't set tone burst mode via '%s'", ext->name);
         }
     }
 

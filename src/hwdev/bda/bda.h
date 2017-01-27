@@ -26,7 +26,6 @@
 #include <astra/core/thread.h>
 #include <astra/core/timer.h>
 #include <astra/core/mutex.h>
-#include <astra/core/mainloop.h>
 
 #include "../dshow/dshow.h"
 #include <tuner.h>
@@ -157,7 +156,7 @@ typedef struct
 {
     bda_command_t cmd;
 
-    /* table syntax: a:diseqc({...},{...}) */
+    /* table syntax: a:diseqc({{...},{...}}) */
     bda_diseqc_seq_t seq[BDA_DISEQC_MAX_SEQ];
     unsigned int seq_size;
 
