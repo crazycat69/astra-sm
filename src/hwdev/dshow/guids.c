@@ -28,5 +28,8 @@
  * source file.
  */
 
+/* clang doesn't support this */
+#define DECLSPEC_SELECTANY
+
 #include <initguid.h>
 #include "guids.h"
