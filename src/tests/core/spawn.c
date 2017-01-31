@@ -72,22 +72,6 @@ static void pipe_check_buf(int fd)
     }
 }
 
-static bool pipe_get_inherit(int fd)
-{
-#ifdef _WIN32
-    DWORD flags = 0;
-    const bool ret = GetHandleInformation(ASC_TO_HANDLE(fd), &flags);
-    ck_assert(ret == true);
-
-    return flags & HANDLE_FLAG_INHERIT;
-#else /* _WIN32 */
-    const int ret = fcntl(fd, F_GETFD);
-    ck_assert(ret != -1);
-
-    return (!(ret & FD_CLOEXEC));
-#endif /* !_WIN32 */
-}
-
 /* open and close pipe */
 static void pipe_open_test(unsigned int nb_side)
 {
@@ -98,8 +82,8 @@ static void pipe_open_test(unsigned int nb_side)
     ck_assert(ret == 0 && fds[PIPE_RD] != -1 && fds[PIPE_WR] != -1);
 
     /* check inheritability and socket buffers */
-    ck_assert(pipe_get_inherit(fds[PIPE_RD]) == false);
-    ck_assert(pipe_get_inherit(fds[PIPE_WR]) == false);
+    ck_assert(is_fd_inherited(fds[PIPE_RD]) == false);
+    ck_assert(is_fd_inherited(fds[PIPE_WR]) == false);
     pipe_check_buf(fds[PIPE_RD]);
     pipe_check_buf(fds[PIPE_WR]);
 
@@ -189,8 +173,8 @@ START_TEST(pipe_inherit)
     ck_assert(ret == 0 && fds[0] != -1 && fds[1] != -1);
 
     /* check inheritability and socket buffers */
-    ck_assert(pipe_get_inherit(fds[0]) == false);
-    ck_assert(pipe_get_inherit(fds[1]) == false);
+    ck_assert(is_fd_inherited(fds[0]) == false);
+    ck_assert(is_fd_inherited(fds[1]) == false);
     pipe_check_buf(fds[0]);
     pipe_check_buf(fds[1]);
 
@@ -198,11 +182,11 @@ START_TEST(pipe_inherit)
     {
         /* enable */
         ck_assert(asc_pipe_inherit(fds[i], true) == 0);
-        ck_assert(pipe_get_inherit(fds[i]) == true);
+        ck_assert(is_fd_inherited(fds[i]) == true);
 
         /* disable */
         ck_assert(asc_pipe_inherit(fds[i], false) == 0);
-        ck_assert(pipe_get_inherit(fds[i]) == false);
+        ck_assert(is_fd_inherited(fds[i]) == false);
     }
 }
 END_TEST
@@ -219,8 +203,8 @@ START_TEST(pipe_write)
     ck_assert(ret == 0 && fds[0] != -1 && fds[1] != -1);
 
     /* both ends must be blocking and non-inheritable */
-    ck_assert(pipe_get_inherit(fds[0]) == false);
-    ck_assert(pipe_get_inherit(fds[1]) == false);
+    ck_assert(is_fd_inherited(fds[0]) == false);
+    ck_assert(is_fd_inherited(fds[1]) == false);
     pipe_check_nb(fds[0], false);
     pipe_check_nb(fds[1], false);
     pipe_check_buf(fds[0]);
@@ -751,11 +735,11 @@ START_TEST(process_inherit)
     pipe_check_nb(tether[0], true);  /* our end */
     pipe_check_nb(tether[1], false); /* far end */
 
-    ck_assert(pipe_get_inherit(tether[0]) == false);
-    ck_assert(pipe_get_inherit(tether[1]) == false);
+    ck_assert(is_fd_inherited(tether[0]) == false);
+    ck_assert(is_fd_inherited(tether[1]) == false);
 
     ck_assert(asc_pipe_inherit(tether[1], true) == 0);
-    ck_assert(pipe_get_inherit(tether[1]) == true);
+    ck_assert(is_fd_inherited(tether[1]) == true);
 
     /* start slave */
     int sin = -1, sout = -1, serr = -1;

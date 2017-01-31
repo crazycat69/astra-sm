@@ -165,7 +165,7 @@ static int sock_connect(int fd, unsigned short port)
     return (ret == 0 ? 0 : sock_err());
 }
 
-static void sock_close(int s)
+static inline void sock_close(int s)
 {
 #ifdef _WIN32
     ck_assert(closesocket(s) == 0);
@@ -174,7 +174,7 @@ static void sock_close(int s)
 #endif
 }
 
-static void sock_shutdown(int s)
+static inline void sock_shutdown(int s)
 {
     int ret;
 #ifdef _WIN32

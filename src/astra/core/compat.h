@@ -92,7 +92,7 @@
 #   endif /* ! */
 
     /* cast int to HANDLE */
-#   define ASC_TO_HANDLE(__x) ((HANDLE)((intptr_t)(__x)))
+#   define ASC_TO_HANDLE(_val) ((HANDLE)((intptr_t)(_val)))
     /*
      * NOTE: casting SOCKET to int to HANDLE is far from best practice,
      *       however it seems to work on existing WinAPI implementations;
@@ -100,20 +100,20 @@
      */
 
     /* COM release shorthand */
-#   define ASC_RELEASE(_obj) ASC_FREE(_obj, IUnknown_Release)
+#   define ASC_RELEASE(_obj) ASC_FREE((_obj), (_obj)->lpVtbl->Release)
 
     /* fix error code if pointer equals NULL */
 #   define ASC_WANT_PTR(_hr, _ptr) \
         do { \
-            if (SUCCEEDED(_hr) && _ptr == NULL) \
-                _hr = E_POINTER; \
+            if (SUCCEEDED((_hr)) && (_ptr) == NULL) \
+                (_hr) = E_POINTER; \
         } while (0)
 
     /* same, except S_FALSE code is preserved */
 #   define ASC_WANT_ENUM(_hr, _ptr) \
         do { \
-            if (_hr == S_OK && _ptr == NULL) \
-                _hr = E_POINTER; \
+            if ((_hr) == S_OK && (_ptr) == NULL) \
+                (_hr) = E_POINTER; \
         } while (0)
 #endif /* _WIN32 */
 

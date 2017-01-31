@@ -28,12 +28,14 @@ extern enum fork_status can_fork;
 
 /* test setup and teardown */
 unsigned int get_timer_res(void);
+bool is_fd_inherited(int fd);
 void lib_setup(void);
 void lib_teardown(void);
 
 /* core */
 Suite *core_alloc(void);
 Suite *core_clock(void);
+Suite *core_compat(void);
 Suite *core_event(void);
 Suite *core_list(void);
 Suite *core_mainloop(void);
@@ -74,6 +76,7 @@ static suite_func_t suite_list[] = {
     /* core */
     core_alloc,
     core_clock,
+    core_compat,
     core_event,
     core_list,
     core_mainloop,
