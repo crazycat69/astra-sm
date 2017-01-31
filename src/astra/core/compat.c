@@ -248,8 +248,8 @@ int cx_mkstemp(char *tpl)
     if (tmp == NULL)
         return -1;
 
-    static const int flags = O_CREAT | O_WRONLY | O_TRUNC;
-    static const mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+    const int flags = O_CREAT | O_WRONLY | O_TRUNC;
+    const mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
     fd = cx_open(tmp, flags, mode);
     if (fd == -1)
         return -1;

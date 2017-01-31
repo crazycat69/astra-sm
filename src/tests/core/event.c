@@ -1362,7 +1362,7 @@ START_TEST(series_of_tubes)
         rl.rlim_cur = 1024;
 #endif
 
-    static const int pad = 64;
+    const int pad = 64;
     const int max = (rl.rlim_cur - SOT_SERVERS - pad) / SOT_SERVERS / 3;
     ck_assert(max > 0);
 

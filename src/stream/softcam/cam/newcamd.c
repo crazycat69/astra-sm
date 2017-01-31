@@ -511,7 +511,7 @@ static void on_newcamd_read_packet(void *arg)
         mod->__cam.disable_emm = (mod->config.disable_emm) ? (true) : (buffer[3] != 1);
 
         const int prov_count = (buffer[14] <= MAX_PROV_COUNT) ? buffer[14] : MAX_PROV_COUNT;
-        static const int info_size = 3 + 8; /* ident + sa */
+        const int info_size = 3 + 8; /* ident + sa */
 
         free(mod->prov_buffer);
         mod->prov_buffer = ASC_ALLOC(prov_count * info_size, uint8_t);
