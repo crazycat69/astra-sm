@@ -1590,6 +1590,16 @@ void cmd_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
 static
 void cmd_pid(module_data_t *mod, bool join, uint16_t pid)
 {
+    const char *const verb = (join ? "join" : "leave");
+
+    if (join == mod->joined_pids[pid])
+    {
+        asc_log_error(MSG("duplicate %s request for pid %hu, ignoring")
+                      , verb, pid);
+
+        return;
+    }
+
     mod->joined_pids[pid] = join;
 
     if (mod->pidmap != NULL)
@@ -1609,8 +1619,7 @@ void cmd_pid(module_data_t *mod, bool join, uint16_t pid)
 
         if (FAILED(hr))
         {
-            BDA_ERROR("failed to %s pid %hu"
-                      , (join ? "join" : "leave"), pid);
+            BDA_ERROR("failed to %s pid %hu", verb, pid);
         }
     }
 }
