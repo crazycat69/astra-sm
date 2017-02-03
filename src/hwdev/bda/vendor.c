@@ -662,7 +662,7 @@ HRESULT bda_ext_init(module_data_t *mod, IBaseFilter *filters[])
         }
         else if (hr != E_NOTIMPL)
         {
-            BDA_DEBUG("probe for %s extension failed", ext->name);
+            BDA_ERROR_D(hr, "probe for %s extension failed", ext->name);
             out_hr = hr;
         }
     }
@@ -707,7 +707,7 @@ HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune
 
         if (FAILED(hr))
         {
-            BDA_DEBUG("couldn't send tuning data for %s", ext->name);
+            BDA_ERROR_D(hr, "couldn't send tuning data for %s", ext->name);
             out_hr = hr;
         }
     }
@@ -730,7 +730,10 @@ HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t *cmd
         {
             hr = ext->diseqc(ext->data, cmd, len);
             if (FAILED(hr))
-                BDA_DEBUG("couldn't send DiSEqC command via '%s'", ext->name);
+            {
+                BDA_ERROR_D(hr, "couldn't send DiSEqC command via '%s'"
+                            , ext->name);
+            }
         }
     }
 
@@ -751,7 +754,10 @@ HRESULT bda_ext_lnbpower(module_data_t *mod, bda_lnbpower_mode_t mode)
         {
             hr = ext->lnbpower(ext->data, mode);
             if (FAILED(hr))
-                BDA_DEBUG("couldn't set LNB power mode via '%s'", ext->name);
+            {
+                BDA_ERROR_D(hr, "couldn't set LNB power mode via '%s'"
+                            , ext->name);
+            }
         }
     }
 
@@ -772,7 +778,10 @@ HRESULT bda_ext_22k(module_data_t *mod, bda_22k_mode_t mode)
         {
             hr = ext->t22k(ext->data, mode);
             if (FAILED(hr))
-                BDA_DEBUG("couldn't set 22kHz tone mode via '%s'", ext->name);
+            {
+                BDA_ERROR_D(hr, "couldn't set 22kHz tone mode via '%s'"
+                            , ext->name);
+            }
         }
     }
 
@@ -793,7 +802,10 @@ HRESULT bda_ext_toneburst(module_data_t *mod, bda_toneburst_mode_t mode)
         {
             hr = ext->toneburst(ext->data, mode);
             if (FAILED(hr))
-                BDA_DEBUG("couldn't set tone burst mode via '%s'", ext->name);
+            {
+                BDA_ERROR_D(hr, "couldn't set tone burst mode via '%s'"
+                            , ext->name);
+            }
         }
     }
 

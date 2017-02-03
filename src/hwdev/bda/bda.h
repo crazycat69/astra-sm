@@ -371,43 +371,51 @@ void bda_buffer_pop(void *arg);
  */
 
 /* log formatted error message */
-#define __BDA_LOG(_level, ...) \
-    do { bda_log_hr(mod, hr, _level, __VA_ARGS__); } while (0)
+#define __BDA_LOG(_hr, _level, ...) \
+    do { bda_log_hr(mod, _hr, _level, __VA_ARGS__); } while (0)
 
-#define BDA_ERROR(...) __BDA_LOG(ASC_LOG_ERROR, __VA_ARGS__)
-#define BDA_DEBUG(...) __BDA_LOG(ASC_LOG_DEBUG, __VA_ARGS__)
+#define BDA_ERROR(_hr, ...) \
+    __BDA_LOG(_hr, ASC_LOG_ERROR, __VA_ARGS__)
+#define BDA_ERROR_D(_hr, ...) \
+    __BDA_LOG(_hr, ASC_LOG_DEBUG, __VA_ARGS__)
 
 /* go to cleanup, unconditionally */
-#define __BDA_THROW(_level, ...) \
+#define __BDA_THROW(_hr, _level, ...) \
     do { \
-        __BDA_LOG(_level, __VA_ARGS__); \
-        if (SUCCEEDED(hr)) \
-            hr = E_FAIL; \
+        __BDA_LOG(_hr, _level, __VA_ARGS__); \
+        if (SUCCEEDED(_hr)) \
+            _hr = E_FAIL; \
         goto out; \
     } while (0)
 
-#define BDA_THROW(...) __BDA_THROW(ASC_LOG_ERROR, __VA_ARGS__)
-#define BDA_THROW_D(...) __BDA_THROW(ASC_LOG_DEBUG, __VA_ARGS__)
+#define BDA_THROW(_hr, ...) \
+    __BDA_THROW(_hr, ASC_LOG_ERROR, __VA_ARGS__)
+#define BDA_THROW_D(_hr, ...) \
+    __BDA_THROW(_hr, ASC_LOG_DEBUG, __VA_ARGS__)
 
 /* go to cleanup if HRESULT indicates failure */
-#define __BDA_CKHR(_level, ...) \
+#define __BDA_CKHR(_hr, _level, ...) \
     do { \
-        if (FAILED(hr)) \
-            __BDA_THROW(_level, __VA_ARGS__); \
+        if (FAILED(_hr)) \
+            __BDA_THROW(_hr, _level, __VA_ARGS__); \
     } while (0)
 
-#define BDA_CKHR(...) __BDA_CKHR(ASC_LOG_ERROR, __VA_ARGS__)
-#define BDA_CKHR_D(...) __BDA_CKHR(ASC_LOG_DEBUG, __VA_ARGS__)
+#define BDA_CKHR(_hr, ...) \
+    __BDA_CKHR(_hr, ASC_LOG_ERROR, __VA_ARGS__)
+#define BDA_CKHR_D(_hr, ...) \
+    __BDA_CKHR(_hr, ASC_LOG_DEBUG, __VA_ARGS__)
 
 /* go to cleanup if a NULL pointer is detected */
-#define __BDA_CKPTR(_level, _ptr, ...) \
+#define __BDA_CKPTR(_hr, _level, _ptr, ...) \
     do { \
-        ASC_WANT_PTR(hr, _ptr); \
-        __BDA_CKHR(_level, __VA_ARGS__); \
+        ASC_WANT_PTR(_hr, _ptr); \
+        __BDA_CKHR(_hr, _level, __VA_ARGS__); \
     } while (0)
 
-#define BDA_CKPTR(_ptr, ...) __BDA_CKPTR(ASC_LOG_ERROR, _ptr, __VA_ARGS__)
-#define BDA_CKPTR_D(_ptr, ...) __BDA_CKPTR(ASC_LOG_DEBUG, _ptr, __VA_ARGS__)
+#define BDA_CKPTR(_hr, _ptr, ...) \
+    __BDA_CKPTR(_hr, ASC_LOG_ERROR, _ptr, __VA_ARGS__)
+#define BDA_CKPTR_D(_hr, _ptr, ...) \
+    __BDA_CKPTR(_hr, ASC_LOG_DEBUG, _ptr, __VA_ARGS__)
 
 void bda_dump_request(ITuneRequest *request);
 void bda_log_hr(const module_data_t *mod, HRESULT hr, asc_log_type_t level
