@@ -822,7 +822,7 @@ static void oob_pipe(int fds[2])
     FD_ZERO(&rset);
     FD_SET(listener, &rset);
     ck_assert(select(listener + 1, &rset, NULL, NULL, NULL) == 1);
-    ck_assert(FD_ISSET(listener, &rset));
+    ck_assert(FD_ISSET((unsigned)listener, &rset));
 
     /* get server side socket */
     test_sa_t sa;
