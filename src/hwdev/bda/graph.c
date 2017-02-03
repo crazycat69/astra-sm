@@ -1229,7 +1229,7 @@ void buffer_push(module_data_t *mod, const uint8_t *ts)
         return;
     }
 
-    memcpy(mod->buf.data[next], ts, TS_PACKET_SIZE);
+    memcpy(mod->buf.data[mod->buf.head], ts, TS_PACKET_SIZE);
     mod->buf.head = next;
 }
 
@@ -1253,9 +1253,7 @@ void on_sample(void *arg, const uint8_t *buf, size_t len)
 
         if (mod->frag_pos >= TS_PACKET_SIZE)
         {
-            if (TS_IS_SYNC(mod->frag))
-                buffer_push(mod, mod->frag);
-
+            buffer_push(mod, mod->frag);
             mod->frag_pos = 0;
         }
 
@@ -1264,14 +1262,25 @@ void on_sample(void *arg, const uint8_t *buf, size_t len)
     }
 
     /* push full packets */
-    while (len >= TS_PACKET_SIZE)
+    while (len > 0)
     {
         if (TS_IS_SYNC(buf))
         {
-            buffer_push(mod, buf);
+            if (len >= TS_PACKET_SIZE)
+            {
+                buffer_push(mod, buf);
 
-            buf += TS_PACKET_SIZE;
-            len -= TS_PACKET_SIZE;
+                buf += TS_PACKET_SIZE;
+                len -= TS_PACKET_SIZE;
+            }
+            else
+            {
+                /* put remainder into frag storage */
+                memcpy(mod->frag, buf, len);
+                mod->frag_pos = len;
+
+                len = 0;
+            }
         }
         else
         {
@@ -1282,16 +1291,9 @@ void on_sample(void *arg, const uint8_t *buf, size_t len)
 
     asc_mutex_unlock(&mod->buf.lock);
 
-    /* put remainder into frag storage */
-    if (len > 0)
-    {
-        memcpy(mod->frag, buf, len);
-        mod->frag_pos = len;
-    }
-
-    /* ask main thread to dequeue */
     if (mod->buf.pending >= BDA_BUFFER_THRESH)
     {
+        /* ask main thread to dequeue */
         asc_job_queue(mod, bda_buffer_pop, mod);
         asc_wake();
 
@@ -1500,7 +1502,7 @@ out:
 
 /* wait for graph event or user command */
 static
-void wait_events(module_data_t *mod)
+void wait_events(const module_data_t *mod)
 {
     HANDLE ev[2] = { mod->queue_evt, NULL };
     DWORD ev_cnt = 1;
