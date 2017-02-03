@@ -608,31 +608,27 @@ void bda_dump_request(ITuneRequest *request)
 }
 
 /* log formatted error message */
-void bda_log_hr(const module_data_t *mod, HRESULT hr, asc_log_type_t level
-                , const char *msg, ...)
+void bda_log_hr(const char *pfx, const char *id
+                , HRESULT hr, asc_log_type_t type
+                , const char *fmt, ...)
 {
-    char fmt[2048] = { '\0' };
-    int ret = 0;
+    char buf[2048] = { '\0' };
 
-    /* cook up a format string */
+    va_list ap;
+    va_start(ap, fmt);
+    vsnprintf(buf, sizeof(buf), fmt, ap);
+    va_end(ap);
+
     if (SUCCEEDED(hr))
     {
         /* success codes won't format properly, nor is there a need */
-        ret = snprintf(fmt, sizeof(fmt), MSG("%s"), msg);
+        asc_log(type, "[%s%s] %s", pfx, id, buf);
     }
     else
     {
         /* append formatted HRESULT to error message */
         char *const err = dshow_error_msg(hr);
-        ret = snprintf(fmt, sizeof(fmt), MSG("%s: %s"), msg, err);
+        asc_log(type, "[%s%s] %s: %s", pfx, id, buf, err);
         free(err);
-    }
-
-    if (ret > 0)
-    {
-        va_list ap;
-        va_start(ap, msg);
-        asc_log_va(level, fmt, ap);
-        va_end(ap);
     }
 }

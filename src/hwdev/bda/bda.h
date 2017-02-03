@@ -370,9 +370,14 @@ void bda_buffer_pop(void *arg);
  * error handling (a.k.a. the joys of working with COM in plain C)
  */
 
+#define BDA_MODULE_PFX "dvb_input "
+#define BDA_MODULE_ID mod->name
+
 /* log formatted error message */
-#define __BDA_LOG(_hr, _level, ...) \
-    do { bda_log_hr(mod, _hr, _level, __VA_ARGS__); } while (0)
+#define __BDA_LOG(_hr, _type, ...) \
+    do { \
+        bda_log_hr(BDA_MODULE_PFX, BDA_MODULE_ID, _hr, _type, __VA_ARGS__); \
+    } while (0)
 
 #define BDA_ERROR(_hr, ...) \
     __BDA_LOG(_hr, ASC_LOG_ERROR, __VA_ARGS__)
@@ -380,9 +385,9 @@ void bda_buffer_pop(void *arg);
     __BDA_LOG(_hr, ASC_LOG_DEBUG, __VA_ARGS__)
 
 /* go to cleanup, unconditionally */
-#define __BDA_THROW(_hr, _level, ...) \
+#define __BDA_THROW(_hr, _type, ...) \
     do { \
-        __BDA_LOG(_hr, _level, __VA_ARGS__); \
+        __BDA_LOG(_hr, _type, __VA_ARGS__); \
         if (SUCCEEDED(_hr)) \
             _hr = E_FAIL; \
         goto out; \
@@ -394,10 +399,10 @@ void bda_buffer_pop(void *arg);
     __BDA_THROW(_hr, ASC_LOG_DEBUG, __VA_ARGS__)
 
 /* go to cleanup if HRESULT indicates failure */
-#define __BDA_CKHR(_hr, _level, ...) \
+#define __BDA_CKHR(_hr, _type, ...) \
     do { \
         if (FAILED(_hr)) \
-            __BDA_THROW(_hr, _level, __VA_ARGS__); \
+            __BDA_THROW(_hr, _type, __VA_ARGS__); \
     } while (0)
 
 #define BDA_CKHR(_hr, ...) \
@@ -406,10 +411,10 @@ void bda_buffer_pop(void *arg);
     __BDA_CKHR(_hr, ASC_LOG_DEBUG, __VA_ARGS__)
 
 /* go to cleanup if a NULL pointer is detected */
-#define __BDA_CKPTR(_hr, _level, _ptr, ...) \
+#define __BDA_CKPTR(_hr, _type, _ptr, ...) \
     do { \
         ASC_WANT_PTR(_hr, _ptr); \
-        __BDA_CKHR(_hr, _level, __VA_ARGS__); \
+        __BDA_CKHR(_hr, _type, __VA_ARGS__); \
     } while (0)
 
 #define BDA_CKPTR(_hr, _ptr, ...) \
@@ -418,7 +423,8 @@ void bda_buffer_pop(void *arg);
     __BDA_CKPTR(_hr, ASC_LOG_DEBUG, _ptr, __VA_ARGS__)
 
 void bda_dump_request(ITuneRequest *request);
-void bda_log_hr(const module_data_t *mod, HRESULT hr, asc_log_type_t level
-                , const char *msg, ...) __fmt_printf(4, 5);
+void bda_log_hr(const char *pfx, const char *id
+                , HRESULT hr, asc_log_type_t type
+                , const char *fmt, ...) __fmt_printf(5, 6);
 
 #endif /* _HWDEV_BDA_H_ */
