@@ -1136,9 +1136,14 @@ void module_destroy(module_data_t *mod)
 
     if (mod->queue != NULL)
     {
+        /* clean up leftovers from failed module init */
+        const size_t cnt = asc_list_size(mod->queue);
+        if (cnt > 0)
+            asc_log_debug(MSG("cleaning up %zu stale user commands"), cnt);
+
         asc_list_clear(mod->queue)
         {
-            asc_log_warning(MSG("BUG: expected command queue to be empty"));
+            free(asc_list_data(mod->queue));
         }
 
         asc_list_destroy(mod->queue);
