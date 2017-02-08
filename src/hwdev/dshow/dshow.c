@@ -20,6 +20,8 @@
 #include <astra/astra.h>
 #include "dshow.h"
 
+#include <tuner.h>
+
 /* format DirectShow error message. the result must be freed using free() */
 char *dshow_error_msg(HRESULT hr)
 {
@@ -263,6 +265,84 @@ out:
     ASC_RELEASE(regsvc);
     ASC_RELEASE(dummy);
     ASC_RELEASE(graph);
+
+    return hr;
+}
+
+/* locate and query a specific BDA topology control node */
+static
+bool guid_in_list(const GUID list[], ULONG cnt, const GUID *want)
+{
+    for (ULONG i = 0; i < cnt; i++)
+    {
+        if (IsEqualGUID(want, &list[i]))
+            return true;
+    }
+
+    return false;
+}
+
+HRESULT dshow_find_ctlnode(IBaseFilter *filter, const GUID *intf
+                           , const IID *iid, void **out)
+{
+    if (filter == NULL || intf == NULL || iid == NULL || out == NULL)
+        return E_POINTER;
+
+    *out = NULL;
+
+    /* get topology interface */
+    IBDA_Topology *topology = NULL;
+    HRESULT hr = IBaseFilter_QueryInterface(filter, &IID_IBDA_Topology
+                                            , (void **)&topology);
+    ASC_WANT_PTR(hr, topology);
+    if (FAILED(hr)) return hr;
+
+    /* list node types */
+    ULONG node_types_cnt = 0;
+    ULONG node_types[32] = { 0 };
+
+    hr = IBDA_Topology_GetNodeTypes(topology, &node_types_cnt
+                                    , ASC_ARRAY_SIZE(node_types)
+                                    , node_types);
+
+    /* list interfaces for each node type */
+    for (ULONG i = 0; SUCCEEDED(hr) && i < node_types_cnt; i++)
+    {
+        ULONG node_intf_cnt = 0;
+        GUID node_intf[32];
+        memset(&node_intf, 0, sizeof(node_intf));
+
+        hr = IBDA_Topology_GetNodeInterfaces(topology, node_types[i]
+                                             , &node_intf_cnt
+                                             , ASC_ARRAY_SIZE(node_intf)
+                                             , node_intf);
+
+        if (SUCCEEDED(hr)
+            && guid_in_list(node_intf, node_intf_cnt, intf))
+        {
+            /* query requested interface */
+            IUnknown *node = NULL;
+            hr = IBDA_Topology_GetControlNode(topology, 0, 1, node_types[i]
+                                              , &node);
+            ASC_WANT_PTR(hr, node);
+
+            if (SUCCEEDED(hr))
+            {
+                hr = IUnknown_QueryInterface(node, iid, out);
+                ASC_WANT_PTR(hr, *out);
+            }
+
+            ASC_RELEASE(node);
+            ASC_RELEASE(topology);
+
+            return hr;
+        }
+    }
+
+    if (SUCCEEDED(hr))
+        hr = E_NOTIMPL;
+
+    ASC_RELEASE(topology);
 
     return hr;
 }

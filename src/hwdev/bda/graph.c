@@ -480,74 +480,6 @@ out:
     return hr;
 }
 
-/* locate and query a specific control node */
-static
-HRESULT find_control_node(const module_data_t *mod, IBaseFilter *filter
-                          , const GUID *intf, const IID *iid, void **out)
-{
-    HRESULT hr = E_FAIL;
-
-    ULONG node_types_cnt = 0;
-    ULONG node_types[32] = { 0 };
-    ULONG node_intf_cnt = 0;
-    GUID node_intf[32];
-
-    IBDA_Topology *topology = NULL;
-    IUnknown *node = NULL;
-
-    if (filter == NULL || intf == NULL || iid == NULL || out == NULL)
-        return E_POINTER;
-
-    *out = NULL;
-
-    /* get topology interface */
-    hr = IBaseFilter_QueryInterface(filter, &IID_IBDA_Topology
-                                    , (void **)&topology);
-    BDA_CKPTR_D(hr, topology, "couldn't query IBDA_Topology interface");
-
-    /* list node types */
-    hr = IBDA_Topology_GetNodeTypes(topology, &node_types_cnt
-                                    , ASC_ARRAY_SIZE(node_types)
-                                    , node_types);
-    BDA_CKHR_D(hr, "couldn't retrieve list of topology node types");
-
-    for (unsigned int i = 0; i < node_types_cnt; i++)
-    {
-        /* list interfaces for each node type */
-        memset(&node_intf, 0, sizeof(node_intf));
-        hr = IBDA_Topology_GetNodeInterfaces(topology, node_types[i]
-                                             , &node_intf_cnt
-                                             , ASC_ARRAY_SIZE(node_intf)
-                                             , node_intf);
-        BDA_CKHR_D(hr, "couldn't retrieve list of node interfaces");
-
-        for (unsigned int j = 0; j < node_intf_cnt; j++)
-        {
-            if (IsEqualGUID(intf, &node_intf[j]))
-            {
-                hr = IBDA_Topology_GetControlNode(topology, 0, 1
-                                                  , node_types[i]
-                                                  , &node);
-                BDA_CKPTR_D(hr, node, "couldn't retrieve node interface");
-
-                hr = IUnknown_QueryInterface(node, iid, out);
-                BDA_CKPTR_D(hr, *out, "couldn't query node interface");
-
-                goto out;
-            }
-        }
-    }
-
-    /* node not found */
-    hr = S_FALSE;
-
-out:
-    ASC_RELEASE(node);
-    ASC_RELEASE(topology);
-
-    return hr;
-}
-
 /* submit user tuning data to network provider */
 static
 HRESULT provider_tune(const module_data_t *mod, IBaseFilter *provider
@@ -1049,12 +981,10 @@ HRESULT graph_setup(module_data_t *mod)
     }
 
     /* create signal statistics interface */
-    hr = find_control_node(mod, source, &KSPROPSETID_BdaSignalStats
-                           , &IID_IBDA_SignalStatistics, (void **)&signal);
-    BDA_CKHR(hr, "failed to search device topology for signal stats");
-
-    if (signal == NULL)
-        asc_log_warning(MSG("couldn't find signal statistics interface"));
+    hr = dshow_find_ctlnode(source, &KSPROPSETID_BdaSignalStats
+                            , &IID_IBDA_SignalStatistics, (void **)&signal);
+    if (FAILED(hr))
+        BDA_ERROR(hr, "failed to locate signal statistics interface");
 
     if (!mod->no_dvr)
     {
