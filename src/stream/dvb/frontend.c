@@ -330,6 +330,10 @@ static void fe_tune_s(dvb_fe_t *fe)
     {
         DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_STREAM_ID,     (fe->pls_mode << 26) | (fe->pls_code << 8) | fe->stream_id);
     }
+    if(fe->modcode != -1)
+    {
+        DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_MODCODE,     fe->modcode);
+    }
     if(fe->diseqc == 0 && fe->uni_scr == 0)
     {
         DTV_PROPERTY_SET(cmdseq, cmdlist, DTV_VOLTAGE,       fe->voltage);

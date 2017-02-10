@@ -45,6 +45,14 @@
 #   define NO_STREAM_ID_FILTER (~0U)
 #endif
 
+#ifndef DTV_MODCODE
+#   define DTV_MODCODE (DTV_STREAM_ID + 1)
+#endif
+
+#ifndef ALL_MODCODES
+#   define ALL_MODCODES (~0U)
+#endif
+
 #ifndef HAVE_DVBAPI_C_ANNEX_AC
 #   define SYS_DVBC_ANNEX_A SYS_DVBC_ANNEX_AC
 #   define SYS_DVBC_ANNEX_C SYS_DVBC_ANNEX_AC
