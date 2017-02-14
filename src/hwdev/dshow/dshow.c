@@ -410,7 +410,9 @@ HRESULT dshow_find_ksprop(IBaseFilter *filter, const GUID *prop_set
         if (hr != S_OK)
         {
             /* no more pins */
-            hr = E_NOTIMPL;
+            if (SUCCEEDED(hr))
+                hr = E_NOTIMPL; /* don't return S_FALSE */
+
             break;
         }
 

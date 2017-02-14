@@ -197,7 +197,17 @@ struct bda_network_t
     HRESULT (*set_locator)(const bda_tune_cmd_t *, ILocator *);
 };
 
+extern const bda_network_t bda_net_atsc;
+extern const bda_network_t bda_net_cqam;
+extern const bda_network_t bda_net_dvbc;
+extern const bda_network_t bda_net_dvbs;
+extern const bda_network_t bda_net_dvbs2;
+extern const bda_network_t bda_net_dvbt;
+extern const bda_network_t bda_net_dvbt2;
+extern const bda_network_t bda_net_isdbs;
+extern const bda_network_t bda_net_isdbt;
 extern const bda_network_t *const bda_network_list[];
+
 HRESULT bda_net_provider(const bda_network_t *net, IBaseFilter **out);
 HRESULT bda_tuning_space(const bda_network_t *net, ITuningSpace **out);
 HRESULT bda_tune_request(const bda_tune_cmd_t *cmd, ITuneRequest **out);

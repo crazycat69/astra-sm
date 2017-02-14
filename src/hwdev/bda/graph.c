@@ -897,8 +897,6 @@ out:
     return hr;
 }
 
-// TODO: restore_ca() / CAM reset function
-
 /*
  * graph initialization and cleanup (uses above functions)
  */
@@ -1239,14 +1237,16 @@ void on_sample(void *arg, const uint8_t *buf, size_t len)
 static
 HRESULT restart_tuning(module_data_t *mod)
 {
-    HRESULT hr = E_FAIL;
+    /* sanity checks */
+    if (mod->state != BDA_STATE_RUNNING || mod->no_dvr)
+        return E_INVALIDARG;
 
     /*
      * NOTE: Depending on the driver, a graph restart might be needed
      *       for the tuning process to actually begin.
      */
 
-    hr = control_stop(mod->graph);
+    HRESULT hr = control_stop(mod->graph);
     BDA_CKHR_D(hr, "couldn't stop the graph");
 
     /* same tuning routine as graph_setup() */
@@ -1274,8 +1274,15 @@ HRESULT restart_tuning(module_data_t *mod)
     if (FAILED(hr))
         BDA_ERROR(hr, "error while running DiSEqC command sequence");
 
-    /* TODO: reset CAM / reset_cam() */
-    // XXX: rejoin pids?
+    /*
+     * TODO: Call restore_pids().
+     *       HW pid filters on some cards might need it after retuning.
+     */
+
+    /*
+     * TODO: Reset CAM / reset_cam().
+     *       Re-send cached CAPMT's.
+     */
 
     /* reset signal lock timeout */
     mod->cooldown = mod->timeout;
@@ -1392,14 +1399,13 @@ const char *event_text(long ec)
 static
 HRESULT handle_events(module_data_t *mod)
 {
-    // XXX: does hotplug work with no_dvr ?
     HRESULT hr = E_FAIL;
 
     do
     {
         const char *ev_text = NULL;
-        long ec;
-        LONG_PTR p1, p2;
+        long ec = 0;
+        LONG_PTR p1 = 0, p2 = 0;
 
         /* wait for an event (50ms timeout) */
         hr = IMediaEvent_GetEvent(mod->event, &ec, &p1, &p2, 50);
@@ -1630,7 +1636,7 @@ void execute_cmd(module_data_t *mod, const bda_user_cmd_t *cmd)
 }
 
 /*
- * thread loop
+ * control thread loop
  */
 
 void bda_graph_loop(void *arg)

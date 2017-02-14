@@ -149,8 +149,7 @@ HRESULT set_locator_atsc(const bda_tune_cmd_t *tune, ILocator *locator)
     return hr;
 }
 
-static
-const bda_network_t net_atsc =
+const bda_network_t bda_net_atsc =
 {
     .name = { "atsc" },
 
@@ -223,8 +222,7 @@ out:
     return hr;
 }
 
-static
-const bda_network_t net_cqam =
+const bda_network_t bda_net_cqam =
 {
     .name = { "cqam" },
 
@@ -250,8 +248,7 @@ HRESULT init_space_dvbc(ITuningSpace *space)
     return init_space_dvbx(space, DVB_Cable);
 }
 
-static
-const bda_network_t net_dvbc =
+const bda_network_t bda_net_dvbc =
 {
     .name = { "dvbc", "c" },
 
@@ -312,8 +309,7 @@ HRESULT set_locator_dvbs(const bda_tune_cmd_t *tune, ILocator *locator)
     return hr;
 }
 
-static
-const bda_network_t net_dvbs =
+const bda_network_t bda_net_dvbs =
 {
     .name = { "dvbs", "s" },
 
@@ -370,8 +366,7 @@ out:
     return hr;
 }
 
-static
-const bda_network_t net_dvbs2 =
+const bda_network_t bda_net_dvbs2 =
 {
     .name = { "dvbs2", "s2" },
 
@@ -427,8 +422,7 @@ out:
     return hr;
 }
 
-static
-const bda_network_t net_dvbt =
+const bda_network_t bda_net_dvbt =
 {
     .name = { "dvbt", "t" },
 
@@ -464,8 +458,7 @@ out:
     return hr;
 }
 
-static
-const bda_network_t net_dvbt2 =
+const bda_network_t bda_net_dvbt2 =
 {
     .name = { "dvbt2", "t2" },
 
@@ -489,8 +482,7 @@ HRESULT init_space_isdbs(ITuningSpace *space)
     return init_space_dvbx(space, ISDB_Satellite);
 }
 
-static
-const bda_network_t net_isdbs =
+const bda_network_t bda_net_isdbs =
 {
     .name = { "isdbs" },
 
@@ -515,8 +507,7 @@ HRESULT init_space_isdbt(ITuningSpace *space)
     return init_space_dvbx(space, ISDB_Terrestrial);
 }
 
-static
-const bda_network_t net_isdbt =
+const bda_network_t bda_net_isdbt =
 {
     .name = { "isdbt" },
 
@@ -537,15 +528,15 @@ const bda_network_t net_isdbt =
 /* list of supported network types */
 const bda_network_t *const bda_network_list[] =
 {
-    &net_atsc,
-    &net_cqam,
-    &net_dvbc,
-    &net_dvbs,
-    &net_dvbs2,
-    &net_dvbt,
-    &net_dvbt2,
-    &net_isdbs,
-    &net_isdbt,
+    &bda_net_atsc,
+    &bda_net_cqam,
+    &bda_net_dvbc,
+    &bda_net_dvbs,
+    &bda_net_dvbs2,
+    &bda_net_dvbt,
+    &bda_net_dvbt2,
+    &bda_net_isdbs,
+    &bda_net_isdbt,
     NULL,
 };
 
