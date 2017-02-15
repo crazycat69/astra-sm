@@ -1028,7 +1028,10 @@ void module_init(lua_State *L, module_data_t *mod)
 
     mod->queue_evt = CreateEventW(NULL, FALSE, FALSE, NULL);
     if (mod->queue_evt == NULL)
-        luaL_error(L, MSG("CreateEvent() failed: %s"), asc_error_msg());
+    {
+        luaL_error(L, "[dvb_input] CreateEvent() failed: %s"
+                   , asc_error_msg());
+    }
 
     /* get instance name */
     module_option_string(L, "name", &mod->name, NULL);
@@ -1056,8 +1059,10 @@ void module_init(lua_State *L, module_data_t *mod)
 
     /* get signal status callback */
     lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
-    if (lua_isfunction(L, -1))
+    if (!lua_isnil(L, -1))
     {
+        luaL_checktype(L, -1, LUA_TFUNCTION);
+
         mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
         mod->status_timer = asc_timer_init(1000, on_status_timer, mod);
     }
