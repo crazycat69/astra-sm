@@ -329,36 +329,24 @@ const bda_network_t bda_net_dvbs =
  */
 
 static
-HRESULT init_locator_dvbs2(ILocator *locator)
-{
-    /* check if the OS supports DVB-S2 */
-    IDVBSLocator2 *locator_s2 = NULL;
-    HRESULT hr = ILocator_QueryInterface(locator, &IID_IDVBSLocator2
-                                         , (void **)&locator_s2);
-    ASC_WANT_PTR(hr, locator_s2);
-    if (FAILED(hr)) return hr;
-
-    ASC_RELEASE(locator_s2);
-    return S_OK;
-}
-
-static
 HRESULT set_locator_dvbs2(const bda_tune_cmd_t *tune, ILocator *locator)
 {
     IDVBSLocator2 *locator_s2 = NULL;
     HRESULT hr = ILocator_QueryInterface(locator, &IID_IDVBSLocator2
                                          , (void **)&locator_s2);
     ASC_WANT_PTR(hr, locator_s2);
-    if (FAILED(hr)) return hr;
 
-    hr = IDVBSLocator2_put_SignalPilot(locator_s2, tune->pilot);
-    if (FAILED(hr)) goto out;
+    if (SUCCEEDED(hr))
+    {
+        hr = IDVBSLocator2_put_SignalPilot(locator_s2, tune->pilot);
+        if (FAILED(hr)) goto out;
 
-    hr = IDVBSLocator2_put_SignalRollOff(locator_s2, tune->rolloff);
-    if (FAILED(hr)) goto out;
+        hr = IDVBSLocator2_put_SignalRollOff(locator_s2, tune->rolloff);
+        if (FAILED(hr)) goto out;
 
-    hr = IDVBSLocator2_put_DiseqLNBSource(locator_s2, tune->lnb_source);
-    if (FAILED(hr)) goto out;
+        hr = IDVBSLocator2_put_DiseqLNBSource(locator_s2, tune->lnb_source);
+        if (FAILED(hr)) goto out;
+    }
 
     hr = set_locator_dvbs(tune, locator); /* delegate to DVB-S */
 out:
@@ -375,7 +363,6 @@ const bda_network_t bda_net_dvbs2 =
     .tuning_space = &CLSID_DVBSTuningSpace,
     .network_type = &DVB_SATELLITE_TV_NETWORK_TYPE,
 
-    .init_default_locator = init_locator_dvbs2,
     .init_space = init_space_dvbs, /* same as DVB-S */
 
     .set_space = set_space_dvbs, /* same as DVB-S */
