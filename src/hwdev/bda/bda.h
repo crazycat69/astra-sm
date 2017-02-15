@@ -187,8 +187,7 @@ struct bda_network_t
     const CLSID *tuning_space;  /* tuning space object for this network */
     const CLSID *network_type;  /* GUID to assign to tuning spaces */
 
-    /* tuning space initializers */
-    HRESULT (*init_default_locator)(ILocator *);
+    /* tuning space initializer */
     HRESULT (*init_space)(ITuningSpace *);
 
     /* tune request initializers */

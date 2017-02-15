@@ -27,10 +27,12 @@ HRESULT init_space_dvbx(ITuningSpace *space, DVBSystemType type)
     HRESULT hr = ITuningSpace_QueryInterface(space, &IID_IDVBTuningSpace2
                                              , (void **)&space_dvb);
     ASC_WANT_PTR(hr, space_dvb);
-    if (FAILED(hr)) return hr;
 
-    hr = IDVBTuningSpace2_put_SystemType(space_dvb, type);
-    ASC_RELEASE(space_dvb);
+    if (SUCCEEDED(hr))
+    {
+        hr = IDVBTuningSpace2_put_SystemType(space_dvb, type);
+        ASC_RELEASE(space_dvb);
+    }
 
     return hr;
 }
@@ -583,12 +585,6 @@ HRESULT bda_tuning_space(const bda_network_t *net, ITuningSpace **out)
                           , &IID_ILocator, (void **)&locator);
     ASC_WANT_PTR(hr, locator);
     if (FAILED(hr)) goto out;
-
-    if (net->init_default_locator != NULL)
-    {
-        hr = net->init_default_locator(locator);
-        if (FAILED(hr)) goto out;
-    }
 
     /* set up tuning space */
     hr = CoCreateInstance(net->tuning_space, NULL, CLSCTX_INPROC_SERVER
