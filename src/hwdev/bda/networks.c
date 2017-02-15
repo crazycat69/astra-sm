@@ -436,10 +436,13 @@ HRESULT set_locator_dvbt2(const bda_tune_cmd_t *tune, ILocator *locator)
     HRESULT hr = ILocator_QueryInterface(locator, &IID_IDVBTLocator2
                                          , (void **)&locator_t2);
     ASC_WANT_PTR(hr, locator_t2);
-    if (FAILED(hr)) return hr;
 
-    hr = IDVBTLocator2_put_PhysicalLayerPipeId(locator_t2, tune->stream_id);
-    if (FAILED(hr)) goto out;
+    if (SUCCEEDED(hr))
+    {
+        hr = IDVBTLocator2_put_PhysicalLayerPipeId(locator_t2
+                                                   , tune->stream_id);
+        if (FAILED(hr)) goto out;
+    }
 
     hr = set_locator_dvbt(tune, locator); /* delegate to DVB-T */
 out:
@@ -453,6 +456,7 @@ const bda_network_t bda_net_dvbt2 =
 
     .provider = &CLSID_DVBTNetworkProvider,
     .locator = &CLSID_DVBTLocator2,
+    .loc_fallback = &CLSID_DVBTLocator,
     .tuning_space = &CLSID_DVBTuningSpace,
     .network_type = &DVB_TERRESTRIAL_TV_NETWORK_TYPE,
 
@@ -584,6 +588,15 @@ HRESULT bda_tuning_space(const bda_network_t *net, ITuningSpace **out)
     hr = CoCreateInstance(net->locator, NULL, CLSCTX_INPROC_SERVER
                           , &IID_ILocator, (void **)&locator);
     ASC_WANT_PTR(hr, locator);
+
+    if (FAILED(hr) && net->loc_fallback != NULL)
+    {
+        /* fallback to legacy locator class */
+        hr = CoCreateInstance(net->loc_fallback, NULL, CLSCTX_INPROC_SERVER
+                              , &IID_ILocator, (void **)&locator);
+        ASC_WANT_PTR(hr, locator);
+    }
+
     if (FAILED(hr)) goto out;
 
     /* set up tuning space */

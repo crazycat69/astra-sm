@@ -184,6 +184,7 @@ struct bda_network_t
 
     const CLSID *provider;      /* fallback provider for older systems */
     const CLSID *locator;       /* locator object for this network */
+    const CLSID *loc_fallback;  /* fallback locator for older systems */
     const CLSID *tuning_space;  /* tuning space object for this network */
     const CLSID *network_type;  /* GUID to assign to tuning spaces */
 
