@@ -193,8 +193,15 @@ void graph_submit(module_data_t *mod, const bda_user_cmd_t *cmd)
 static
 void push_signal_stats(lua_State *L, module_data_t *mod)
 {
+    static const char *state_names[] =
+    {
+        "stopped", "init", "running", "error"
+    };
+
     asc_mutex_lock(&mod->signal_lock);
     lua_newtable(L);
+    lua_pushstring(L, state_names[mod->signal_stats.graph_state]);
+    lua_setfield(L, -2, "state");
     lua_pushboolean(L, mod->signal_stats.present);
     lua_setfield(L, -2, "present");
     lua_pushboolean(L, mod->signal_stats.locked);
@@ -949,7 +956,7 @@ int method_diseqc(lua_State *L, module_data_t *mod)
             else if (size >= ASC_ARRAY_SIZE(cmd.diseqc.seq))
                 luaL_error(L, MSG("DiSEqC sequence is too long"));
 
-            lua_insert(L, MODULE_OPTIONS_IDX);
+            lua_insert(L, MODULE_OPTIONS_IDX); /* stack fixup */
 
             parse_diseqc_options(L, mod, &cmd.diseqc.seq[size]);
             size++;

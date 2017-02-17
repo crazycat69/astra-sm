@@ -284,6 +284,10 @@ typedef enum
 
 typedef struct
 {
+    /* graph is in "stopped" state right after module init */
+    bda_state_t graph_state;
+
+    /* standard BDA signal metrics */
     BOOLEAN locked;
     BOOLEAN present;
     LONG quality;

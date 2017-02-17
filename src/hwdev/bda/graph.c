@@ -817,7 +817,7 @@ HRESULT control_stop(IFilterGraph2 *graph)
 
 /* request signal statistics from driver */
 static
-HRESULT signal_stats_load(module_data_t *mod, bda_signal_stats_t *out)
+HRESULT load_signal_stats(module_data_t *mod, bda_signal_stats_t *out)
 {
     HRESULT hr = E_FAIL;
 
@@ -840,20 +840,6 @@ HRESULT signal_stats_load(module_data_t *mod, bda_signal_stats_t *out)
 
 out:
     return hr;
-}
-
-/* update last known signal statistics */
-static
-void signal_stats_set(module_data_t *mod, const bda_signal_stats_t *stats)
-{
-    asc_mutex_lock(&mod->signal_lock);
-
-    if (stats != NULL)
-        memcpy(&mod->signal_stats, stats, sizeof(mod->signal_stats));
-    else
-        memset(&mod->signal_stats, 0, sizeof(mod->signal_stats));
-
-    asc_mutex_unlock(&mod->signal_lock);
 }
 
 /* run saved DiSEqC sequence through available extensions */
@@ -892,6 +878,52 @@ HRESULT diseqc_sequence_run(module_data_t *mod)
 
         asc_usleep(BDA_DISEQC_DELAY + seq->delay);
     }
+
+out:
+    return hr;
+}
+
+/* begin tuning sequence; called when all objects are in place */
+static
+HRESULT start_tuning(module_data_t *mod, IFilterGraph2 *graph
+                     , const bda_tune_cmd_t *tune)
+{
+    HRESULT hr = E_FAIL;
+
+    if (graph == NULL || tune == NULL)
+        return E_POINTER;
+
+    /* call pre-tuning hooks */
+    hr = bda_ext_tune(mod, tune, BDA_TUNE_PRE);
+    if (FAILED(hr))
+        BDA_ERROR(hr, "error while sending extension pre-tuning data");
+
+    /* start the graph */
+    hr = control_run(mod, graph);
+    BDA_CKHR_D(hr, "couldn't run the graph");
+
+    /* call post-tuning hooks */
+    hr = bda_ext_tune(mod, tune, BDA_TUNE_POST);
+    if (FAILED(hr))
+        BDA_ERROR(hr, "error while sending extension post-tuning data");
+
+    /* run stored DiSEqC sequence */
+    hr = diseqc_sequence_run(mod);
+    if (FAILED(hr))
+        BDA_ERROR(hr, "error while running DiSEqC command sequence");
+
+    /*
+     * TODO: Call restore_pids().
+     *       HW pid filters on some cards might need it after retuning.
+     */
+
+    /*
+     * TODO: Reset CAM / reset_cam().
+     *       Re-send cached CAPMT's.
+     */
+
+    /* reset signal lock timeout */
+    mod->cooldown = mod->timeout;
 
 out:
     return hr;
@@ -1034,33 +1066,11 @@ HRESULT graph_setup(module_data_t *mod)
         if (FAILED(hr))
             BDA_ERROR(hr, "error while probing for vendor extensions");
 
-        /* call pre-tuning hooks */
-        hr = bda_ext_tune(mod, &tune, BDA_TUNE_PRE);
-        if (FAILED(hr))
-            BDA_ERROR(hr, "error while sending extension pre-tuning data");
+        hr = start_tuning(mod, graph, &tune);
+        BDA_CKHR(hr, "failed to initiate tuning sequence");
 
-        /* start the graph */
-        hr = control_run(mod, graph);
-        BDA_CKHR(hr, "failed to run the graph");
-
-        /* call post-tuning hooks */
-        hr = bda_ext_tune(mod, &tune, BDA_TUNE_POST);
-        if (FAILED(hr))
-            BDA_ERROR(hr, "error while sending extension post-tuning data");
-
-        /* run stored DiSEqC sequence */
-        hr = diseqc_sequence_run(mod);
-        if (FAILED(hr))
-            BDA_ERROR(hr, "error while running DiSEqC command sequence");
-
-        /* TODO: reset CAM state / reset_cam() */
-
-        /* set signal lock timeout */
         mod->tunefail = 0;
-        mod->cooldown = mod->timeout;
     }
-
-    signal_stats_set(mod, NULL);
 
     /* increase refcount on objects of interest */
     IFilterGraph2_AddRef(graph);
@@ -1131,7 +1141,6 @@ void graph_teardown(module_data_t *mod)
 
     mod->graph_evt = NULL;
     mod->cooldown = 0;
-    signal_stats_set(mod, NULL);
 
     mod->frag_pos = 0;
 
@@ -1235,7 +1244,7 @@ void on_sample(void *arg, const uint8_t *buf, size_t len)
 
 /* stop the graph, submit tuning data and start it again */
 static
-HRESULT restart_tuning(module_data_t *mod)
+HRESULT restart_graph(module_data_t *mod)
 {
     /* sanity checks */
     if (mod->state != BDA_STATE_RUNNING || mod->no_dvr)
@@ -1259,40 +1268,29 @@ HRESULT restart_tuning(module_data_t *mod)
     hr = provider_tune(mod, mod->provider, &tune);
     BDA_CKHR_D(hr, "couldn't configure provider with tuning data");
 
-    hr = bda_ext_tune(mod, &tune, BDA_TUNE_PRE);
-    if (FAILED(hr))
-        BDA_ERROR(hr, "error while sending extension pre-tuning data");
-
-    hr = control_run(mod, mod->graph);
-    BDA_CKHR_D(hr, "couldn't run the graph");
-
-    hr = bda_ext_tune(mod, &tune, BDA_TUNE_POST);
-    if (FAILED(hr))
-        BDA_ERROR(hr, "error while sending extension post-tuning data");
-
-    hr = diseqc_sequence_run(mod);
-    if (FAILED(hr))
-        BDA_ERROR(hr, "error while running DiSEqC command sequence");
-
-    /*
-     * TODO: Call restore_pids().
-     *       HW pid filters on some cards might need it after retuning.
-     */
-
-    /*
-     * TODO: Reset CAM / reset_cam().
-     *       Re-send cached CAPMT's.
-     */
-
-    /* reset signal lock timeout */
-    mod->cooldown = mod->timeout;
-    signal_stats_set(mod, NULL);
+    hr = start_tuning(mod, mod->graph, &tune);
+    BDA_CKHR_D(hr, "couldn't initiate tuning sequence");
 
 out:
     return hr;
 }
 
-/* react to change in signal status */
+/* update last known signal statistics */
+static
+void set_signal_stats(module_data_t *mod, const bda_signal_stats_t *stats)
+{
+    asc_mutex_lock(&mod->signal_lock);
+
+    if (stats != NULL)
+        memcpy(&mod->signal_stats, stats, sizeof(mod->signal_stats));
+    else
+        memset(&mod->signal_stats, 0, sizeof(mod->signal_stats));
+
+    mod->signal_stats.graph_state = mod->state;
+    asc_mutex_unlock(&mod->signal_lock);
+}
+
+/* react to change in signal lock status */
 static
 HRESULT watch_signal(module_data_t *mod)
 {
@@ -1301,7 +1299,7 @@ HRESULT watch_signal(module_data_t *mod)
     bda_signal_stats_t s;
     const char *str = NULL;
 
-    hr = signal_stats_load(mod, &s);
+    hr = load_signal_stats(mod, &s);
     BDA_CKHR(hr, "failed to retrieve signal statistics from driver");
 
     if (!mod->no_dvr)
@@ -1327,7 +1325,7 @@ HRESULT watch_signal(module_data_t *mod)
             if (mod->tunefail == 1)
                 str = " no"; /* always report first tuning failure */
 
-            hr = restart_tuning(mod);
+            hr = restart_graph(mod);
             BDA_CKHR(hr, "failed to restart tuning process");
         }
     }
@@ -1345,7 +1343,7 @@ HRESULT watch_signal(module_data_t *mod)
                      , s.quality, s.strength);
     }
 
-    signal_stats_set(mod, &s);
+    set_signal_stats(mod, &s);
 
 out:
     return hr;
@@ -1476,7 +1474,9 @@ void set_state(module_data_t *mod, bda_state_t state)
         return;
 
     asc_log_debug(MSG("setting state to %s"), state_name(state));
+
     mod->state = state;
+    set_signal_stats(mod, NULL);
 
     if (state == BDA_STATE_ERROR)
     {
@@ -1505,7 +1505,7 @@ void cmd_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
     else if (!mod->no_dvr)
     {
         /* apply new configuration */
-        const HRESULT hr = restart_tuning(mod);
+        const HRESULT hr = restart_graph(mod);
 
         if (FAILED(hr))
         {
@@ -1516,7 +1516,7 @@ void cmd_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
         }
         else
         {
-            /* reset tuning failure counter */
+            set_signal_stats(mod, NULL);
             mod->tunefail = 0;
         }
     }
@@ -1586,13 +1586,19 @@ void cmd_diseqc(module_data_t *mod, const bda_diseqc_cmd_t *diseqc)
     if (mod->diseqc.port != BDA_LNB_SOURCE_NOT_DEFINED)
     {
         /* DiSEqC 1.0 port number; have to send it as part of tuning data */
-        const HRESULT hr = restart_tuning(mod);
+        const HRESULT hr = restart_graph(mod);
+
         if (FAILED(hr))
         {
             BDA_ERROR(hr, "failed to change DiSEqC port");
 
             graph_teardown(mod);
             set_state(mod, BDA_STATE_ERROR);
+        }
+        else
+        {
+            set_signal_stats(mod, NULL);
+            mod->tunefail = 0;
         }
     }
     else
