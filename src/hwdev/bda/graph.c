@@ -782,7 +782,7 @@ out:
     if (control != NULL)
     {
         if (hr != S_OK)
-            IMediaControl_StopWhenReady(control);
+            IMediaControl_Stop(control);
 
         IMediaControl_Release(control);
     }
@@ -804,8 +804,8 @@ HRESULT control_stop(IFilterGraph2 *graph)
     ASC_WANT_PTR(hr, control);
     if (FAILED(hr)) return hr;
 
-    /* asynchronously switch graph into stopped state */
-    hr = IMediaControl_StopWhenReady(control);
+    /* switch graph into stopped state */
+    hr = IMediaControl_Stop(control);
     ASC_RELEASE(control);
 
     return hr;
