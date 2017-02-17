@@ -306,7 +306,7 @@ struct module_data_t
     bool no_dvr;
     int timeout;
 
-    asc_timer_t *status_timer;
+    asc_timer_t *stats_timer;
 
     /*
      * TODO

@@ -189,9 +189,26 @@ void graph_submit(module_data_t *mod, const bda_user_cmd_t *cmd)
     SetEvent(mod->queue_evt);
 }
 
-/* signal statistics callback */
+/* push Lua table containing signal statistics */
 static
-void on_status_timer(void *arg)
+void push_signal_stats(lua_State *L, module_data_t *mod)
+{
+    asc_mutex_lock(&mod->signal_lock);
+    lua_newtable(L);
+    lua_pushboolean(L, mod->signal_stats.present);
+    lua_setfield(L, -2, "present");
+    lua_pushboolean(L, mod->signal_stats.locked);
+    lua_setfield(L, -2, "locked");
+    lua_pushinteger(L, mod->signal_stats.strength);
+    lua_setfield(L, -2, "strength");
+    lua_pushinteger(L, mod->signal_stats.quality);
+    lua_setfield(L, -2, "quality");
+    asc_mutex_unlock(&mod->signal_lock);
+}
+
+/* signal statistics timer callback */
+static
+void on_stats_timer(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
 
@@ -200,18 +217,7 @@ void on_status_timer(void *arg)
         lua_State *const L = module_lua(mod);
         lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
 
-        asc_mutex_lock(&mod->signal_lock);
-        lua_newtable(L);
-        lua_pushboolean(L, mod->signal_stats.present);
-        lua_setfield(L, -2, "present");
-        lua_pushboolean(L, mod->signal_stats.locked);
-        lua_setfield(L, -2, "locked");
-        lua_pushinteger(L, mod->signal_stats.strength);
-        lua_setfield(L, -2, "strength");
-        lua_pushinteger(L, mod->signal_stats.quality);
-        lua_setfield(L, -2, "quality");
-        asc_mutex_unlock(&mod->signal_lock);
-
+        push_signal_stats(L, mod);
         if (lua_tr_call(L, 1, 0) != 0)
             lua_err_log(L);
     }
@@ -971,6 +977,13 @@ int method_diseqc(lua_State *L, module_data_t *mod)
     return 0;
 }
 
+static
+int method_stats(lua_State *L, module_data_t *mod)
+{
+    push_signal_stats(L, mod);
+    return 1;
+}
+
 /*
  * demux control
  */
@@ -1057,14 +1070,14 @@ void module_init(lua_State *L, module_data_t *mod)
         luaL_error(L, MSG("either adapter or devpath must be set"));
     }
 
-    /* get signal status callback */
+    /* get signal stats callback */
     lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
     if (!lua_isnil(L, -1))
     {
         luaL_checktype(L, -1, LUA_TFUNCTION);
 
         mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
-        mod->status_timer = asc_timer_init(1000, on_status_timer, mod);
+        mod->stats_timer = asc_timer_init(1000, on_stats_timer, mod);
     }
     else
     {
@@ -1158,7 +1171,7 @@ void module_destroy(module_data_t *mod)
     asc_job_prune(mod);
 
     ASC_FREE(mod->buf.data, free);
-    ASC_FREE(mod->status_timer, asc_timer_destroy);
+    ASC_FREE(mod->stats_timer, asc_timer_destroy);
     ASC_FREE(mod->queue_evt, CloseHandle);
 
     asc_mutex_destroy(&mod->queue_lock);
@@ -1175,6 +1188,7 @@ const module_method_t module_methods[] =
     { "close", method_close },
     { "ca_set_pnr", method_ca },
     { "diseqc", method_diseqc },
+    { "stats", method_stats },
     { NULL, NULL },
 };
 
