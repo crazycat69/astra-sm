@@ -763,8 +763,15 @@ HRESULT control_run(const module_data_t *mod, IFilterGraph2 *graph)
                                       , (void **)&control);
     BDA_CKPTR_D(hr, control, "couldn't query IMediaControl interface");
 
-    /* switch the graph into running state */
-    hr = IMediaControl_Run(control);
+    /* switch graph into running state */
+    hr = IMediaControl_GetState(control, 0, &state);
+    BDA_CKHR_D(hr, "couldn't retrieve graph state");
+
+    if (hr == S_OK && state == State_Stopped)
+        hr = IMediaControl_Run(control);
+    else
+        hr = VFW_E_NOT_STOPPED;
+
     BDA_CKHR_D(hr, "couldn't switch the graph into running state");
 
     do
