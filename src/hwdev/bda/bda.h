@@ -276,9 +276,9 @@ HRESULT bda_ext_toneburst(module_data_t *mod, bda_toneburst_mode_t mode);
 
 typedef enum
 {
-    BDA_STATE_INIT = 0,     /* control thread shall attempt tuner init */
+    BDA_STATE_STOPPED = 0,  /* tuner device closed by user command */
+    BDA_STATE_INIT,         /* control thread shall attempt tuner init */
     BDA_STATE_RUNNING,      /* tuner open, graph is working properly */
-    BDA_STATE_STOPPED,      /* tuner device closed by user command */
     BDA_STATE_ERROR,        /* graph stopped due to error; awaiting reinit */
 } bda_state_t;
 

@@ -1645,7 +1645,6 @@ void bda_graph_loop(void *arg)
     bool quit = false;
 
     asc_log_debug(MSG("control thread started"));
-    mod->state = BDA_STATE_STOPPED;
 
     do
     {
