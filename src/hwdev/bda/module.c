@@ -95,6 +95,7 @@
  *                  - send DiSEqC command sequence when tuner is ready
  *      diseqc(port)
  *                  - set DiSEqC 1.0 port number (alternate syntax)
+ *      stats()     - return table containing signal statistics
  *
  * DiSEqC Commands:
  *      data        - string, hex DiSEqC command (6 bytes/12 chars max)
@@ -166,7 +167,7 @@
 #include <astra/utils/strhex.h>
 
 /* default buffer size, MiB */
-#define BDA_BUFFER_SIZE 4
+#define BDA_BUFFER_SIZE 1
 
 /* default retune timeout, seconds */
 #define BDA_RETUNE_TIMEOUT 5
