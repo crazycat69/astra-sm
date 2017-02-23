@@ -165,7 +165,7 @@ static void module_destroy(module_data_t *mod)
 {
     module_stream_destroy(mod);
 
-    asc_event_close(mod->event);
+    ASC_FREE(mod->event, asc_event_close);
     if(mod->fd)
         close(mod->fd);
 }

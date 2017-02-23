@@ -2,7 +2,7 @@
 -- https://cesbo.com/astra/
 --
 -- Copyright (C) 2014-2015, Andrey Dyldin <and@cesbo.com>
---               2015-2016, Artem Kharitonov <artem@3phase.pw>
+--               2015-2017, Artem Kharitonov <artem@3phase.pw>
 --
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -674,95 +674,143 @@ kill_input_module.http = function(module)
     end
 end
 
--- ooooo         ooooooooo  ooooo  oooo oooooooooo
---  888           888    88o 888    88   888    888
---  888 ooooooooo 888    888  888  88    888oooo88
---  888           888    888   88888     888    888
--- o888o         o888ooo88      888     o888ooo888
+--
+-- Input: dvb://
+--
 
 dvb_input_instance_list = {}
 dvb_list = nil
 
 function dvb_tune(conf)
-    if conf.mac then
+    local name = conf.name
+    if name == nil then
+        error("[dvb_tune] option 'name' is required")
+    end
+
+    -- look up MAC if needed
+    if conf.mac ~= nil then
         conf.adapter = nil
         conf.frontend = nil
+        conf.devpath = nil
 
-        if dvb_list == nil then
-            log.warning("[dvb_tune] dvb_list is not set; searching adapters by MAC will not work")
-            dvb_list = {}
-        end
-        local mac = conf.mac:upper()
-        for _, a in ipairs(dvb_list) do
-            if a.mac == mac then
-                log.info("[dvb_tune] adapter: " .. a.adapter .. "." .. a.frontend .. ". " ..
-                         "MAC address: " .. mac)
-                conf.adapter = a.adapter
-                conf.frontend = a.frontend
-                break
+        local found = false
+        if dvb_list ~= nil then
+            local mac = conf.mac:upper()
+            for _, val in ipairs(dvb_list) do
+                if val.mac ~= nil and val.mac:upper() == mac then
+                    local msg = ""
+
+                    if val.adapter ~= nil then
+                        msg = msg .. ", adapter: " .. val.adapter
+                        conf.adapter = val.adapter
+                        if val.frontend ~= nil then
+                            msg = msg .. ", frontend: " .. val.frontend
+                            conf.frontend = val.frontend
+                        end
+                    end
+                    if val.devpath ~= nil then
+                        msg = msg .. ", devpath: '" .. val.devpath .. "'"
+                        conf.devpath = val.devpath
+                    end
+
+                    if #msg > 0 then
+                        log.debug("[dvb_tune " .. name .. "] MAC '" .. mac .. "' found" .. msg)
+                        found = true
+                        break
+                    end
+                end
             end
+        else
+            log.warning("[dvb_tune " .. name .. "] dvb_list is not set; searching adapters by MAC will not work")
         end
 
-        if conf.adapter == nil then
-            error("[dvb_tune] failed to get an adapter. MAC address: " .. mac)
-        end
-    else
-        if conf.adapter == nil then
-            error("[dvb_tune] option 'adapter' or 'mac' is required")
-        end
-
-        local a = string.split(tostring(conf.adapter), "%.")
-        if #a == 1 then
-            conf.adapter = tonumber(a[1])
-            if conf.frontend == nil then conf.frontend = 0 end
-        elseif #a == 2 then
-            conf.adapter = tonumber(a[1])
-            conf.frontend = tonumber(a[2])
+        if not found then
+            error("[dvb_tune " .. name .. "] failed to find adapter with MAC address '" .. conf.mac .. "'")
         end
     end
 
-    local instance_id = conf.adapter .. "." .. conf.frontend
-    local instance = dvb_input_instance_list[instance_id]
-    if not instance then
-        if not conf.type then
-            instance = dvb_input(conf)
-            dvb_input_instance_list[instance_id] = instance
-            return instance
-        end
-
-        if conf.tp then
-            local a = string.split(conf.tp, ":")
-            if #a ~= 3 then
-                error("[dvb_tune " .. instance_id .. "] option 'tp' has wrong format")
+    -- fix up adapter and frontend numbers
+    if conf.adapter ~= nil then
+        local a = string.split(tostring(conf.adapter), "%.")
+        if #a == 1 then
+            conf.adapter = tonumber(a[1])
+        elseif #a == 2 then
+            -- handle 'adapter = "X.Y"' syntax
+            if conf.frontend ~= nil then
+                log.warning("[dvb_tune " .. name .. "] ignoring 'frontend' option")
             end
-            conf.frequency, conf.polarization, conf.symbolrate = a[1], a[2], a[3]
-        end
-
-        if conf.lnb then
-            local a = string.split(conf.lnb, ":")
-            if #a ~= 3 then
-                error("[dvb_tune " .. instance_id .. "] option 'lnb' has wrong format")
-            end
-            conf.lof1, conf.lof2, conf.slof = a[1], a[2], a[3]
-        end
-
-        if conf.unicable then
-            local a = string.split(conf.unicable, ":")
-            if #a ~= 2 then
-                error("[dvb_tune " .. instance_id .. "] option 'unicable' has wrong format")
-            end
-            conf.uni_scr, conf.uni_frequency = a[1], a[2]
-        end
-
-        if conf.type == "S" and conf.s2 == true then conf.type = "S2" end
-        if conf.type == "T" and conf.t2 == true then conf.type = "T2" end
-
-        if conf.type:lower() == "asi" then
-            instance = asi_input(conf)
+            conf.adapter = tonumber(a[1])
+            conf.frontend = tonumber(a[2])
         else
-            instance = dvb_input(conf)
+            error("[dvb_tune " .. name .. "] option 'adapter' has wrong format: '" .. conf.adapter .. "'")
         end
-        dvb_input_instance_list[instance_id] = instance
+
+        -- make sure both options are filled in
+        if conf.adapter == nil then
+            conf.adapter = 0
+        end
+        if conf.frontend == nil then
+            conf.frontend = 0
+        end
+    elseif conf.frontend ~= nil then
+        error("[dvb_tune " .. name .. "] option 'adapter' must be specified if 'frontend' is present")
+    end
+
+    -- apply option wrappers
+    if conf.tp ~= nil then
+        -- satellite transponder: 'tp = "FFFFF:P:SSSSS"'
+        local a = string.split(conf.tp, ":")
+        if #a ~= 3 then
+            error("[dvb_tune " .. name .. "] option 'tp' has wrong format: '" .. conf.tp .. "'")
+        end
+        conf.frequency, conf.polarization, conf.symbolrate = a[1], a[2], a[3]
+    end
+
+    if conf.lnb ~= nil then
+        -- satellite LNB: 'lnb = "LO:HI:SW"'
+        local a = string.split(conf.lnb, ":")
+        if #a ~= 3 then
+            error("[dvb_tune " .. name .. "] option 'lnb' has wrong format: '" .. conf.lnb .. "'")
+        end
+        conf.lof1, conf.lof2, conf.slof = a[1], a[2], a[3]
+    end
+
+    if conf.unicable ~= nil then
+        -- Unicable: 'unicable = "S:F"'
+        local a = string.split(conf.unicable, ":")
+        if #a ~= 2 then
+            error("[dvb_tune " .. name .. "] option 'unicable' has wrong format: '" .. conf.unicable .. "'")
+        end
+        conf.uni_scr, conf.uni_frequency = a[1], a[2]
+        -- TODO: put this in conf.diseqc
+        --       raise error if conf.diseqc ~= nil
+        -- postponed until linux dvb_input rewrite
+    end
+
+    if conf.type ~= nil then
+        -- alternate format for S2/T2: 'type = "s", s2 = true'
+        local t = conf.type:lower()
+        if t == "s" or t == "dvbs" then
+            if conf.s2 then conf.type = "s2" end
+        elseif t == "t" or t == "dvbt" then
+            if conf.t2 then conf.type = "t2" end
+        end
+    end
+
+    -- reuse module instance if it already exists
+    local instance_id = string.format("a%s:f%s:d%s",
+                                      tostring(conf.adapter),
+                                      tostring(conf.frontend),
+                                      tostring(conf.devpath))
+
+    local instance = dvb_input_instance_list[instance_id]
+    if instance == nil then
+        conf.id = instance_id
+        instance = {
+            name = name,
+            conf = conf,
+            clients = 0,
+        }
     end
 
     return instance
@@ -770,53 +818,56 @@ end
 
 init_input_module.dvb = function(conf)
     local instance = nil
-
     if conf.addr == nil or #conf.addr == 0 then
-        conf.channels = 0
+        -- ad-hoc configuration
         instance = dvb_tune(conf)
-        if instance.__options.channels ~= nil then
-            instance.__options.channels = instance.__options.channels + 1
-        end
     else
-        local function get_dvb_tune()
-            local adapter_addr = tostring(conf.addr)
-            for _, i in pairs(dvb_input_instance_list) do
-                if tostring(i.__options.id) == adapter_addr then
-                    return i
-                end
-            end
-            local i = _G[adapter_addr]
-            local module_name = tostring(i)
-            if  module_name == "dvb_input" or
-                module_name == "asi_input" or
-                module_name == "ddci"
-            then
-                return i
-            end
-            error("[" .. conf.name .. "] dvb is not found")
+        -- pre-defined tuner
+        instance = _G[conf.addr]
+    end
+
+    local function check_def()
+        if not instance then return false end
+        if not instance.name then return false end
+        if not instance.conf then return false end
+        if not instance.conf.id then return false end
+        return true
+    end
+    if not check_def() then
+        error("[" .. name .. "] dvb tuner definition not found")
+    end
+
+    if instance.clients == 0 then
+        -- TODO: create dveo:// scheme for dveo dvb master rx/tx
+        local func = _G["dvb_input"]
+        if tostring(instance.conf.type):lower() == "asi" then
+            func = _G["asi_input"]
         end
-        instance = get_dvb_tune()
+
+        instance.module = func(instance.conf)
+        dvb_input_instance_list[instance.conf.id] = instance
     end
 
-    if conf.cam == true and conf.pnr then
-        instance:ca_set_pnr(conf.pnr, true)
+    if conf.cam == true and conf.pnr ~= nil then
+        instance.module:ca_set_pnr(conf.pnr, true)
     end
 
-    return instance
+    instance.clients = instance.clients + 1
+    return instance.module
 end
 
 kill_input_module.dvb = function(module, conf)
-    if conf.cam == true and conf.pnr then
+    local instance_id = module.__options.id
+    local instance = dvb_input_instance_list[instance_id]
+
+    if conf.cam == true and conf.pnr ~= nil then
         module:ca_set_pnr(conf.pnr, false)
     end
 
-    if module.__options.channels ~= nil then
-        module.__options.channels = module.__options.channels - 1
-        if module.__options.channels == 0 then
-            module:close()
-            local instance_id = module.__options.adapter .. "." .. module.__options.frontend
-            dvb_input_instance_list[instance_id] = nil
-        end
+    instance.clients = instance.clients - 1
+    if instance.clients == 0 then
+        instance.module = nil
+        dvb_input_instance_list[instance_id] = nil
     end
 end
 
