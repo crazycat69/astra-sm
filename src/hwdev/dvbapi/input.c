@@ -167,14 +167,6 @@ static void dvr_on_retry(void *arg)
         asc_usleep(500);
 }
 
-static void dvr_on_error(void *arg)
-{
-    module_data_t *mod = (module_data_t *)arg;
-    asc_log_error(MSG("dvr read error, try to reopen [%s]"), strerror(errno));
-    dvr_close(mod);
-    dvr_open(mod);
-}
-
 static void dvr_on_read(void *arg)
 {
     module_data_t *mod = (module_data_t *)arg;
@@ -182,7 +174,13 @@ static void dvr_on_read(void *arg)
     const ssize_t len = read(mod->dvr_fd, mod->dvr_buffer, sizeof(mod->dvr_buffer));
     if(len <= 0)
     {
-        dvr_on_error(mod);
+        if (errno != EWOULDBLOCK && errno != EAGAIN)
+        {
+            asc_log_error(MSG("dvr read error, try to reopen [%s]"), strerror(errno));
+            dvr_close(mod);
+            dvr_open(mod);
+        }
+
         return;
     }
     mod->dvr_read += len;
@@ -228,7 +226,6 @@ static void dvr_open(module_data_t *mod)
 
     mod->dvr_event = asc_event_init(mod->dvr_fd, mod);
     asc_event_set_on_read(mod->dvr_event, dvr_on_read);
-    asc_event_set_on_error(mod->dvr_event, dvr_on_error);
 }
 
 static void dvr_close(module_data_t *mod)
