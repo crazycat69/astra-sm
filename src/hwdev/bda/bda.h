@@ -224,6 +224,7 @@ enum
     BDA_EXT_22K       = 0x00000004, /* switch 22kHz tone on and off */
     BDA_EXT_TONEBURST = 0x00000008, /* switch mini-DiSEqC input (A/B) */
     BDA_EXT_CA        = 0x00000010, /* CI CAM slot support */
+    BDA_EXT_PIDMAP    = 0x00000020, /* hardware PID filter */
 };
 
 /* tuning data hooks */
@@ -256,6 +257,10 @@ typedef struct
     HRESULT (*t22k)(void *, bda_22k_mode_t);
     HRESULT (*toneburst)(void *, bda_toneburst_mode_t);
 
+    /* PID filter */
+    HRESULT (*pid_set)(void *, uint16_t, bool);
+    HRESULT (*pid_bulk)(void *, const bool[TS_MAX_PID]);
+
     void *data;
 } bda_extension_t;
 
@@ -269,6 +274,8 @@ HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t *cmd
 HRESULT bda_ext_lnbpower(module_data_t *mod, bda_lnbpower_mode_t mode);
 HRESULT bda_ext_22k(module_data_t *mod, bda_22k_mode_t mode);
 HRESULT bda_ext_toneburst(module_data_t *mod, bda_toneburst_mode_t mode);
+HRESULT bda_ext_pid_set(module_data_t *mod, uint16_t pid, bool join);
+HRESULT bda_ext_pid_bulk(module_data_t *mod, const bool pids[TS_MAX_PID]);
 
 /*
  * BDA graph
@@ -352,9 +359,9 @@ struct module_data_t
     bda_tune_cmd_t tune;
     bda_diseqc_cmd_t diseqc;
     bool joined_pids[TS_MAX_PID];
-    bool ca_pmts[TS_MAX_PNR];
 
     bda_state_t state;
+    bool sw_pidmap;
     unsigned int tunefail;
     int cooldown;
 
@@ -365,7 +372,6 @@ struct module_data_t
     IFilterGraph2 *graph;
     IMediaEvent *event;
     IBaseFilter *provider;
-    IMPEG2PIDMap *pidmap;
     IBDA_SignalStatistics *signal;
 
     HANDLE graph_evt;

@@ -606,6 +606,66 @@ const bda_extension_t omc_pci_diseqc =
 };
 
 /*
+ * Microsoft PID Filter
+ */
+
+static
+HRESULT ms_pidmap_set(void *data, uint16_t pid, bool join)
+{
+    IMPEG2PIDMap *const pidmap = (IMPEG2PIDMap *)data;
+
+    // TODO
+    __uarg(pidmap);
+    __uarg(pid);
+    __uarg(join);
+
+    return E_NOTIMPL;
+}
+
+static
+HRESULT ms_pidmap_bulk(void *data, const bool pids[TS_MAX_PID])
+{
+    IMPEG2PIDMap *const pidmap = (IMPEG2PIDMap *)data;
+
+    // TODO
+    __uarg(pidmap);
+    __uarg(pids);
+
+    return E_NOTIMPL;
+}
+
+static
+HRESULT ms_pidmap_init(IBaseFilter *filters[], void **data)
+{
+    // TODO
+    __uarg(filters);
+    __uarg(data);
+
+    return E_NOTIMPL;
+}
+
+static
+void ms_pidmap_destroy(void *data)
+{
+    IMPEG2PIDMap *pidmap = (IMPEG2PIDMap *)data;
+    ASC_RELEASE(pidmap);
+}
+
+static
+const bda_extension_t ms_pidmap =
+{
+    .name = "ms_pidmap",
+    .description = "Microsoft PID Filter",
+    .flags = BDA_EXT_PIDMAP,
+
+    .init = ms_pidmap_init,
+    .destroy = ms_pidmap_destroy,
+
+    .pid_set = ms_pidmap_set,
+    .pid_bulk = ms_pidmap_bulk,
+};
+
+/*
  * public API
  */
 
@@ -625,6 +685,9 @@ const bda_extension_t *const ext_list[] =
     &omc_pci_isi,
     &omc_pci_pls,
     &omc_pci_diseqc,
+
+    /* Microsoft */
+    &ms_pidmap,
 
     NULL,
 };
@@ -804,6 +867,54 @@ HRESULT bda_ext_toneburst(module_data_t *mod, bda_toneburst_mode_t mode)
             if (FAILED(hr))
             {
                 BDA_ERROR_D(hr, "couldn't set tone burst mode via '%s'"
+                            , ext->name);
+            }
+        }
+    }
+
+    return hr;
+}
+
+/* map or unmap a single PID */
+HRESULT bda_ext_pid_set(module_data_t *mod, uint16_t pid, bool join)
+{
+    HRESULT hr = E_NOTIMPL;
+
+    asc_list_for(mod->extensions)
+    {
+        bda_extension_t *const ext =
+                (bda_extension_t *)asc_list_data(mod->extensions);
+
+        if (ext->pid_set != NULL)
+        {
+            hr = ext->pid_set(ext->data, pid, join);
+            if (FAILED(hr))
+            {
+                BDA_ERROR_D(hr, "couldn't add or remove PID via '%s'"
+                            , ext->name);
+            }
+        }
+    }
+
+    return hr;
+}
+
+/* load a complete PID list into filter */
+HRESULT bda_ext_pid_bulk(module_data_t *mod, const bool pids[TS_MAX_PID])
+{
+    HRESULT hr = E_NOTIMPL;
+
+    asc_list_for(mod->extensions)
+    {
+        bda_extension_t *const ext =
+                (bda_extension_t *)asc_list_data(mod->extensions);
+
+        if (ext->pid_bulk != NULL)
+        {
+            hr = ext->pid_bulk(ext->data, pids);
+            if (FAILED(hr))
+            {
+                BDA_ERROR_D(hr, "couldn't load PID whitelist via '%s'"
                             , ext->name);
             }
         }

@@ -297,53 +297,13 @@ out:
     return hr;
 }
 
-/* create an output pin with PID mapping on the demux */
-static
-HRESULT create_pidmap(const module_data_t *mod, IBaseFilter *demux
-                      , IMPEG2PIDMap **out)
-{
-    HRESULT hr = E_FAIL;
-    wchar_t pin_name[] = L"TS Out";
-
-    IMpeg2Demultiplexer *mpeg = NULL;
-    IPin *mpeg_out = NULL;
-
-    if (demux == NULL || out == NULL)
-        return E_POINTER;
-
-    *out = NULL;
-
-    /* add output pin to demultiplexer */
-    hr = IBaseFilter_QueryInterface(demux, &IID_IMpeg2Demultiplexer
-                                    , (void **)&mpeg);
-    BDA_CKPTR_D(hr, mpeg, "couldn't query IMpeg2Demultiplexer interface");
-
-    AM_MEDIA_TYPE mt;
-    memset(&mt, 0, sizeof(mt));
-    mt.majortype = MEDIATYPE_Stream;
-    mt.subtype = MEDIASUBTYPE_MPEG2_TRANSPORT;
-
-    hr = IMpeg2Demultiplexer_CreateOutputPin(mpeg, &mt, pin_name, &mpeg_out);
-    BDA_CKPTR_D(hr, mpeg_out, "couldn't create output pin on demultiplexer");
-
-    /* query pid mapper */
-    hr = IPin_QueryInterface(mpeg_out, &IID_IMPEG2PIDMap, (void **)out);
-    BDA_CKPTR_D(hr, *out, "couldn't query IMPEG2PIDMap interface");
-
-out:
-    ASC_RELEASE(mpeg_out);
-    ASC_RELEASE(mpeg);
-
-    return hr;
-}
-
-/* create TS probe and connect it directly to the capture filter */
+/* create TS probe and connect it to the graph */
 static
 void on_sample(void *arg, const uint8_t *buf, size_t len);
 
 static
-HRESULT create_probe(const module_data_t *mod, IBaseFilter *tail
-                     , void *arg, IBaseFilter **out)
+HRESULT create_probe(module_data_t *mod, IBaseFilter *tail
+                     , IBaseFilter **out)
 {
     HRESULT hr = E_FAIL;
 
@@ -385,7 +345,7 @@ HRESULT create_probe(const module_data_t *mod, IBaseFilter *tail
             break;
 
         /* attach probe */
-        hr = dshow_grabber(on_sample, arg, &mt, &probe);
+        hr = dshow_grabber(on_sample, mod, &mt, &probe);
         if (FAILED(hr)) continue;
 
         hr = dshow_find_pin(probe, PINDIR_INPUT, true, NULL, &probe_in);
@@ -410,72 +370,6 @@ HRESULT create_probe(const module_data_t *mod, IBaseFilter *tail
 out:
     ASC_RELEASE(tail_out);
     ASC_RELEASE(graph);
-
-    return hr;
-}
-
-/* create TS probe and connect it to demux PID mapper */
-static
-HRESULT create_probe_dmx(const module_data_t *mod, IMPEG2PIDMap *pidmap
-                         , void *arg, IBaseFilter **out)
-{
-    HRESULT hr = E_FAIL;
-
-    IPin *demux_out = NULL;
-    IBaseFilter *demux = NULL;
-    IFilterGraph2 *graph = NULL;
-    IBaseFilter *probe = NULL;
-    IPin *probe_in = NULL;
-
-    if (pidmap == NULL || out == NULL)
-        return E_POINTER;
-
-    *out = NULL;
-
-    /* get graph object from PID mapper */
-    hr = IMPEG2PIDMap_QueryInterface(pidmap, &IID_IPin, (void **)&demux_out);
-    BDA_CKPTR_D(hr, demux_out, "couldn't query IPin interface");
-
-    PIN_INFO info;
-    memset(&info, 0, sizeof(info));
-    hr = IPin_QueryPinInfo(demux_out, &info);
-    BDA_CKPTR_D(hr, info.pFilter, "couldn't query PID mapper's pin info");
-    demux = info.pFilter;
-
-    hr = dshow_get_graph(demux, &graph);
-    BDA_CKHR_D(hr, "couldn't get demultiplexer's graph");
-
-    /* create probe and attach it to demultiplexer pin */
-    AM_MEDIA_TYPE mt;
-    memset(&mt, 0, sizeof(mt));
-    mt.majortype = MEDIATYPE_Stream;
-    mt.subtype = MEDIASUBTYPE_MPEG2_TRANSPORT;
-
-    hr = dshow_grabber(on_sample, arg, &mt, &probe);
-    BDA_CKHR_D(hr, "couldn't instantiate TS probe filter");
-
-    hr = dshow_find_pin(probe, PINDIR_INPUT, true, NULL, &probe_in);
-    BDA_CKHR_D(hr, "couldn't find input pin on TS probe");
-
-    hr = IFilterGraph2_AddFilter(graph, probe, L"Probe");
-    BDA_CKHR_D(hr, "couldn't add TS probe to graph");
-
-    hr = IFilterGraph2_ConnectDirect(graph, demux_out, probe_in, NULL);
-    if (FAILED(hr))
-    {
-        IFilterGraph2_RemoveFilter(graph, probe);
-        BDA_THROW_D(hr, "couldn't connect TS probe to demultiplexer");
-    }
-
-    IBaseFilter_AddRef(probe);
-    *out = probe;
-
-out:
-    ASC_RELEASE(probe_in);
-    ASC_RELEASE(probe);
-    ASC_RELEASE(graph);
-    ASC_RELEASE(demux);
-    ASC_RELEASE(demux_out);
 
     return hr;
 }
@@ -573,56 +467,6 @@ out:
     ASC_RELEASE(source_in);
     ASC_RELEASE(provider_out);
     ASC_RELEASE(graph);
-
-    return hr;
-}
-
-/* load saved PID list into demultiplexer's PID mapper */
-static
-HRESULT restore_pids(IMPEG2PIDMap *pidmap, const bool join[TS_MAX_PID])
-{
-    if (pidmap == NULL)
-        return E_POINTER;
-
-    /* remove existing PID mappings first */
-    IEnumPIDMap *enum_pid = NULL;
-    HRESULT hr = IMPEG2PIDMap_EnumPIDMap(pidmap, &enum_pid);
-
-    if (hr == S_OK && enum_pid != NULL)
-    {
-        PID_MAP old[TS_MAX_PID];
-        ULONG old_cnt = 0;
-
-        hr = IEnumPIDMap_Next(enum_pid, ASC_ARRAY_SIZE(old), old, &old_cnt);
-        if (hr == S_OK && old_cnt > 0)
-        {
-            ULONG unpids[TS_MAX_PID];
-            for (unsigned int i = 0; i < old_cnt; i++)
-                unpids[i] = old[i].ulPID;
-
-            IMPEG2PIDMap_UnmapPID(pidmap, old_cnt, unpids);
-        }
-    }
-
-    ASC_RELEASE(enum_pid);
-
-    /* create and submit PID array */
-    ULONG pids[TS_MAX_PID] = { 0 };
-    unsigned int cnt = 0;
-
-    if (join != NULL)
-    {
-        for (unsigned int i = 0; i < TS_MAX_PID; i++)
-        {
-            if (join[i])
-                pids[cnt++] = i;
-        }
-    }
-
-    if (cnt > 0)
-        hr = IMPEG2PIDMap_MapPID(pidmap, cnt, pids, MEDIA_TRANSPORT_PACKET);
-    else
-        hr = S_OK;
 
     return hr;
 }
@@ -919,10 +763,13 @@ HRESULT start_tuning(module_data_t *mod, IFilterGraph2 *graph
     if (FAILED(hr))
         BDA_ERROR(hr, "error while running DiSEqC command sequence");
 
-    /*
-     * TODO: Call restore_pids().
-     *       HW pid filters on some cards might need it after retuning.
-     */
+    /* reload joined PID list */
+    if (!mod->budget && (mod->ext_flags & BDA_EXT_PIDMAP))
+    {
+        hr = bda_ext_pid_bulk(mod, mod->joined_pids);
+        if (FAILED(hr))
+            BDA_ERROR(hr, "error while loading PID whitelist into filter");
+    }
 
     /*
      * TODO: Reset CAM / reset_cam().
@@ -957,7 +804,6 @@ HRESULT graph_setup(module_data_t *mod)
     IBaseFilter *probe = NULL;
     IBaseFilter *demux = NULL;
     IBaseFilter *tif = NULL;
-    IMPEG2PIDMap *pidmap = NULL;
 
     /* initialize COM on this thread */
     hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
@@ -1023,8 +869,29 @@ HRESULT graph_setup(module_data_t *mod)
     if (FAILED(hr))
         BDA_ERROR(hr, "failed to locate signal statistics interface");
 
+    /* scan for vendor-specific BDA extensions */
+    IBaseFilter *flt_list[4];
+    flt_list[0] = source;
+    flt_list[1] = capture;
+    flt_list[2] = demod;
+    flt_list[3] = NULL;
+
+    hr = bda_ext_init(mod, flt_list);
+    if (FAILED(hr))
+        BDA_ERROR(hr, "error while probing for vendor extensions");
+
     if (!mod->no_dvr)
     {
+        /*
+         * Emulate PID mapper when the user has requested filtering,
+         * but the hardware doesn't support it.
+         */
+        mod->sw_pidmap = (!mod->budget
+                          && !(mod->ext_flags & BDA_EXT_PIDMAP));
+
+        if (mod->sw_pidmap)
+            asc_log_debug(MSG("using software PID filtering"));
+
         /* add TS probe */
         IBaseFilter *tail;
         if (capture != NULL)
@@ -1032,47 +899,17 @@ HRESULT graph_setup(module_data_t *mod)
         else
             tail = source;
 
-        if (mod->budget)
-        {
-            /* insert probe after capture filter (no PID filter) */
-            hr = create_probe(mod, tail, mod, &probe);
-            BDA_CKHR(hr, "failed to create TS probe");
-
-            tail = probe;
-        }
+        hr = create_probe(mod, tail, &probe);
+        BDA_CKHR(hr, "failed to create TS probe");
 
         /* set up demultiplexer and TIF */
-        hr = create_demux(mod, tail, &demux);
+        hr = create_demux(mod, probe, &demux);
         BDA_CKHR(hr, "failed to initialize demultiplexer");
 
         hr = create_tif(mod, demux, &tif);
         BDA_CKHR(hr, "failed to initialize transport information filter");
 
-        if (!mod->budget)
-        {
-            /* insert probe after demux (PID filter enabled) */
-            hr = create_pidmap(mod, demux, &pidmap);
-            BDA_CKHR(hr, "failed to initialize PID mapper");
-
-            hr = create_probe_dmx(mod, pidmap, mod, &probe);
-            BDA_CKHR(hr, "failed to create TS probe");
-
-            hr = restore_pids(pidmap, mod->joined_pids);
-            if (FAILED(hr))
-                BDA_ERROR(hr, "failed to load joined PID list into mapper");
-        }
-
-        /* scan for vendor-specific BDA extensions */
-        IBaseFilter *flt_list[4];
-        flt_list[0] = source;
-        flt_list[1] = capture;
-        flt_list[2] = demod;
-        flt_list[3] = NULL;
-
-        hr = bda_ext_init(mod, flt_list);
-        if (FAILED(hr))
-            BDA_ERROR(hr, "error while probing for vendor extensions");
-
+        /* start moving data through the graph */
         hr = start_tuning(mod, graph, &tune);
         BDA_CKHR(hr, "failed to initiate tuning sequence");
 
@@ -1096,12 +933,6 @@ HRESULT graph_setup(module_data_t *mod)
         mod->signal = signal;
     }
 
-    if (pidmap != NULL)
-    {
-        IMPEG2PIDMap_AddRef(pidmap);
-        mod->pidmap = pidmap;
-    }
-
     need_uninit = false;
     hr = S_OK;
 
@@ -1113,7 +944,6 @@ out:
         rot_unregister(&mod->rot_reg);
     }
 
-    ASC_RELEASE(pidmap);
     ASC_RELEASE(tif);
     ASC_RELEASE(demux);
     ASC_RELEASE(probe);
@@ -1138,7 +968,6 @@ void graph_teardown(module_data_t *mod)
     bda_ext_destroy(mod);
 
     ASC_RELEASE(mod->signal);
-    ASC_RELEASE(mod->pidmap);
     ASC_RELEASE(mod->provider);
     ASC_RELEASE(mod->event);
 
@@ -1164,17 +993,25 @@ void graph_teardown(module_data_t *mod)
 static
 void buffer_push(module_data_t *mod, const uint8_t *ts)
 {
-    mod->buf.pending++;
-
-    const size_t next = (mod->buf.head + 1) % mod->buf.size;
-    if (next == mod->buf.tail)
+    if (mod->sw_pidmap)
     {
-        mod->buf.dropped++;
-        return;
+        const uint16_t pid = TS_GET_PID(ts);
+        if (!mod->joined_pids[pid])
+            return;
     }
 
-    memcpy(mod->buf.data[mod->buf.head], ts, TS_PACKET_SIZE);
-    mod->buf.head = next;
+    const size_t next = (mod->buf.head + 1) % mod->buf.size;
+    if (next != mod->buf.tail)
+    {
+        memcpy(mod->buf.data[mod->buf.head], ts, TS_PACKET_SIZE);
+        mod->buf.head = next;
+    }
+    else
+    {
+        mod->buf.dropped++;
+    }
+
+    mod->buf.pending++;
 }
 
 /* called by the probe filter when it has media samples */
@@ -1529,7 +1366,7 @@ void cmd_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
     }
 }
 
-/* request demultiplexer to join or leave PID */
+/* request PID filter to map or unmap PID */
 static
 void cmd_pid(module_data_t *mod, bool join, uint16_t pid)
 {
@@ -1543,27 +1380,16 @@ void cmd_pid(module_data_t *mod, bool join, uint16_t pid)
         return;
     }
 
+    asc_mutex_lock(&mod->buf.lock);
     mod->joined_pids[pid] = join;
+    asc_mutex_unlock(&mod->buf.lock);
 
-    if (mod->pidmap != NULL)
+    if ((mod->state == BDA_STATE_RUNNING && !mod->no_dvr)
+        && !mod->budget && (mod->ext_flags & BDA_EXT_PIDMAP))
     {
-        ULONG val = pid;
-        HRESULT hr;
-
-        if (join)
-        {
-            hr = IMPEG2PIDMap_MapPID(mod->pidmap, 1, &val
-                                     , MEDIA_TRANSPORT_PACKET);
-        }
-        else
-        {
-            hr = IMPEG2PIDMap_UnmapPID(mod->pidmap, 1, &val);
-        }
-
+        const HRESULT hr = bda_ext_pid_set(mod, pid, join);
         if (FAILED(hr))
-        {
             BDA_ERROR(hr, "failed to %s pid %hu", verb, pid);
-        }
     }
 }
 
@@ -1571,8 +1397,6 @@ void cmd_pid(module_data_t *mod, bool join, uint16_t pid)
 static
 void cmd_ca(module_data_t *mod, bool enable, uint16_t pnr)
 {
-    mod->ca_pmts[pnr] = enable;
-
     /* TODO: implement CAM support */
     asc_log_error(MSG("STUB: %s CAM for PNR %hu")
                   , (enable ? "enable" : "disable"), pnr);
