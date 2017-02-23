@@ -1,0 +1,96 @@
+commit af6584dbea3e7b1ea5fb8a98377c9a371d4f4ede
+Merge: 4ffac9a 0bea984
+Author: Artem Kharitonov <artem@3phase.pw>
+Date:   Thu Feb 23 09:24:54 2017 +0500
+
+    Merge branch 'windvb' into staging
+    
+    Add experimental DVB support to Windows builds. For the most part, this
+    should be compatible with the dvb_input module on Linux; see known issue
+    list.
+    
+    BDA drivers must be installed in order for the module to work; legacy WDM
+    drivers are not supported. Refer to src/hwdev/bda/module.c for a complete
+    listing of available options, their values and methods.
+    
+    Example configuration #1:
+    
+        my_dvb = dvb_tune({
+            name = "DVB-T Card",
+    
+            adapter = 0,
+            -- OR: --
+            devpath = "see output from astra.exe --devices",
+    
+            type = "T",
+            frequency = "674",
+            bandwidth = "8MHz",
+        })
+    
+        make_channel({
+            name = "Test Channel",
+            input = { "dvb://my_dvb#pnr=1" },
+            output = { "udp://239.10.10.10" },
+        })
+    
+    Example configuration #2:
+    
+        my_dvb = dvb_tune({
+            name = "DVB-S Card",
+    	adapter = 0,
+    
+    	type = "S2",
+    	tp = "11045:H:44922",
+    	lnb = "9750:10600:11700",
+    	fec = "5/6",
+    
+    	budget = true, -- no PID filter
+        })
+    
+        make_channel({
+            name = "Whole Transponder",
+    	input = { "dvb://my_dvb" },
+    	output = { "file://./11045.ts" },
+        })
+    
+    Command line examples:
+    
+        List installed DVB adapters:
+        > astra.exe --devices dvb_input
+    
+        Get signal lock and run built-in TS analyzer:
+        > astra.exe --analyze "dvb://#adapter=0&type=s&tp=11045:h:44922"
+        'budget' option is added automatically for --analyze on dvb:// URLs.
+    
+        Monitor signal status (adapter can still be used by other software):
+        > astra.exe --femon --debug "dvb://#adapter=0&type=s"
+    
+    Known issues:
+    - Transport Information Filter (TIF) leaks memory every time the graph
+      is set up and torn down. Fixing this is impossible without writing a
+      replacement TIF from scratch.
+    - No support for CI CAM slots and DiSEqC (backend code for these features
+      has to be written specifically for each card vendor).
+    - Same goes for error correction statistics (BER/UNC) because BDA doesn't
+      support it without vendor extensions.
+    - PLP/ISI setting (stream_id) is only implemented for TBS and Omicom cards.
+    - ATSC, CQAM and ISDB-T/S are completely untested.
+    
+    Minor issues:
+    - Lua callback field names are different from the Linux version.
+    - 'raw_signal' option is not implemented; signal quality and strength
+      are always reported as percentages.
+    - USB hotplug doesn't work with no_dvr (--femon) option.
+    - femon app can only monitor signal status, no tuning.
+      Use --analyze and 'log_signal' option instead if you need to tune
+      the device.
+    
+    Changes not directly related to BDA support:
+    - hwdev/dvbapi: rename 'device' option to 'frontend' [37562601]
+    - replace --dvbls option with --devices [bdd01512, 60fef582]
+    - libastra: use Unicode APIs on Windows
+      [ae913f52, f8860dd9, b7ced360, 0cdf0e01, 7a25bda9, 30bd660c]
+    - core/compat: add COM convenience macros [1f649b61]
+    - core/log: add locks, VA functions and win32 unicode support [d7399260]
+    - mpegts/tscore: clean up namespace [b9e7d119]
+
