@@ -64,5 +64,5 @@ function main()
     dvb_conf.log_signal = true
     dvb_conf.no_dvr = true
 
-    dvb_femon = dvb_tune(dvb_conf)
+    dvb_femon = init_input(dvb_conf)
 end
