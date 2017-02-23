@@ -2,7 +2,7 @@
  * Astra Lua API (State Initialization)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -76,20 +76,21 @@ lua_State *lua_api_init(void)
     }
 
 #ifdef _WIN32
-    char buf[MAX_PATH] = { 0 };
+    char *const path = cx_exepath();
     char *sl = NULL;
-    const DWORD ret = GetModuleFileName(NULL, buf, sizeof(buf));
 
-    if (ret > 0 && ret < sizeof(buf) && (sl = strrchr(buf, '\\')) != NULL)
+    if (path != NULL && (sl = strrchr(path, '\\')) != NULL)
     {
         *sl = '\0';
 
-        luaL_addstring(&b, buf); /* <exe path>\scripts\?.lua */
+        luaL_addstring(&b, path); /* <exe path>\scripts\?.lua */
         luaL_addstring(&b, LUA_DIRSEP "scripts" LUA_DIRSEP "?.lua;");
 
-        luaL_addstring(&b, buf); /* <exe>\data\?.lua */
+        luaL_addstring(&b, path); /* <exe path>\data\?.lua */
         luaL_addstring(&b, LUA_DIRSEP "data" LUA_DIRSEP "?.lua");
     }
+
+    free(path);
 #else /* _WIN32 */
     luaL_addstring(&b, ASC_SCRIPTDIR LUA_DIRSEP "?.lua;");
     luaL_addstring(&b, ASC_DATADIR LUA_DIRSEP "?.lua");

@@ -213,25 +213,6 @@ if HAVE_LIBAIO
 libstream_la_LIBADD += $(LIBAIO_LIBS)
 endif
 
-# DVB-ASI input
-if !HAVE_WIN32
-libstream_la_SOURCES += \
-    stream/asi/input.c
-endif
-
-# DVB reception
-if HAVE_DVBAPI
-libstream_la_SOURCES += \
-    stream/dvb/ca.c \
-    stream/dvb/ca.h \
-    stream/dvb/dvb.h \
-    stream/dvb/dvbls.c \
-    stream/dvb/frontend.c \
-    stream/dvb/frontend.h \
-    stream/dvb/ddci.c \
-    stream/dvb/input.c
-endif
-
 # CSA scrambling and descrambling
 if HAVE_DVBCSA
 libstream_la_SOURCES += \
@@ -261,14 +242,59 @@ libstream_la_SOURCES += \
 endif
 endif
 
-# manifest list
-BUILT_SOURCES += stream/list.h
-CLEANFILES += stream/list.h
+# Hardware devices
+libstream_la_SOURCES += \
+    hwdev/enum/enum.c \
+    hwdev/enum/enum.h
 
-GEN_MANIFEST_LIST = $(top_srcdir)/build-aux/gen-manifest-list
-stream/list.h: $(GEN_MANIFEST_LIST) config.h
-	$(AM_V_GEN)$(GEN_MANIFEST_LIST) $(srcdir) $(libstream_la_SOURCES) \
+# DVB-ASI input
+if !HAVE_WIN32
+libstream_la_SOURCES += \
+    hwdev/asi/input.c
+endif
+
+# DVB reception (Linux)
+if HAVE_DVBAPI
+libstream_la_SOURCES += \
+    hwdev/dvbapi/ca.c \
+    hwdev/dvbapi/ca.h \
+    hwdev/dvbapi/dvb.h \
+    hwdev/dvbapi/frontend.c \
+    hwdev/dvbapi/frontend.h \
+    hwdev/dvbapi/ddci.c \
+    hwdev/dvbapi/input.c \
+    hwdev/enum/dvbapi.c
+endif
+
+# DVB reception (Windows)
+if HAVE_WIN32
+libstream_la_SOURCES += \
+    hwdev/bda/bda.h \
+    hwdev/bda/dump.c \
+    hwdev/bda/graph.c \
+    hwdev/bda/module.c \
+    hwdev/bda/networks.c \
+    hwdev/bda/vendor.c \
+    hwdev/dshow/dshow.c \
+    hwdev/dshow/dshow.h \
+    hwdev/dshow/grabber.c \
+    hwdev/dshow/guids.c \
+    hwdev/dshow/guids.h \
+    hwdev/enum/bda.c
+endif
+
+# dynamically generated symbol lists
+DYNAMIC_HDR_LIST = \
+    stream/list.h \
+    hwdev/enum/list.h
+
+GEN_DYNAMIC_LIST = $(top_srcdir)/build-aux/gen-dynamic-list
+$(DYNAMIC_HDR_LIST): $(GEN_DYNAMIC_LIST) config.h
+	$(AM_V_GEN)$(GEN_DYNAMIC_LIST) $(srcdir) $@ $(libstream_la_SOURCES) \
 	    >$@ || exit $$?
+
+BUILT_SOURCES += $(DYNAMIC_HDR_LIST)
+CLEANFILES += $(DYNAMIC_HDR_LIST)
 
 ##
 ## Main binary
@@ -277,6 +303,7 @@ bin_PROGRAMS += main/astra
 main_astra_SOURCES = main/main.c main/sig.h
 
 if HAVE_WIN32
+main_astra_LDFLAGS = -municode
 main_astra_SOURCES += \
     main/resources.rc \
     main/sig-win32.c
@@ -321,6 +348,7 @@ tests_libastra_SOURCES += \
     tests/core/alloc.c \
     tests/core/child.c \
     tests/core/clock.c \
+    tests/core/compat.c \
     tests/core/event.c \
     tests/core/list.c \
     tests/core/mainloop.c \

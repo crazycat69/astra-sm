@@ -37,7 +37,7 @@ struct module_data_t
 {
     STREAM_MODULE_DATA();
 
-    mpegts_packet_type_t stream[MAX_PID];
+    mpegts_packet_type_t stream[TS_MAX_PID];
 
     mpegts_psi_t *pat;
     mpegts_psi_t *pmt;

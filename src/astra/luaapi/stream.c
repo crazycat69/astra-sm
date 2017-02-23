@@ -38,7 +38,7 @@ struct module_stream_t
 
     demux_callback_t join_pid;
     demux_callback_t leave_pid;
-    uint8_t pid_list[MAX_PID];
+    uint8_t pid_list[TS_MAX_PID];
 };
 
 struct module_data_t
@@ -63,6 +63,21 @@ ASC_STATIC_ASSERT(sizeof(module_data_t) <= STREAM_MODULE_DATA_SIZE);
 static
 int method_set_upstream(lua_State *L, module_data_t *mod);
 
+static
+int method_stream(lua_State *L, module_data_t *mod)
+{
+    lua_pushlightuserdata(L, mod);
+    return 1;
+}
+
+static
+const module_method_t stream_methods[] =
+{
+    { "set_upstream", method_set_upstream },
+    { "stream", method_stream },
+    { NULL, NULL },
+};
+
 void module_stream_init(lua_State *L, module_data_t *mod
                         , stream_callback_t on_ts)
 {
@@ -79,13 +94,18 @@ void module_stream_init(lua_State *L, module_data_t *mod
 
     mod->stream = st;
 
-    if (L != NULL && lua_istable(L, MODULE_OPTIONS_IDX))
+    if (L != NULL)
     {
-        lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
-        if (!lua_isnil(L, -1))
-            method_set_upstream(L, mod);
+        module_add_methods(L, mod, stream_methods);
 
-        lua_pop(L, 1);
+        if (lua_istable(L, MODULE_OPTIONS_IDX))
+        {
+            lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
+            if (!lua_isnil(L, -1))
+                method_set_upstream(L, mod);
+
+            lua_pop(L, 1);
+        }
     }
 }
 
@@ -96,7 +116,7 @@ void module_stream_destroy(module_data_t *mod)
         return;
 
     /* leave all joined pids */
-    for (unsigned int i = 0; i < MAX_PID; i++)
+    for (unsigned int i = 0; i < TS_MAX_PID; i++)
     {
         while (module_demux_check(mod, i))
             module_demux_leave(mod, i);
@@ -148,25 +168,11 @@ int method_set_upstream(lua_State *L, module_data_t *mod)
     return 0;
 }
 
-static
-int method_stream(lua_State *L, module_data_t *mod)
-{
-    lua_pushlightuserdata(L, mod);
-    return 1;
-}
-
-const module_method_t module_stream_methods[] =
-{
-    { "set_upstream", method_set_upstream },
-    { "stream", method_stream },
-    { NULL, NULL },
-};
-
 void module_stream_attach(module_data_t *mod, module_data_t *child)
 {
     /* save pid membership data, leave all pids */
-    uint8_t saved_list[MAX_PID] = { 0 };
-    for (unsigned int i = 0; i < MAX_PID; i++)
+    uint8_t saved_list[TS_MAX_PID] = { 0 };
+    for (unsigned int i = 0; i < TS_MAX_PID; i++)
     {
         while (module_demux_check(child, i))
         {
@@ -195,7 +201,7 @@ void module_stream_attach(module_data_t *mod, module_data_t *child)
     }
 
     /* re-request pids from new parent */
-    for (unsigned int i = 0; i < MAX_PID; i++)
+    for (unsigned int i = 0; i < TS_MAX_PID; i++)
     {
         while (saved_list[i]-- > 0)
             module_demux_join(child, i);
@@ -228,7 +234,7 @@ void module_demux_set(module_data_t *mod, demux_callback_t join_pid
 
 void module_demux_join(module_data_t *mod, uint16_t pid)
 {
-    asc_assert(pid < MAX_PID, MSG("join: pid %hu out of range"), pid);
+    asc_assert(pid < TS_MAX_PID, MSG("join: pid %hu out of range"), pid);
     module_stream_t *const st = mod->stream;
 
     ++st->pid_list[pid];
@@ -241,7 +247,7 @@ void module_demux_join(module_data_t *mod, uint16_t pid)
 
 void module_demux_leave(module_data_t *mod, uint16_t pid)
 {
-    asc_assert(pid < MAX_PID, MSG("leave: pid %hu out of range"), pid);
+    asc_assert(pid < TS_MAX_PID, MSG("leave: pid %hu out of range"), pid);
     module_stream_t *const st = mod->stream;
 
     if (st->pid_list[pid] > 0)
@@ -261,6 +267,6 @@ void module_demux_leave(module_data_t *mod, uint16_t pid)
 
 bool module_demux_check(const module_data_t *mod, uint16_t pid)
 {
-    asc_assert(pid < MAX_PID, MSG("check: pid %hu out of range"), pid);
+    asc_assert(pid < TS_MAX_PID, MSG("check: pid %hu out of range"), pid);
     return (mod->stream->pid_list[pid] > 0);
 }

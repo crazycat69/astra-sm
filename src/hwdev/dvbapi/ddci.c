@@ -30,7 +30,7 @@
 #include <astra/core/mainloop.h>
 #include <astra/core/thread.h>
 
-#define MSG(_msg) "[ddci %d:%d] " _msg, mod->adapter, mod->device
+#define MSG(_msg) "[ddci %d:%d] " _msg, mod->adapter, mod->frontend
 
 #define BUFFER_SIZE (1022 * TS_PACKET_SIZE)
 
@@ -39,7 +39,7 @@ struct module_data_t
     STREAM_MODULE_DATA();
 
     int adapter;
-    int device;
+    int frontend;
 
     /* Base */
     char dev_name[32];
@@ -283,20 +283,20 @@ static void module_init(lua_State *L, module_data_t *mod)
         asc_log_error(MSG("option '%s' is required"), __adapter);
         asc_lib_abort();
     }
-    module_option_integer(L, "device", &mod->device);
+    module_option_integer(L, "frontend", &mod->frontend);
     mod->ca->adapter = mod->adapter;
-    mod->ca->device = mod->device;
+    mod->ca->frontend = mod->frontend;
     const size_t path_size = sprintf(mod->dev_name, "/dev/dvb/adapter%d/", mod->adapter);
 
     while(1)
     {
         // check ci%d
-        sprintf(&mod->dev_name[path_size], "ci%d", mod->device);
+        sprintf(&mod->dev_name[path_size], "ci%d", mod->frontend);
         if(!access(mod->dev_name, W_OK))
             break;
 
         // check sec%d
-        sprintf(&mod->dev_name[path_size], "sec%d", mod->device);
+        sprintf(&mod->dev_name[path_size], "sec%d", mod->frontend);
         if(!access(mod->dev_name, W_OK))
             break;
 

@@ -151,13 +151,22 @@ case "${host_os}" in
             AC_MSG_ERROR([invalid value for --with-winver])
         ])
 
-        # check winmm (needed for timer resolution APIs)
+        # add required libraries to linker flags
+        # timer APIs
         AC_CHECK_LIB([winmm], [main],
             [], AC_MSG_ERROR([cannot link with winmm.dll]) )
-
-        # check winsock
+        # networking
         AC_CHECK_LIB([ws2_32], [main],
             [], AC_MSG_ERROR([cannot link with ws2_32.dll]) )
+        # COM interfaces
+        AC_CHECK_LIB([ole32], [main],
+            [], AC_MSG_ERROR([cannot link with ole32.dll]) )
+        # SysAllocString() and friends
+        AC_CHECK_LIB([oleaut32], [main],
+            [], AC_MSG_ERROR([cannot link with oleaut32.dll]) )
+        # AMGetErrorText()
+        AC_CHECK_LIB([quartz], [main],
+            [], AC_MSG_ERROR([cannot link with quartz.dll]) )
 
         # look for resource tools
         LT_LANG([Windows Resource])

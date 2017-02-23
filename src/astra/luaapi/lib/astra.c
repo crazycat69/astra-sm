@@ -87,9 +87,9 @@ static void module_load(lua_State *L)
     luaL_newlib(L, api);
 
 #ifdef DEBUG
-    static const int is_debug = 1;
+    const int is_debug = 1;
 #else
-    static const int is_debug = 0;
+    const int is_debug = 0;
 #endif
 
     lua_pushboolean(L, is_debug);

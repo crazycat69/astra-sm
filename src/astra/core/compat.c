@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *               2015-2016, Artem Kharitonov <artem@3phase.pw>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,7 +64,9 @@ size_t strnlen(const char *str, size_t max)
 }
 #endif
 
-#if defined(_WIN32) && (_WIN32_WINNT <= _WIN32_WINNT_WIN2K)
+#ifdef _WIN32
+#if _WIN32_WINNT <= _WIN32_WINNT_WIN2K
+/* IsProcessInJob() wrapper for legacy builds */
 BOOL cx_IsProcessInJob(HANDLE process, HANDLE job, BOOL *result)
 {
     typedef BOOL (WINAPI *cx_IsProcessInJob_t)(HANDLE, HANDLE, BOOL *);
@@ -72,7 +74,7 @@ BOOL cx_IsProcessInJob(HANDLE process, HANDLE job, BOOL *result)
     static HMODULE kern32;
     if (kern32 == NULL)
     {
-        kern32 = LoadLibrary("kernel32.dll");
+        kern32 = LoadLibraryW(L"kernel32.dll");
         if (kern32 == NULL)
             return FALSE;
     }
@@ -87,7 +89,103 @@ BOOL cx_IsProcessInJob(HANDLE process, HANDLE job, BOOL *result)
 
     return func(process, job, result);
 }
-#endif /* _WIN32 && (_WIN32_WINNT <= _WIN32_WINNT_WIN2K) */
+#endif /* _WIN32_WINNT <= _WIN32_WINNT_WIN2K */
+
+/* convert from char (UTF-8) to wchar_t (UTF-16) */
+wchar_t *cx_widen(const char *str)
+{
+    int ret = MultiByteToWideChar(CP_UTF8, 0, str, -1, NULL, 0);
+    if (ret <= 0)
+        return NULL;
+
+    wchar_t *buf = (wchar_t *)calloc((size_t)ret, sizeof(*buf));
+    if (buf != NULL)
+    {
+        ret = MultiByteToWideChar(CP_UTF8, 0, str, -1, buf, ret);
+        if (ret <= 0)
+        {
+            free(buf);
+            buf = NULL;
+        }
+    }
+    else
+    {
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+    }
+
+    return buf;
+}
+
+/* convert from wchar_t (UTF-16) to char (UTF-8) */
+char *cx_narrow(const wchar_t *str)
+{
+    int ret = WideCharToMultiByte(CP_UTF8, 0, str, -1, NULL, 0, NULL, NULL);
+    if (ret <= 0)
+        return NULL;
+
+    char *buf = (char *)calloc((size_t)ret, sizeof(*buf));
+    if (buf != NULL)
+    {
+        ret = WideCharToMultiByte(CP_UTF8, 0, str, -1, buf, ret, NULL, NULL);
+        if (ret <= 0)
+        {
+            free(buf);
+            buf = NULL;
+        }
+    }
+    else
+    {
+        SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+    }
+
+    return buf;
+}
+
+/* return full executable path as a UTF-8 string */
+char *cx_exepath(void)
+{
+    wchar_t *wbuf = NULL;
+    DWORD bufsiz = MAX_PATH;
+    DWORD ret = 0;
+    char *buf = NULL;
+
+    do
+    {
+        wchar_t *const ptr = wbuf;
+        wbuf = (wchar_t *)realloc(wbuf, sizeof(*wbuf) * bufsiz);
+
+        if (wbuf == NULL)
+        {
+            SetLastError(ERROR_NOT_ENOUGH_MEMORY);
+            free(ptr);
+            return NULL;
+        }
+
+        ret = GetModuleFileNameW(NULL, wbuf, bufsiz);
+        if ((ret == 0 && GetLastError() == ERROR_INSUFFICIENT_BUFFER)
+            || ret >= bufsiz)
+        {
+            /* double the buffer size and try again */
+            bufsiz *= 2;
+            ret = 0;
+        }
+        else if (ret == 0)
+        {
+            /* error is not buffer-related */
+            free(wbuf);
+            return NULL;
+        }
+    } while (ret == 0);
+
+    if (wbuf != NULL)
+    {
+        buf = cx_narrow(wbuf);
+        free(wbuf);
+    }
+
+    return buf;
+}
+#endif /* _WIN32 */
 
 int cx_accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen)
 {
@@ -150,8 +248,8 @@ int cx_mkstemp(char *tpl)
     if (tmp == NULL)
         return -1;
 
-    static const int flags = O_CREAT | O_WRONLY | O_TRUNC;
-    static const mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+    const int flags = O_CREAT | O_WRONLY | O_TRUNC;
+    const mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
     fd = cx_open(tmp, flags, mode);
     if (fd == -1)
         return -1;
@@ -213,7 +311,7 @@ int cx_socket(int family, int type, int protocol)
         return fd;
 
     /* probably pre-7/SP1 version of Windows */
-    fd = WSASocket(family, type, protocol, NULL, 0, 0);
+    fd = WSASocketW(family, type, protocol, NULL, 0, 0);
     if (fd == -1)
         return fd;
 

@@ -43,8 +43,6 @@
 /* timeout for new block arrival */
 #define MAX_IDLE_TIME (200 * 1000) /* 200ms */
 
-typedef uint8_t ts_packet_t[TS_PACKET_SIZE];
-
 struct mpegts_sync_t
 {
     char name[128];
@@ -311,7 +309,7 @@ bool seek_pcr(mpegts_sync_t *sx)
         if (!TS_IS_PCR(ts))
             continue;
 
-        if (!sx->pcr_pid && pid != NULL_TS_PID)
+        if (!sx->pcr_pid && pid != TS_NULL_PID)
         {
             /* latch onto first PCR pid we see */
             sx->pcr_pid = pid;

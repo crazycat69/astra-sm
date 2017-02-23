@@ -25,6 +25,7 @@
 #include <astra/luaapi/module.h>
 #include <astra/luaapi/state.h>
 
+/* this gets put in builddir, not srcdir */
 #include "stream/list.h"
 
 #ifdef HAVE_INSCRIPT
@@ -110,6 +111,10 @@ void bootstrap(lua_State *L, int argc, const char *argv[])
 int main(int argc, const char *argv[])
 {
 #ifdef _WIN32
+    /* disable line ending translation */
+    setmode(STDOUT_FILENO, _O_BINARY);
+    setmode(STDERR_FILENO, _O_BINARY);
+
     /* line buffering is not supported on win32 */
     setvbuf(stdout, NULL, _IONBF, 0);
     setvbuf(stderr, NULL, _IONBF, 0);
@@ -136,3 +141,35 @@ int main(int argc, const char *argv[])
 
     return 0;
 }
+
+#ifdef _WIN32
+/* NOTE: prototype is here to suppress missing prototype warnings */
+int wmain(int argc, wchar_t *wargv[], wchar_t *wenvp[]);
+
+int wmain(int argc, wchar_t *wargv[], wchar_t *wenvp[])
+{
+    __uarg(wenvp);
+
+    /* convert wide arguments into UTF-8 */
+    const char *argv[argc + 1];
+    argv[argc] = NULL;
+
+    for (int i = 0; i < argc; i++)
+    {
+        argv[i] = cx_narrow(wargv[i]);
+
+        /* silently truncate argument list on error */
+        if (argv[i] == NULL)
+            argc = i;
+    }
+
+    /* call real main() */
+    const int ret = main(argc, argv);
+
+    /* clean up converted strings */
+    while (argc-- > 0)
+        free((char *)argv[argc]);
+
+    return ret;
+}
+#endif /* _WIN32 */

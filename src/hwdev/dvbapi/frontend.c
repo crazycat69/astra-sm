@@ -20,7 +20,7 @@
 
 #include "dvb.h"
 
-#define MSG(_msg) "[dvb_input %d:%d] " _msg, fe->adapter, fe->device
+#define MSG(_msg) "[dvb_input %d:%d] " _msg, fe->adapter, fe->frontend
 
 #define DTV_PROPERTY_BEGIN(_cmdseq, _cmdlist) \
     _cmdseq.num = 0; \
@@ -506,7 +506,7 @@ void fe_open(dvb_fe_t *fe)
 {
     char dev_name[64];
     snprintf(dev_name, sizeof(dev_name), "/dev/dvb/adapter%d/frontend%d"
-             , fe->adapter, fe->device);
+             , fe->adapter, fe->frontend);
 
     int flags = O_NONBLOCK;
     if (fe->type != DVB_TYPE_UNKNOWN)

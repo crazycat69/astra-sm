@@ -25,6 +25,7 @@
 /*
  * system headers
  */
+
 #ifdef _WIN32
     /* reduce header size */
 #   define WIN32_LEAN_AND_MEAN
@@ -41,6 +42,14 @@
 #   ifndef _WIN32_WINNT
 #       define _WIN32_WINNT _WIN32_WINNT_WIN2K
 #   endif /* !_WIN32_WINNT */
+
+    /* enable C COM API */
+#   define COBJMACROS
+#   define CINTERFACE
+
+    /* suppress strsafe.h warnings */
+#   define __CRT_STRSAFE_IMPL
+#   define __STRSAFE__NO_INLINE
 
 #   include <winsock2.h>
 #   include <ws2tcpip.h>
@@ -74,6 +83,7 @@
 /*
  * common macros
  */
+
 #define ASC_ARRAY_SIZE(_a) \
     (sizeof(_a) / sizeof(_a[0]))
 
@@ -103,6 +113,7 @@
 /*
  * public interface
  */
+
 #include "core/core.h"
 #include "mpegts/mpegts.h"
 

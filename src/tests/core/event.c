@@ -165,7 +165,7 @@ static int sock_connect(int fd, unsigned short port)
     return (ret == 0 ? 0 : sock_err());
 }
 
-static void sock_close(int s)
+static inline void sock_close(int s)
 {
 #ifdef _WIN32
     ck_assert(closesocket(s) == 0);
@@ -174,7 +174,7 @@ static void sock_close(int s)
 #endif
 }
 
-static void sock_shutdown(int s)
+static inline void sock_shutdown(int s)
 {
     int ret;
 #ifdef _WIN32
@@ -822,7 +822,7 @@ static void oob_pipe(int fds[2])
     FD_ZERO(&rset);
     FD_SET(listener, &rset);
     ck_assert(select(listener + 1, &rset, NULL, NULL, NULL) == 1);
-    ck_assert(FD_ISSET(listener, &rset));
+    ck_assert(FD_ISSET((unsigned)listener, &rset));
 
     /* get server side socket */
     test_sa_t sa;
@@ -1362,7 +1362,7 @@ START_TEST(series_of_tubes)
         rl.rlim_cur = 1024;
 #endif
 
-    static const int pad = 64;
+    const int pad = 64;
     const int max = (rl.rlim_cur - SOT_SERVERS - pad) / SOT_SERVERS / 3;
     ck_assert(max > 0);
 

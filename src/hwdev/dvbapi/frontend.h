@@ -43,7 +43,7 @@ struct dvb_fe_t
     /* General Config */
     dvb_type_t type;
     int adapter;
-    int device;
+    int frontend;
     int timeout;
 
     /* FE Config */

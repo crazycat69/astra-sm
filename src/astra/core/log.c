@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,6 +21,7 @@
 
 #include <astra/astra.h>
 #include <astra/core/log.h>
+#include <astra/core/mutex.h>
 
 #ifndef _WIN32
 #   include <syslog.h>
@@ -34,60 +35,129 @@ typedef struct
     bool debug;
 
     bool sout;
-
     int fd;
     char *filename;
-
 #ifndef _WIN32
     char *syslog;
 #else
     HANDLE con;
     WORD attr;
 #endif
+
+    asc_mutex_t lock;
 } asc_logger_t;
 
-static asc_logger_t *logger = NULL;
+static
+asc_logger_t *logger = NULL;
 
-typedef enum
-{
-    ASC_LOG_ERROR = 0,
-    ASC_LOG_WARNING,
-    ASC_LOG_INFO,
-    ASC_LOG_DEBUG,
-} asc_log_type_t;
+/*
+ * helper functions and maps
+ */
+
+/* log level string map */
+static
+const char *type_strings[] = {
+    "ERROR", "WARNING", "INFO", "DEBUG"
+};
 
 #ifndef _WIN32
-static const int type_syslog[] = {
+
+/* syslog severity map */
+static
+const int type_syslog[] = {
     LOG_ERR, LOG_WARNING, LOG_INFO, LOG_DEBUG
 };
 
-static const char *type_color_reset = "\x1b[0m";
-
-static const char *type_colors[] = {
+/* ANSI color codes for each log level */
+static
+const char *type_colors[] = {
     /* error = red */
     "\x1b[31m",
 
     /* warning = yellow */
     "\x1b[33m",
 
-    /* default color for other types */
+    /* info = default */
     NULL,
+
+    /* debug = default */
     NULL,
 };
+
+/* ANSI color reset code */
+static
+const char *type_color_reset = "\x1b[0m";
+
+/* write a log message to standard output */
+static
+void sout_write(asc_log_type_t type, const char *str)
+{
+    const char *color_on = "";
+    const char *color_off = "";
+
+    if (logger->color && type_colors[type] != NULL
+        && isatty(STDOUT_FILENO))
+    {
+        color_on = type_colors[type];
+        color_off = type_color_reset;
+    }
+
+    printf("%s%s%s\n", color_on, str, color_off);
+}
+
 #else /* !_WIN32 */
-static const WORD type_colors[] = {
+
+/* console attributes for each log level */
+static
+const WORD type_colors[] = {
     /* error = red */
     FOREGROUND_INTENSITY | FOREGROUND_RED,
 
     /* warning = yellow */
     FOREGROUND_INTENSITY | FOREGROUND_RED | FOREGROUND_GREEN,
 
-    /* default color for other types */
+    /* info = default */
     0,
+
+    /* debug = default */
     0,
 };
 
-static struct tm *localtime_r(const time_t *timep, struct tm *result)
+/* write a log message to standard output */
+static
+void sout_write(asc_log_type_t type, const char *str)
+{
+    if (logger->con != NULL)
+    {
+        /* stdout is a console: write Unicode directly without using CRT */
+        BOOL on = FALSE;
+        if (logger->color && type_colors[type] != 0)
+            on = SetConsoleTextAttribute(logger->con, type_colors[type]);
+
+        wchar_t *const wbuf = cx_widen(str);
+        if (wbuf != NULL)
+        {
+            size_t wlen = wcslen(wbuf);
+            wbuf[wlen++] = L'\n'; /* replace null with newline */
+
+            DWORD written = 0;
+            WriteConsoleW(logger->con, wbuf, wlen, &written, NULL);
+            free(wbuf);
+        }
+
+        if (on)
+            SetConsoleTextAttribute(logger->con, logger->attr);
+    }
+    else
+    {
+        /* stdout is not a console: print unaltered UTF-8 string */
+        printf("%s\n", str);
+    }
+}
+
+/* localtime_r() replacement function */
+static
+struct tm *localtime_r(const time_t *timep, struct tm *result)
 {
     /* NOTE: localtime() is thread-safe on Windows */
     struct tm *ptr = localtime(timep);
@@ -96,142 +166,12 @@ static struct tm *localtime_r(const time_t *timep, struct tm *result)
 
     return ptr;
 }
+
 #endif /* _WIN32 */
 
-static const char *type_strings[] = {
-    "ERROR", "WARNING", "INFO", "DEBUG"
-};
-
-static __fmt_printf(2, 0)
-void log_write(asc_log_type_t type, const char *msg, va_list ap)
-{
-    char buf[512];
-    ssize_t space = sizeof(buf);
-    int ret;
-
-    /* add timestamp and severity */
-    size_t len_prefix = 0;
-    const time_t ct = time(NULL);
-    struct tm sct;
-
-    tzset();
-    if (localtime_r(&ct, &sct) != NULL)
-    {
-        len_prefix += strftime(buf, space, "%b %d %X: ", &sct);
-        space -= len_prefix;
-    }
-
-    ret = snprintf(&buf[len_prefix], space, "%s: ", type_strings[type]);
-    if (ret > 0 && ret < space)
-    {
-        len_prefix += ret;
-        space -= ret;
-    }
-
-    /* add message */
-    size_t len = 0;
-    ret = vsnprintf(&buf[len_prefix], space, msg, ap);
-    if (ret > 0 && ret < space)
-        len = len_prefix + ret; /* success */
-    else if (ret >= space)
-        len = sizeof(buf) - 1; /* string truncated */
-    else
-        return; /* error or empty string */
-
-    if (logger == NULL)
-    {
-        fprintf(stderr, "%s\n", &buf[len_prefix]);
-        return;
-    }
-
-    /* send it out through configured channels */
-#ifndef _WIN32
-    if (logger->syslog != NULL)
-        syslog(type_syslog[type], "%s", &buf[len_prefix]);
-#endif /* !_WIN32 */
-
-    if (logger->sout)
-    {
-#ifndef _WIN32
-        const char *color_on = "";
-        const char *color_off = "";
-
-        if (logger->color && type_colors[type] != NULL
-            && isatty(STDOUT_FILENO))
-        {
-            color_on = type_colors[type];
-            color_off = type_color_reset;
-        }
-
-        printf("%s%s%s\n", color_on, buf, color_off);
-#else /* !_WIN32 */
-        bool reset_color = false;
-
-        if (logger->color && type_colors[type] != 0 && logger->con != NULL)
-        {
-            if (SetConsoleTextAttribute(logger->con, type_colors[type]))
-                reset_color = true;
-        }
-
-        printf("%s\n", buf);
-
-        if (reset_color)
-            SetConsoleTextAttribute(logger->con, logger->attr);
-#endif /* _WIN32 */
-    }
-
-    if (logger->fd != -1)
-    {
-        /* replace null with newline before writing to file */
-        buf[len++] = '\n';
-
-        if (write(logger->fd, buf, len) == -1)
-        {
-            fprintf(stderr, MSG("failed to write to log file: %s\n")
-                    , strerror(errno));
-        }
-    }
-}
-
-void asc_log_info(const char *msg, ...)
-{
-    va_list ap;
-    va_start(ap, msg);
-    log_write(ASC_LOG_INFO, msg, ap);
-    va_end(ap);
-}
-
-void asc_log_error(const char *msg, ...)
-{
-    va_list ap;
-    va_start(ap, msg);
-    log_write(ASC_LOG_ERROR, msg, ap);
-    va_end(ap);
-}
-
-void asc_log_warning(const char *msg, ...)
-{
-    va_list ap;
-    va_start(ap, msg);
-    log_write(ASC_LOG_WARNING, msg, ap);
-    va_end(ap);
-}
-
-void asc_log_debug(const char *msg, ...)
-{
-    if (logger != NULL && !logger->debug)
-        return;
-
-    va_list ap;
-    va_start(ap, msg);
-    log_write(ASC_LOG_DEBUG, msg, ap);
-    va_end(ap);
-}
-
-bool asc_log_is_debug(void)
-{
-    return logger->debug;
-}
+/*
+ * init and deinit
+ */
 
 void asc_log_core_init(void)
 {
@@ -239,6 +179,8 @@ void asc_log_core_init(void)
 
     logger->sout = true;
     logger->fd = -1;
+
+    asc_mutex_init(&logger->lock);
 
 #ifdef _WIN32
     /* get default text color */
@@ -262,42 +204,26 @@ void asc_log_core_destroy(void)
         close(logger->fd);
 
 #ifndef _WIN32
-    if (logger->syslog)
+    if (logger->syslog != NULL)
     {
         closelog();
         ASC_FREE(logger->syslog, free);
     }
 #endif /* !_WIN32 */
 
+    asc_mutex_destroy(&logger->lock);
+
     ASC_FREE(logger->filename, free);
     ASC_FREE(logger, free);
 }
 
-void asc_log_reopen(void)
+/*
+ * setters and getters
+ */
+
+void asc_log_set_color(bool val)
 {
-    if (logger->fd != -1)
-    {
-        close(logger->fd);
-        logger->fd = -1;
-    }
-
-    if (logger->filename == NULL)
-        return;
-
-    const int flags = O_WRONLY | O_CREAT | O_APPEND;
-    const mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-
-    logger->fd = open(logger->filename, flags, mode);
-    if (logger->fd == -1)
-    {
-        fprintf(stderr, MSG("failed to open %s: %s\n"), logger->filename
-                , strerror(errno));
-    }
-}
-
-void asc_log_set_stdout(bool val)
-{
-    logger->sout = val;
+    logger->color = val;
 }
 
 void asc_log_set_debug(bool val)
@@ -305,35 +231,191 @@ void asc_log_set_debug(bool val)
     logger->debug = val;
 }
 
-void asc_log_set_color(bool val)
+void asc_log_set_stdout(bool val)
 {
-    logger->color = val;
+    logger->sout = val;
 }
 
 void asc_log_set_file(const char *val)
 {
-    ASC_FREE(logger->filename, free);
+    asc_mutex_lock(&logger->lock);
 
-    if (val != NULL && strlen(val))
+    ASC_FREE(logger->filename, free);
+    if (val != NULL && strlen(val) > 0)
         logger->filename = strdup(val);
 
+    asc_mutex_unlock(&logger->lock);
     asc_log_reopen();
 }
 
 #ifndef _WIN32
 void asc_log_set_syslog(const char *val)
 {
+    asc_mutex_lock(&logger->lock);
+
     if (logger->syslog != NULL)
     {
         closelog();
         ASC_FREE(logger->syslog, free);
     }
 
-    if (val == NULL)
-        return;
+    if (val != NULL && strlen(val) > 0)
+    {
+        const int option = LOG_PID | LOG_CONS | LOG_NOWAIT | LOG_NDELAY;
+        const int facility = LOG_USER;
 
-    logger->syslog = strdup(val);
-    openlog(logger->syslog, LOG_PID | LOG_CONS | LOG_NOWAIT | LOG_NDELAY
-            , LOG_USER);
+        logger->syslog = strdup(val);
+        openlog(logger->syslog, option, facility);
+    }
+
+    asc_mutex_unlock(&logger->lock);
 }
 #endif /* !_WIN32 */
+
+void asc_log_reopen(void)
+{
+    asc_mutex_lock(&logger->lock);
+
+    if (logger->fd != -1)
+    {
+        close(logger->fd);
+        logger->fd = -1;
+    }
+
+    if (logger->filename != NULL)
+    {
+        const int flags = O_WRONLY | O_CREAT | O_APPEND;
+        const mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+
+        logger->fd = open(logger->filename, flags, mode);
+        if (logger->fd == -1)
+        {
+            fprintf(stderr, MSG("failed to open %s: %s\n")
+                    , logger->filename, strerror(errno));
+        }
+    }
+
+    asc_mutex_unlock(&logger->lock);
+}
+
+bool asc_log_is_debug(void)
+{
+    return logger->debug;
+}
+
+/*
+ * public interface
+ */
+
+void asc_log_va(asc_log_type_t type, const char *msg, va_list ap)
+{
+    if (type == ASC_LOG_DEBUG)
+    {
+        if (logger != NULL && !logger->debug)
+            return;
+    }
+
+    char buf[2048];
+    ssize_t space = sizeof(buf);
+    size_t len_prefix = 0;
+    int ret;
+
+    /* add timestamp and severity */
+    tzset();
+    const time_t ct = time(NULL);
+    struct tm sct;
+
+    if (localtime_r(&ct, &sct) != NULL)
+    {
+        len_prefix += strftime(buf, space, "%b %d %X: ", &sct);
+        space -= len_prefix;
+    }
+
+    ret = snprintf(&buf[len_prefix], space, "%s: ", type_strings[type]);
+    if (ret > 0 && ret < space)
+    {
+        len_prefix += ret;
+        space -= ret;
+    }
+
+    /* add message */
+    size_t len = 0;
+    ret = vsnprintf(&buf[len_prefix], space, msg, ap);
+    if (ret > 0 && ret < space)
+        len = len_prefix + ret; /* success */
+    else if (ret >= space)
+        len = sizeof(buf) - 1; /* string truncated */
+    else
+        return; /* error or empty string */
+
+    /* send it out through configured channels */
+    if (logger == NULL)
+    {
+        fprintf(stderr, "%s\n", &buf[len_prefix]);
+        return;
+    }
+
+    asc_mutex_lock(&logger->lock);
+
+#ifndef _WIN32
+    if (logger->syslog != NULL)
+        syslog(type_syslog[type], "%s", &buf[len_prefix]);
+#endif /* !_WIN32 */
+
+    if (logger->sout)
+        sout_write(type, buf);
+
+    if (logger->fd != -1)
+    {
+        /* replace null with newline before writing to file */
+        buf[len++] = '\n';
+
+        if (write(logger->fd, buf, len) == -1)
+        {
+            fprintf(stderr, MSG("failed to write to log file: %s\n")
+                    , strerror(errno));
+        }
+    }
+
+    asc_mutex_unlock(&logger->lock);
+}
+
+void asc_log(asc_log_type_t type, const char *msg, ...)
+{
+    va_list ap;
+    va_start(ap, msg);
+    asc_log_va(type, msg, ap);
+    va_end(ap);
+}
+
+void asc_log_error(const char *msg, ...)
+{
+    va_list ap;
+    va_start(ap, msg);
+    asc_log_va(ASC_LOG_ERROR, msg, ap);
+    va_end(ap);
+}
+
+void asc_log_warning(const char *msg, ...)
+{
+    va_list ap;
+    va_start(ap, msg);
+    asc_log_va(ASC_LOG_WARNING, msg, ap);
+    va_end(ap);
+}
+
+void asc_log_info(const char *msg, ...)
+{
+    va_list ap;
+    va_start(ap, msg);
+    asc_log_va(ASC_LOG_INFO, msg, ap);
+    va_end(ap);
+}
+
+void asc_log_debug(const char *msg, ...)
+{
+    va_list ap;
+    va_start(ap, msg);
+    asc_log_va(ASC_LOG_DEBUG, msg, ap);
+    va_end(ap);
+}

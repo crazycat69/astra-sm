@@ -25,7 +25,7 @@
 
 #include <netinet/in.h>
 
-#define MSG(_msg) "[dvb_ca %d:%d] " _msg, ca->adapter, ca->device
+#define MSG(_msg) "[dvb_ca %d:%d] " _msg, ca->adapter, ca->frontend
 
 /* en50221: A.4.1.13 List of transport tags */
 enum
@@ -1709,7 +1709,7 @@ void ca_open(dvb_ca_t *ca)
 {
     char dev_name[64];
     snprintf(dev_name, sizeof(dev_name), "/dev/dvb/adapter%d/ca%d"
-             , ca->adapter, ca->device);
+             , ca->adapter, ca->frontend);
 
     ca->ca_fd = open(dev_name, O_RDWR | O_NONBLOCK);
     if(ca->ca_fd <= 0)
@@ -1781,7 +1781,7 @@ void ca_open(dvb_ca_t *ca)
     ca->ca_pmt_list_del = asc_list_init();
 
     ca->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0x00);
-    ca->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, MAX_PID);
+    ca->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, TS_MAX_PID);
 
     ca->stream[0] = MPEGTS_PACKET_PAT;
 }

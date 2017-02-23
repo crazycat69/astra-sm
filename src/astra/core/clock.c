@@ -62,7 +62,7 @@ void asc_usleep(uint64_t usec)
     LARGE_INTEGER ft;
     ft.QuadPart = -(usec * 10);
 
-    const HANDLE timer = CreateWaitableTimer(NULL, TRUE, NULL);
+    const HANDLE timer = CreateWaitableTimerW(NULL, TRUE, NULL);
     SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
     WaitForSingleObject(timer, INFINITE);
     CloseHandle(timer);

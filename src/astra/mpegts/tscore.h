@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,11 +30,12 @@
 #define TS_HEADER_SIZE 4
 #define TS_BODY_SIZE (TS_PACKET_SIZE - TS_HEADER_SIZE)
 
-#define M2TS_PACKET_SIZE 192
+#define TS_PACKET_SIZE_BDAV 192
 
-#define MAX_PID 8192
-#define NULL_TS_PID (MAX_PID - 1)
-#define DESC_MAX_SIZE 1024
+#define TS_MAX_PID 8192
+#define TS_MAX_PNR (UINT16_MAX + 1)
+#define TS_NULL_PID (TS_MAX_PID - 1)
+#define TS_MAX_DESC 1024
 
 #define TS_IS_SYNC(_ts) ((_ts[0] == 0x47))
 #define TS_IS_PAYLOAD(_ts) ((_ts[3] & 0x10))
@@ -72,5 +73,12 @@
     )
 
 typedef void (*ts_callback_t)(void *, const uint8_t *);
+
+/*
+ * An array type representing a 188-byte TS packet, meant for ring
+ * buffers and the like. That way there's no need to manually calculate
+ * byte offsets for each packet in the buffer.
+ */
+typedef uint8_t ts_packet_t[TS_PACKET_SIZE];
 
 #endif /* _TS_CORE_ */

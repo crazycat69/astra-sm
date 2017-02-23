@@ -101,7 +101,7 @@ struct module_data_t
     } shift;
 
     /* Base */
-    mpegts_psi_t *stream[MAX_PID];
+    mpegts_psi_t *stream[TS_MAX_PID];
     mpegts_psi_t *pmt;
 };
 
@@ -204,7 +204,7 @@ static void stream_reload(module_data_t *mod)
 {
     mod->stream[0]->crc32 = 0;
 
-    for(int i = 1; i < MAX_PID; ++i)
+    for(int i = 1; i < TS_MAX_PID; ++i)
     {
         if(mod->stream[i])
         {
@@ -302,7 +302,7 @@ static bool __cat_check_desc(module_data_t *mod, const uint8_t *desc)
     const uint16_t pid = DESC_CA_PID(desc);
 
     /* Skip BISS */
-    if(pid == NULL_TS_PID)
+    if(pid == TS_NULL_PID)
         return false;
 
     if(mod->stream[pid])
@@ -389,7 +389,7 @@ static ca_stream_t * __pmt_check_desc(  module_data_t *mod
     const uint16_t pid = DESC_CA_PID(desc);
 
     /* Skip BISS */
-    if(pid == NULL_TS_PID)
+    if(pid == TS_NULL_PID)
         return NULL;
 
     if(mod->stream[pid] == NULL)
@@ -687,7 +687,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
             mpegts_psi_mux(mod->stream[pid], ts, on_cat, mod);
         return;
     }
-    else if(pid == NULL_TS_PID)
+    else if(pid == TS_NULL_PID)
     {
         return;
     }
@@ -932,7 +932,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         luaL_error(L, "[decrypt] option 'name' is required");
 
     mod->stream[0] = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
-    mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, MAX_PID);
+    mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, TS_MAX_PID);
 
     mod->ca_list = asc_list_init();
     mod->el_list = asc_list_init();
@@ -958,7 +958,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         key[3] = (key[0] + key[1] + key[2]) & 0xFF;
         key[7] = (key[4] + key[5] + key[6]) & 0xFF;
 
-        ca_stream_t *biss = ca_stream_init(mod, NULL_TS_PID);
+        ca_stream_t *biss = ca_stream_init(mod, TS_NULL_PID);
         ca_stream_set_keys(biss, key, key);
     }
 
@@ -1029,7 +1029,7 @@ static void module_destroy(module_data_t *mod)
     ASC_FREE(mod->storage.buffer, free);
     ASC_FREE(mod->shift.buffer, free);
 
-    for(int i = 0; i < MAX_PID; ++i)
+    for(int i = 0; i < TS_MAX_PID; ++i)
         ASC_FREE(mod->stream[i], mpegts_psi_destroy);
 
     ASC_FREE(mod->pmt, mpegts_psi_destroy);

@@ -52,6 +52,22 @@ unsigned int get_timer_res(void)
     return mean;
 }
 
+bool is_fd_inherited(int fd)
+{
+#ifdef _WIN32
+    DWORD flags = 0;
+    const bool ret = GetHandleInformation(ASC_TO_HANDLE(fd), &flags);
+    ck_assert(ret == true);
+
+    return flags & HANDLE_FLAG_INHERIT;
+#else /* _WIN32 */
+    const int ret = fcntl(fd, F_GETFD);
+    ck_assert(ret != -1);
+
+    return (!(ret & FD_CLOEXEC));
+#endif /* !_WIN32 */
+}
+
 void lib_setup(void)
 {
     asc_srand();

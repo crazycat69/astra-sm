@@ -31,7 +31,7 @@
 #include <astra/core/thread.h>
 #include <astra/core/timer.h>
 
-#define MSG(_msg) "[dvb_input %d:%d] " _msg, mod->adapter, mod->device
+#define MSG(_msg) "[dvb_input %d:%d] " _msg, mod->adapter, mod->frontend
 
 #define DVR_RETRY 10
 
@@ -40,7 +40,7 @@ struct module_data_t
     STREAM_MODULE_DATA();
 
     int adapter;
-    int device;
+    int frontend;
 
     /* Base */
     asc_thread_t *thread;
@@ -167,14 +167,6 @@ static void dvr_on_retry(void *arg)
         asc_usleep(500);
 }
 
-static void dvr_on_error(void *arg)
-{
-    module_data_t *mod = (module_data_t *)arg;
-    asc_log_error(MSG("dvr read error, try to reopen [%s]"), strerror(errno));
-    dvr_close(mod);
-    dvr_open(mod);
-}
-
 static void dvr_on_read(void *arg)
 {
     module_data_t *mod = (module_data_t *)arg;
@@ -182,7 +174,13 @@ static void dvr_on_read(void *arg)
     const ssize_t len = read(mod->dvr_fd, mod->dvr_buffer, sizeof(mod->dvr_buffer));
     if(len <= 0)
     {
-        dvr_on_error(mod);
+        if (errno != EWOULDBLOCK && errno != EAGAIN)
+        {
+            asc_log_error(MSG("dvr read error, try to reopen [%s]"), strerror(errno));
+            dvr_close(mod);
+            dvr_open(mod);
+        }
+
         return;
     }
     mod->dvr_read += len;
@@ -205,7 +203,7 @@ static void dvr_open(module_data_t *mod)
 {
     char dev_name[64];
     snprintf(dev_name, sizeof(dev_name), "/dev/dvb/adapter%d/dvr%d"
-             , mod->adapter, mod->device);
+             , mod->adapter, mod->frontend);
 
     mod->dvr_fd = open(dev_name, O_RDONLY | O_NONBLOCK);
     if(mod->dvr_fd <= 0)
@@ -228,7 +226,6 @@ static void dvr_open(module_data_t *mod)
 
     mod->dvr_event = asc_event_init(mod->dvr_fd, mod);
     asc_event_set_on_read(mod->dvr_event, dvr_on_read);
-    asc_event_set_on_error(mod->dvr_event, dvr_on_error);
 }
 
 static void dvr_close(module_data_t *mod)
@@ -287,9 +284,9 @@ static void dmx_set_pid(module_data_t *mod, uint16_t pid, int is_set)
     if(mod->dmx_budget)
         return;
 
-    if(pid >= MAX_PID)
+    if(pid >= TS_MAX_PID)
     {
-        asc_log_error(MSG("demux: PID value must be less then %d"), MAX_PID);
+        asc_log_error(MSG("demux: PID value must be less then %d"), TS_MAX_PID);
         asc_lib_abort();
     }
 
@@ -322,7 +319,7 @@ static void dmx_bounce(module_data_t *mod)
     if(!mod->dmx_fd_list)
         return;
 
-    const int fd_max = (mod->dmx_budget) ? 1 : MAX_PID;
+    const int fd_max = (mod->dmx_budget) ? 1 : TS_MAX_PID;
     for(int i = 0; i < fd_max; ++i)
     {
         if(mod->dmx_fd_list[i])
@@ -335,7 +332,7 @@ static void dmx_bounce(module_data_t *mod)
 
 static void dmx_open(module_data_t *mod)
 {
-    sprintf(mod->dmx_dev_name, "/dev/dvb/adapter%d/demux%d", mod->adapter, mod->device);
+    sprintf(mod->dmx_dev_name, "/dev/dvb/adapter%d/demux%d", mod->adapter, mod->frontend);
 
     const int fd = __dmx_open(mod);
     if(fd <= 0)
@@ -348,12 +345,12 @@ static void dmx_open(module_data_t *mod)
     {
         mod->dmx_fd_list = ASC_ALLOC(1, int);
         mod->dmx_fd_list[0] = fd;
-        __dmx_join_pid(mod, fd, MAX_PID);
+        __dmx_join_pid(mod, fd, TS_MAX_PID);
     }
     else
     {
         close(fd);
-        mod->dmx_fd_list = ASC_ALLOC(MAX_PID, int);
+        mod->dmx_fd_list = ASC_ALLOC(TS_MAX_PID, int);
     }
 }
 
@@ -362,7 +359,7 @@ static void dmx_close(module_data_t *mod)
     if(!mod->dmx_fd_list)
         return;
 
-    const int fd_max = (mod->dmx_budget) ? 1 : MAX_PID;
+    const int fd_max = (mod->dmx_budget) ? 1 : TS_MAX_PID;
     for(int i = 0; i < fd_max; ++i)
     {
         if(mod->dmx_fd_list[i])
@@ -652,12 +649,12 @@ static void module_options(lua_State *L, module_data_t *mod)
     static const char __adapter[] = "adapter";
     if(!module_option_integer(L, __adapter, &mod->adapter))
         option_required(mod, __adapter);
-    module_option_integer(L, "device", &mod->device);
+    module_option_integer(L, "frontend", &mod->frontend);
 
     mod->fe->adapter = mod->adapter;
     mod->ca->adapter = mod->adapter;
-    mod->fe->device = mod->device;
-    mod->ca->device = mod->device;
+    mod->fe->frontend = mod->frontend;
+    mod->ca->frontend = mod->frontend;
 
     const char *string_val = NULL;
 
@@ -885,7 +882,7 @@ static void thread_loop(void *arg)
         {
             dmx_check_timeout = current_time;
 
-            for(int i = 0; i < MAX_PID; ++i)
+            for(int i = 0; i < TS_MAX_PID; ++i)
             {
                 if(module_demux_check(mod, i) && (mod->dmx_fd_list[i] == 0))
                     dmx_set_pid(mod, i, 1);
@@ -964,7 +961,7 @@ static void thread_loop_slave(void *arg)
         {
             dmx_check_timeout = current_time;
 
-            for(int i = 0; i < MAX_PID; ++i)
+            for(int i = 0; i < TS_MAX_PID; ++i)
             {
                 if(module_demux_check(mod, i) && (mod->dmx_fd_list[i] == 0))
                     dmx_set_pid(mod, i, 1);

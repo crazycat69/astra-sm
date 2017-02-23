@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2016, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,23 +26,34 @@
 #   error "Please include <astra/astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-void asc_log_set_stdout(bool val);
-void asc_log_set_debug(bool val);
-void asc_log_set_color(bool val);
-void asc_log_set_file(const char *val);
-#ifndef _WIN32
-void asc_log_set_syslog(const char *val);
-#endif
-bool asc_log_is_debug(void) __func_pure;
+typedef enum
+{
+    ASC_LOG_ERROR = 0,
+    ASC_LOG_WARNING,
+    ASC_LOG_INFO,
+    ASC_LOG_DEBUG,
+} asc_log_type_t;
 
 void asc_log_core_init(void);
 void asc_log_core_destroy(void);
 
+void asc_log_set_color(bool val);
+void asc_log_set_debug(bool val);
+void asc_log_set_stdout(bool val);
+void asc_log_set_file(const char *val);
+#ifndef _WIN32
+void asc_log_set_syslog(const char *val);
+#endif
 void asc_log_reopen(void);
+bool asc_log_is_debug(void) __func_pure;
 
-void asc_log_info(const char *msg, ...) __fmt_printf(1, 2);
+void asc_log_va(asc_log_type_t type, const char *msg, va_list ap)
+    __fmt_printf(2, 0);
+void asc_log(asc_log_type_t type, const char *msg, ...)
+    __fmt_printf(2, 3);
 void asc_log_error(const char *msg, ...) __fmt_printf(1, 2);
 void asc_log_warning(const char *msg, ...) __fmt_printf(1, 2);
+void asc_log_info(const char *msg, ...) __fmt_printf(1, 2);
 void asc_log_debug(const char *msg, ...) __fmt_printf(1, 2);
 
 #endif /* _ASC_LOG_H_ */

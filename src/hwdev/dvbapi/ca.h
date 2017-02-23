@@ -89,7 +89,7 @@ typedef struct
 struct dvb_ca_t
 {
     int adapter;
-    int device;
+    int frontend;
 
     /* CA Base */
     int ca_fd;
@@ -100,7 +100,7 @@ struct dvb_ca_t
 
     /* CA PMT */
 
-    mpegts_packet_type_t stream[MAX_PID];
+    mpegts_packet_type_t stream[TS_MAX_PID];
     mpegts_psi_t *pat;
     mpegts_psi_t *pmt;
 

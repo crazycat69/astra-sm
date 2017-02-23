@@ -26,30 +26,38 @@ static /*__thread*/ char msg_buf[1024];
 
 char *asc_strerror(int errnum, char *buf, size_t buflen)
 {
-    char *msg = NULL;
-
 #ifdef _WIN32
+    wchar_t *wbuf = NULL;
     const DWORD lang_id = MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT);
-    const DWORD ret = FormatMessageA((FORMAT_MESSAGE_FROM_SYSTEM
+    const DWORD ret = FormatMessageW((FORMAT_MESSAGE_FROM_SYSTEM
                                       | FORMAT_MESSAGE_ALLOCATE_BUFFER
                                       | FORMAT_MESSAGE_IGNORE_INSERTS
                                       | FORMAT_MESSAGE_MAX_WIDTH_MASK)
                                      , NULL, errnum, lang_id
-                                     , (LPTSTR)&msg, 0, NULL);
+                                     , (LPWSTR)&wbuf, 0, NULL);
 
-    if (ret > 0 && msg != NULL)
+    char *msg = NULL;
+    if (wbuf != NULL)
+    {
+        if (ret > 0)
+            msg = cx_narrow(wbuf);
+
+        LocalFree(wbuf);
+    }
+
+    if (msg != NULL)
     {
         /* remove trailing punctuation */
         for (ssize_t i = strlen(msg) - 1; i >= 0; i--)
         {
-            if (msg[i] != '.' && msg[i] != ' ')
+            if (msg[i] != '.' && !isspace(msg[i]))
                 break;
 
             msg[i] = '\0';
         }
 
         strncpy(buf, msg, buflen);
-        LocalFree(msg);
+        free(msg);
     }
     else
     {
@@ -57,7 +65,7 @@ char *asc_strerror(int errnum, char *buf, size_t buflen)
         strncpy(buf, fail_msg, buflen);
     }
 #else
-    msg = strerror(errnum);
+    char *const msg = strerror(errnum);
     strncpy(buf, msg, buflen);
 #endif /* _WIN32 */
 

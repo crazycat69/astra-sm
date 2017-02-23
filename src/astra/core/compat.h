@@ -2,7 +2,7 @@
  * Astra Core (Compatibility library)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -92,12 +92,29 @@
 #   endif /* ! */
 
     /* cast int to HANDLE */
-#   define ASC_TO_HANDLE(__x) ((HANDLE)((intptr_t)(__x)))
+#   define ASC_TO_HANDLE(_val) ((HANDLE)((intptr_t)(_val)))
     /*
      * NOTE: casting SOCKET to int to HANDLE is far from best practice,
      *       however it seems to work on existing WinAPI implementations;
      *       some future Windows version might break this.
      */
+
+    /* COM release shorthand */
+#   define ASC_RELEASE(_obj) ASC_FREE((_obj), (_obj)->lpVtbl->Release)
+
+    /* fix error code if pointer equals NULL */
+#   define ASC_WANT_PTR(_hr, _ptr) \
+        do { \
+            if (SUCCEEDED((_hr)) && (_ptr) == NULL) \
+                (_hr) = E_POINTER; \
+        } while (0)
+
+    /* same, except S_FALSE code is preserved */
+#   define ASC_WANT_ENUM(_hr, _ptr) \
+        do { \
+            if ((_hr) == S_OK && (_ptr) == NULL) \
+                (_hr) = E_POINTER; \
+        } while (0)
 #endif /* _WIN32 */
 
 /* not defined on some systems */
@@ -121,11 +138,16 @@ char *strndup(const char *str, size_t max);
 size_t strnlen(const char *str, size_t max) __func_pure;
 #endif
 
-/* IsProcessInJob() wrapper for legacy builds */
-#if defined(_WIN32) && (_WIN32_WINNT <= _WIN32_WINNT_WIN2K)
+#ifdef _WIN32
+#if _WIN32_WINNT <= _WIN32_WINNT_WIN2K
 BOOL cx_IsProcessInJob(HANDLE process, HANDLE job, BOOL *result);
 #define IsProcessInJob(...) cx_IsProcessInJob(__VA_ARGS__)
-#endif
+#endif /* _WIN32_WINNT <= _WIN32_WINNT_WIN2K */
+
+wchar_t *cx_widen(const char *str);
+char *cx_narrow(const wchar_t *str);
+char *cx_exepath(void);
+#endif /* _WIN32 */
 
 /*
  * standard function wrappers

@@ -71,9 +71,14 @@ static asc_main_loop_t *main_loop = NULL;
  * main thread wake up mechanism
  */
 
-static void on_wake_read(void *arg);
+static
+void on_wake_read(void *arg);
 
-static bool wake_open(void)
+static
+void on_wake_error(void *arg);
+
+static
+bool wake_open(void)
 {
     int fds[2] = { -1, -1 };
 
@@ -85,11 +90,13 @@ static bool wake_open(void)
 
     main_loop->wake_ev = asc_event_init(fds[PIPE_RD], NULL);
     asc_event_set_on_read(main_loop->wake_ev, on_wake_read);
+    asc_event_set_on_error(main_loop->wake_ev, on_wake_error);
 
     return true;
 }
 
-static void wake_close(void)
+static
+void wake_close(void)
 {
     ASC_FREE(main_loop->wake_ev, asc_event_close);
 
@@ -112,7 +119,8 @@ static void wake_close(void)
 }
 
 /* read event handler: discard incoming data, reopen pipe on errors */
-static void on_wake_read(void *arg)
+static
+void on_wake_read(void *arg)
 {
     __uarg(arg);
 
@@ -144,6 +152,17 @@ static void on_wake_read(void *arg)
     wake_close();
     if (!wake_open())
        asc_log_error(MSG("couldn't reopen pipe: %s"), asc_error_msg());
+}
+
+/* error event handler: emit error message and close pipe */
+static
+void on_wake_error(void *arg)
+{
+    __uarg(arg);
+
+    /* shouldn't happen, ever */
+    asc_log_error(MSG("BUG: error event on wake up pipe"));
+    wake_close();
 }
 
 /* increase pipe refcount, opening it if necessary */
@@ -235,7 +254,8 @@ void asc_job_prune(void *owner)
 }
 
 /* run all queued callbacks */
-static void run_jobs(void)
+static
+void run_jobs(void)
 {
     loop_job_t *const first = &main_loop->jobs[0];
     loop_job_t job;
