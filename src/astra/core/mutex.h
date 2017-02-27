@@ -55,6 +55,17 @@ void asc_mutex_lock(asc_mutex_t *mutex)
                , strerror(ret));
 }
 
+static inline __wur
+bool asc_mutex_trylock(asc_mutex_t *mutex)
+{
+    const int ret = pthread_mutex_trylock(mutex);
+    asc_assert(ret == 0 || ret == EBUSY
+               , "[core/mutex] couldn't lock mutex: %s"
+               , strerror(ret));
+
+    return (ret == 0);
+}
+
 static inline
 void asc_mutex_unlock(asc_mutex_t *mutex)
 {
@@ -85,6 +96,12 @@ void asc_mutex_lock(asc_mutex_t *mutex)
     EnterCriticalSection(mutex);
 }
 
+static inline __wur
+bool asc_mutex_trylock(asc_mutex_t *mutex)
+{
+    return TryEnterCriticalSection(mutex);
+}
+
 static inline
 void asc_mutex_unlock(asc_mutex_t *mutex)
 {
@@ -93,6 +110,6 @@ void asc_mutex_unlock(asc_mutex_t *mutex)
 
 #endif /* _WIN32 */
 
-bool asc_mutex_timedlock(asc_mutex_t *mutex, unsigned int ms) __wur;
+bool asc_mutex_timedlock(asc_mutex_t *mutex, unsigned long ms) __wur;
 
 #endif /* _ASC_MUTEX_H_ */

@@ -1,7 +1,7 @@
 /*
  * Astra Core (Child process)
  *
- * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,7 @@
 #include <astra/core/spawn.h>
 #include <astra/core/timer.h>
 
-#define MSG(_msg) "[child/%s] " _msg, child->name
+#define MSG(_msg) "[core/child %s] " _msg, child->name
 
 #define IO_BUFFER_SIZE (64UL * 1024UL) /* 64 KiB */
 #define IO_BUFFER_TS_PACKETS (IO_BUFFER_SIZE / TS_PACKET_SIZE)

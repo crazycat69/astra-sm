@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -28,5 +28,8 @@
 
 uint64_t asc_utime(void) __wur;
 void asc_usleep(uint64_t usec);
+#ifndef _WIN32
+void asc_rtctime(struct timespec *ts, unsigned long offset_ms);
+#endif
 
 #endif /* _ASC_CLOCK_H_ */

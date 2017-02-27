@@ -240,6 +240,7 @@ static void timedlock_proc(void *arg)
     asc_mutex_lock(&tl_mutex2); /* locked M2 */
 
     /* part 1 */
+    ck_assert(asc_mutex_trylock(&tl_mutex1) == false);
     const uint64_t start = asc_utime();
     const bool ret = asc_mutex_timedlock(&tl_mutex1, TL_MS); /* locked M1 */
     ck_assert(ret == true);
@@ -253,6 +254,8 @@ static void timedlock_proc(void *arg)
     asc_mutex_lock(&tl_mutex3); /* locked M3 */
     asc_mutex_unlock(&tl_mutex1); /* released M1 */
     asc_mutex_unlock(&tl_mutex3); /* released M3 */
+    ck_assert(asc_mutex_trylock(&tl_mutex1) == true); /* locked M1 */
+    asc_mutex_unlock(&tl_mutex1); /* released M1 */
 }
 
 START_TEST(timedlock)
@@ -270,6 +273,7 @@ START_TEST(timedlock)
     asc_mutex_unlock(&tl_mutex1); /* released M1 */
 
     /* part 2: main thread waits for aux */
+    ck_assert(asc_mutex_trylock(&tl_mutex2) == false);
     uint64_t start = asc_utime();
     bool ret = asc_mutex_timedlock(&tl_mutex2, TL_MS); /* locked M2 */
     ck_assert(ret == true);
@@ -285,6 +289,9 @@ START_TEST(timedlock)
     asc_mutex_unlock(&tl_mutex2); /* released M2 */
     asc_mutex_unlock(&tl_mutex3); /* released M3 */
     asc_thread_join(thr);
+
+    ck_assert(asc_mutex_trylock(&tl_mutex3) == true); /* locked M3 */
+    asc_mutex_unlock(&tl_mutex3); /* released M3 */
 
     asc_mutex_destroy(&tl_mutex1);
     asc_mutex_destroy(&tl_mutex2);
