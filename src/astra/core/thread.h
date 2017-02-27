@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *               2015-2016, Artem Kharitonov <artem@3phase.pw>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,20 +27,19 @@
 #endif /* !_ASTRA_H_ */
 
 typedef struct asc_thread_t asc_thread_t;
-typedef struct asc_thread_buffer_t asc_thread_buffer_t;
 typedef void (*thread_callback_t)(void *);
 
 void asc_thread_core_init(void);
 void asc_thread_core_destroy(void);
 
-asc_thread_t *asc_thread_init(void) __wur;
-void asc_thread_start(asc_thread_t *thr, void *arg, thread_callback_t proc
-                      , thread_callback_t on_close);
+asc_thread_t *asc_thread_init(void *arg, thread_callback_t proc
+                              , thread_callback_t on_close) __wur;
 void asc_thread_join(asc_thread_t *thr);
 
+/* thread buffer (deprecated) */
+typedef struct asc_thread_buffer_t asc_thread_buffer_t;
 asc_thread_buffer_t *asc_thread_buffer_init(size_t buffer_size) __wur;
 void asc_thread_buffer_destroy(asc_thread_buffer_t *buffer);
-
 void asc_thread_buffer_flush(asc_thread_buffer_t *buffer);
 ssize_t asc_thread_buffer_read(asc_thread_buffer_t *buffer
                                , void *data, size_t size) __wur;

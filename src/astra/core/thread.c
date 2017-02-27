@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
- *               2015-2016, Artem Kharitonov <artem@3phase.pw>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,17 +27,6 @@
 
 #define MSG(_msg) "[core/thread %p] " _msg, (void *)thr
 
-struct asc_thread_buffer_t
-{
-    uint8_t *buffer;
-    size_t size;
-    size_t read;
-    size_t write;
-    size_t count;
-
-    asc_mutex_t mutex;
-};
-
 struct asc_thread_t
 {
     thread_callback_t proc;
@@ -56,11 +45,9 @@ typedef struct
     asc_list_t *list;
 } asc_thread_mgr_t;
 
-static asc_thread_mgr_t *thread_mgr = NULL;
+static
+asc_thread_mgr_t *thread_mgr = NULL;
 
-/*
- * threads
- */
 void asc_thread_core_init(void)
 {
     thread_mgr = ASC_ALLOC(1, asc_thread_mgr_t);
@@ -73,7 +60,6 @@ void asc_thread_core_destroy(void)
         return;
 
     asc_thread_t *thr, *prev = NULL;
-
     asc_list_till_empty(thread_mgr->list)
     {
         thr = (asc_thread_t *)asc_list_data(thread_mgr->list);
@@ -91,15 +77,9 @@ void asc_thread_core_destroy(void)
     ASC_FREE(thread_mgr, free);
 }
 
-asc_thread_t *asc_thread_init(void)
-{
-    asc_thread_t *const thr = ASC_ALLOC(1, asc_thread_t);
-    asc_list_insert_tail(thread_mgr->list, thr);
-
-    return thr;
-}
-
-static void on_thread_exit(void *arg)
+/* this is queued to main loop when thread exits */
+static
+void on_thread_exit(void *arg)
 {
     asc_thread_t *const thr = (asc_thread_t *)arg;
 
@@ -109,10 +89,13 @@ static void on_thread_exit(void *arg)
         asc_thread_join(thr);
 }
 
+/* wrapper around thread function */
 #ifdef _WIN32
-static unsigned int __stdcall thread_proc(void *arg)
+static __stdcall
+unsigned int thread_proc(void *arg)
 #else
-static void *thread_proc(void *arg)
+static
+void *thread_proc(void *arg)
 #endif
 {
     asc_thread_t *const thr = (asc_thread_t *)arg;
@@ -123,14 +106,15 @@ static void *thread_proc(void *arg)
     return 0;
 }
 
-void asc_thread_start(asc_thread_t *thr, void *arg, thread_callback_t proc
-                      , thread_callback_t on_close)
+asc_thread_t *asc_thread_init(void *arg, thread_callback_t proc
+                              , thread_callback_t on_close)
 {
-    asc_assert(thr->thread == NULL, MSG("can't start thread twice"));
+    asc_thread_t *const thr = ASC_ALLOC(1, asc_thread_t);
+    asc_list_insert_tail(thread_mgr->list, thr);
 
-    thr->arg = arg;
     thr->proc = proc;
     thr->on_close = on_close;
+    thr->arg = arg;
 
 #ifdef _WIN32
     const intptr_t ret = _beginthreadex(NULL, 0, thread_proc, thr, 0, NULL);
@@ -143,26 +127,25 @@ void asc_thread_start(asc_thread_t *thr, void *arg, thread_callback_t proc
     const int ret = pthread_create(thr->thread, NULL, thread_proc, thr);
     asc_assert(ret == 0, MSG("failed to create thread: %s"), strerror(ret));
 #endif /* !_WIN32 */
+
+    return thr;
 }
 
 void asc_thread_join(asc_thread_t *thr)
 {
-    if (thr->thread != NULL)
-    {
 #ifdef _WIN32
-        const DWORD ret = WaitForSingleObject(thr->thread, INFINITE);
-        if (ret != WAIT_OBJECT_0)
-            asc_log_error(MSG("failed to join thread: %s"), asc_error_msg());
+    const DWORD ret = WaitForSingleObject(thr->thread, INFINITE);
+    if (ret != WAIT_OBJECT_0)
+        asc_log_error(MSG("failed to join thread: %s"), asc_error_msg());
 
-        CloseHandle(thr->thread);
+    CloseHandle(thr->thread);
 #else /* _WIN32 */
-        const int ret = pthread_join(*thr->thread, NULL);
-        if (ret != 0)
-            asc_log_error(MSG("failed to join thread: %s"), strerror(ret));
+    const int ret = pthread_join(*thr->thread, NULL);
+    if (ret != 0)
+        asc_log_error(MSG("failed to join thread: %s"), strerror(ret));
 
-        free(thr->thread);
+    free(thr->thread);
 #endif /* !_WIN32 */
-    }
 
     asc_list_remove_item(thread_mgr->list, thr);
     asc_job_prune(thr);
@@ -171,8 +154,20 @@ void asc_thread_join(asc_thread_t *thr)
 }
 
 /*
- * thread buffer
+ * thread buffer (deprecated)
  */
+
+struct asc_thread_buffer_t
+{
+    uint8_t *buffer;
+    size_t size;
+    size_t read;
+    size_t write;
+    size_t count;
+
+    asc_mutex_t mutex;
+};
+
 asc_thread_buffer_t *asc_thread_buffer_init(size_t size)
 {
     asc_thread_buffer_t *const buffer = ASC_ALLOC(1, asc_thread_buffer_t);

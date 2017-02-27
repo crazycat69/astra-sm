@@ -342,8 +342,9 @@ START_TEST(pipe_event)
     asc_event_set_on_error(ev, pipe_on_error);
 
     /* start writing thread */
-    asc_thread_t *const thr = asc_thread_init();
-    asc_thread_start(thr, &fds[PIPE_WR], thread_proc, NULL);
+    asc_thread_t *const thr = asc_thread_init(&fds[PIPE_WR], thread_proc
+                                              , NULL);
+    ck_assert(thr != NULL);
 
     const bool again = asc_main_loop_run();
     ck_assert(again == false);

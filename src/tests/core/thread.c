@@ -55,12 +55,9 @@ START_TEST(set_value)
     thread_test_t tt;
     memset(&tt, 0, sizeof(tt));
 
-    asc_thread_t *const thr = asc_thread_init();
-    ck_assert(thr != NULL);
+    tt.thread = asc_thread_init(&tt, set_value_proc, set_value_close);
+    ck_assert(tt.thread != NULL);
 
-    tt.thread = thr;
-
-    asc_thread_start(thr, &tt, set_value_proc, set_value_close);
     ck_assert(asc_main_loop_run() == false);
     ck_assert(tt.value == 0xdeadbeef);
 }
@@ -109,15 +106,14 @@ START_TEST(producers)
     producer_running = 0;
     for (size_t i = 0; i < ASC_ARRAY_SIZE(tt); i++)
     {
-        tt[i].thread = asc_thread_init();
-        ck_assert(tt[i].thread != NULL);
-
         tt[i].list = list;
         tt[i].mutex = &mutex;
         tt[i].id = i;
         tt[i].value = 0;
 
-        asc_thread_start(tt[i].thread, &tt[i], producer_proc, NULL);
+        tt[i].thread = asc_thread_init(&tt[i], producer_proc, NULL);
+        ck_assert(tt[i].thread != NULL);
+
         producer_running++;
     }
 
@@ -146,14 +142,6 @@ START_TEST(producers)
 }
 END_TEST
 
-/* thread that never gets started */
-START_TEST(no_start)
-{
-    asc_thread_t *const thr = asc_thread_init();
-    __uarg(thr);
-}
-END_TEST
-
 /* buggy cleanup routine */
 static void no_destroy_proc(void *arg)
 {
@@ -165,12 +153,15 @@ static void no_destroy_close(void *arg)
 {
     __uarg(arg);
     asc_main_loop_shutdown();
+
+    /* BUG: does not call thread_join()! */
 }
 
 START_TEST(no_destroy)
 {
-    asc_thread_t *const thr = asc_thread_init();
-    asc_thread_start(thr, NULL, no_destroy_proc, no_destroy_close);
+    asc_thread_t *const thr = asc_thread_init(NULL, no_destroy_proc
+                                              , no_destroy_close);
+    ck_assert(thr != NULL);
 
     ck_assert(asc_main_loop_run() == false);
 }
@@ -204,9 +195,9 @@ static void wake_up_proc(void *arg)
 
 static void wake_up_close(void *arg)
 {
-    asc_thread_t *const thr = (asc_thread_t *)arg;
+    thread_test_t *const tt = (thread_test_t *)arg;
 
-    asc_thread_join(thr);
+    asc_thread_join(tt->thread);
     asc_wake_close();
 
     asc_main_loop_shutdown();
@@ -214,10 +205,13 @@ static void wake_up_close(void *arg)
 
 START_TEST(wake_up)
 {
-    asc_thread_t *const thr = asc_thread_init();
+    thread_test_t tt;
+    memset(&tt, 0, sizeof(tt));
 
     asc_wake_open();
-    asc_thread_start(thr, thr, wake_up_proc, wake_up_close);
+
+    tt.thread = asc_thread_init(&tt, wake_up_proc, wake_up_close);
+    ck_assert(tt.thread != NULL);
 
     ck_assert(asc_main_loop_run() == false);
 }
@@ -271,8 +265,7 @@ START_TEST(timedlock)
 
     /* part 1: aux thread waits for main */
     asc_mutex_lock(&tl_mutex1); /* locked M1 */
-    asc_thread_t *thr = asc_thread_init();
-    asc_thread_start(thr, NULL, timedlock_proc, NULL);
+    asc_thread_t *const thr = asc_thread_init(NULL, timedlock_proc, NULL);
     asc_usleep(TL_P1_WAIT);
     asc_mutex_unlock(&tl_mutex1); /* released M1 */
 
@@ -308,7 +301,6 @@ Suite *core_thread(void)
 
     tcase_add_test(tc, set_value);
     tcase_add_test(tc, producers);
-    tcase_add_test(tc, no_start);
     tcase_add_test(tc, wake_up);
     tcase_add_test(tc, timedlock);
 

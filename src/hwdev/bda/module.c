@@ -237,7 +237,9 @@ void on_thread_close(void *arg)
 {
     /* shouldn't happen, ever */
     module_data_t *const mod = (module_data_t *)arg;
+
     asc_log_error(MSG("BUG: BDA thread exited on its own"));
+    ASC_FREE(mod->thr, asc_thread_join);
 }
 
 /* called when there's packets queued in the ring buffer */
@@ -1126,8 +1128,7 @@ void module_init(lua_State *L, module_data_t *mod)
     module_stream_init(L, mod, NULL);
     module_demux_set(mod, join_pid, leave_pid);
 
-    mod->thr = asc_thread_init();
-    asc_thread_start(mod->thr, mod, bda_graph_loop, on_thread_close);
+    mod->thr = asc_thread_init(mod, bda_graph_loop, on_thread_close);
 }
 
 static

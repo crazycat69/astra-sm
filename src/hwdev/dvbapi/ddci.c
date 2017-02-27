@@ -157,11 +157,10 @@ static void sec_open(module_data_t *mod)
         asc_lib_abort();
     }
 
-    mod->sec_thread = asc_thread_init();
-    mod->sec_thread_output = asc_thread_buffer_init(BUFFER_SIZE);
-
     asc_wake_open();
-    asc_thread_start(mod->sec_thread, mod, thread_loop, on_thread_close);
+
+    mod->sec_thread_output = asc_thread_buffer_init(BUFFER_SIZE);
+    mod->sec_thread = asc_thread_init(mod, thread_loop, on_thread_close);
 }
 
 static void sec_close(module_data_t *mod)
@@ -190,8 +189,7 @@ static void on_ca_thread_close(void *arg)
     module_data_t *mod = (module_data_t *)arg;
 
     mod->is_ca_thread_started = false;
-    if(mod->ca_thread)
-        ASC_FREE(mod->ca_thread, asc_thread_join);
+    ASC_FREE(mod->ca_thread, asc_thread_join);
 }
 
 static void ca_thread_loop(void *arg)
@@ -304,8 +302,7 @@ static void module_init(lua_State *L, module_data_t *mod)
         asc_lib_abort();
     }
 
-    mod->ca_thread = asc_thread_init();
-    asc_thread_start(mod->ca_thread, mod, ca_thread_loop, on_ca_thread_close);
+    mod->ca_thread = asc_thread_init(mod, ca_thread_loop, on_ca_thread_close);
 
     sec_open(mod);
 

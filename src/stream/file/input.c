@@ -455,17 +455,17 @@ static void module_init(lua_State *L, module_data_t *mod)
         mod->timer_skip = asc_timer_init(2000, timer_skip_set, mod);
     }
 
-    mod->thread = asc_thread_init();
-    mod->thread_output = asc_thread_buffer_init(mod->buffer_size);
-    mod->thread_run = true;
-
     asc_wake_open();
-    asc_thread_start(mod->thread, mod, thread_loop, on_thread_close);
+
+    mod->thread_run = true;
+    mod->thread_output = asc_thread_buffer_init(mod->buffer_size);
+
+    mod->thread = asc_thread_init(mod, thread_loop, on_thread_close);
 }
 
 static void module_destroy(module_data_t *mod)
 {
-    asc_timer_destroy(mod->timer_skip);
+    ASC_FREE(mod->timer_skip, asc_timer_destroy);
 
     if(mod->thread)
         on_thread_close(mod);
