@@ -23,12 +23,14 @@
 #include <astra/core/mainloop.h>
 #include <astra/core/thread.h>
 #include <astra/core/mutex.h>
+#include <astra/core/cond.h>
 
 typedef struct
 {
     asc_thread_t *thread;
     asc_mutex_t *mutex;
     asc_list_t *list;
+    asc_cond_t *cond;
     unsigned int id;
     unsigned int value;
 } thread_test_t;
@@ -258,7 +260,7 @@ static void timedlock_proc(void *arg)
     asc_mutex_unlock(&tl_mutex1); /* released M1 */
 }
 
-START_TEST(timedlock)
+START_TEST(mutex_timedlock)
 {
     asc_mutex_init(&tl_mutex1);
     asc_mutex_init(&tl_mutex2);
@@ -299,6 +301,155 @@ START_TEST(timedlock)
 }
 END_TEST
 
+/* condition variable, single thread */
+static asc_mutex_t one_mutex;
+static asc_cond_t one_cond;
+static uint32_t one_val;
+
+static void one_proc(void *arg)
+{
+    __uarg(arg);
+
+    ck_assert(asc_mutex_trylock(&one_mutex) == false);
+
+    /* aux signals main */
+    asc_mutex_lock(&one_mutex);
+    one_val = 0xdeadbeef;
+    asc_cond_signal(&one_cond);
+    asc_mutex_unlock(&one_mutex);
+
+    /* main signals aux */
+    asc_mutex_lock(&one_mutex);
+    asc_cond_wait(&one_cond, &one_mutex);
+    ck_assert(one_val == 0xbaadf00d);
+    asc_mutex_unlock(&one_mutex);
+
+    one_val = 0xbeefcafe;
+}
+
+START_TEST(cond_single)
+{
+    asc_mutex_init(&one_mutex);
+    asc_cond_init(&one_cond);
+
+    /* missed signal */
+    ck_assert(asc_mutex_trylock(&one_mutex) == true);
+    /* expect these to be ignored as no one's waiting on the variable */
+    asc_cond_signal(&one_cond);
+    asc_cond_broadcast(&one_cond);
+    ck_assert(asc_cond_timedwait(&one_cond, &one_mutex, 100) == false);
+    asc_mutex_unlock(&one_mutex);
+
+    /* aux signals main */
+    asc_mutex_lock(&one_mutex);
+    asc_thread_t *const thr = asc_thread_init(NULL, one_proc, NULL);
+    ck_assert(thr != NULL);
+    asc_usleep(100000); /* 100ms */
+    ck_assert(asc_cond_timedwait(&one_cond, &one_mutex, 200) == true);
+    ck_assert(one_val == 0xdeadbeef);
+    asc_mutex_unlock(&one_mutex);
+
+    /* main signals aux */
+    asc_usleep(100000); /* 100ms */
+    asc_mutex_lock(&one_mutex);
+    one_val = 0xbaadf00d;
+    asc_cond_broadcast(&one_cond);
+    asc_mutex_unlock(&one_mutex);
+
+    asc_thread_join(thr);
+    ck_assert(one_val == 0xbeefcafe);
+
+    asc_cond_destroy(&one_cond);
+    asc_mutex_destroy(&one_mutex);
+}
+END_TEST
+
+/* condition variable, multiple threads */
+#define MULTI_THREADS 128
+#define MULTI_TASKS 262144
+
+static bool multi_quit = false;
+
+static void multi_proc(void *arg)
+{
+    thread_test_t *const tt = (thread_test_t *)arg;
+
+    asc_mutex_lock(tt->mutex);
+    while (true)
+    {
+        asc_list_clear(tt->list)
+        {
+            tt->value++;
+        }
+
+        if (multi_quit)
+        {
+            asc_mutex_unlock(tt->mutex);
+            break;
+        }
+
+        asc_cond_wait(tt->cond, tt->mutex);
+    }
+}
+
+START_TEST(cond_multi)
+{
+    thread_test_t tt[MULTI_THREADS];
+
+    asc_list_t *const list = asc_list_init();
+
+    asc_cond_t cond;
+    asc_cond_init(&cond);
+
+    asc_mutex_t mutex;
+    asc_mutex_init(&mutex);
+
+    /* start worker threads */
+    asc_mutex_lock(&mutex);
+    for (size_t i = 0; i < ASC_ARRAY_SIZE(tt); i++)
+    {
+        tt[i].list = list;
+        tt[i].mutex = &mutex;
+        tt[i].cond = &cond;
+        tt[i].id = i;
+        tt[i].value = 0;
+
+        tt[i].thread = asc_thread_init(&tt[i], multi_proc, NULL);
+        ck_assert(tt[i].thread != NULL);
+    }
+    asc_mutex_unlock(&mutex);
+
+    /* insert "tasks" */
+    for (size_t i = 0; i < MULTI_TASKS; i++)
+    {
+        asc_mutex_lock(&mutex);
+
+        asc_list_insert_tail(list, (void *)0x1234);
+        asc_cond_signal(&cond);
+
+        asc_mutex_unlock(&mutex);
+    }
+
+    /* signal threads to quit */
+    asc_mutex_lock(&mutex);
+    multi_quit = true;
+    asc_cond_broadcast(&cond);
+    asc_mutex_unlock(&mutex);
+
+    size_t tasks_done = 0;
+    for (size_t i = 0; i < ASC_ARRAY_SIZE(tt); i++)
+    {
+        asc_thread_join(tt[i].thread);
+        tasks_done += tt[i].value;
+    }
+    ck_assert(tasks_done == MULTI_TASKS);
+
+    asc_mutex_destroy(&mutex);
+    asc_cond_destroy(&cond);
+    asc_list_destroy(list);
+}
+END_TEST
+
 Suite *core_thread(void)
 {
     Suite *const s = suite_create("core/thread");
@@ -309,7 +460,9 @@ Suite *core_thread(void)
     tcase_add_test(tc, set_value);
     tcase_add_test(tc, producers);
     tcase_add_test(tc, wake_up);
-    tcase_add_test(tc, timedlock);
+    tcase_add_test(tc, mutex_timedlock);
+    tcase_add_test(tc, cond_single);
+    tcase_add_test(tc, cond_multi);
 
     if (can_fork != CK_NOFORK)
     {
