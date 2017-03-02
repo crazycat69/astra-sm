@@ -67,10 +67,7 @@ void module_cam_reset(module_cam_t *cam)
         on_cam_error(__decrypt->self);
     }
 
-    asc_list_till_empty(cam->prov_list)
-    {
-        asc_list_remove_current(cam->prov_list);
-    }
+    asc_list_purge(cam->prov_list);
 
     module_cam_queue_flush(cam, NULL);
 }
@@ -87,6 +84,6 @@ void module_cam_detach_decrypt(module_cam_t *cam, module_decrypt_t *decrypt)
 {
     module_cam_queue_flush(cam, decrypt);
     asc_list_remove_item(cam->decrypt_list, decrypt);
-    if(asc_list_size(cam->decrypt_list) == 0)
+    if(asc_list_count(cam->decrypt_list) == 0)
         cam->disconnect(cam->self);
 }

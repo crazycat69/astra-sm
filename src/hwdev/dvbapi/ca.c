@@ -748,10 +748,9 @@ static void mmi_free(mmi_data_t *mmi)
             free(mmi->object.menu.title);
             free(mmi->object.menu.subtitle);
             free(mmi->object.menu.bottom);
-            asc_list_till_empty(mmi->object.menu.choices)
+            asc_list_for(mmi->object.menu.choices)
             {
                 free(asc_list_data(mmi->object.menu.choices));
-                asc_list_remove_current(mmi->object.menu.choices);
             }
             asc_list_destroy(mmi->object.menu.choices);
             break;
@@ -875,7 +874,7 @@ static void mmi_menu_event(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id)
         char *text = NULL;
         size_t choice_size = mmi_get_text(ca, &buffer[skip], size - skip, &text);
         asc_log_debug(MSG("CA: MMI: Choice #%zu: %s"),
-                      asc_list_size(mmi->object.menu.choices) + 1,
+                      asc_list_count(mmi->object.menu.choices) + 1,
                       text);
         asc_list_insert_tail(mmi->object.menu.choices, text);
         skip += choice_size;
@@ -1215,7 +1214,7 @@ static void ca_tpdu_write(dvb_ca_t *ca, uint8_t slot_id)
         return;
     }
 
-    if(!asc_list_size(slot->queue))
+    if(!asc_list_count(slot->queue))
     {
         asc_log_error(MSG("CA: Slot %d queue is empty"), slot_id);
         return;
@@ -1373,7 +1372,7 @@ static void ca_tpdu_event(dvb_ca_t *ca)
             break;
     }
 
-    if(!slot->is_busy && asc_list_size(slot->queue) > 0)
+    if(!slot->is_busy && asc_list_count(slot->queue) > 0)
         ca_tpdu_write(ca, slot_id);
 
     if(!slot->is_busy && slot->pending_session_id)
@@ -1435,10 +1434,9 @@ static void ca_slot_reset(dvb_ca_t *ca, uint8_t slot_id)
     slot->is_busy = false;
     slot->is_first_ca_pmt = true;
 
-    asc_list_till_empty(slot->queue)
+    asc_list_clear(slot->queue)
     {
         free(asc_list_data(slot->queue));
-        asc_list_remove_current(slot->queue);
     }
 
     for(int i = 1; i < MAX_SESSIONS; ++i)
@@ -1806,10 +1804,9 @@ void ca_close(dvb_ca_t *ca)
     {
         ca_pmt_send_all(ca, CA_PMT_LM_UPDATE, CA_PMT_CMD_NOT_SELECTED);
 
-        asc_list_till_empty(ca->ca_pmt_list)
+        asc_list_for(ca->ca_pmt_list)
         {
             free(asc_list_data(ca->ca_pmt_list));
-            asc_list_remove_current(ca->ca_pmt_list);
         }
         asc_list_destroy(ca->ca_pmt_list);
         ca->ca_pmt_list = NULL;
@@ -1817,10 +1814,9 @@ void ca_close(dvb_ca_t *ca)
 
     if(ca->ca_pmt_list_new)
     {
-        asc_list_till_empty(ca->ca_pmt_list_new)
+        asc_list_for(ca->ca_pmt_list_new)
         {
             free(asc_list_data(ca->ca_pmt_list_new));
-            asc_list_remove_current(ca->ca_pmt_list_new);
         }
 
         asc_list_destroy(ca->ca_pmt_list_new);
@@ -1829,11 +1825,6 @@ void ca_close(dvb_ca_t *ca)
 
     if(ca->ca_pmt_list_del)
     {
-        asc_list_till_empty(ca->ca_pmt_list_del)
-        {
-            asc_list_remove_current(ca->ca_pmt_list_del);
-        }
-
         asc_list_destroy(ca->ca_pmt_list_del);
         ca->ca_pmt_list_del = NULL;
     }
@@ -1851,10 +1842,9 @@ void ca_close(dvb_ca_t *ca)
         for(int i = 0; i < ca->slots_num; ++i)
         {
             ca_slot_t *slot = &ca->slots[i];
-            asc_list_till_empty(slot->queue)
+            asc_list_for(slot->queue)
             {
                 free(asc_list_data(slot->queue));
-                asc_list_remove_current(slot->queue);
             }
             asc_list_destroy(slot->queue);
         }
@@ -1892,7 +1882,7 @@ void ca_loop(dvb_ca_t *ca, int is_data)
             return;
     }
 
-    if(asc_list_size(ca->ca_pmt_list_del) > 0)
+    if(asc_list_count(ca->ca_pmt_list_del) > 0)
     {
         const uint64_t current_time = asc_utime();
         if(current_time >= ca->pmt_check_delay + ca->pmt_delay)
@@ -1924,7 +1914,7 @@ void ca_loop(dvb_ca_t *ca, int is_data)
         }
     }
 
-    if(asc_list_size(ca->ca_pmt_list_new) > 0)
+    if(asc_list_count(ca->ca_pmt_list_new) > 0)
     {
         const uint64_t current_time = asc_utime();
         if(current_time >= ca->pmt_check_delay + ca->pmt_delay)

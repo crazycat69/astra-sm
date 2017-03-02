@@ -253,8 +253,9 @@ size_t find_event(const asc_event_t *event)
 static
 void resize_event_list(void)
 {
-    const size_t maxcnt = event_out_size(event_mgr->ev_maxcnt
-                                         , event_mgr->ev_cnt);
+    const size_t maxcnt = asc_list_calc_size(event_mgr->ev_cnt
+                                             , event_mgr->ev_maxcnt
+                                             , EVENT_LIST_MIN_SIZE);
 
     if (event_mgr->ev_maxcnt != maxcnt)
     {

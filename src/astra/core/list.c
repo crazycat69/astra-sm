@@ -1,9 +1,9 @@
 /*
- * Astra Core (Linked lists)
+ * Astra Core (Array list)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -24,59 +24,91 @@
 
 #define MSG(_msg) "[core/list] " _msg
 
+/* minimum list size, items */
+#define LIST_MIN_SIZE 32
+
+/* change list allocation size if needed */
+static
+void resize_list(asc_list_t *list, size_t count)
+{
+    const size_t new_size = asc_list_calc_size(count, list->size
+                                               , LIST_MIN_SIZE);
+
+    if (list->size != new_size)
+    {
+        const size_t block = new_size * sizeof(void *);
+        list->items = (void **)realloc(list->items, block);
+        asc_assert(list->items != NULL, MSG("realloc() failed"));
+
+        list->size = new_size;
+    }
+}
+
 asc_list_t *asc_list_init(void)
 {
     asc_list_t *const list = ASC_ALLOC(1, asc_list_t);
-    TAILQ_INIT(&list->list);
+    resize_list(list, 0);
 
     return list;
 }
 
 void asc_list_destroy(asc_list_t *list)
 {
-    asc_assert(list->size == 0 && list->current == NULL
-               , MSG("list is not empty"));
-
+    free(list->items);
     free(list);
 }
 
 void asc_list_insert_head(asc_list_t *list, void *data)
 {
-    ++list->size;
+    const size_t block = list->count * sizeof(void *);
+    resize_list(list, ++list->count);
 
-    asc_item_t *const item = ASC_ALLOC(1, asc_item_t);
-    item->data = data;
+    if (block > 0)
+        memmove(&list->items[1], list->items, block);
 
-    TAILQ_INSERT_HEAD(&list->list, item, entries);
+    list->items[0] = data;
+    list->current++;
 }
 
 void asc_list_insert_tail(asc_list_t *list, void *data)
 {
-    ++list->size;
-
-    asc_item_t *const item = ASC_ALLOC(1, asc_item_t);
-    item->data = data;
-
-    TAILQ_INSERT_TAIL(&list->list, item, entries);
+    resize_list(list, ++list->count);
+    list->items[list->count - 1] = data;
 }
 
-void asc_list_remove_current(asc_list_t *list)
+void asc_list_purge(asc_list_t *list)
 {
-    --list->size;
-    asc_assert(list->current != NULL, MSG("failed to remove item"));
-    asc_item_t *const next = TAILQ_NEXT(list->current, entries);
-    TAILQ_REMOVE(&list->list, list->current, entries);
-    free(list->current);
-    list->current = next;
+    list->count = list->current = 0;
+    resize_list(list, 0);
+}
+
+void asc_list_remove_index(asc_list_t *list, size_t index)
+{
+    asc_assert(index < list->count, MSG("index out of bounds"));
+
+    const size_t more = list->count - (index + 1);
+    if (more > 0)
+    {
+        const size_t block = more * sizeof(void *);
+        memmove(&list->items[index], &list->items[index + 1], block);
+    }
+
+    resize_list(list, --list->count);
+
+    if (index < list->current)
+        list->current--;
+
+    if (list->current > list->count)
+        list->current = list->count;
 }
 
 void asc_list_remove_item(asc_list_t *list, const void *data)
 {
-    asc_list_for(list)
+    for (size_t i = 0; i < list->count; i++)
     {
-        if(data == asc_list_data(list))
+        if (list->items[i] == data)
         {
-            asc_list_remove_current(list);
+            asc_list_remove_index(list, i);
             return;
         }
     }

@@ -835,12 +835,11 @@ static void on_server_close(void *arg)
 
     if(mod->routes)
     {
-        asc_list_till_empty(mod->routes)
+        asc_list_for(mod->routes)
         {
             route_t *route = (route_t *)asc_list_data(mod->routes);
             luaL_unref(L, LUA_REGISTRYINDEX, route->idx_callback);
             free(route);
-            asc_list_remove_current(mod->routes);
         }
 
         asc_list_destroy(mod->routes);
@@ -874,7 +873,7 @@ static void on_server_accept(void *arg)
     asc_log_debug(MSG("client connected %s:%d (%zu clients)")
                       , asc_socket_addr(client->sock)
                       , asc_socket_port(client->sock)
-                      , asc_list_size(mod->clients));
+                      , asc_list_count(mod->clients));
 
     asc_socket_set_on_read(client->sock, on_client_read);
     asc_socket_set_on_close(client->sock, on_client_close);

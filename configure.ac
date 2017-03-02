@@ -197,7 +197,7 @@ case "${host_os}" in
             #include <netinet/in.h>
         ]])
 
-        AC_CHECK_HEADERS([ifaddrs.h netinet/sctp.h sys/queue.h])
+        AC_CHECK_HEADERS([ifaddrs.h netinet/sctp.h])
         AC_CHECK_FUNCS([posix_memalign accept4 mkostemp mkstemp pthread_mutex_timedlock])
 
         # getifaddrs(): used by utils.c

@@ -126,7 +126,7 @@ void module_stream_destroy(module_data_t *mod)
     module_stream_attach(NULL, mod);
 
     /* detach children */
-    asc_list_clear(mod->stream->children)
+    asc_list_for(mod->stream->children)
     {
         module_stream_t *const i =
             (module_stream_t *)asc_list_data(mod->stream->children);

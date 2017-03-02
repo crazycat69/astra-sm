@@ -209,7 +209,7 @@ asc_event_t *asc_event_init(int fd, void *arg)
         event_mgr->max_fd = fd;
 
 #ifdef _WIN32
-    if (asc_list_size(event_mgr->list) >= FD_SETSIZE)
+    if (asc_list_count(event_mgr->list) >= FD_SETSIZE)
         asc_log_error(MSG("fd list is too large, events could get dropped"));
 #endif
 

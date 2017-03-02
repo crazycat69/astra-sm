@@ -59,7 +59,6 @@ libastra_la_SOURCES += \
     astra/core/clock.h \
     astra/core/compat.c \
     astra/core/compat.h \
-    astra/core/compat_queue.h \
     astra/core/cond.c \
     astra/core/cond.h \
     astra/core/core.h \

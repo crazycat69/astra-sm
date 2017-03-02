@@ -147,7 +147,7 @@ static void on_websocket_send(void *arg)
     frame->skip = 0;
 
     asc_list_insert_tail(response->frame_queue, frame);
-    if(asc_list_size(response->frame_queue) == 1)
+    if(asc_list_count(response->frame_queue) == 1)
         asc_socket_set_on_ready(client->sock, on_websocket_ready);
 }
 
@@ -333,7 +333,7 @@ static int module_call(lua_State *L, module_data_t *mod)
             }
             if(client->response->frame_queue)
             {
-                asc_list_clear(client->response->frame_queue)
+                asc_list_for(client->response->frame_queue)
                 {
                     frame_t *frame = (frame_t *)asc_list_data(client->response->frame_queue);
                     free(frame->buffer);

@@ -79,7 +79,7 @@ void asc_event_core_destroy(void)
 
 bool asc_event_core_loop(unsigned int timeout)
 {
-    if (asc_list_size(event_mgr->list) == 0)
+    if (asc_list_count(event_mgr->list) == 0)
     {
         asc_usleep(timeout * 1000ULL); /* dry run */
         return true;
@@ -154,8 +154,9 @@ void asc_event_subscribe(asc_event_t *event)
 static
 void resize_event_list(void)
 {
-    const size_t ev_cnt = asc_list_size(event_mgr->list);
-    const size_t new_size = event_out_size(event_mgr->out_size, ev_cnt);
+    const size_t ev_cnt = asc_list_count(event_mgr->list);
+    const size_t new_size = asc_list_calc_size(ev_cnt, event_mgr->out_size
+                                               , EVENT_LIST_MIN_SIZE);
 
     if (event_mgr->out_size != new_size)
     {

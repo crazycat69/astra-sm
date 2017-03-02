@@ -708,7 +708,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
         }
     }
 
-    if(asc_list_size(mod->ca_list) == 0)
+    if(asc_list_count(mod->ca_list) == 0)
     {
         module_stream_send(mod, ts);
         return;

@@ -2,7 +2,7 @@
  * Astra Unit Tests
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -125,7 +125,7 @@ START_TEST(producers)
     ck_assert(producer_running == 0);
 
     /* check total item count */
-    ck_assert(asc_list_size(list) == PRODUCER_THREADS * PRODUCER_ITEMS);
+    ck_assert(asc_list_count(list) == PRODUCER_THREADS * PRODUCER_ITEMS);
 
     /* check item order */
     unsigned int counts[PRODUCER_THREADS] = { 0 };
@@ -170,52 +170,82 @@ START_TEST(no_destroy)
 END_TEST
 
 /* main thread wake up */
+#define WAKE_TASKS 1000
+
 static uint64_t wake_time = 0;
+static unsigned int wake_tasks_done = 0;
+static bool wake_quit = false;
+
+static asc_thread_t *wake_thr = NULL;
+static asc_mutex_t wake_mutex;
+static asc_cond_t wake_cond;
 
 static void wake_up_cb(void *arg)
 {
     __uarg(arg);
 
     const uint64_t now = asc_utime();
-    ck_assert_msg(now - wake_time < (5 * 1000), "didn't wake up within 5ms");
+    ck_assert_msg(now >= wake_time && now - wake_time < (5 * 1000)
+                  , "didn't wake up within 5ms");
+
+    asc_mutex_lock(&wake_mutex);
+    if (++wake_tasks_done >= WAKE_TASKS)
+    {
+        wake_quit = true;
+    }
+    asc_cond_signal(&wake_cond);
+    asc_mutex_unlock(&wake_mutex);
 }
 
 static void wake_up_proc(void *arg)
 {
     __uarg(arg);
 
-    /*
-     * TODO: add APIs for conditional variables, simulate data exchange
-     *       between main and auxiliary threads.
-     */
-    asc_usleep(50 * 1000); /* 50ms */
+    asc_mutex_lock(&wake_mutex);
+    while (true)
+    {
+        if (!wake_quit)
+        {
+            wake_time = asc_utime();
+            asc_job_queue(NULL, wake_up_cb, NULL);
+            asc_wake();
+        }
+        else
+        {
+            asc_mutex_unlock(&wake_mutex);
+            break;
+        }
 
-    wake_time = asc_utime();
-    asc_job_queue(NULL, wake_up_cb, NULL);
-    asc_wake();
+        asc_cond_wait(&wake_cond, &wake_mutex);
+    }
 }
 
 static void wake_up_close(void *arg)
 {
-    thread_test_t *const tt = (thread_test_t *)arg;
+    __uarg(arg);
 
-    asc_thread_join(tt->thread);
-    asc_wake_close();
-
+    asc_thread_join(wake_thr);
     asc_main_loop_shutdown();
 }
 
 START_TEST(wake_up)
 {
-    thread_test_t tt;
-    memset(&tt, 0, sizeof(tt));
-
+    asc_mutex_init(&wake_mutex);
+    asc_cond_init(&wake_cond);
     asc_wake_open();
 
-    tt.thread = asc_thread_init(&tt, wake_up_proc, wake_up_close);
-    ck_assert(tt.thread != NULL);
+    wake_tasks_done = 0;
+    wake_quit = false;
+
+    wake_thr = asc_thread_init(NULL, wake_up_proc, wake_up_close);
+    ck_assert(wake_thr != NULL);
 
     ck_assert(asc_main_loop_run() == false);
+    ck_assert(wake_tasks_done == WAKE_TASKS);
+
+    asc_wake_close();
+    asc_cond_destroy(&wake_cond);
+    asc_mutex_destroy(&wake_mutex);
 }
 END_TEST
 
@@ -377,9 +407,12 @@ static void multi_proc(void *arg)
     asc_mutex_lock(tt->mutex);
     while (true)
     {
-        asc_list_clear(tt->list)
+        asc_list_till_empty(tt->list)
         {
+            asc_list_remove_current(tt->list);
+            asc_mutex_unlock(tt->mutex);
             tt->value++;
+            asc_mutex_lock(tt->mutex);
         }
 
         if (multi_quit)
@@ -441,7 +474,9 @@ START_TEST(cond_multi)
     {
         asc_thread_join(tt[i].thread);
         tasks_done += tt[i].value;
+        asc_log_info("thread %zu: %u tasks done", i, tt[i].value);
     }
+    asc_log_info("total: %zu tasks", tasks_done);
     ck_assert(tasks_done == MULTI_TASKS);
 
     asc_mutex_destroy(&mutex);

@@ -1,9 +1,9 @@
 /*
- * Astra Core (Linked lists)
+ * Astra Core (Array list)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,22 +26,12 @@
 #   error "Please include <astra/astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-#ifdef HAVE_SYS_QUEUE_H
-#   include <sys/queue.h>
-#endif
-#include "compat_queue.h"
-
-typedef struct asc_item_s
-{
-    void *data;
-    TAILQ_ENTRY(asc_item_s) entries;
-} asc_item_t;
-
 typedef struct
 {
+    size_t count;
     size_t size;
-    struct asc_item_s *current;
-    TAILQ_HEAD(list_head_s, asc_item_s) list;
+    size_t current;
+    void **items;
 } asc_list_t;
 
 asc_list_t *asc_list_init(void) __wur;
@@ -50,54 +40,82 @@ void asc_list_destroy(asc_list_t *list);
 void asc_list_insert_head(asc_list_t *list, void *data);
 void asc_list_insert_tail(asc_list_t *list, void *data);
 
-void asc_list_remove_current(asc_list_t *list);
+void asc_list_purge(asc_list_t *list);
+void asc_list_remove_index(asc_list_t *list, size_t index);
 void asc_list_remove_item(asc_list_t *list, const void *data);
 
-#define asc_list_for(__list) \
-    for (asc_list_first(__list) \
-         ; !asc_list_eol(__list) \
-         ; asc_list_next(__list))
+/* calculate optimum allocation size based on the number of items */
+static inline __func_const __wur
+size_t asc_list_calc_size(size_t count, size_t size, size_t min_size)
+{
+    if (size < min_size)
+        size = min_size;
 
-#define asc_list_clear(__list) \
-    for (asc_list_first(__list) \
-         ; !asc_list_eol(__list) \
-         ; asc_list_remove_current(__list))
+    /* double list size when it's full */
+    while (count >= size)
+        size *= 2;
 
-#define asc_list_till_empty(__list) \
-    for (asc_list_first(__list) \
-         ; !asc_list_eol(__list) \
-         ; asc_list_first(__list))
+    /* halve list size if it uses less than 1/4th of its allocated space */
+    while (count < (size / 4) && size > min_size)
+        size /= 2;
+
+    return size;
+}
+
+static inline
+void asc_list_remove_current(asc_list_t *list)
+{
+    asc_list_remove_index(list, list->current);
+}
 
 static inline
 void asc_list_first(asc_list_t *list)
 {
-    list->current = TAILQ_FIRST(&list->list);
+    list->current = 0;
 }
 
 static inline
 void asc_list_next(asc_list_t *list)
 {
-    if (list->current)
-        list->current = TAILQ_NEXT(list->current, entries);
+    if (list->current < list->count)
+        list->current++;
+    else
+        list->current = list->count;
 }
 
-static inline __wur
+static inline __func_pure __wur
 bool asc_list_eol(const asc_list_t *list)
 {
-    return (list->current == NULL);
+    return (list->current >= list->count);
 }
 
-static inline __wur
-void *asc_list_data(const asc_list_t *list)
+static inline __func_pure __wur
+void *asc_list_data(asc_list_t *list)
 {
-    asc_assert(list->current != NULL, "[core/list] failed to get data");
-    return list->current->data;
+    asc_assert(!asc_list_eol(list), "[core/list] index out of bounds");
+    return list->items[list->current];
 }
 
-static inline __wur
-size_t asc_list_size(const asc_list_t *list)
+static inline __func_pure __wur
+size_t asc_list_count(const asc_list_t *list)
 {
-    return list->size;
+    return list->count;
 }
+
+/* iterator macros */
+#define asc_list_for(_list) \
+    for (size_t __i = 0 \
+         ; ((_list)->current = __i, true) && __i < (_list)->count \
+         ; __i++)
+
+#define asc_list_clear(_list) \
+    for ((_list)->current = 0 \
+         ; (_list)->count > 0 \
+         ; (_list)->current = 0, asc_list_remove_current((_list)))
+
+#define asc_list_till_empty(_list) \
+    for ((_list)->current = 0 \
+         ; (_list)->count > 0 \
+         ; (_list)->current = 0)
 
 #endif /* _ASC_LIST_H_ */

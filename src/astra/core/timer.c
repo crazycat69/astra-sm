@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -62,7 +63,7 @@ void asc_timer_core_destroy(void)
     if (timer_list == NULL)
         return;
 
-    asc_list_clear(timer_list)
+    asc_list_for(timer_list)
     {
         free(asc_list_data(timer_list));
     }

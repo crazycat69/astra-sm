@@ -2,7 +2,7 @@
  * Astra Unit Tests
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -45,7 +45,7 @@ START_TEST(empty_list)
             case 2: asc_list_first(list); break;
             default: break;
         }
-        ck_assert(asc_list_size(list) == 0);
+        ck_assert(asc_list_count(list) == 0);
         ck_assert(asc_list_eol(list));
     }
 
@@ -54,6 +54,7 @@ START_TEST(empty_list)
         count++;
 
     ck_assert(count == 0);
+    ck_assert(asc_list_eol(list));
 }
 END_TEST
 
@@ -77,7 +78,7 @@ START_TEST(random_values)
         ck_assert(asc_list_data(list) == data[i++]);
         asc_list_remove_current(list);
     }
-    ck_assert(asc_list_size(list) == 0);
+    ck_assert(asc_list_count(list) == 0);
 
     /* reverse order */
     for (i = 0; i < ASC_ARRAY_SIZE(data); i++)
@@ -93,7 +94,7 @@ START_TEST(random_values)
         ck_assert(asc_list_data(list) == data[--i]);
         asc_list_remove_current(list);
     }
-    ck_assert(asc_list_size(list) == 0);
+    ck_assert(asc_list_count(list) == 0);
 }
 END_TEST
 
@@ -139,12 +140,15 @@ START_TEST(no_data_empty)
 }
 END_TEST
 
-START_TEST(no_data_full)
+START_TEST(for_eol)
 {
     void *data[16];
     memset(data, 0x1f, sizeof(data));
     for (size_t i = 0; i < ASC_ARRAY_SIZE(data); i++)
         asc_list_insert_tail(list, data[i]);
+
+    asc_list_for(list);
+    ck_assert(asc_list_eol(list));
 }
 END_TEST
 
@@ -158,12 +162,14 @@ START_TEST(clear_list)
     }
 
     size_t idx = 0;
-    asc_list_clear(list)
+    asc_list_for(list)
     {
         void *const ptr = asc_list_data(list);
         ck_assert((uintptr_t)ptr == items[idx++]);
     }
-    ck_assert(asc_list_size(list) == 0);
+    asc_list_purge(list);
+
+    ck_assert(asc_list_count(list) == 0);
     ck_assert(asc_list_eol(list));
 }
 END_TEST
@@ -176,19 +182,19 @@ START_TEST(till_empty)
     for (size_t i = 0; i < ASC_ARRAY_SIZE(items); i++)
         asc_list_insert_tail(list, (void *)((intptr_t)items[i]));
 
-    ck_assert(asc_list_size(list) == ASC_ARRAY_SIZE(items));
+    ck_assert(asc_list_count(list) == ASC_ARRAY_SIZE(items));
 
     asc_list_till_empty(list)
         asc_list_remove_current(list);
 
-    ck_assert(asc_list_size(list) == 0);
+    ck_assert(asc_list_count(list) == 0);
     ck_assert(asc_list_eol(list));
 
     /* invalid use (not removing items) */
     for (size_t i = 0; i < ASC_ARRAY_SIZE(items); i++)
         asc_list_insert_tail(list, (void *)((intptr_t)items[i]));
 
-    ck_assert(asc_list_size(list) == ASC_ARRAY_SIZE(items));
+    ck_assert(asc_list_count(list) == ASC_ARRAY_SIZE(items));
 
     void *prev = NULL;
     asc_list_till_empty(list)
@@ -206,6 +212,8 @@ START_TEST(till_empty)
     }
 
     asc_list_clear(list);
+    ck_assert(asc_list_count(list) == 0);
+    ck_assert(asc_list_eol(list));
 }
 END_TEST
 
@@ -219,14 +227,12 @@ Suite *core_list(void)
     tcase_add_test(tc, empty_list);
     tcase_add_test(tc, random_values);
     tcase_add_test(tc, selective_delete);
+    tcase_add_test(tc, for_eol);
     tcase_add_test(tc, clear_list);
     tcase_add_test(tc, till_empty);
 
     if (can_fork != CK_NOFORK)
-    {
         tcase_add_exit_test(tc, no_data_empty, EXIT_ABORT);
-        tcase_add_exit_test(tc, no_data_full, EXIT_ABORT);
-    }
 
     suite_add_tcase(s, tc);
 

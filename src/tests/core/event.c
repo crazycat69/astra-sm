@@ -1297,8 +1297,8 @@ static bool sot_check(void)
     {
         sot_server_t *const svr = &sot_servers[i];
 
-        size_t reqs = asc_list_size(svr->requests);
-        size_t clients = asc_list_size(svr->clients);
+        size_t reqs = asc_list_count(svr->requests);
+        size_t clients = asc_list_count(svr->clients);
         if (sot_shutdown)
         {
             if (reqs > 0 || clients > 0)
