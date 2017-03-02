@@ -981,8 +981,7 @@ static void module_destroy(module_data_t *mod)
         asc_list_destroy(mod->map);
     }
 
-    if(mod->si_timer)
-        asc_timer_destroy(mod->si_timer);
+    ASC_FREE(mod->si_timer, asc_timer_destroy);
 }
 
 STREAM_MODULE_REGISTER(channel)

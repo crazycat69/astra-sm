@@ -154,9 +154,6 @@ asc_timer_t *asc_timer_one_shot(unsigned int ms, timer_callback_t callback
 
 void asc_timer_destroy(asc_timer_t *timer)
 {
-    if (timer == NULL)
-        return;
-
     /* setting callback to NULL causes timer removal by loop function */
     timer->callback = NULL;
 }

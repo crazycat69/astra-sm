@@ -850,7 +850,7 @@ static void module_destroy(module_data_t *mod)
     mpegts_psi_destroy(mod->sdt);
     mpegts_psi_destroy(mod->pmt);
 
-    asc_timer_destroy(mod->check_stat);
+    ASC_FREE(mod->check_stat, asc_timer_destroy);
 
     free(mod->pmt_checksum_list);
     free(mod->sdt_checksum_list);

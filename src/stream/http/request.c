@@ -186,8 +186,7 @@ static void timeout_callback(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
 
-    asc_timer_destroy(mod->timeout);
-    mod->timeout = NULL;
+    ASC_FREE(mod->timeout, asc_timer_destroy);
 
     if(mod->request.status == 0)
     {
@@ -224,11 +223,7 @@ static void on_close(void *arg)
     asc_socket_close(mod->sock);
     mod->sock = NULL;
 
-    if(mod->timeout)
-    {
-        asc_timer_destroy(mod->timeout);
-        mod->timeout = NULL;
-    }
+    ASC_FREE(mod->timeout, asc_timer_destroy);
 
     if(mod->request.buffer)
     {
@@ -419,11 +414,7 @@ static void on_read(void *arg)
     module_data_t *const mod = (module_data_t *)arg;
     lua_State *const L = module_lua(mod);
 
-    if(mod->timeout)
-    {
-        asc_timer_destroy(mod->timeout);
-        mod->timeout = NULL;
-    }
+    ASC_FREE(mod->timeout, asc_timer_destroy);
 
     ssize_t size = asc_socket_recv(  mod->sock
                                    , &mod->buffer[mod->buffer_skip]
@@ -936,7 +927,7 @@ static void on_connect(void *arg)
 
     mod->request.status = 1;
 
-    asc_timer_destroy(mod->timeout);
+    ASC_FREE(mod->timeout, asc_timer_destroy);
     mod->timeout = asc_timer_init(mod->timeout_ms, timeout_callback, mod);
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_self);
@@ -1063,8 +1054,7 @@ static int method_send(lua_State *L, module_data_t *mod)
 {
     mod->status = 0;
 
-    if(mod->timeout)
-        asc_timer_destroy(mod->timeout);
+    ASC_FREE(mod->timeout, asc_timer_destroy);
     mod->timeout = asc_timer_init(mod->timeout_ms, timeout_callback, mod);
 
     asc_assert(lua_istable(L, 2), MSG(":send() table required"));

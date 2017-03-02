@@ -82,11 +82,7 @@ static void on_close(void *arg)
         mod->sock = NULL;
     }
 
-    if(mod->timer_renew)
-    {
-        asc_timer_destroy(mod->timer_renew);
-        mod->timer_renew = NULL;
-    }
+    ASC_FREE(mod->timer_renew, asc_timer_destroy);
 }
 
 static void on_read(void *arg)

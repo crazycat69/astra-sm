@@ -163,8 +163,7 @@ static void on_timeout(void *arg)
 {
     module_data_t *mod = (module_data_t *)arg;
 
-    asc_timer_destroy(mod->timeout);
-    mod->timeout = NULL;
+    ASC_FREE(mod->timeout, asc_timer_destroy);
 
     switch(mod->status)
     {
@@ -192,11 +191,7 @@ static void on_newcamd_close(void *arg)
     asc_socket_close(mod->sock);
     mod->sock = NULL;
 
-    if(mod->timeout)
-    {
-        asc_timer_destroy(mod->timeout);
-        mod->timeout = NULL;
-    }
+    ASC_FREE(mod->timeout, asc_timer_destroy);
 
     module_cam_reset(&mod->__cam);
 
@@ -410,8 +405,7 @@ static void on_newcamd_read_packet(void *arg)
             return;
         }
 
-        asc_timer_destroy(mod->timeout);
-        mod->timeout = NULL;
+        ASC_FREE(mod->timeout, asc_timer_destroy);
 
         asc_list_for(mod->__cam.decrypt_list)
         {
@@ -527,8 +521,7 @@ static void on_newcamd_read_packet(void *arg)
                          , au_hex2str(&hex_str[8], &p[3], 8));
         }
 
-        asc_timer_destroy(mod->timeout);
-        mod->timeout = NULL;
+        ASC_FREE(mod->timeout, asc_timer_destroy);
 
         module_cam_ready(&mod->__cam);
     }
@@ -582,7 +575,7 @@ static void on_newcamd_connect(void *arg)
 
     mod->status = 1;
 
-    asc_timer_destroy(mod->timeout);
+    ASC_FREE(mod->timeout, asc_timer_destroy);
     mod->timeout = asc_timer_init(mod->config.timeout, on_timeout, mod);
 
     mod->buffer_skip = 0;
