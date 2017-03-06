@@ -1358,9 +1358,15 @@ START_TEST(series_of_tubes)
 
     asc_log_info("RLIMIT_NOFILE=%lu", (unsigned long)rl.rlim_cur);
 #ifdef WITH_EVENT_SELECT
-    if (rl.rlim_cur > 1024)
-        rl.rlim_cur = 1024;
+    const rlim_t cap = 1024;
+#else
+    const rlim_t cap = 4096;
 #endif
+    if (rl.rlim_cur > cap)
+    {
+        asc_log_info("capping max socket no. at %lu", (unsigned long)cap);
+        rl.rlim_cur = cap;
+    }
 
     const int pad = 64;
     const int max = (rl.rlim_cur - SOT_SERVERS - pad) / SOT_SERVERS / 3;
