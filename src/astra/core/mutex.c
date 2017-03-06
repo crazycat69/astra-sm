@@ -29,7 +29,7 @@ bool asc_mutex_timedlock(asc_mutex_t *mutex, unsigned long ms)
     asc_rtctime(&ts, ms);
 
     const int ret = pthread_mutex_timedlock(mutex, &ts);
-    asc_assert(ret == 0 || ret == ETIMEDOUT
+    ASC_ASSERT(ret == 0 || ret == ETIMEDOUT
                , "[core/mutex] couldn't lock mutex: %s"
                , strerror(ret));
 

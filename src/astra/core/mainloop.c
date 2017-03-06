@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *               2015-2016, Artem Kharitonov <artem@3phase.pw>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,9 +29,9 @@
 #include <astra/luaapi/luaapi.h>
 #include <astra/luaapi/state.h>
 
-#define MSG(_msg) "[mainloop] " _msg
+#define MSG(_msg) "[core/mainloop] " _msg
 
-/* garbage collector interval */
+/* garbage collector interval, usecs */
 #define LUA_GC_TIMEOUT (1 * 1000 * 1000)
 
 /* maximum number of jobs queued */
@@ -65,7 +65,8 @@ typedef struct
     asc_mutex_t job_mutex;
 } asc_main_loop_t;
 
-static asc_main_loop_t *main_loop = NULL;
+static
+asc_main_loop_t *main_loop = NULL;
 
 /*
  * main thread wake up mechanism
@@ -100,7 +101,8 @@ void wake_close(void)
 {
     ASC_FREE(main_loop->wake_ev, asc_event_close);
 
-    const int fds[2] = {
+    const int fds[2] =
+    {
         main_loop->wake_fd[0],
         main_loop->wake_fd[1],
     };
@@ -181,7 +183,7 @@ void asc_wake_open(void)
 /* decrease pipe refcount, closing it when it's no longer needed */
 void asc_wake_close(void)
 {
-    asc_assert(main_loop->wake_cnt > 0, MSG("wake up pipe already closed"));
+    ASC_ASSERT(main_loop->wake_cnt > 0, MSG("wake up pipe already closed"));
     --main_loop->wake_cnt;
 
     if (main_loop->wake_cnt == 0)
@@ -311,7 +313,7 @@ bool asc_main_loop_run(void)
         if (!asc_event_core_loop(ev_sleep))
             return true; /* polling failed, restart instance */
 
-        if (main_loop->flags)
+        if (main_loop->flags != 0)
         {
             const uint32_t flags = main_loop->flags;
             main_loop->flags = 0;

@@ -103,7 +103,7 @@ void asc_socket_core_destroy(void)
 static asc_socket_t *sock_init(int family, int type, int protocol, void *arg)
 {
     const int fd = socket(family, type, protocol);
-    asc_assert(fd != -1, "[core/socket] failed to open socket: %s"
+    ASC_ASSERT(fd != -1, "[core/socket] failed to open socket: %s"
                , asc_error_msg());
 
     asc_socket_t *const sock = ASC_ALLOC(1, asc_socket_t);
@@ -360,7 +360,7 @@ bool asc_socket_bind(asc_socket_t *sock, const char *addr, int port)
 void asc_socket_listen(  asc_socket_t *sock
                        , event_callback_t on_accept, event_callback_t on_error)
 {
-    asc_assert(on_accept && on_error, MSG("listen() - on_ok/on_err not specified"));
+    ASC_ASSERT(on_accept && on_error, MSG("listen() - on_ok/on_err not specified"));
     if(listen(sock->fd, SOMAXCONN) == -1)
     {
         asc_log_error(MSG("listen() on socket failed: %s"), asc_error_msg());
@@ -427,7 +427,7 @@ bool asc_socket_accept(asc_socket_t *sock, asc_socket_t **client_ptr
 void asc_socket_connect(  asc_socket_t *sock, const char *addr, int port
                         , event_callback_t on_connect, event_callback_t on_error)
 {
-    asc_assert(on_connect && on_error, MSG("connect() - on_ok/on_err not specified"));
+    ASC_ASSERT(on_connect && on_error, MSG("connect() - on_ok/on_err not specified"));
     memset(&sock->addr, 0, sizeof(sock->addr));
     sock->addr.sin_family = sock->family;
     // sock->addr.sin_addr.s_addr = inet_addr(addr);
@@ -607,7 +607,7 @@ void asc_socket_set_nonblock(asc_socket_t *sock, bool is_nonblock)
     const int ret = fcntl(sock->fd, F_SETFL, flags);
 #endif
 
-    asc_assert(ret == 0, MSG("failed to set non-blocking mode: %s")
+    ASC_ASSERT(ret == 0, MSG("failed to set non-blocking mode: %s")
                , asc_error_msg());
 }
 

@@ -418,7 +418,7 @@ static int __module_call(lua_State *L)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     lua_getfield(L, MODULE_OPTIONS_IDX, "callback");
-    asc_assert(lua_isfunction(L, -1), "[http_websocket] option 'callback' is required");
+    ASC_ASSERT(lua_isfunction(L, -1), "[http_websocket] option 'callback' is required");
     mod->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);
 
     // Set callback for http route

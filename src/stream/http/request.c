@@ -781,7 +781,7 @@ static void on_ready_send_content(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
 
-    asc_assert(mod->request.size > 0, MSG("invalid content size"));
+    ASC_ASSERT(mod->request.size > 0, MSG("invalid content size"));
 
     const size_t rem = mod->request.size - mod->request.skip;
     const size_t cap = (rem > HTTP_BUFFER_SIZE) ? HTTP_BUFFER_SIZE : rem;
@@ -814,7 +814,7 @@ static void on_ready_send_request(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
 
-    asc_assert(mod->request.size > 0, MSG("invalid request size"));
+    ASC_ASSERT(mod->request.size > 0, MSG("invalid request size"));
 
     const size_t rem = mod->request.size - mod->request.skip;
     const size_t cap = (rem > HTTP_BUFFER_SIZE) ? HTTP_BUFFER_SIZE : rem;
@@ -860,7 +860,7 @@ static void on_ready_send_request(void *arg)
 
 static void lua_make_request(lua_State *L, module_data_t *mod)
 {
-    asc_assert(lua_istable(L, -1),
+    ASC_ASSERT(lua_istable(L, -1),
         MSG("%s() requires table on top of the stack"), __func__);
 
     lua_getfield(L, -1, __method);
@@ -1057,7 +1057,7 @@ static int method_send(lua_State *L, module_data_t *mod)
     ASC_FREE(mod->timeout, asc_timer_destroy);
     mod->timeout = asc_timer_init(mod->timeout_ms, timeout_callback, mod);
 
-    asc_assert(lua_istable(L, 2), MSG(":send() table required"));
+    ASC_ASSERT(lua_istable(L, 2), MSG(":send() table required"));
     lua_pushvalue(L, 2);
     lua_make_request(L, mod);
     lua_pop(L, 2); // :send() options
@@ -1082,7 +1082,7 @@ static int method_close(lua_State *L, module_data_t *mod)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     module_option_string(L, "host", &mod->config.host, NULL);
-    asc_assert(mod->config.host != NULL, MSG("option 'host' is required"));
+    ASC_ASSERT(mod->config.host != NULL, MSG("option 'host' is required"));
 
     mod->config.port = 80;
     module_option_integer(L, "port", &mod->config.port);
@@ -1091,7 +1091,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_option_string(L, __path, &mod->config.path, NULL);
 
     lua_getfield(L, MODULE_OPTIONS_IDX, __callback);
-    asc_assert(lua_isfunction(L, -1), MSG("option 'callback' is required"));
+    ASC_ASSERT(lua_isfunction(L, -1), MSG("option 'callback' is required"));
     lua_pop(L, 1); // callback
 
     // store self in registry
@@ -1114,7 +1114,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     lua_getfield(L, MODULE_OPTIONS_IDX, "upstream");
     if(!lua_isnil(L, -1))
     {
-        asc_assert(mod->is_stream != true, MSG("option 'upstream' is not allowed in stream mode"));
+        ASC_ASSERT(mod->is_stream != true, MSG("option 'upstream' is not allowed in stream mode"));
 
         module_stream_init(L, mod, on_ts);
         module_demux_set(mod, NULL, NULL);

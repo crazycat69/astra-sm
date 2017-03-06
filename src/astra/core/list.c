@@ -38,7 +38,7 @@ void resize_list(asc_list_t *list, size_t count)
     {
         const size_t block = new_size * sizeof(void *);
         list->items = (void **)realloc(list->items, block);
-        asc_assert(list->items != NULL, MSG("realloc() failed"));
+        ASC_ASSERT(list->items != NULL, MSG("realloc() failed"));
 
         list->size = new_size;
     }
@@ -84,7 +84,7 @@ void asc_list_purge(asc_list_t *list)
 
 void asc_list_remove_index(asc_list_t *list, size_t index)
 {
-    asc_assert(index < list->count, MSG("index out of bounds"));
+    ASC_ASSERT(index < list->count, MSG("index out of bounds"));
 
     const size_t more = list->count - (index + 1);
     if (more > 0)

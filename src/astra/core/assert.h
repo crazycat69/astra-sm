@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,15 +27,15 @@
 #endif /* !_ASTRA_H_ */
 
 #include <astra/core/init.h>
-#include <astra/core/log.h>
 
-#define asc_assert(__cond, ...) \
+#define ASC_ASSERT(__cond, ...) \
     do { \
         if (!(__cond)) \
         { \
-            asc_log_error("%s:%u: failed assertion `%s'" \
-                          , __FILE__, __LINE__, #__cond); \
-            asc_log_error(__VA_ARGS__); \
+            fprintf(stderr, "%s:%u: %s: assertion `%s' failed\n" \
+                    , __FILE__, __LINE__, __FUNCTION__, #__cond); \
+            fprintf(stderr, __VA_ARGS__); \
+            putc('\n', stderr); \
             asc_lib_abort(); \
         } \
     } while (0)

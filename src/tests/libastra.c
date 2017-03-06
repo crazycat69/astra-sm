@@ -97,8 +97,7 @@ static void redirect_output(void)
         exit(EXIT_FAILURE);
     }
 
-    if (dup2(fd, STDOUT_FILENO) != STDOUT_FILENO
-        || dup2(fd, STDERR_FILENO) != STDERR_FILENO)
+    if (dup2(fd, STDOUT_FILENO) != STDOUT_FILENO)
     {
         fprintf(stderr, "couldn't redirect output to fd %d: %s\n"
                 , fd, strerror(errno));

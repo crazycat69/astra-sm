@@ -527,7 +527,7 @@ static void on_ready_send_content(void *arg)
 /* Stack: 1 - server, 2 - client, 3 - response */
 static int method_send(lua_State *L, module_data_t *mod)
 {
-    asc_assert(lua_islightuserdata(L, 2), MSG(":send() client instance required"));
+    ASC_ASSERT(lua_islightuserdata(L, 2), MSG(":send() client instance required"));
     http_client_t *client = (http_client_t *)lua_touserdata(L, 2);
 
     if(client->on_send)
@@ -822,7 +822,7 @@ static void on_server_close(void *arg)
         asc_list_till_empty(mod->clients)
         {
             http_client_t *client = (http_client_t *)asc_list_data(mod->clients);
-            asc_assert(client != prev_client
+            ASC_ASSERT(client != prev_client
                        , MSG("loop on on_server_close() client:%p")
                        , (void *)client);
             on_client_close(client);
@@ -890,7 +890,7 @@ static void on_server_accept(void *arg)
 
 static int method_data(lua_State *L, module_data_t *mod)
 {
-    asc_assert(lua_islightuserdata(L, 2), MSG(":data() client instance required"));
+    ASC_ASSERT(lua_islightuserdata(L, 2), MSG(":data() client instance required"));
     http_client_t *client = (http_client_t *)lua_touserdata(L, 2);
 
     if(!client->idx_data)
@@ -910,7 +910,7 @@ static int method_close(lua_State *L, module_data_t *mod)
     }
     else
     {
-        asc_assert(lua_islightuserdata(L, 2), MSG(":close() client instance required"));
+        ASC_ASSERT(lua_islightuserdata(L, 2), MSG(":close() client instance required"));
         http_client_t *client = (http_client_t *)lua_touserdata(L, 2);
         on_client_close(client);
     }
@@ -920,8 +920,8 @@ static int method_close(lua_State *L, module_data_t *mod)
 
 static int method_redirect(lua_State *L, module_data_t *mod)
 {
-    asc_assert(lua_islightuserdata(L, 2), MSG(":redirect() client instance required"));
-    asc_assert(lua_isstring(L, 3), MSG(":redirect() location required"));
+    ASC_ASSERT(lua_islightuserdata(L, 2), MSG(":redirect() client instance required"));
+    ASC_ASSERT(lua_isstring(L, 3), MSG(":redirect() location required"));
     http_client_t *client = (http_client_t *)lua_touserdata(L, 2);
     const char *location = lua_tostring(L, 3);
     http_client_redirect(client, 302, location);
@@ -930,8 +930,8 @@ static int method_redirect(lua_State *L, module_data_t *mod)
 
 static int method_abort(lua_State *L, module_data_t *mod)
 {
-    asc_assert(lua_islightuserdata(L, 2), MSG(":abort() client instance required"));
-    asc_assert(lua_isnumber(L, 3), MSG(":abort() code required"));
+    ASC_ASSERT(lua_islightuserdata(L, 2), MSG(":abort() client instance required"));
+    ASC_ASSERT(lua_isnumber(L, 3), MSG(":abort() code required"));
     http_client_t *client = (http_client_t *)lua_touserdata(L, 2);
     const int code = lua_tointeger(L, 3);
     const char *text = lua_isstring(L, 4) ? lua_tostring(L, 4) : NULL;
@@ -974,7 +974,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     // store routes in registry
     mod->routes = asc_list_init();
     lua_getfield(L, MODULE_OPTIONS_IDX, "route");
-    asc_assert(lua_istable(L, -1), MSG("option 'route' is required"));
+    ASC_ASSERT(lua_istable(L, -1), MSG("option 'route' is required"));
     for(lua_pushnil(L); lua_next(L, -2); lua_pop(L, 1))
     {
         bool is_ok = false;
@@ -994,7 +994,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 
             is_ok = true;
         } while(0);
-        asc_assert(is_ok, MSG("route format: { { \"/path\", callback }, ... }"));
+        ASC_ASSERT(is_ok, MSG("route format: { { \"/path\", callback }, ... }"));
 
         route_t *const route = ASC_ALLOC(1, route_t);
         route->idx_callback = luaL_ref(L, LUA_REGISTRYINDEX);

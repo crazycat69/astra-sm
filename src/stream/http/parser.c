@@ -377,13 +377,13 @@ char *http_authorization(const char *auth_header, size_t size
             {
                 realm_len = m[2].eo - m[2].so;
                 realm = strndup(&auth_header[skip + m[2].so], realm_len);
-                asc_assert(realm != NULL, "[http/parser] strndup() failed");
+                ASC_ASSERT(realm != NULL, "[http/parser] strndup() failed");
             }
             else if(!strncmp(&auth_header[skip], "nonce", m[1].eo))
             {
                 nonce_len = m[2].eo - m[2].so;
                 nonce = strndup(&auth_header[skip + m[2].so], nonce_len);
-                asc_assert(nonce != NULL, "[http/parser] strndup() failed");
+                ASC_ASSERT(nonce != NULL, "[http/parser] strndup() failed");
             }
             skip += m[0].eo;
         }

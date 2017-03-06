@@ -1101,7 +1101,7 @@ void module_init(lua_State *L, module_data_t *mod)
         luaL_error(L, MSG("buffer size out of range"));
 
     mod->buf.size = (mod->buffer_size * 1024UL * 1024UL) / TS_PACKET_SIZE;
-    asc_assert(mod->buf.size > 0, MSG("invalid buffer size"));
+    ASC_ASSERT(mod->buf.size > 0, MSG("invalid buffer size"));
 
     mod->buf.data = ASC_ALLOC(mod->buf.size, ts_packet_t);
 

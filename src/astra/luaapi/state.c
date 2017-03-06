@@ -44,7 +44,7 @@ int panic_handler(lua_State *L)
 lua_State *lua_api_init(void)
 {
     lua_State *const L = luaL_newstate();
-    asc_assert(L != NULL, MSG("luaL_newstate() failed"));
+    ASC_ASSERT(L != NULL, MSG("luaL_newstate() failed"));
 
     luaL_openlibs(L);
     lua_atpanic(L, panic_handler);
@@ -63,7 +63,7 @@ lua_State *lua_api_init(void)
     if (envvar != NULL)
     {
         char *const tmp = strdup(envvar);
-        asc_assert(tmp != NULL, MSG("strdup() failed"));
+        ASC_ASSERT(tmp != NULL, MSG("strdup() failed"));
 
         for (char *ptr = NULL, *tok = strtok_r(tmp, ";", &ptr)
              ; tok != NULL; tok = strtok_r(NULL, ";", &ptr))

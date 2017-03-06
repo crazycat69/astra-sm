@@ -34,7 +34,7 @@ bool asc_cond_timedwait(asc_cond_t *cond, asc_mutex_t *mutex
     asc_rtctime(&ts, ms);
 
     const int ret = pthread_cond_timedwait(cond, mutex, &ts);
-    asc_assert(ret == 0 || ret == ETIMEDOUT
+    ASC_ASSERT(ret == 0 || ret == ETIMEDOUT
                , "[core/cond] couldn't wait on condition: %s"
                , strerror(ret));
 
@@ -126,11 +126,11 @@ void asc_cond_init(asc_cond_t *cond)
     cond->Ptr = emu;
 
     emu->semaphore = CreateSemaphoreW(NULL, 0, 0x7fffffff, NULL);
-    asc_assert(emu->semaphore != NULL
+    ASC_ASSERT(emu->semaphore != NULL
                , "[core/cond] CreateSemaphore() failed: %s", asc_error_msg());
 
     emu->waiters_done = CreateEventW(NULL, FALSE, FALSE, NULL);
-    asc_assert(emu->waiters_done != NULL
+    ASC_ASSERT(emu->waiters_done != NULL
                , "[core/cond] CreateEvent() failed: %s", asc_error_msg());
 
     asc_mutex_init(&emu->waiter_count_lock);
@@ -224,7 +224,7 @@ bool asc_cond_timedwait(asc_cond_t *cond, asc_mutex_t *mutex
     if (nt6_timedwait != NULL)
     {
         const BOOL ret = nt6_timedwait(cond, mutex, ms);
-        asc_assert(ret || GetLastError() == ERROR_TIMEOUT
+        ASC_ASSERT(ret || GetLastError() == ERROR_TIMEOUT
                    , "[core/cond] couldn't wait on condition: %s"
                    , asc_error_msg());
 
@@ -245,7 +245,7 @@ bool asc_cond_timedwait(asc_cond_t *cond, asc_mutex_t *mutex
     const DWORD ret = WaitForSingleObject(emu->semaphore, ms);
     const bool signaled = (ret == WAIT_OBJECT_0);
 
-    asc_assert(signaled || ret == WAIT_TIMEOUT
+    ASC_ASSERT(signaled || ret == WAIT_TIMEOUT
                , "[core/cond] WaitForSingleObject() failed: %s"
                , asc_error_msg());
 

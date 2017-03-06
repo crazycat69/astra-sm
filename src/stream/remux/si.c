@@ -33,7 +33,7 @@
         if(!__found) \
         { \
             void *const __tmp = realloc(__list, sizeof(*__list) * (__cnt + 1)); \
-            asc_assert(__tmp != NULL, MSG("realloc() failed")); \
+            ASC_ASSERT(__tmp != NULL, MSG("realloc() failed")); \
             __list = (__type *)__tmp; \
             __list[__cnt++] = __val; \
         } \

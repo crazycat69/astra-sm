@@ -41,7 +41,7 @@ static inline
 void asc_cond_init(asc_cond_t *cond)
 {
     const int ret = pthread_cond_init(cond, NULL);
-    asc_assert(ret == 0, "[core/cond] couldn't init condition: %s"
+    ASC_ASSERT(ret == 0, "[core/cond] couldn't init condition: %s"
                , strerror(ret));
 }
 
@@ -49,7 +49,7 @@ static inline
 void asc_cond_destroy(asc_cond_t *cond)
 {
     const int ret = pthread_cond_destroy(cond);
-    asc_assert(ret == 0, "[core/cond] couldn't destroy condition: %s"
+    ASC_ASSERT(ret == 0, "[core/cond] couldn't destroy condition: %s"
                , strerror(ret));
 }
 
@@ -57,7 +57,7 @@ static inline
 void asc_cond_signal(asc_cond_t *cond)
 {
     const int ret = pthread_cond_signal(cond);
-    asc_assert(ret == 0, "[core/cond] couldn't signal condition: %s"
+    ASC_ASSERT(ret == 0, "[core/cond] couldn't signal condition: %s"
                , strerror(ret));
 }
 
@@ -65,7 +65,7 @@ static inline
 void asc_cond_broadcast(asc_cond_t *cond)
 {
     const int ret = pthread_cond_broadcast(cond);
-    asc_assert(ret == 0, "[core/cond] couldn't broadcast condition: %s"
+    ASC_ASSERT(ret == 0, "[core/cond] couldn't broadcast condition: %s"
                , strerror(ret));
 }
 
@@ -73,7 +73,7 @@ static inline
 void asc_cond_wait(asc_cond_t *cond, asc_mutex_t *mutex)
 {
     const int ret = pthread_cond_wait(cond, mutex);
-    asc_assert(ret == 0, "[core/cond] couldn't wait on condition: %s"
+    ASC_ASSERT(ret == 0, "[core/cond] couldn't wait on condition: %s"
                , strerror(ret));
 }
 
@@ -119,7 +119,7 @@ static inline
 void asc_cond_wait(asc_cond_t *cond, asc_mutex_t *mutex)
 {
     const BOOL ret = SleepConditionVariableCS(cond, mutex, INFINITE);
-    asc_assert(ret
+    ASC_ASSERT(ret
                , "[core/cond] couldn't wait on condition: %s"
                , asc_error_msg());
 }
@@ -129,7 +129,7 @@ bool asc_cond_timedwait(asc_cond_t *cond, asc_mutex_t *mutex
                         , unsigned long ms)
 {
     const BOOL ret = SleepConditionVariableCS(cond, mutex, ms);
-    asc_assert(ret || GetLastError() == ERROR_TIMEOUT
+    ASC_ASSERT(ret || GetLastError() == ERROR_TIMEOUT
                , "[core/cond] couldn't wait on condition: %s"
                , asc_error_msg());
 
@@ -153,7 +153,7 @@ static inline
 void asc_cond_wait(asc_cond_t *cond, asc_mutex_t *mutex)
 {
     const bool ret = asc_cond_timedwait(cond, mutex, INFINITE);
-    asc_assert(ret, "[core/cond] couldn't wait on condition");
+    ASC_ASSERT(ret, "[core/cond] couldn't wait on condition");
 }
 
 #endif /* _WIN32_WINNT < _WIN32_WINNT_VISTA */

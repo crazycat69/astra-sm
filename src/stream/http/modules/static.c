@@ -248,7 +248,7 @@ static int __module_call(lua_State *L)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     lua_getfield(L, MODULE_OPTIONS_IDX, __path);
-    asc_assert(lua_isstring(L, -1), "[http_static] option 'path' is required");
+    ASC_ASSERT(lua_isstring(L, -1), "[http_static] option 'path' is required");
     mod->path = lua_tostring(L, -1);
     int path_size = luaL_len(L, -1);
     lua_pop(L, 1);
@@ -275,8 +275,8 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_option_string(L, "default_mime", &mod->default_mime, NULL);
 
     struct stat s;
-    asc_assert(stat(mod->path, &s) != -1, "[http_static] path is not found");
-    asc_assert(S_ISDIR(s.st_mode), "[http_static] path is not directory");
+    ASC_ASSERT(stat(mod->path, &s) != -1, "[http_static] path is not found");
+    ASC_ASSERT(S_ISDIR(s.st_mode), "[http_static] path is not directory");
 
     // Set callback for http route
     lua_getmetatable(L, 3);

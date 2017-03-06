@@ -342,7 +342,7 @@ asc_child_t *asc_child_init(const asc_child_cfg_t *cfg)
     asc_child_t *const child = ASC_ALLOC(1, asc_child_t);
     snprintf(child->name, sizeof(child->name), "%s", cfg->name);
 
-    asc_assert(cfg->sin.on_flush == NULL && cfg->sin.ignore_read == false
+    ASC_ASSERT(cfg->sin.on_flush == NULL && cfg->sin.ignore_read == false
                , MSG("cannot set read callback on standard input"));
 
     /* start the process */
@@ -586,7 +586,7 @@ void asc_child_set_on_flush(asc_child_t *child, int child_fd
                             , child_io_callback_t on_flush)
 {
     child_io_t *const io = get_io_by_fd(child, child_fd);
-    asc_assert(io != &child->sin, MSG("can't change read events on stdin"));
+    ASC_ASSERT(io != &child->sin, MSG("can't change read events on stdin"));
 
     io->on_flush = on_flush;
 }
@@ -604,7 +604,7 @@ void asc_child_toggle_input(asc_child_t *child, int child_fd
                             , bool enable)
 {
     const child_io_t *const io = get_io_by_fd(child, child_fd);
-    asc_assert(io != &child->sin, MSG("can't change read events on stdin"));
+    ASC_ASSERT(io != &child->sin, MSG("can't change read events on stdin"));
 
     if (enable)
         asc_event_set_on_read(io->ev, io->on_read);

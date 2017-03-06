@@ -63,7 +63,7 @@ void asc_thread_core_destroy(void)
     asc_list_till_empty(thread_mgr->list)
     {
         thr = (asc_thread_t *)asc_list_data(thread_mgr->list);
-        asc_assert(thr != prev, MSG("on_close didn't join thread"));
+        ASC_ASSERT(thr != prev, MSG("on_close didn't join thread"));
 
         if (thr->on_close != NULL)
             thr->on_close(thr->arg);
@@ -118,14 +118,14 @@ asc_thread_t *asc_thread_init(void *arg, thread_callback_t proc
 
 #ifdef _WIN32
     const intptr_t ret = _beginthreadex(NULL, 0, thread_proc, thr, 0, NULL);
-    asc_assert(ret > 0, MSG("failed to create thread: %s"), strerror(errno));
+    ASC_ASSERT(ret > 0, MSG("failed to create thread: %s"), strerror(errno));
 
     thr->thread = (HANDLE)ret;
 #else /* _WIN32 */
     thr->thread = ASC_ALLOC(1, pthread_t);
 
     const int ret = pthread_create(thr->thread, NULL, thread_proc, thr);
-    asc_assert(ret == 0, MSG("failed to create thread: %s"), strerror(ret));
+    ASC_ASSERT(ret == 0, MSG("failed to create thread: %s"), strerror(ret));
 #endif /* !_WIN32 */
 
     return thr;

@@ -808,7 +808,7 @@ HRESULT graph_setup(module_data_t *mod)
     /* initialize COM on this thread */
     hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
     BDA_CKHR(hr, "CoInitializeEx() failed");
-    asc_assert(hr != S_FALSE, MSG("COM initialized twice!"));
+    ASC_ASSERT(hr != S_FALSE, MSG("COM initialized twice!"));
 
     need_uninit = true;
 
@@ -1290,7 +1290,7 @@ void wait_events(const module_data_t *mod)
 
     /* wait up to 1 second */
     const DWORD ret = WaitForMultipleObjects(ev_cnt, ev, FALSE, 1000);
-    asc_assert(ret != WAIT_FAILED, MSG("event wait failed: %s")
+    ASC_ASSERT(ret != WAIT_FAILED, MSG("event wait failed: %s")
                , asc_error_msg());
 }
 

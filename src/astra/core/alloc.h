@@ -40,7 +40,7 @@ static inline __wur
 void *asc_calloc(size_t nmemb, size_t size)
 {
     void *const p = calloc(nmemb, size);
-    asc_assert(p != NULL, "[core/alloc] calloc() failed");
+    ASC_ASSERT(p != NULL, "[core/alloc] calloc() failed");
 
     return p;
 }

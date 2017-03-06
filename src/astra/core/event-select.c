@@ -69,7 +69,7 @@ void asc_event_core_destroy(void)
     asc_list_till_empty(event_mgr->list)
     {
         event = (asc_event_t *)asc_list_data(event_mgr->list);
-        asc_assert(event != prev, MSG("on_error didn't close event"));
+        ASC_ASSERT(event != prev, MSG("on_error didn't close event"));
 
         if (event->on_error != NULL)
             event->on_error(event->arg);

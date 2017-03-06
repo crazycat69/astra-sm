@@ -35,7 +35,7 @@ static inline
 void asc_mutex_init(asc_mutex_t *mutex)
 {
     const int ret = pthread_mutex_init(mutex, NULL);
-    asc_assert(ret == 0, "[core/mutex] couldn't init mutex: %s"
+    ASC_ASSERT(ret == 0, "[core/mutex] couldn't init mutex: %s"
                , strerror(ret));
 }
 
@@ -43,7 +43,7 @@ static inline
 void asc_mutex_destroy(asc_mutex_t *mutex)
 {
     const int ret = pthread_mutex_destroy(mutex);
-    asc_assert(ret == 0, "[core/mutex] couldn't destroy mutex: %s"
+    ASC_ASSERT(ret == 0, "[core/mutex] couldn't destroy mutex: %s"
                , strerror(ret));
 }
 
@@ -51,7 +51,7 @@ static inline
 void asc_mutex_lock(asc_mutex_t *mutex)
 {
     const int ret = pthread_mutex_lock(mutex);
-    asc_assert(ret == 0, "[core/mutex] couldn't lock mutex: %s"
+    ASC_ASSERT(ret == 0, "[core/mutex] couldn't lock mutex: %s"
                , strerror(ret));
 }
 
@@ -59,7 +59,7 @@ static inline __wur
 bool asc_mutex_trylock(asc_mutex_t *mutex)
 {
     const int ret = pthread_mutex_trylock(mutex);
-    asc_assert(ret == 0 || ret == EBUSY
+    ASC_ASSERT(ret == 0 || ret == EBUSY
                , "[core/mutex] couldn't lock mutex: %s"
                , strerror(ret));
 
@@ -70,7 +70,7 @@ static inline
 void asc_mutex_unlock(asc_mutex_t *mutex)
 {
     const int ret = pthread_mutex_unlock(mutex);
-    asc_assert(ret == 0, "[core/mutex] couldn't unlock mutex: %s"
+    ASC_ASSERT(ret == 0, "[core/mutex] couldn't unlock mutex: %s"
                , strerror(ret));
 }
 

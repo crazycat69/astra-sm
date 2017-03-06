@@ -161,7 +161,7 @@ static void module_decrypt_cas_init(module_data_t *mod)
         if(mod->__decrypt.cas)
             return;
     }
-    asc_assert(mod->__decrypt.cas != NULL, MSG("CAS with CAID:0x%04X not found"), mod->caid);
+    ASC_ASSERT(mod->__decrypt.cas != NULL, MSG("CAS with CAID:0x%04X not found"), mod->caid);
 }
 
 static void module_decrypt_cas_destroy(module_data_t *mod)

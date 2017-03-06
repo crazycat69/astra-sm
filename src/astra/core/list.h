@@ -92,7 +92,7 @@ bool asc_list_eol(const asc_list_t *list)
 static inline __func_pure __wur
 void *asc_list_data(asc_list_t *list)
 {
-    asc_assert(!asc_list_eol(list), "[core/list] index out of bounds");
+    ASC_ASSERT(!asc_list_eol(list), "[core/list] index out of bounds");
     return list->items[list->current];
 }
 

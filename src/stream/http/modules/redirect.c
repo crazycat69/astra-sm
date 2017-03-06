@@ -53,7 +53,7 @@ static int __module_call(lua_State *L)
 static void module_init(lua_State *L, module_data_t *mod)
 {
     module_option_string(L, "location", &mod->location, NULL);
-    asc_assert(mod->location != NULL, "[http_redirect] option 'location' is required");
+    ASC_ASSERT(mod->location != NULL, "[http_redirect] option 'location' is required");
 
     mod->code = 302;
     module_option_integer(L, "code", &mod->code);

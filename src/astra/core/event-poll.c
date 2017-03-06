@@ -157,7 +157,7 @@ void asc_event_core_destroy(void)
     while (event_mgr->ev_cnt > 0)
     {
         event = event_mgr->ev[0];
-        asc_assert(event != prev, MSG("on_error didn't close event"));
+        ASC_ASSERT(event != prev, MSG("on_error didn't close event"));
 
         if (event->on_error != NULL)
             event->on_error(event->arg);
@@ -244,7 +244,7 @@ size_t find_event(const asc_event_t *event)
         if (event_mgr->ev[i] == event)
             break;
     }
-    asc_assert(i < event_mgr->ev_cnt, MSG("event %p not in array")
+    ASC_ASSERT(i < event_mgr->ev_cnt, MSG("event %p not in array")
                , (void *)event);
 
     return i;
@@ -265,7 +265,7 @@ void resize_event_list(void)
         const size_t fd_size = maxcnt * sizeof(*event_mgr->fd);
         event_mgr->fd = (struct pollfd *)realloc(event_mgr->fd, fd_size);
 
-        asc_assert(event_mgr->ev != NULL && event_mgr->fd != NULL
+        ASC_ASSERT(event_mgr->ev != NULL && event_mgr->fd != NULL
                    , MSG("realloc() failed"));
 
         event_mgr->ev_maxcnt = maxcnt;

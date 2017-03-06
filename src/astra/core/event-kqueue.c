@@ -45,7 +45,7 @@ void asc_event_core_init(void)
     event_mgr->list = asc_list_init();
 
     event_mgr->fd = kqueue();
-    asc_assert(event_mgr->fd != -1
+    ASC_ASSERT(event_mgr->fd != -1
                , MSG("kqueue(): %s"), strerror(errno));
 }
 
@@ -58,7 +58,7 @@ void asc_event_core_destroy(void)
     asc_list_till_empty(event_mgr->list)
     {
         event = (asc_event_t *)asc_list_data(event_mgr->list);
-        asc_assert(event != prev, MSG("on_error didn't close event"));
+        ASC_ASSERT(event != prev, MSG("on_error didn't close event"));
 
         if (event->on_error != NULL)
             event->on_error(event->arg);
@@ -168,7 +168,7 @@ void resize_event_list(void)
     {
         const size_t bytes = new_size * sizeof(*event_mgr->out);
         event_mgr->out = (struct kevent *)realloc(event_mgr->out, bytes);
-        asc_assert(event_mgr->out != NULL, MSG("realloc() failed"));
+        ASC_ASSERT(event_mgr->out != NULL, MSG("realloc() failed"));
 
         event_mgr->out_size = new_size;
     }

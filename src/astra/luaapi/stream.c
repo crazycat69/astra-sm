@@ -81,7 +81,7 @@ const module_method_t stream_methods[] =
 void module_stream_init(lua_State *L, module_data_t *mod
                         , stream_callback_t on_ts)
 {
-    asc_assert(mod->stream == NULL, MSG("module already initialized"));
+    ASC_ASSERT(mod->stream == NULL, MSG("module already initialized"));
     module_stream_t *const st = ASC_ALLOC(1, module_stream_t);
 
     st->self = mod;
@@ -193,8 +193,8 @@ void module_stream_attach(module_data_t *mod, module_data_t *child)
     if (mod != NULL)
     {
         module_stream_t *const ps = mod->stream;
-        asc_assert(ps != NULL, MSG("attaching to uninitialized module"));
-        asc_assert(cs->on_ts != NULL, MSG("this module cannot receive TS"));
+        ASC_ASSERT(ps != NULL, MSG("attaching to uninitialized module"));
+        ASC_ASSERT(cs->on_ts != NULL, MSG("this module cannot receive TS"));
 
         cs->parent = ps;
         asc_list_insert_tail(ps->children, cs);
@@ -234,7 +234,7 @@ void module_demux_set(module_data_t *mod, demux_callback_t join_pid
 
 void module_demux_join(module_data_t *mod, uint16_t pid)
 {
-    asc_assert(pid < TS_MAX_PID, MSG("join: pid %hu out of range"), pid);
+    ASC_ASSERT(pid < TS_MAX_PID, MSG("join: pid %hu out of range"), pid);
     module_stream_t *const st = mod->stream;
 
     ++st->pid_list[pid];
@@ -247,7 +247,7 @@ void module_demux_join(module_data_t *mod, uint16_t pid)
 
 void module_demux_leave(module_data_t *mod, uint16_t pid)
 {
-    asc_assert(pid < TS_MAX_PID, MSG("leave: pid %hu out of range"), pid);
+    ASC_ASSERT(pid < TS_MAX_PID, MSG("leave: pid %hu out of range"), pid);
     module_stream_t *const st = mod->stream;
 
     if (st->pid_list[pid] > 0)
@@ -267,6 +267,6 @@ void module_demux_leave(module_data_t *mod, uint16_t pid)
 
 bool module_demux_check(const module_data_t *mod, uint16_t pid)
 {
-    asc_assert(pid < TS_MAX_PID, MSG("check: pid %hu out of range"), pid);
+    ASC_ASSERT(pid < TS_MAX_PID, MSG("check: pid %hu out of range"), pid);
     return (mod->stream->pid_list[pid] > 0);
 }
