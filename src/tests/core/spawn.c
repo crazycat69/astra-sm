@@ -249,6 +249,7 @@ END_TEST
 /* pipe event notification test */
 #define SEND_SIZE (BUF_SIZE / 128)
 
+static asc_event_t *pipe_ev = NULL;
 static uint32_t tx_crc = 0;
 static uint32_t rx_crc = 0;
 static size_t rx_pos = 0;
@@ -282,6 +283,7 @@ static void thread_proc(void *arg)
 static void pipe_on_read(void *arg)
 {
     const int rfd = *((int *)arg);
+    ck_assert(pipe_ev != NULL);
 
     while (true)
     {
@@ -305,6 +307,8 @@ static void pipe_on_read(void *arg)
                 rx_crc = au_crc32b(rx_buf, sizeof(rx_buf));
                 ck_assert(rx_crc == tx_crc);
 
+                ASC_FREE(pipe_ev, asc_event_close);
+                asc_pipe_close(rfd);
                 asc_main_loop_shutdown();
                 return;
 
@@ -337,9 +341,9 @@ START_TEST(pipe_event)
     pipe_check_buf(fds[1]);
 
     /* set up event handler */
-    asc_event_t *const ev = asc_event_init(fds[PIPE_RD], &fds[PIPE_RD]);
-    asc_event_set_on_read(ev, pipe_on_read);
-    asc_event_set_on_error(ev, pipe_on_error);
+    pipe_ev = asc_event_init(fds[PIPE_RD], &fds[PIPE_RD]);
+    asc_event_set_on_read(pipe_ev, pipe_on_read);
+    asc_event_set_on_error(pipe_ev, pipe_on_error);
 
     /* start writing thread */
     asc_thread_t *const thr = asc_thread_init(&fds[PIPE_WR], thread_proc
@@ -348,9 +352,7 @@ START_TEST(pipe_event)
 
     const bool again = asc_main_loop_run();
     ck_assert(again == false);
-
-    asc_event_close(ev);
-    asc_pipe_close(fds[PIPE_RD]);
+    ck_assert(pipe_ev == NULL);
 }
 END_TEST
 
