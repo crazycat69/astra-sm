@@ -72,7 +72,7 @@ static void asrt_proc(void *arg)
 
 static void on_asrt_timer(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     asc_mutex_lock(&asrt_mutex);
     asc_cond_signal(&asrt_cond);

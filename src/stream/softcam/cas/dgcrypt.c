@@ -27,7 +27,7 @@ struct module_data_t
 
 static bool cas_check_em(module_data_t *mod, mpegts_psi_t *em)
 {
-    __uarg(mod);
+    ASC_UNUSED(mod);
 
     const uint8_t em_type = em->buffer[0];
     switch(em_type)
@@ -50,8 +50,8 @@ static bool cas_check_em(module_data_t *mod, mpegts_psi_t *em)
 
 static bool cas_check_keys(module_data_t *mod, const uint8_t *keys)
 {
-    __uarg(mod);
-    __uarg(keys);
+    ASC_UNUSED(mod);
+    ASC_UNUSED(keys);
     return true;
 }
 
@@ -67,8 +67,8 @@ static bool cas_check_keys(module_data_t *mod, const uint8_t *keys)
 
 static bool cas_check_descriptor(module_data_t *mod, const uint8_t *desc)
 {
-    __uarg(mod);
-    __uarg(desc);
+    ASC_UNUSED(mod);
+    ASC_UNUSED(desc);
     return true;
 }
 

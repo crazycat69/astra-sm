@@ -27,7 +27,7 @@
 #ifdef _WIN32
 static BOOL WINAPI console_handler(DWORD type)
 {
-    __uarg(type);
+    ASC_UNUSED(type);
     fprintf(stderr, "peep\n");
     return TRUE;
 }
@@ -37,7 +37,7 @@ static BOOL WINAPI console_handler(DWORD type)
 
 static void signal_handler(int signum)
 {
-    __uarg(signum);
+    ASC_UNUSED(signum);
     fprintf(stderr, "peep\n");
 }
 #endif /* !_WIN32 */

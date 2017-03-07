@@ -36,7 +36,7 @@ static uint64_t time_stop;
 
 static void on_stop(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     timed_out = true;
     time_stop = asc_utime();
@@ -167,7 +167,7 @@ END_TEST
 /* cancel one shot timer */
 static __func_pure void on_cancel_failed(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
     fail("timer did not get cancelled");
 }
 

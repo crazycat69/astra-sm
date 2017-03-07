@@ -148,7 +148,7 @@ int wmain(int argc, wchar_t *wargv[], wchar_t *wenvp[]);
 
 int wmain(int argc, wchar_t *wargv[], wchar_t *wenvp[])
 {
-    __uarg(wenvp);
+    ASC_UNUSED(wenvp);
 
     /* convert wide arguments into UTF-8 */
     const char *argv[argc + 1];

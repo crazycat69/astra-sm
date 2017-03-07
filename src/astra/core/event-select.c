@@ -100,7 +100,7 @@ bool is_valid_fd(int fd)
      * select()'s nfds argument is completely ignored. We still warn
      * the user if the fd list gets too large.
      */
-    __uarg(fd);
+    ASC_UNUSED(fd);
     return true;
 #endif
 }

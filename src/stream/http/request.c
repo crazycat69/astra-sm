@@ -1070,7 +1070,7 @@ static int method_send(lua_State *L, module_data_t *mod)
 
 static int method_close(lua_State *L, module_data_t *mod)
 {
-    __uarg(L);
+    ASC_UNUSED(L);
 
     mod->status = -1;
     mod->request.status = -1;

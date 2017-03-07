@@ -83,9 +83,9 @@ ULONG Release(ISampleGrabberCB *obj)
 static STDMETHODCALLTYPE
 HRESULT SampleCB(ISampleGrabberCB *obj, double time, IMediaSample *sample)
 {
-    __uarg(obj);
-    __uarg(time);
-    __uarg(sample);
+    ASC_UNUSED(obj);
+    ASC_UNUSED(time);
+    ASC_UNUSED(sample);
 
     return E_NOTIMPL;
 }
@@ -94,7 +94,7 @@ HRESULT SampleCB(ISampleGrabberCB *obj, double time, IMediaSample *sample)
 static STDMETHODCALLTYPE
 HRESULT BufferCB(ISampleGrabberCB *obj, double time, BYTE *buf, LONG len)
 {
-    __uarg(time);
+    ASC_UNUSED(time);
 
     MySampleGrabberCB *const cb = (MySampleGrabberCB *)obj;
     cb->callback(cb->arg, buf, len);

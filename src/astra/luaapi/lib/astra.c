@@ -54,21 +54,21 @@ static int method_exit(lua_State *L)
 
 static int method_abort(lua_State *L)
 {
-    __uarg(L);
+    ASC_UNUSED(L);
     asc_lib_abort();
     return 0; /* unreachable */
 }
 
 static int method_reload(lua_State *L)
 {
-    __uarg(L);
+    ASC_UNUSED(L);
     asc_main_loop_reload();
     return 0;
 }
 
 static int method_shutdown(lua_State *L)
 {
-    __uarg(L);
+    ASC_UNUSED(L);
     asc_main_loop_shutdown();
     return 0;
 }

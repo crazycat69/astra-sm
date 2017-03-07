@@ -180,8 +180,8 @@ BOOL console_handler(DWORD type)
 static WINAPI
 void service_main(DWORD argc, LPWSTR *argv)
 {
-    __uarg(argc);
-    __uarg(argv);
+    ASC_UNUSED(argc);
+    ASC_UNUSED(argv);
 
     /* register control handler */
     ignore_ctrl = false;
@@ -202,7 +202,7 @@ void service_main(DWORD argc, LPWSTR *argv)
 static __stdcall
 unsigned int service_thread_proc(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     /*
      * NOTE: here we use a dedicated thread for the blocking call

@@ -896,7 +896,7 @@ int method_tune(lua_State *L, module_data_t *mod)
 static
 int method_close(lua_State *L, module_data_t *mod)
 {
-    __uarg(L);
+    ASC_UNUSED(L);
 
     const bda_user_cmd_t cmd =
     {

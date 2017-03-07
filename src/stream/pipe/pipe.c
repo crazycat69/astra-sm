@@ -297,14 +297,14 @@ void on_child_ts(void *arg, const void *buf, size_t packets)
 static
 void on_child_stdout(void *arg, const void *buf, size_t len)
 {
-    __uarg(len);
+    ASC_UNUSED(len);
     callback_text((module_data_t *)arg, "stdout", (char *)buf);
 }
 
 static
 void on_child_stderr(void *arg, const void *buf, size_t len)
 {
-    __uarg(len);
+    ASC_UNUSED(len);
     callback_text((module_data_t *)arg, "stderr", (char *)buf);
 }
 

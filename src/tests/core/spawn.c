@@ -39,8 +39,8 @@ static void pipe_check_nb(int fd, bool expect)
 {
 #ifdef _WIN32
     /* NOTE: on Win32, there's no way to test if a socket is non-blocking */
-    __uarg(fd);
-    __uarg(expect);
+    ASC_UNUSED(fd);
+    ASC_UNUSED(expect);
 #else /* _WIN32 */
     const int ret = fcntl(fd, F_GETFL);
     ck_assert(ret != -1);
@@ -321,7 +321,7 @@ static void pipe_on_read(void *arg)
 
 static void pipe_on_error(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
     fail("didn't expect an error event");
 }
 

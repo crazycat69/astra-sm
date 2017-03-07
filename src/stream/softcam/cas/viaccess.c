@@ -170,8 +170,8 @@ static bool cas_check_em(module_data_t *mod, mpegts_psi_t *em)
 
 static bool cas_check_keys(module_data_t *mod, const uint8_t *keys)
 {
-    __uarg(mod);
-    __uarg(keys);
+    ASC_UNUSED(mod);
+    ASC_UNUSED(keys);
     return true;
 }
 

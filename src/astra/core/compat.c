@@ -255,7 +255,7 @@ int cx_mkstemp(char *tpl)
         return -1;
 #else
     /* shouldn't happen */
-    __uarg(tpl);
+    ASC_UNUSED(tpl);
     errno = ENOTSUP;
 #endif
 

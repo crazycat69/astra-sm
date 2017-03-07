@@ -615,9 +615,9 @@ HRESULT ms_pidmap_set(void *data, uint16_t pid, bool join)
     IMPEG2PIDMap *const pidmap = (IMPEG2PIDMap *)data;
 
     // TODO
-    __uarg(pidmap);
-    __uarg(pid);
-    __uarg(join);
+    ASC_UNUSED(pidmap);
+    ASC_UNUSED(pid);
+    ASC_UNUSED(join);
 
     return E_NOTIMPL;
 }
@@ -628,8 +628,8 @@ HRESULT ms_pidmap_bulk(void *data, const bool pids[TS_MAX_PID])
     IMPEG2PIDMap *const pidmap = (IMPEG2PIDMap *)data;
 
     // TODO
-    __uarg(pidmap);
-    __uarg(pids);
+    ASC_UNUSED(pidmap);
+    ASC_UNUSED(pids);
 
     return E_NOTIMPL;
 }
@@ -638,8 +638,8 @@ static
 HRESULT ms_pidmap_init(IBaseFilter *filters[], void **data)
 {
     // TODO
-    __uarg(filters);
-    __uarg(data);
+    ASC_UNUSED(filters);
+    ASC_UNUSED(data);
 
     return E_NOTIMPL;
 }

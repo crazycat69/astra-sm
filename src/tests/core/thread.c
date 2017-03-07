@@ -147,13 +147,13 @@ END_TEST
 /* buggy cleanup routine */
 static void no_destroy_proc(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
     asc_usleep(50 * 1000); /* 50ms */
 }
 
 static void no_destroy_close(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
     asc_main_loop_shutdown();
 
     /* BUG: does not call thread_join()! */
@@ -182,7 +182,7 @@ static asc_cond_t wake_cond;
 
 static void wake_up_cb(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     const uint64_t now = asc_utime();
     ck_assert_msg(now >= wake_time && now - wake_time < (5 * 1000)
@@ -199,7 +199,7 @@ static void wake_up_cb(void *arg)
 
 static void wake_up_proc(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     asc_mutex_lock(&wake_mutex);
     while (true)
@@ -222,7 +222,7 @@ static void wake_up_proc(void *arg)
 
 static void wake_up_close(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     asc_thread_join(wake_thr);
     asc_main_loop_shutdown();
@@ -267,7 +267,7 @@ static asc_mutex_t tl_mutex3;
 
 static void timedlock_proc(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     asc_mutex_lock(&tl_mutex2); /* locked M2 */
 
@@ -338,7 +338,7 @@ static uint32_t one_val;
 
 static void one_proc(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     ck_assert(asc_mutex_trylock(&one_mutex) == false);
 

@@ -124,7 +124,7 @@ void wake_close(void)
 static
 void on_wake_read(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     char buf[32];
     const int ret = recv(main_loop->wake_fd[PIPE_RD], buf, sizeof(buf), 0);
@@ -160,7 +160,7 @@ void on_wake_read(void *arg)
 static
 void on_wake_error(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     /* shouldn't happen, ever */
     asc_log_error(MSG("BUG: error event on wake up pipe"));

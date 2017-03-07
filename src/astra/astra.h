@@ -87,7 +87,7 @@
 #define ASC_ARRAY_SIZE(_a) \
     (sizeof(_a) / sizeof(_a[0]))
 
-#define __uarg(_x) \
+#define ASC_UNUSED(_x) \
     do { (void)_x; } while (0)
 
 /* function attributes */

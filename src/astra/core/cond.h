@@ -100,7 +100,7 @@ static inline
 void asc_cond_destroy(asc_cond_t *cond)
 {
     /* no cleanup needed */
-    __uarg(cond);
+    ASC_UNUSED(cond);
 }
 
 static inline

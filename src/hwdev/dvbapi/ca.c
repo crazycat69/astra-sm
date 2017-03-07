@@ -253,7 +253,7 @@ static void resource_manager_open(dvb_ca_t *ca, uint8_t slot_id, uint16_t sessio
 
 static void application_information_event(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id)
 {
-    __uarg(session_id);
+    ASC_UNUSED(session_id);
 
     const uint32_t tag = ca_apdu_get_tag(ca, slot_id);
     switch(tag)
@@ -763,7 +763,7 @@ static void mmi_free(mmi_data_t *mmi)
 
 static void mmi_send_menu_answer(dvb_ca_t *ca, uint8_t slot_id, uint16_t session_id, int choice)
 {
-    __uarg(session_id);
+    ASC_UNUSED(session_id);
 
     uint8_t answer[5];
     answer[0] = (AOT_MENU_ANSW >> 16) & 0xFF;

@@ -187,7 +187,7 @@ static inline void sock_shutdown(int s)
 
 static void on_fail_event(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
     ck_abort_msg("didn't expect to reach this code");
 }
 
@@ -265,7 +265,7 @@ static void pp_on_write(void *arg)
 
 static void pp_on_timer(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     pp_timer = NULL;
     asc_main_loop_shutdown();
@@ -391,7 +391,7 @@ static void tc_svr_on_write(void *arg);
 
 static void tc_ear_on_accept(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     /* accept client */
     test_sa_t sa;
@@ -439,7 +439,7 @@ static void tc_clnt_on_write(void *arg);
 
 static void tc_clnt_on_connect(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     ck_assert_msg(sock_erropt(tc_clnt_fd) == 0, "SO_ERROR is not 0");
 
@@ -470,7 +470,7 @@ static void tc_clnt_on_connect(void *arg)
 
 static void tc_clnt_on_read(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
     ssize_t ret;
 
     switch (tc_case)
@@ -520,7 +520,7 @@ static void tc_clnt_on_read(void *arg)
 
 static void tc_clnt_on_write(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     switch (tc_case)
     {
@@ -550,7 +550,7 @@ static void tc_clnt_on_write(void *arg)
 
 static void tc_svr_on_read(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
     ssize_t ret;
 
     switch (tc_case)
@@ -599,7 +599,7 @@ static void tc_svr_on_read(void *arg)
 
 static void tc_svr_on_write(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     switch (tc_case)
     {
@@ -677,7 +677,7 @@ static int tr_err = -1;
 
 static void tr_on_connect(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     if (tr_err == -1)
         tr_err = sock_erropt(tr_fd);
@@ -696,7 +696,7 @@ static void tr_on_connect(void *arg)
 
 static void tr_on_read(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     /*
      * Many OS/event backend combinations trigger on_read on connection
@@ -724,7 +724,7 @@ static void tr_on_read(void *arg)
 
 static void tr_on_write(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     tr_on_connect(NULL);
     asc_log_info("connect error triggered on_write");
@@ -732,7 +732,7 @@ static void tr_on_write(void *arg)
 
 static void tr_on_error(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     tr_on_connect(NULL);
     asc_log_info("connect error triggered on_error");
@@ -898,7 +898,7 @@ static void oob_on_error(void *arg)
 #else /* !WITH_EVENT_KQUEUE */
 static void oob_on_error(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     /*
      * NOTE: most kqueue implementations don't support polling for
@@ -1337,7 +1337,7 @@ static bool sot_check(void)
 
 static void sot_on_kill(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     asc_log_info("kill timer!");
     sot_kill = NULL;
@@ -1435,7 +1435,7 @@ END_TEST
 /* on_error handler that doesn't close the event */
 static void nce_on_error(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 }
 
 START_TEST(no_close_on_error)

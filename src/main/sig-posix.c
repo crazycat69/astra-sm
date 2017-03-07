@@ -52,7 +52,7 @@ static bool quit_thread = true;
 static
 void *thread_loop(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     while (true)
     {

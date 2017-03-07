@@ -288,7 +288,7 @@ static void module_init(lua_State *L, module_data_t *mod)
 
 static void module_destroy(module_data_t *mod)
 {
-    __uarg(mod);
+    ASC_UNUSED(mod);
 }
 
 MODULE_REGISTER(http_static)

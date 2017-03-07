@@ -33,17 +33,17 @@
 
 static void fail_on_read(void *arg, const void *buf, size_t len)
 {
-    __uarg(arg);
-    __uarg(buf);
-    __uarg(len);
+    ASC_UNUSED(arg);
+    ASC_UNUSED(buf);
+    ASC_UNUSED(len);
 
     ck_abort_msg("unexpected read event");
 }
 
 static void fail_on_close(void *arg, int status)
 {
-    __uarg(arg);
-    __uarg(status);
+    ASC_UNUSED(arg);
+    ASC_UNUSED(status);
 
     ck_abort_msg("unexpected close event");
 }
@@ -135,7 +135,7 @@ static void bandit_on_read(void *arg, const void *buf, size_t len)
 
 static void bandit_on_close(void *arg, int status)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
 #ifdef _WIN32
     ck_assert(status == EXIT_FAILURE);
@@ -207,7 +207,7 @@ END_TEST
 /* stdio pipes closed on far side */
 static void far_on_close(void *arg, int status)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     /*
      * NOTE: whenever an stdio pipe is closed on the far side,
@@ -246,17 +246,17 @@ asc_child_t *double_child = NULL;
 
 static void double_on_read(void *arg, const void *buf, size_t len)
 {
-    __uarg(arg);
-    __uarg(buf);
-    __uarg(len);
+    ASC_UNUSED(arg);
+    ASC_UNUSED(buf);
+    ASC_UNUSED(len);
 
     asc_main_loop_shutdown();
 }
 
 static void double_on_close(void *arg, int status)
 {
-    __uarg(arg);
-    __uarg(status);
+    ASC_UNUSED(arg);
+    ASC_UNUSED(status);
 
 #ifdef _WIN32
     ck_assert(status == EXIT_FAILURE);
@@ -304,7 +304,7 @@ static bool aligner_closed = false;
 
 static void aligner_on_read(void *arg, const void *buf, size_t len)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     const uint8_t *ts = (uint8_t *)buf;
 
@@ -330,8 +330,8 @@ static void aligner_on_read(void *arg, const void *buf, size_t len)
 
 static void aligner_on_close(void *arg, int status)
 {
-    __uarg(arg);
-    __uarg(status);
+    ASC_UNUSED(arg);
+    ASC_UNUSED(status);
 
     asc_main_loop_shutdown();
     aligner = NULL;
@@ -369,7 +369,7 @@ static unsigned int assy_cc_in = 15;
 
 static void assy_on_ts(void *arg, const void *buf, size_t len)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     const uint8_t *ts = (uint8_t *)buf;
     while (len > 0)
@@ -391,7 +391,7 @@ static void assy_on_ts(void *arg, const void *buf, size_t len)
 
 static void assy_on_ready(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     uint8_t ts[TS_PACKET_SIZE] = { 0x47 };
     TS_SET_PID(ts, ASSY_PID);
@@ -420,8 +420,8 @@ static void assy_on_ready(void *arg)
 
 static void assy_on_close(void *arg, int status)
 {
-    __uarg(arg);
-    __uarg(status);
+    ASC_UNUSED(arg);
+    ASC_UNUSED(status);
 
     assy_child = NULL;
     asc_main_loop_shutdown();
@@ -467,7 +467,7 @@ static unsigned int push_rcvd = 0;
 
 static void push_on_timer(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     if (push_rcvd >= PUSH_LIMIT)
     {
@@ -498,7 +498,7 @@ static void push_on_timer(void *arg)
 
 static void push_on_ts(void *arg, const void *buf, size_t len)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     const uint8_t *ts = (uint8_t *)buf;
     while (len > 0)
@@ -520,8 +520,8 @@ static void push_on_ts(void *arg, const void *buf, size_t len)
 
 static void push_on_close(void *arg, int status)
 {
-    __uarg(arg);
-    __uarg(status);
+    ASC_UNUSED(arg);
+    ASC_UNUSED(status);
 
     asc_main_loop_shutdown();
     push_child = NULL;
@@ -567,7 +567,7 @@ static char raw_char = '\0';
 
 static void raw_on_ready(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     raw_char++;
     const ssize_t ret = asc_child_send(raw_child, &raw_char, sizeof(raw_char));
@@ -579,7 +579,7 @@ static void raw_on_ready(void *arg)
 
 static void raw_on_read(void *arg, const void *buf, size_t len)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     ck_assert(len == sizeof(raw_char));
 
@@ -595,8 +595,8 @@ static void raw_on_read(void *arg, const void *buf, size_t len)
 
 static void raw_on_close(void *arg, int status)
 {
-    __uarg(arg);
-    __uarg(status);
+    ASC_UNUSED(arg);
+    ASC_UNUSED(status);
 
     asc_main_loop_shutdown();
     raw_child = NULL;
@@ -634,7 +634,7 @@ static bool discard_timer_fired = false;
 
 static void discard_on_timer(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     discard_timer_fired = true;
     asc_child_close(discard_child);
@@ -642,7 +642,7 @@ static void discard_on_timer(void *arg)
 
 static void discard_on_ready(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     char buf[] = "Test";
     const ssize_t ret = asc_child_send(discard_child, buf, sizeof(buf));
@@ -654,8 +654,8 @@ static void discard_on_ready(void *arg)
 
 static void discard_on_close(void *arg, int status)
 {
-    __uarg(arg);
-    __uarg(status);
+    ASC_UNUSED(arg);
+    ASC_UNUSED(status);
 
     asc_main_loop_shutdown();
     discard_child = NULL;
@@ -711,7 +711,7 @@ static asc_timer_t *spammer_timer = NULL;
 
 static void spammer_on_timer(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     asc_child_close(spammer_child);
     spammer_timer = NULL;
@@ -719,16 +719,16 @@ static void spammer_on_timer(void *arg)
 
 static void spammer_on_read(void *arg, const void *ts, size_t len)
 {
-    __uarg(arg);
-    __uarg(ts);
+    ASC_UNUSED(arg);
+    ASC_UNUSED(ts);
 
     spammer_rcvd += len;
 }
 
 static void spammer_on_close(void *arg, int status)
 {
-    __uarg(arg);
-    __uarg(status);
+    ASC_UNUSED(arg);
+    ASC_UNUSED(status);
 
     asc_main_loop_shutdown();
     spammer_child = NULL;

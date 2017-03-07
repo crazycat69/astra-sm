@@ -347,7 +347,7 @@ static bool my_lib_loaded;
 
 static void bind_load(lua_State *L)
 {
-    __uarg(L);
+    ASC_UNUSED(L);
     my_lib_loaded = true;
 }
 

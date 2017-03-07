@@ -37,13 +37,13 @@ static void on_ts(void *arg, const uint8_t *ts)
 
 static void join_pid(module_data_t *arg, uint16_t pid)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
     asc_log_info(MSG("joining pid %hu"), pid);
 }
 
 static void leave_pid(module_data_t *arg, uint16_t pid)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
     asc_log_info(MSG("leaving pid %hu"), pid);
 }
 

@@ -40,7 +40,7 @@ END_TEST
 
 static __dead void on_exit_timer(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
     asc_lib_exit(EXIT_TEST);
 }
 
@@ -68,7 +68,7 @@ END_TEST
 
 static void on_iteration(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     unsigned *counter = (unsigned *)arg;
     if (++(*counter) >= ITERATIONS)
@@ -90,7 +90,7 @@ END_TEST
 /* block thread then call asc_main_loop_shutdown() until it aborts */
 static void on_block(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
 
     while (true)
     {
@@ -160,7 +160,7 @@ END_TEST
 
 static void on_last(void *arg)
 {
-    __uarg(arg);
+    ASC_UNUSED(arg);
     asc_main_loop_shutdown();
 }
 
