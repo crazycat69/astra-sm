@@ -34,6 +34,7 @@ void lib_teardown(void);
 
 /* core */
 Suite *core_alloc(void);
+Suite *core_assert(void);
 Suite *core_clock(void);
 Suite *core_compat(void);
 Suite *core_event(void);
@@ -75,6 +76,7 @@ typedef Suite (*(*const suite_func_t)(void));
 static suite_func_t suite_list[] = {
     /* core */
     core_alloc,
+    core_assert,
     core_clock,
     core_compat,
     core_event,

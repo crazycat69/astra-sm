@@ -347,6 +347,7 @@ tests_libastra_SOURCES = \
 
 tests_libastra_SOURCES += \
     tests/core/alloc.c \
+    tests/core/assert.c \
     tests/core/child.c \
     tests/core/clock.c \
     tests/core/compat.c \

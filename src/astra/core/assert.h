@@ -40,7 +40,14 @@
         } \
     } while (0)
 
+/* some black magic to avoid compiler warnings for multiple asserts */
+#define ASC_STATIC_ASSERT_SYMBOL(_a, _b) \
+    _a ## _b
+
+#define ASC_STATIC_ASSERT_DECL(_line) \
+    extern int ASC_STATIC_ASSERT_SYMBOL(__asc_static_assert_, _line)
+
 #define ASC_STATIC_ASSERT(_cond) \
-    extern int __asc_static_assert[((_cond) ? 1 : -1)]
+    ASC_STATIC_ASSERT_DECL(__LINE__)[((_cond) ? 1 : -1)]
 
 #endif /* _ASC_ASSERT_H_ */
