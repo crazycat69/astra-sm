@@ -60,6 +60,7 @@ function main()
         astra_usage()
     end
 
+    dvb_conf.format = "dvb"
     dvb_conf.name = "femon"
     dvb_conf.log_signal = true
     dvb_conf.no_dvr = true
