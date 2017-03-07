@@ -351,6 +351,7 @@ tests_libastra_SOURCES += \
     tests/core/compat.c \
     tests/core/event.c \
     tests/core/list.c \
+    tests/core/log.c \
     tests/core/mainloop.c \
     tests/core/spawn.c \
     tests/core/thread.c \

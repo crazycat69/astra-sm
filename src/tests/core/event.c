@@ -820,7 +820,7 @@ static void oob_pipe(int fds[2])
     /* wait for connection */
     fd_set rset;
     FD_ZERO(&rset);
-    FD_SET(listener, &rset);
+    FD_SET((unsigned)listener, &rset);
     ck_assert(select(listener + 1, &rset, NULL, NULL, NULL) == 1);
     ck_assert(FD_ISSET((unsigned)listener, &rset));
 

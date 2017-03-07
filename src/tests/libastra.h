@@ -39,6 +39,7 @@ Suite *core_clock(void);
 Suite *core_compat(void);
 Suite *core_event(void);
 Suite *core_list(void);
+Suite *core_log(void);
 Suite *core_mainloop(void);
 Suite *core_spawn(void);
 Suite *core_child(void);
@@ -81,6 +82,7 @@ static suite_func_t suite_list[] = {
     core_compat,
     core_event,
     core_list,
+    core_log,
     core_mainloop,
     core_spawn,
     core_child,

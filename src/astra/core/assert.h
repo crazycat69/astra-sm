@@ -33,7 +33,7 @@
         if (!(_cond)) \
         { \
             fprintf(stderr, "%s:%u: %s: assertion `%s' failed\n" \
-                    , __FILE__, __LINE__, __FUNCTION__, #_cond); \
+                    , __FILE__, __LINE__, __func__, #_cond); \
             fprintf(stderr, __VA_ARGS__); \
             putc('\n', stderr); \
             asc_lib_abort(); \
