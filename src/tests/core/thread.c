@@ -185,8 +185,8 @@ static void wake_up_cb(void *arg)
     ASC_UNUSED(arg);
 
     const uint64_t now = asc_utime();
-    ck_assert_msg(now >= wake_time && now - wake_time < (5 * 1000)
-                  , "didn't wake up within 5ms");
+    ck_assert_msg(now >= wake_time && now - wake_time < (50 * 1000)
+                  , "didn't wake up within 50ms");
 
     asc_mutex_lock(&wake_mutex);
     if (++wake_tasks_done >= WAKE_TASKS)

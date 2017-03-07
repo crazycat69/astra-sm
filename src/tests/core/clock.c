@@ -20,7 +20,7 @@
 
 #include "../libastra.h"
 
-START_TEST(func_asc_utime)
+START_TEST(u_time)
 {
     uint64_t last = asc_utime();
     ck_assert_msg(last != 0, "asc_utime() returned zero");
@@ -37,7 +37,7 @@ START_TEST(func_asc_utime)
 }
 END_TEST
 
-START_TEST(func_asc_usleep)
+START_TEST(u_sleep)
 {
     const unsigned res = get_timer_res();
 
@@ -59,13 +59,39 @@ START_TEST(func_asc_usleep)
 }
 END_TEST
 
+#ifndef _WIN32
+START_TEST(rtc_time)
+{
+    for (unsigned int i = 0; i <= 10000; i += 10)
+    {
+        struct timeval tv = { 0, 0 };
+        ck_assert(gettimeofday(&tv, NULL) == 0);
+        const uint64_t ref = (tv.tv_sec * 1000000ULL) + tv.tv_usec;
+
+        struct timespec ts = { 0, 0 };
+        asc_rtctime(&ts, i);
+        const uint64_t val = (ts.tv_sec * 1000000ULL) + (ts.tv_nsec / 1000ULL);
+
+        const double low = (i * 0.95);
+        const double high = (i * 1.05);
+        const uint64_t ms = (val - ref) / 1000ULL;
+
+        ck_assert(ms >= low && ms <= high);
+    }
+}
+END_TEST
+#endif /* !_WIN32 */
+
 Suite *core_clock(void)
 {
     Suite *const s = suite_create("core/clock");
 
     TCase *const tc = tcase_create("default");
-    tcase_add_test(tc, func_asc_utime);
-    tcase_add_test(tc, func_asc_usleep);
+    tcase_add_test(tc, u_time);
+    tcase_add_test(tc, u_sleep);
+#ifndef _WIN32
+    tcase_add_test(tc, rtc_time);
+#endif
     suite_add_tcase(s, tc);
 
     return s;
