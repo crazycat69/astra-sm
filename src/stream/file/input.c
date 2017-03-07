@@ -252,8 +252,8 @@ static void thread_loop(void *arg)
         block_time = mpegts_pcr_block_us(&mod->pcr, &pcr);
         if(block_time == 0 || block_time > 500000)
         {
-            asc_log_error(  MSG("block time out of range: %" PRIu64 "ms block_size: %zu")
-                          , block_time / 1000, block_size);
+            asc_log_error(MSG("block time out of range: %llums block_size: %zu")
+                          , block_time / 1000ULL, block_size);
             mod->buffer_skip += block_size;
 
             reset = true;
@@ -318,8 +318,8 @@ static void thread_loop(void *arg)
         system_time = asc_utime();
         if(system_time > block_time_total + 100000)
         {
-            asc_log_warning(  MSG("wrong syncing time. -%" PRIu64 "ms")
-                            , (system_time - block_time_total) / 1000);
+            asc_log_warning(MSG("wrong syncing time. -%llums")
+                            , (system_time - block_time_total) / 1000ULL);
             reset = true;
         }
 

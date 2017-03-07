@@ -32,6 +32,18 @@
 #   include <sys/event.h>
 #endif
 
+#ifdef _WIN32
+    /* WSASocket() no-inherit flag; appeared in Win7 SP1 */
+#   ifndef WSA_FLAG_NO_HANDLE_INHERIT
+#       define WSA_FLAG_NO_HANDLE_INHERIT 0x80
+#   endif
+
+    /* open() no-inherit flag */
+#   ifndef O_CLOEXEC
+#       define O_CLOEXEC _O_NOINHERIT
+#   endif
+#endif /* _WIN32 */
+
 #ifndef HAVE_PREAD
 ssize_t pread(int fd, void *buffer, size_t size, off_t off)
 {
@@ -40,7 +52,7 @@ ssize_t pread(int fd, void *buffer, size_t size, off_t off)
 
     return read(fd, buffer, size);
 }
-#endif
+#endif /* !HAVE_PREAD */
 
 #ifndef HAVE_STRNDUP
 char *strndup(const char *str, size_t max)
@@ -54,7 +66,7 @@ char *strndup(const char *str, size_t max)
     }
     return res;
 }
-#endif
+#endif /* !HAVE_STRNDUP */
 
 #ifndef HAVE_STRNLEN
 size_t strnlen(const char *str, size_t max)
@@ -62,7 +74,7 @@ size_t strnlen(const char *str, size_t max)
     const char *end = memchr(str, 0, max);
     return end ? (size_t)(end - str) : max;
 }
-#endif
+#endif /* !HAVE_STRNLEN */
 
 #ifdef _WIN32
 #if _WIN32_WINNT <= _WIN32_WINNT_WIN2K

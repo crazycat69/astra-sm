@@ -53,8 +53,8 @@ START_TEST(func_asc_usleep)
 
         const uint64_t duration = time_b - time_a;
         ck_assert_msg(duration >= (usecs * 0.9) && duration <= (usecs * 2.1)
-                      , "Requested %uus sleep, got %" PRIu64 "us"
-                      , usecs, duration);
+                      , "Requested %uus sleep, got %lluus"
+                      , (unsigned long long)usecs, duration);
     }
 }
 END_TEST

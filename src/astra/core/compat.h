@@ -29,43 +29,8 @@
  * replacement defines
  */
 
-/* [u]int64_t format specs as per C99 */
-#ifndef __WORDSIZE
-#   if defined __x86_64__ && !defined __ILP32__
-#       define __WORDSIZE 64
-#   else
-#       define __WORDSIZE 32
-#   endif
-#endif /* !__WORDSIZE */
-
-#ifndef __PRI64_PREFIX
-#   if __WORDSIZE == 64 && !defined(__llvm__)
-#       define __PRI64_PREFIX "l"
-#   else
-#       define __PRI64_PREFIX "ll"
-#   endif
-#endif /* !__PRI64_PREFIX */
-
-#ifndef PRId64
-#   define PRId64 __PRI64_PREFIX "d"
-#endif /* !PRId64 */
-
-#ifndef PRIu64
-#   define PRIu64 __PRI64_PREFIX "u"
-#endif /* !PRIu64 */
-
 /* win32-specific defines */
 #ifdef _WIN32
-    /* open() no-inherit flag */
-#   ifndef O_CLOEXEC
-#       define O_CLOEXEC _O_NOINHERIT
-#   endif /* !O_CLOEXEC */
-
-    /* WSASocket() no-inherit flag; appeared in Win7 SP1 */
-#   ifndef WSA_FLAG_NO_HANDLE_INHERIT
-#       define WSA_FLAG_NO_HANDLE_INHERIT 0x80
-#   endif /* !WSA_FLAG_NO_HANDLE_INHERIT */
-
     /* file create modes */
 #   ifndef S_IRUSR
 #       define S_IRUSR _S_IREAD
@@ -89,7 +54,7 @@
     /* maximum path length */
 #   ifndef PATH_MAX
 #       define PATH_MAX MAX_PATH
-#   endif /* ! */
+#   endif
 
     /* cast int to HANDLE */
 #   define ASC_TO_HANDLE(_val) ((HANDLE)((intptr_t)(_val)))

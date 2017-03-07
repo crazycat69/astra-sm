@@ -22,6 +22,7 @@
 #include <astra/core/mutex.h>
 
 #if !defined(_WIN32) && defined(HAVE_PTHREAD_MUTEX_TIMEDLOCK)
+
 bool asc_mutex_timedlock(asc_mutex_t *mutex, unsigned long ms)
 {
     /* use native OS implementation */
@@ -35,7 +36,9 @@ bool asc_mutex_timedlock(asc_mutex_t *mutex, unsigned long ms)
 
     return (ret == 0);
 }
+
 #else /* !_WIN32 && HAVE_PTHREAD_MUTEX_TIMEDLOCK */
+
 bool asc_mutex_timedlock(asc_mutex_t *mutex, unsigned long ms)
 {
     /* spin until we hit the timeout */
@@ -55,4 +58,5 @@ bool asc_mutex_timedlock(asc_mutex_t *mutex, unsigned long ms)
 
     return ret;
 }
+
 #endif /* _WIN32 || !HAVE_PTHREAD_MUTEX_TIMEDLOCK */
