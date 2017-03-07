@@ -36,7 +36,7 @@ int panic_handler(lua_State *L)
 
     asc_log_error("%s", err);
     asc_log_error(MSG("unprotected Lua error, aborting execution"));
-    asc_lib_exit(EXIT_ABORT);
+    asc_lib_exit(ASC_EXIT_ABORT);
 
     return 0;
 }

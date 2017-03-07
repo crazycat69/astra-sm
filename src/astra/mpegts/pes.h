@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
- *               2014-2015, Artem Kharitonov <artem@sysert.ru>
+ *               2014-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -180,7 +180,7 @@ struct mpegts_pes_t
     ts_callback_t on_ts;
 };
 
-mpegts_pes_t *mpegts_pes_init(uint16_t pid) __wur;
+mpegts_pes_t *mpegts_pes_init(uint16_t pid) __asc_result;
 void mpegts_pes_destroy(mpegts_pes_t *pes);
 
 bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts);

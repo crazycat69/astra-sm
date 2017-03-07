@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
- *               2015-2016, Artem Kharitonov <artem@3phase.pw>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -63,7 +63,7 @@ typedef struct
 void module_add_methods(lua_State *L, const module_data_t *mod
                         , const module_method_t *list);
 void module_register(lua_State *L, const module_manifest_t *manifest);
-lua_State *module_lua(const module_data_t *mod);
+lua_State *module_lua(const module_data_t *mod) __asc_result;
 
 bool module_option_integer(lua_State *L, const char *name, int *integer);
 bool module_option_string(lua_State *L, const char *name, const char **string

@@ -97,7 +97,7 @@ Suite *luaapi_state(void)
     tcase_add_test(tc, pkg_paths);
 
     if (can_fork != CK_NOFORK)
-        tcase_add_exit_test(tc, panic, EXIT_ABORT);
+        tcase_add_exit_test(tc, panic, ASC_EXIT_ABORT);
 
     suite_add_tcase(s, tc);
 

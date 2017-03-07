@@ -33,17 +33,17 @@ void asc_thread_core_init(void);
 void asc_thread_core_destroy(void);
 
 asc_thread_t *asc_thread_init(void *arg, thread_callback_t proc
-                              , thread_callback_t on_close) __wur;
+                              , thread_callback_t on_close) __asc_result;
 void asc_thread_join(asc_thread_t *thr);
 
 /* thread buffer (deprecated) */
 typedef struct asc_thread_buffer_t asc_thread_buffer_t;
-asc_thread_buffer_t *asc_thread_buffer_init(size_t buffer_size) __wur;
+asc_thread_buffer_t *asc_thread_buffer_init(size_t buffer_size) __asc_result;
 void asc_thread_buffer_destroy(asc_thread_buffer_t *buffer);
 void asc_thread_buffer_flush(asc_thread_buffer_t *buffer);
 ssize_t asc_thread_buffer_read(asc_thread_buffer_t *buffer
-                               , void *data, size_t size) __wur;
+                               , void *data, size_t size) __asc_result;
 ssize_t asc_thread_buffer_write(asc_thread_buffer_t *buffer
-                                , const void *data, size_t size) __wur;
+                                , const void *data, size_t size) __asc_result;
 
 #endif /* _ASC_THREAD_H_ */

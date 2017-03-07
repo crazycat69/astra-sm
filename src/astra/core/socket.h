@@ -37,9 +37,9 @@ void asc_socket_core_destroy(void);
 #define asc_socket_core_destroy(...)
 #endif /* _WIN32 */
 
-asc_socket_t *asc_socket_open_tcp4(void *arg) __wur;
-asc_socket_t *asc_socket_open_udp4(void *arg) __wur;
-asc_socket_t *asc_socket_open_sctp4(void *arg) __wur;
+asc_socket_t *asc_socket_open_tcp4(void *arg) __asc_result;
+asc_socket_t *asc_socket_open_udp4(void *arg) __asc_result;
+asc_socket_t *asc_socket_open_sctp4(void *arg) __asc_result;
 
 void asc_socket_set_on_read(asc_socket_t *sock, event_callback_t on_read);
 void asc_socket_set_on_close(asc_socket_t *sock, event_callback_t on_close);
@@ -50,22 +50,22 @@ void asc_socket_shutdown_send(asc_socket_t *sock);
 void asc_socket_shutdown_both(asc_socket_t *sock);
 void asc_socket_close(asc_socket_t *sock);
 
-bool asc_socket_bind(asc_socket_t *sock, const char *addr, int port) __wur;
+bool asc_socket_bind(asc_socket_t *sock, const char *addr, int port) __asc_result;
 void asc_socket_listen(asc_socket_t *sock
                        , event_callback_t on_accept, event_callback_t on_error);
-bool asc_socket_accept(asc_socket_t *sock, asc_socket_t **client_ptr, void *arg) __wur;
+bool asc_socket_accept(asc_socket_t *sock, asc_socket_t **client_ptr, void *arg) __asc_result;
 void asc_socket_connect(asc_socket_t *sock, const char *addr, int port
                         , event_callback_t on_connect, event_callback_t on_error);
 
-ssize_t asc_socket_recv(asc_socket_t *sock, void *buffer, size_t size) __wur;
-ssize_t asc_socket_recvfrom(asc_socket_t *sock, void *buffer, size_t size) __wur;
+ssize_t asc_socket_recv(asc_socket_t *sock, void *buffer, size_t size) __asc_result;
+ssize_t asc_socket_recvfrom(asc_socket_t *sock, void *buffer, size_t size) __asc_result;
 
-ssize_t asc_socket_send(asc_socket_t *sock, const void *buffer, size_t size) __wur;
-ssize_t asc_socket_sendto(asc_socket_t *sock, const void *buffer, size_t size) __wur;
+ssize_t asc_socket_send(asc_socket_t *sock, const void *buffer, size_t size) __asc_result;
+ssize_t asc_socket_sendto(asc_socket_t *sock, const void *buffer, size_t size) __asc_result;
 
-int asc_socket_fd(asc_socket_t *sock) __wur;
-const char *asc_socket_addr(asc_socket_t *sock) __wur;
-int asc_socket_port(asc_socket_t *sock) __wur;
+int asc_socket_fd(asc_socket_t *sock) __asc_result;
+const char *asc_socket_addr(asc_socket_t *sock) __asc_result;
+int asc_socket_port(asc_socket_t *sock) __asc_result;
 
 void asc_socket_set_nonblock(asc_socket_t *sock, bool is_nonblock);
 void asc_socket_set_sockaddr(asc_socket_t *sock, const char *addr, int port);
@@ -83,7 +83,7 @@ void asc_socket_multicast_join(asc_socket_t *sock, const char *addr, const char 
 void asc_socket_multicast_leave(asc_socket_t *sock);
 void asc_socket_multicast_renew(asc_socket_t *sock);
 
-static inline __wur
+static inline __asc_result
 bool asc_socket_would_block(void)
 {
 #ifdef _WIN32

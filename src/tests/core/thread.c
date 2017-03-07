@@ -502,7 +502,7 @@ Suite *core_thread(void)
     if (can_fork != CK_NOFORK)
     {
         tcase_set_timeout(tc, 5);
-        tcase_add_exit_test(tc, no_destroy, EXIT_ABORT);
+        tcase_add_exit_test(tc, no_destroy, ASC_EXIT_ABORT);
     }
 
     suite_add_tcase(s, tc);

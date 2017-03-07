@@ -2,7 +2,7 @@
  * Astra Core (Memory allocation)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2016-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -36,7 +36,7 @@
         } \
     } while (0)
 
-static inline __wur
+static inline __asc_result
 void *asc_calloc(size_t nmemb, size_t size)
 {
     void *const p = calloc(nmemb, size);

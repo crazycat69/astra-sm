@@ -649,13 +649,13 @@ Suite *luaapi_stream(void)
     {
         TCase *const tc_f = tcase_create("fail");
         tcase_add_checked_fixture(tc_f, setup, teardown);
-        tcase_add_exit_test(tc_f, double_init, EXIT_ABORT);
-        tcase_add_exit_test(tc_f, bad_attach, EXIT_ABORT);
-        tcase_add_exit_test(tc_f, ouroboros, EXIT_ABORT);
-        tcase_add_exit_test(tc_f, no_on_ts, EXIT_ABORT);
-        tcase_add_exit_test(tc_f, range_join, EXIT_ABORT);
-        tcase_add_exit_test(tc_f, range_leave, EXIT_ABORT);
-        tcase_add_exit_test(tc_f, range_check, EXIT_ABORT);
+        tcase_add_exit_test(tc_f, double_init, ASC_EXIT_ABORT);
+        tcase_add_exit_test(tc_f, bad_attach, ASC_EXIT_ABORT);
+        tcase_add_exit_test(tc_f, ouroboros, ASC_EXIT_ABORT);
+        tcase_add_exit_test(tc_f, no_on_ts, ASC_EXIT_ABORT);
+        tcase_add_exit_test(tc_f, range_join, ASC_EXIT_ABORT);
+        tcase_add_exit_test(tc_f, range_leave, ASC_EXIT_ABORT);
+        tcase_add_exit_test(tc_f, range_check, ASC_EXIT_ABORT);
         suite_add_tcase(s, tc_f);
     }
 

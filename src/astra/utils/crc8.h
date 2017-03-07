@@ -2,7 +2,7 @@
  * Astra Utils (CRC-8)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,6 @@
 #   error "Please include <astra/astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-uint8_t au_crc8(const uint8_t *buffer, size_t len) __wur;
+uint8_t au_crc8(const uint8_t *buffer, size_t len) __asc_result;
 
 #endif /* _AU_CRC8_H_ */

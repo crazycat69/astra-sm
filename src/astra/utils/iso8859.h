@@ -26,6 +26,6 @@
 #   error "Please include <astra/astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-char *au_iso8859_dec(const uint8_t *data, size_t size) __wur;
+char *au_iso8859_dec(const uint8_t *data, size_t size) __asc_result;
 
 #endif /* _AU_ISO8859_H_ */

@@ -26,7 +26,7 @@
 #   error "Please include <astra/astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-uint64_t asc_utime(void) __wur;
+uint64_t asc_utime(void) __asc_result;
 void asc_usleep(uint64_t usec);
 #ifndef _WIN32
 void asc_rtctime(struct timespec *ts, unsigned long offset_ms);

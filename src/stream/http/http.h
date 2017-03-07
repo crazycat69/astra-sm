@@ -50,11 +50,11 @@ struct http_client_t
 // HTTP Server API
 
 void http_response_code(http_client_t *client, int code, const char *message);
-void http_response_header(http_client_t *client, const char *header, ...) __fmt_printf(2, 3);
+void http_response_header(http_client_t *client, const char *header, ...) __asc_printf(2, 3);
 void http_response_send(http_client_t *client);
 
-void http_client_warning(http_client_t *client, const char *message, ...) __fmt_printf(2, 3);
-void http_client_error(http_client_t *client, const char *message, ...) __fmt_printf(2, 3);
+void http_client_warning(http_client_t *client, const char *message, ...) __asc_printf(2, 3);
+void http_client_error(http_client_t *client, const char *message, ...) __asc_printf(2, 3);
 void http_client_close(http_client_t *client);
 
 void http_client_redirect(http_client_t *client, int code, const char *location);

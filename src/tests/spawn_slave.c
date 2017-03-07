@@ -25,7 +25,8 @@
     } while (0)
 
 #ifdef _WIN32
-static BOOL WINAPI console_handler(DWORD type)
+static WINAPI
+BOOL console_handler(DWORD type)
 {
     ASC_UNUSED(type);
     fprintf(stderr, "peep\n");
@@ -35,7 +36,8 @@ static BOOL WINAPI console_handler(DWORD type)
 #include <signal.h>
 #include <sys/socket.h>
 
-static void signal_handler(int signum)
+static
+void signal_handler(int signum)
 {
     ASC_UNUSED(signum);
     fprintf(stderr, "peep\n");
@@ -43,7 +45,8 @@ static void signal_handler(int signum)
 #endif /* !_WIN32 */
 
 /* ignore termination signals */
-static void __dead cmd_bandit(void)
+static __asc_noreturn
+void cmd_bandit(void)
 {
 #ifdef _WIN32
     SetConsoleCtrlHandler(console_handler, true);
@@ -62,7 +65,8 @@ static void __dead cmd_bandit(void)
 }
 
 /* read from fd and write to another fd */
-static void cmd_cat(int rfd, int wfd, bool stdio)
+static
+void cmd_cat(int rfd, int wfd, bool stdio)
 {
 #ifdef _WIN32
     /* NOTE: read() and write() don't work on sockets on Win32 */
@@ -113,7 +117,8 @@ static void cmd_cat(int rfd, int wfd, bool stdio)
 }
 
 /* close all stdio fds and do nothing */
-static void __dead cmd_close(void)
+static __asc_noreturn
+void cmd_close(void)
 {
     close(STDIN_FILENO);
     close(STDOUT_FILENO);
@@ -123,13 +128,15 @@ static void __dead cmd_close(void)
 }
 
 /* exit with a given return value */
-static void __dead cmd_exit(int rc)
+static __asc_noreturn
+void cmd_exit(int rc)
 {
     exit(rc);
 }
 
 /* report my pid to stdout and exit */
-static void cmd_pid(void)
+static
+void cmd_pid(void)
 {
     char buf[512] = { 0 };
     const int len = snprintf(buf, sizeof(buf), "%lld\n", (long long)getpid());
@@ -139,7 +146,8 @@ static void cmd_pid(void)
 }
 
 /* report current date to stdout once per second */
-static void __dead cmd_ticker(void)
+static __asc_noreturn
+void cmd_ticker(void)
 {
     while (true)
     {
@@ -156,7 +164,8 @@ static void __dead cmd_ticker(void)
 }
 
 /* output TS packets interspersed with some random bytes */
-static void trash(void)
+static
+void trash(void)
 {
     char buf[32];
 
@@ -177,7 +186,8 @@ static void trash(void)
     }
 }
 
-static void cmd_unaligned(unsigned int cnt)
+static
+void cmd_unaligned(unsigned int cnt)
 {
     const unsigned int pid = 0x100;
     unsigned int cc = 15;
@@ -204,7 +214,8 @@ static void cmd_unaligned(unsigned int cnt)
     }
 }
 
-static void __dead usage(const char *argv0)
+static __asc_noreturn
+void usage(const char *argv0)
 {
     fprintf(stderr, "usage: %s <cmd> [args]\n", argv0);
     exit(EXIT_FAILURE);

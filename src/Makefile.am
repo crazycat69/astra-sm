@@ -61,7 +61,6 @@ libastra_la_SOURCES += \
     astra/core/compat.h \
     astra/core/cond.c \
     astra/core/cond.h \
-    astra/core/core.h \
     astra/core/error.c \
     astra/core/error.h \
     astra/core/event.c \
@@ -137,7 +136,6 @@ endif
 libastra_la_SOURCES += \
     astra/mpegts/descriptors.c \
     astra/mpegts/descriptors.h \
-    astra/mpegts/mpegts.h \
     astra/mpegts/pcr.c \
     astra/mpegts/pcr.h \
     astra/mpegts/pes.c \

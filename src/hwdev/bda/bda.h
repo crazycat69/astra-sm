@@ -445,6 +445,6 @@ void bda_buffer_pop(void *arg);
 void bda_dump_request(ITuneRequest *request);
 void bda_log_hr(const char *pfx, const char *id
                 , HRESULT hr, asc_log_type_t type
-                , const char *fmt, ...) __fmt_printf(5, 6);
+                , const char *fmt, ...) __asc_printf(5, 6);
 
 #endif /* _HWDEV_BDA_H_ */

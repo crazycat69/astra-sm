@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
- *               2014-2015, Artem Kharitonov <artem@sysert.ru>
+ *               2014-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -95,6 +95,7 @@
     TS_SET_PCR_FIELDS(__x, ((__v) / 300), ((__v) % 300));
 
 /* usecs between two PCR values */
-uint64_t mpegts_pcr_block_us(uint64_t *pcr_last, const uint64_t *pcr_current) __wur;
+uint64_t mpegts_pcr_block_us(uint64_t *pcr_last
+                             , const uint64_t *pcr_current) __asc_result;
 
 #endif /* _TS_PCR_ */

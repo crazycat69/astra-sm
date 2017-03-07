@@ -2,7 +2,7 @@
  * Astra Core (Initialization)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,6 +25,11 @@
 #   error "Please include <astra/astra.h> first"
 #endif /* !_ASTRA_H_ */
 
+/* additional exit codes */
+#define ASC_EXIT_ABORT      2   /* abnormal termination */
+#define ASC_EXIT_SIGNAL     101 /* signal handling error */
+#define ASC_EXIT_MAINLOOP   102 /* main loop blocked */
+
 extern int asc_exit_status;
 
 void asc_srand(void);
@@ -32,7 +37,7 @@ void asc_srand(void);
 void asc_lib_init(void);
 void asc_lib_destroy(void);
 
-void asc_lib_exit(int status) __dead;
-void asc_lib_abort(void) __dead;
+void asc_lib_exit(int status) __asc_noreturn;
+void asc_lib_abort(void) __asc_noreturn;
 
 #endif /* _ASC_INIT_H_ */

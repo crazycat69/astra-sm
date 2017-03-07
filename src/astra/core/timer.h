@@ -34,9 +34,9 @@ unsigned int asc_timer_core_loop(void);
 void asc_timer_core_destroy(void);
 
 asc_timer_t *asc_timer_init(unsigned int ms, timer_callback_t callback
-                            , void *arg) __wur;
+                            , void *arg) __asc_result;
 asc_timer_t *asc_timer_one_shot(unsigned int ms, timer_callback_t callback
-                                , void *arg) __wur;
+                                , void *arg) __asc_result;
 void asc_timer_destroy(asc_timer_t *timer);
 
 #endif /* _ASC_TIMER_H_ */

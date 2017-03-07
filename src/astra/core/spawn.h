@@ -1,7 +1,7 @@
 /*
  * Astra Core (Process spawning)
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,7 +40,7 @@ typedef struct
     HANDLE job;
 } asc_process_t;
 
-static inline __wur
+static inline __asc_result
 pid_t asc_process_id(const asc_process_t *proc)
 {
     return proc->pi.dwProcessId;
@@ -55,7 +55,7 @@ void asc_process_free(asc_process_t *proc)
 }
 
 pid_t asc_process_wait(const asc_process_t *proc, int *status
-                       , bool block) __wur;
+                       , bool block) __asc_result;
 
 #else /* _WIN32 */
 
@@ -64,7 +64,7 @@ pid_t asc_process_wait(const asc_process_t *proc, int *status
 
 typedef pid_t asc_process_t;
 
-static inline __wur
+static inline __asc_result
 pid_t asc_process_id(const asc_process_t *proc)
 {
     return *proc;
@@ -76,7 +76,7 @@ void asc_process_free(asc_process_t *proc)
     *proc = -1;
 }
 
-static inline __wur
+static inline __asc_result
 pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block)
 {
     return waitpid(*proc, status, (block ? 0 : WNOHANG));
@@ -86,11 +86,11 @@ pid_t asc_process_wait(const asc_process_t *proc, int *status, bool block)
 
 int asc_process_spawn(const char *command, asc_process_t *proc
                       , int *parent_sin, int *parent_sout
-                      , int *parent_serr) __wur;
-int asc_process_kill(const asc_process_t *proc, bool forced) __wur;
+                      , int *parent_serr) __asc_result;
+int asc_process_kill(const asc_process_t *proc, bool forced) __asc_result;
 
-int asc_pipe_open(int fds[2], int *nb_fd, unsigned int nb_side) __wur;
-int asc_pipe_inherit(int fd, bool inherit) __wur;
+int asc_pipe_open(int fds[2], int *nb_fd, unsigned int nb_side) __asc_result;
+int asc_pipe_inherit(int fd, bool inherit) __asc_result;
 int asc_pipe_close(int fd);
 
 #endif /* _ASC_SPAWN_H_ */

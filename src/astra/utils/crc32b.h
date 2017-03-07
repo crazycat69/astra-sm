@@ -27,6 +27,6 @@
 
 #define CRC32_SIZE 4
 
-uint32_t au_crc32b(const uint8_t *buffer, int size) __wur;
+uint32_t au_crc32b(const uint8_t *buffer, int size) __asc_result;
 
 #endif /* _AU_CRC32B_H_ */

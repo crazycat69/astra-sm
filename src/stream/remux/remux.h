@@ -1,7 +1,7 @@
 /*
  * Astra Module: Remux
  *
- * Copyright (C) 2014-2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2014-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,8 +46,9 @@ typedef struct
     size_t pid_cnt;
 } ts_program_t;
 
-ts_program_t *ts_program_init(uint16_t pnr, uint16_t pid) __wur;
-ts_program_t *ts_program_find(const module_data_t *mod, uint16_t pid) __wur;
+ts_program_t *ts_program_init(uint16_t pnr, uint16_t pid) __asc_result;
+ts_program_t *ts_program_find(const module_data_t *mod
+                              , uint16_t pid) __asc_result;
 void ts_program_destroy(ts_program_t *p);
 
 /*
@@ -63,8 +64,9 @@ typedef struct
     unsigned count;
 } pcr_stream_t;
 
-pcr_stream_t *pcr_stream_init(uint16_t pid);
-pcr_stream_t *pcr_stream_find(const module_data_t *mod, uint16_t pid) __wur;
+pcr_stream_t *pcr_stream_init(uint16_t pid) __asc_result;
+pcr_stream_t *pcr_stream_find(const module_data_t *mod
+                              , uint16_t pid) __asc_result;
 void pcr_stream_destroy(pcr_stream_t *p);
 
 /*

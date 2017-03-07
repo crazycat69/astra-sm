@@ -28,12 +28,12 @@
 
 #include <astra/core/init.h>
 
-#define ASC_ASSERT(__cond, ...) \
+#define ASC_ASSERT(_cond, ...) \
     do { \
-        if (!(__cond)) \
+        if (!(_cond)) \
         { \
             fprintf(stderr, "%s:%u: %s: assertion `%s' failed\n" \
-                    , __FILE__, __LINE__, __FUNCTION__, #__cond); \
+                    , __FILE__, __LINE__, __FUNCTION__, #_cond); \
             fprintf(stderr, __VA_ARGS__); \
             putc('\n', stderr); \
             asc_lib_abort(); \

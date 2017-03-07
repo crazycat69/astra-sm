@@ -103,7 +103,7 @@ Suite *luaapi_lib_astra(void)
 
     if (can_fork != CK_NOFORK)
     {
-        tcase_add_exit_test(tc, astra_abort, EXIT_ABORT);
+        tcase_add_exit_test(tc, astra_abort, ASC_EXIT_ABORT);
         tcase_add_exit_test(tc, astra_exit, TEST_EXIT_CODE);
     }
 

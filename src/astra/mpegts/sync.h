@@ -2,7 +2,7 @@
  * Astra Module: MPEG-TS (Sync buffer)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -53,11 +53,11 @@ typedef struct
     unsigned int num_blocks;
 } mpegts_sync_stat_t;
 
-mpegts_sync_t *mpegts_sync_init(void) __wur;
+mpegts_sync_t *mpegts_sync_init(void) __asc_result;
 void mpegts_sync_destroy(mpegts_sync_t *sx);
 
-void mpegts_sync_set_fname(mpegts_sync_t *sx
-                           , const char *format, ...) __fmt_printf(2, 3);
+void mpegts_sync_set_fname(mpegts_sync_t *sx, const char *format
+                           , ...) __asc_printf(2, 3);
 
 void mpegts_sync_set_on_ready(mpegts_sync_t *sx, sync_callback_t on_ready);
 void mpegts_sync_set_on_write(mpegts_sync_t *sx, ts_callback_t on_write);
@@ -84,7 +84,8 @@ bool mpegts_sync_set_blocks(mpegts_sync_t *sx, unsigned int enough
 void mpegts_sync_query(const mpegts_sync_t *sx, mpegts_sync_stat_t *out);
 
 void mpegts_sync_loop(void *arg);
-bool mpegts_sync_push(mpegts_sync_t *sx, const void *buf, size_t count) __wur;
+bool mpegts_sync_push(mpegts_sync_t *sx, const void *buf
+                      , size_t count) __asc_result;
 void mpegts_sync_reset(mpegts_sync_t *sx, enum mpegts_sync_reset type);
 
 #endif /* _TS_SYNC_ */

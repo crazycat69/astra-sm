@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *               2015-2016, Artem Kharitonov <artem@3phase.pw>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -37,7 +37,7 @@ void asc_job_prune(void *owner);
 
 void asc_main_loop_init(void);
 void asc_main_loop_destroy(void);
-bool asc_main_loop_run(void) __wur;
+bool asc_main_loop_run(void) __asc_result;
 
 void asc_main_loop_shutdown(void);
 void asc_main_loop_reload(void);

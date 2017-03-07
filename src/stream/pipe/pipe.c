@@ -116,7 +116,7 @@ void callback_text(module_data_t *mod, const char *src, const char *text)
     }
 }
 
-static __fmt_printf(2, 0)
+static __asc_printf(2, 0)
 void callback_error(module_data_t *mod, const char *fmt, ...)
 {
     char buf[512] = { 0 };

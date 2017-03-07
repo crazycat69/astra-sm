@@ -93,7 +93,7 @@ void module_cam_detach_decrypt(module_cam_t *cam, module_decrypt_t *decrypt);
 void module_cam_ready(module_cam_t *cam);
 void module_cam_reset(module_cam_t *cam);
 
-em_packet_t * module_cam_queue_pop(module_cam_t *cam) __wur;
+em_packet_t * module_cam_queue_pop(module_cam_t *cam) __asc_result;
 void module_cam_queue_flush(module_cam_t *cam, module_decrypt_t *decrypt);
 
 #define module_cam_init(_mod, _connect, _disconnect, _send_em) \

@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *               2015-2016, Artem Kharitonov <artem@3phase.pw>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -47,13 +47,13 @@ void asc_log_set_syslog(const char *val);
 void asc_log_reopen(void);
 bool asc_log_is_debug(void);
 
-void asc_log_va(asc_log_type_t type, const char *msg, va_list ap)
-    __fmt_printf(2, 0);
-void asc_log(asc_log_type_t type, const char *msg, ...)
-    __fmt_printf(2, 3);
-void asc_log_error(const char *msg, ...) __fmt_printf(1, 2);
-void asc_log_warning(const char *msg, ...) __fmt_printf(1, 2);
-void asc_log_info(const char *msg, ...) __fmt_printf(1, 2);
-void asc_log_debug(const char *msg, ...) __fmt_printf(1, 2);
+void asc_log_va(asc_log_type_t type, const char *msg
+                , va_list ap) __asc_printf(2, 0);
+void asc_log(asc_log_type_t type, const char *msg
+             , ...) __asc_printf(2, 3);
+void asc_log_error(const char *msg, ...) __asc_printf(1, 2);
+void asc_log_warning(const char *msg, ...) __asc_printf(1, 2);
+void asc_log_info(const char *msg, ...) __asc_printf(1, 2);
+void asc_log_debug(const char *msg, ...) __asc_printf(1, 2);
 
 #endif /* _ASC_LOG_H_ */

@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,17 +30,19 @@
 
 typedef struct string_buffer_t string_buffer_t;
 
-string_buffer_t *string_buffer_alloc(void) __wur;
+string_buffer_t *string_buffer_alloc(void) __asc_result;
 void string_buffer_free(string_buffer_t *buffer);
 
 void string_buffer_addchar(string_buffer_t *buffer, char c);
-void string_buffer_addlstring(string_buffer_t *buffer, const char *str, size_t size);
-void string_buffer_addvastring(string_buffer_t *buffer, const char *str, va_list ap)
-    __fmt_printf(2, 0);
-void string_buffer_addfstring(string_buffer_t *buffer, const char *str, ...)
-    __fmt_printf(2, 3);
+void string_buffer_addlstring(string_buffer_t *buffer, const char *str
+                              , size_t size);
+void string_buffer_addvastring(string_buffer_t *buffer, const char *str
+                               , va_list ap) __asc_printf(2, 0);
+void string_buffer_addfstring(string_buffer_t *buffer, const char *str
+                              , ...) __asc_printf(2, 3);
 
-char *string_buffer_release(string_buffer_t *buffer, size_t *size) __wur;
+char *string_buffer_release(string_buffer_t *buffer
+                            , size_t *size) __asc_result;
 void string_buffer_push(lua_State *L, string_buffer_t *buffer);
 
 #endif /* _ASC_STRBUF_H_ */

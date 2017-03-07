@@ -2,7 +2,7 @@
  * Astra Core (Mutex)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -55,7 +55,7 @@ void asc_mutex_lock(asc_mutex_t *mutex)
                , strerror(ret));
 }
 
-static inline __wur
+static inline __asc_result
 bool asc_mutex_trylock(asc_mutex_t *mutex)
 {
     const int ret = pthread_mutex_trylock(mutex);
@@ -96,7 +96,7 @@ void asc_mutex_lock(asc_mutex_t *mutex)
     EnterCriticalSection(mutex);
 }
 
-static inline __wur
+static inline __asc_result
 bool asc_mutex_trylock(asc_mutex_t *mutex)
 {
     return TryEnterCriticalSection(mutex);
@@ -110,6 +110,6 @@ void asc_mutex_unlock(asc_mutex_t *mutex)
 
 #endif /* _WIN32 */
 
-bool asc_mutex_timedlock(asc_mutex_t *mutex, unsigned long ms) __wur;
+bool asc_mutex_timedlock(asc_mutex_t *mutex, unsigned long ms) __asc_result;
 
 #endif /* _ASC_MUTEX_H_ */

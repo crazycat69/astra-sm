@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -64,8 +64,8 @@ static const uint8_t ts_null_pkt[TS_PACKET_SIZE] = {
     0x47, 0x1f, 0xff, 0x10
 };
 
-const stream_type_t *mpegts_stream_type(uint8_t type_id) __wur;
-mpegts_packet_type_t mpegts_priv_type(uint8_t desc_type) __wur;
-const char *mpegts_type_name(mpegts_packet_type_t type) __wur;
+const stream_type_t *mpegts_stream_type(uint8_t type_id) __asc_result;
+mpegts_packet_type_t mpegts_priv_type(uint8_t desc_type) __asc_result;
+const char *mpegts_type_name(mpegts_packet_type_t type) __asc_result;
 
 #endif /* _TS_TYPES_ */

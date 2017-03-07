@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
- *               2015-2016, Artem Kharitonov <artem@3phase.pw>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -42,7 +42,7 @@ void module_demux_set(module_data_t *mod, demux_callback_t join_pid
                       , demux_callback_t leave_pid);
 void module_demux_join(module_data_t *mod, uint16_t pid);
 void module_demux_leave(module_data_t *mod, uint16_t pid);
-bool module_demux_check(const module_data_t *mod, uint16_t pid);
+bool module_demux_check(const module_data_t *mod, uint16_t pid) __asc_result;
 
 #define STREAM_MODULE_DATA_SIZE \
     MODULE_DATA_SIZE

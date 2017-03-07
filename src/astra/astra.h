@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
- *               2015-2016, Artem Kharitonov <artem@3phase.pw>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -81,9 +81,10 @@
 #endif /* !_WIN32 */
 
 /*
- * common macros
+ * common definitions
  */
 
+/* convenience macros */
 #define ASC_ARRAY_SIZE(_a) \
     (sizeof(_a) / sizeof(_a[0]))
 
@@ -91,27 +92,37 @@
     do { (void)_x; } while (0)
 
 /* function attributes */
-#ifndef __wur
-#   define __wur __attribute__((__warn_unused_result__))
-#endif /* !__wur */
+#ifdef __dead
+#   define __asc_noreturn __dead
+#elif defined(__GNUC__) /* __dead */
+#   define __asc_noreturn __attribute__((__noreturn__))
+#else /* __GNUC__ */
+#   define __asc_noreturn
+#endif /* !__GNUC__ */
 
-#ifndef __dead
-#   define __dead __attribute__((__noreturn__))
-#endif /* !__dead */
-
-#define __fmt_printf(__index, __first) \
-    __attribute__((__format__(__printf__, __index, __first)))
-
-/* additional exit codes */
-#define EXIT_ABORT      2   /* abnormal termination */
-#define EXIT_SIGHANDLER 101 /* signal handling error */
-#define EXIT_MAINLOOP   102 /* main loop blocked */
+#ifdef __GNUC__
+#define __asc_printf(_index, _first) \
+    __attribute__((__format__(__printf__, _index, _first)))
+#define __asc_result \
+    __attribute__((__warn_unused_result__))
+#else /* __GNUC__ */
+#define __asc_printf(_index, _first)
+#define __asc_result
+#endif /* !__GNUC__ */
 
 /*
  * public interface
  */
 
-#include "core/core.h"
-#include "mpegts/mpegts.h"
+#include "core/assert.h"
+#include "core/alloc.h"
+#include "core/compat.h"
+#include "core/init.h"
+#include "core/log.h"
+#include "core/clock.h"
+#include "core/error.h"
+
+#include "mpegts/tscore.h"
+#include "mpegts/types.h"
 
 #endif /* _ASTRA_H_ */

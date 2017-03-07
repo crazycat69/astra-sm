@@ -242,7 +242,7 @@ bool service_initialize(void)
     if (thr <= 0)
     {
         fprintf(stderr, "_beginthreadex(): %s\n", strerror(errno));
-        _exit(EXIT_SIGHANDLER);
+        _exit(ASC_EXIT_SIGNAL);
     }
     service_thread = (HANDLE)thr;
 

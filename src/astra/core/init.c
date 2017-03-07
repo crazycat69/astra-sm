@@ -107,6 +107,6 @@ void asc_lib_exit(int status)
 
 void asc_lib_abort(void)
 {
-    asc_exit_status = EXIT_ABORT;
-    exit(EXIT_ABORT);
+    asc_exit_status = ASC_EXIT_ABORT;
+    exit(ASC_EXIT_ABORT);
 }

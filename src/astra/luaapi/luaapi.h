@@ -3,7 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
- *               2015-2016, Artem Kharitonov <artem@3phase.pw>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,15 +26,11 @@
 #   error "Please include <astra/astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-#ifndef __cplusplus
-#   include <lua.h>
-#   include <lualib.h>
-#   include <lauxlib.h>
-#else
-#   include <lua.hpp>
-#endif /* !__cplusplus */
+#include <lua.h>
+#include <lualib.h>
+#include <lauxlib.h>
 
-int lua_tr_call(lua_State *L, int nargs, int nresults);
+int lua_tr_call(lua_State *L, int nargs, int nresults) __asc_result;
 void lua_err_log(lua_State *L);
 
 #define lua_foreach(_lua, _idx) \

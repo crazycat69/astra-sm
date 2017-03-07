@@ -2,7 +2,7 @@
  * Astra (OS signal handling)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,7 +34,7 @@ static inline
 void signal_timeout(void)
 {
     fprintf(stderr, "wait timeout for signal lock\n");
-    _exit(EXIT_SIGHANDLER);
+    _exit(ASC_EXIT_SIGNAL);
 }
 
 static inline
@@ -43,7 +43,7 @@ void signal_perror(int errnum, const char *str)
     char buf[512] = { 0 };
     asc_strerror(errnum, buf, sizeof(buf));
     fprintf(stderr, "%s: %s\n", str, buf);
-    _exit(EXIT_SIGHANDLER);
+    _exit(ASC_EXIT_SIGNAL);
 }
 
 #endif /* _MAIN_SIG_H_ */

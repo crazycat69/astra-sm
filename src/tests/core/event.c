@@ -1466,7 +1466,7 @@ Suite *core_event(void)
     if (can_fork != CK_NOFORK)
     {
         tcase_set_timeout(tc, 10);
-        tcase_add_exit_test(tc, no_close_on_error, EXIT_ABORT);
+        tcase_add_exit_test(tc, no_close_on_error, ASC_EXIT_ABORT);
     }
 
     suite_add_tcase(s, tc);

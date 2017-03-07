@@ -79,7 +79,7 @@ void bootstrap(lua_State *L, int argc, const char *argv[])
                 || lua_tr_call(L, 0, 0) != 0)
             {
                 lua_err_log(L);
-                asc_lib_exit(EXIT_ABORT);
+                asc_lib_exit(ASC_EXIT_ABORT);
             }
 
             cnt++;
@@ -104,7 +104,7 @@ void bootstrap(lua_State *L, int argc, const char *argv[])
     if (lua_tr_call(L, 1, 0) != 0)
     {
         lua_err_log(L);
-        asc_lib_exit(EXIT_ABORT);
+        asc_lib_exit(ASC_EXIT_ABORT);
     }
 }
 

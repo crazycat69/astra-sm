@@ -2,7 +2,7 @@
  * Astra Lua API (State Initialization)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015, Artem Kharitonov <artem@sysert.ru>
+ * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -29,7 +29,7 @@
 
 extern lua_State *lua;
 
-lua_State *lua_api_init(void);
+lua_State *lua_api_init(void) __asc_result;
 void lua_api_destroy(lua_State *L);
 
 #endif /* _LUA_STATE_H_ */

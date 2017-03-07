@@ -42,7 +42,7 @@ string_buffer_t *string_buffer_alloc(void)
 }
 
 /* only for single char operations */
-static __wur
+static __asc_result
 string_buffer_t *__string_buffer_last(string_buffer_t *buffer)
 {
     string_buffer_t *last = buffer->last;

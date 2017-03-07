@@ -106,8 +106,8 @@ Suite *core_assert(void)
 
     if (can_fork != CK_NOFORK)
     {
-        tcase_add_exit_test(tc, bad_assert, EXIT_ABORT);
-        tcase_add_exit_test(tc, thread_assert, EXIT_ABORT);
+        tcase_add_exit_test(tc, bad_assert, ASC_EXIT_ABORT);
+        tcase_add_exit_test(tc, thread_assert, ASC_EXIT_ABORT);
     }
 
     suite_add_tcase(s, tc);

@@ -25,7 +25,9 @@
 #   error "Please include <astra/astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-char *au_base64_enc(const void *in, size_t in_size, size_t *out_size) __wur;
-void *au_base64_dec(const char *in, size_t in_size, size_t *out_size) __wur;
+char *au_base64_enc(const void *in, size_t in_size
+                    , size_t *out_size) __asc_result;
+void *au_base64_dec(const char *in, size_t in_size
+                    , size_t *out_size) __asc_result;
 
 #endif /* _AU_BASE64_H_ */

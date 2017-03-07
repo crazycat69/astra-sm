@@ -38,7 +38,8 @@ END_TEST
 /* immediate exit procedure */
 #define EXIT_TEST 123
 
-static __dead void on_exit_timer(void *arg)
+static __asc_noreturn
+void on_exit_timer(void *arg)
 {
     ASC_UNUSED(arg);
     asc_lib_exit(EXIT_TEST);
@@ -101,7 +102,7 @@ static void on_block(void *arg)
 
 static void on_process_abort(void)
 {
-    ck_assert(asc_exit_status == EXIT_MAINLOOP);
+    ck_assert(asc_exit_status == ASC_EXIT_MAINLOOP);
 }
 
 START_TEST(blocked_thread)
@@ -250,7 +251,7 @@ Suite *core_mainloop(void)
     if (can_fork != CK_NOFORK)
     {
         tcase_add_exit_test(tc, exit_status, EXIT_TEST);
-        tcase_add_exit_test(tc, blocked_thread, EXIT_MAINLOOP);
+        tcase_add_exit_test(tc, blocked_thread, ASC_EXIT_MAINLOOP);
     }
 
     suite_add_tcase(s, tc);

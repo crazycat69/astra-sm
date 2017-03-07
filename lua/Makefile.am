@@ -64,7 +64,6 @@ liblua_la_SOURCES = \
     ltm.h \
     luaconf.h \
     lua.h \
-    lua.hpp \
     lualib.h \
     lundump.c \
     lundump.h \

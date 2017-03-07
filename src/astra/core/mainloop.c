@@ -373,7 +373,7 @@ void asc_main_loop_shutdown(void)
              *       join the thread on itself, possibly resulting in
              *       a deadlock.
              */
-            _exit(EXIT_MAINLOOP);
+            _exit(ASC_EXIT_MAINLOOP);
         }
         else if (main_loop->stop_cnt >= 2)
         {
