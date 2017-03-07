@@ -41,7 +41,7 @@ void asc_list_insert_head(asc_list_t *list, void *data);
 void asc_list_insert_tail(asc_list_t *list, void *data);
 
 void asc_list_purge(asc_list_t *list);
-void asc_list_remove_index(asc_list_t *list, size_t index);
+void asc_list_remove_index(asc_list_t *list, size_t idx);
 void asc_list_remove_item(asc_list_t *list, const void *data);
 
 /* calculate optimum allocation size based on the number of items */

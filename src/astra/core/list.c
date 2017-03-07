@@ -82,20 +82,20 @@ void asc_list_purge(asc_list_t *list)
     resize_list(list, 0);
 }
 
-void asc_list_remove_index(asc_list_t *list, size_t index)
+void asc_list_remove_index(asc_list_t *list, size_t idx)
 {
-    ASC_ASSERT(index < list->count, MSG("index out of bounds"));
+    ASC_ASSERT(idx < list->count, MSG("index out of bounds"));
 
-    const size_t more = list->count - (index + 1);
+    const size_t more = list->count - (idx + 1);
     if (more > 0)
     {
         const size_t block = more * sizeof(void *);
-        memmove(&list->items[index], &list->items[index + 1], block);
+        memmove(&list->items[idx], &list->items[idx + 1], block);
     }
 
     resize_list(list, --list->count);
 
-    if (index < list->current)
+    if (idx < list->current)
         list->current--;
 
     if (list->current > list->count)

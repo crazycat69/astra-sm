@@ -411,6 +411,7 @@ static void multi_proc(void *arg)
         {
             asc_list_remove_current(tt->list);
             asc_mutex_unlock(tt->mutex);
+            asc_usleep(1000);
             tt->value++;
             asc_mutex_lock(tt->mutex);
         }
@@ -501,7 +502,7 @@ Suite *core_thread(void)
 
     if (can_fork != CK_NOFORK)
     {
-        tcase_set_timeout(tc, 5);
+        tcase_set_timeout(tc, 120);
         tcase_add_exit_test(tc, no_destroy, ASC_EXIT_ABORT);
     }
 
