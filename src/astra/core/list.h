@@ -45,7 +45,7 @@ void asc_list_remove_index(asc_list_t *list, size_t index);
 void asc_list_remove_item(asc_list_t *list, const void *data);
 
 /* calculate optimum allocation size based on the number of items */
-static inline __func_const __wur
+static inline __wur
 size_t asc_list_calc_size(size_t count, size_t size, size_t min_size)
 {
     if (size < min_size)
@@ -83,20 +83,20 @@ void asc_list_next(asc_list_t *list)
         list->current = list->count;
 }
 
-static inline __func_pure __wur
+static inline __wur
 bool asc_list_eol(const asc_list_t *list)
 {
     return (list->current >= list->count);
 }
 
-static inline __func_pure __wur
+static inline __wur
 void *asc_list_data(asc_list_t *list)
 {
     ASC_ASSERT(!asc_list_eol(list), "[core/list] index out of bounds");
     return list->items[list->current];
 }
 
-static inline __func_pure __wur
+static inline __wur
 size_t asc_list_count(const asc_list_t *list)
 {
     return list->count;

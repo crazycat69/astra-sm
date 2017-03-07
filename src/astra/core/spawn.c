@@ -135,7 +135,7 @@ extern char **environ;
 #endif /* !NSIG */
 
 /* async-signal-safe functions for child process */
-static __func_pure
+static
 size_t strlen_s(const char *s)
 {
     size_t n = 0;

@@ -102,9 +102,6 @@
 #define __fmt_printf(__index, __first) \
     __attribute__((__format__(__printf__, __index, __first)))
 
-#define __func_pure __attribute__((__pure__))
-#define __func_const __attribute__((__const__))
-
 /* additional exit codes */
 #define EXIT_ABORT      2   /* abnormal termination */
 #define EXIT_SIGHANDLER 101 /* signal handling error */

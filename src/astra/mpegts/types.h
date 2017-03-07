@@ -64,8 +64,8 @@ static const uint8_t ts_null_pkt[TS_PACKET_SIZE] = {
     0x47, 0x1f, 0xff, 0x10
 };
 
-const stream_type_t *mpegts_stream_type(uint8_t type_id) __func_pure __wur;
-mpegts_packet_type_t mpegts_priv_type(uint8_t desc_type) __func_const __wur;
-const char *mpegts_type_name(mpegts_packet_type_t type) __func_const __wur;
+const stream_type_t *mpegts_stream_type(uint8_t type_id) __wur;
+mpegts_packet_type_t mpegts_priv_type(uint8_t desc_type) __wur;
+const char *mpegts_type_name(mpegts_packet_type_t type) __wur;
 
 #endif /* _TS_TYPES_ */

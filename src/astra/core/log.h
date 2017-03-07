@@ -45,7 +45,7 @@ void asc_log_set_file(const char *val);
 void asc_log_set_syslog(const char *val);
 #endif
 void asc_log_reopen(void);
-bool asc_log_is_debug(void) __func_pure;
+bool asc_log_is_debug(void);
 
 void asc_log_va(asc_log_type_t type, const char *msg, va_list ap)
     __fmt_printf(2, 0);

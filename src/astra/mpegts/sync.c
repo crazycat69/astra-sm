@@ -266,7 +266,7 @@ void mpegts_sync_query(const mpegts_sync_t *sx, mpegts_sync_stat_t *out)
  * worker functions
  */
 
-static __func_pure
+static
 unsigned int block_count(const mpegts_sync_t *sx)
 {
     unsigned int count = 1;

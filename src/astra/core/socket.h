@@ -63,7 +63,7 @@ ssize_t asc_socket_recvfrom(asc_socket_t *sock, void *buffer, size_t size) __wur
 ssize_t asc_socket_send(asc_socket_t *sock, const void *buffer, size_t size) __wur;
 ssize_t asc_socket_sendto(asc_socket_t *sock, const void *buffer, size_t size) __wur;
 
-int asc_socket_fd(asc_socket_t *sock) __func_pure __wur;
+int asc_socket_fd(asc_socket_t *sock) __wur;
 const char *asc_socket_addr(asc_socket_t *sock) __wur;
 int asc_socket_port(asc_socket_t *sock) __wur;
 

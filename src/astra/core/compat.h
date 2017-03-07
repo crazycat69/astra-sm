@@ -135,7 +135,7 @@ char *strndup(const char *str, size_t max);
 #endif
 
 #ifndef HAVE_STRNLEN
-size_t strnlen(const char *str, size_t max) __func_pure;
+size_t strnlen(const char *str, size_t max);
 #endif
 
 #ifdef _WIN32

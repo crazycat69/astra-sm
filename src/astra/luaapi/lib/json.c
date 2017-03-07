@@ -154,7 +154,7 @@ void walk_table(lua_State *L, string_buffer_t *buffer)
 static
 int scan_json(lua_State *L, const char *str, int pos);
 
-static __func_pure
+static
 int skip_sp(const char *str, int pos)
 {
     do
@@ -174,7 +174,7 @@ int skip_sp(const char *str, int pos)
     } while (true);
 }
 
-static __func_pure
+static
 int skip_comment(const char *str, int pos)
 {
     char c;

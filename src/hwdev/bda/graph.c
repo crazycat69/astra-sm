@@ -1194,7 +1194,7 @@ out:
 }
 
 /* list of events to be treated as errors */
-static inline __func_const
+static inline
 const char *event_text(long ec)
 {
     switch (ec)
@@ -1295,7 +1295,7 @@ void wait_events(const module_data_t *mod)
 }
 
 /* list of state enum strings */
-static inline __func_const
+static inline
 const char *state_name(bda_state_t state)
 {
     switch (state)

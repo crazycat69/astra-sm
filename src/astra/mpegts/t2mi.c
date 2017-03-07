@@ -354,7 +354,7 @@ uint64_t read_bit_field(const uint8_t **ptr, unsigned *off, unsigned size)
  * string values for header fields
  */
 
-static inline __func_const
+static inline
 const char *bb_format_name(unsigned fmt)
 {
     switch (fmt)
@@ -368,7 +368,7 @@ const char *bb_format_name(unsigned fmt)
     return "Unknown";
 }
 
-static inline __func_const
+static inline
 const char *plp_type_name(unsigned type)
 {
     switch (type)

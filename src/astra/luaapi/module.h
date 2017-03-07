@@ -63,7 +63,7 @@ typedef struct
 void module_add_methods(lua_State *L, const module_data_t *mod
                         , const module_method_t *list);
 void module_register(lua_State *L, const module_manifest_t *manifest);
-lua_State *module_lua(const module_data_t *mod) __func_pure;
+lua_State *module_lua(const module_data_t *mod);
 
 bool module_option_integer(lua_State *L, const char *name, int *integer);
 bool module_option_string(lua_State *L, const char *name, const char **string

@@ -716,8 +716,6 @@ AC_ARG_ENABLE([suggestions],
     AC_HELP_STRING([--enable-suggestions], [turn on non-vital warnings (e.g. -Wsuggest-*)]))
 
 AS_IF([test "x${enable_suggestions}" = "xyes"], [
-    AX_CHECK_CFLAG([-Wsuggest-attribute=pure], [WARN_CFLAGS])
-    AX_CHECK_CFLAG([-Wsuggest-attribute=const], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wsuggest-attribute=noreturn], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wsuggest-attribute=format], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wmissing-format-attribute], [WARN_CFLAGS])
