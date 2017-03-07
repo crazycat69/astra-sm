@@ -180,13 +180,13 @@
 static
 void graph_submit(module_data_t *mod, const bda_user_cmd_t *cmd)
 {
-    asc_mutex_lock(&mod->queue_lock);
-
     bda_user_cmd_t *const item = ASC_ALLOC(1, bda_user_cmd_t);
     memcpy(item, cmd, sizeof(*item));
-    asc_list_insert_tail(mod->queue, item);
 
+    asc_mutex_lock(&mod->queue_lock);
+    asc_list_insert_tail(mod->queue, item);
     asc_mutex_unlock(&mod->queue_lock);
+
     SetEvent(mod->queue_evt);
 }
 
@@ -199,19 +199,23 @@ void push_signal_stats(lua_State *L, module_data_t *mod)
         "stopped", "init", "running", "error"
     };
 
+    bda_signal_stats_t s;
+
     asc_mutex_lock(&mod->signal_lock);
-    lua_newtable(L);
-    lua_pushstring(L, state_names[mod->signal_stats.graph_state]);
-    lua_setfield(L, -2, "state");
-    lua_pushboolean(L, mod->signal_stats.present);
-    lua_setfield(L, -2, "present");
-    lua_pushboolean(L, mod->signal_stats.locked);
-    lua_setfield(L, -2, "locked");
-    lua_pushinteger(L, mod->signal_stats.strength);
-    lua_setfield(L, -2, "strength");
-    lua_pushinteger(L, mod->signal_stats.quality);
-    lua_setfield(L, -2, "quality");
+    memcpy(&s, &mod->signal_stats, sizeof(s));
     asc_mutex_unlock(&mod->signal_lock);
+
+    lua_newtable(L);
+    lua_pushstring(L, state_names[s.graph_state]);
+    lua_setfield(L, -2, "state");
+    lua_pushboolean(L, s.present);
+    lua_setfield(L, -2, "present");
+    lua_pushboolean(L, s.locked);
+    lua_setfield(L, -2, "locked");
+    lua_pushinteger(L, s.strength);
+    lua_setfield(L, -2, "strength");
+    lua_pushinteger(L, s.quality);
+    lua_setfield(L, -2, "quality");
 }
 
 /* signal statistics timer callback */
