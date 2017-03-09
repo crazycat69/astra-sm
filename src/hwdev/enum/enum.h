@@ -35,7 +35,7 @@ typedef struct
     static const hw_enum_t *enum_list[] =
 
 #define HW_ENUM_SYMBOL(_name) \
-    __hw_enum_##__name
+    __hw_enum_##_name
 
 #define HW_ENUM_DEF(_name) \
     const hw_enum_t HW_ENUM_SYMBOL(_name)
