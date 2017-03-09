@@ -32,7 +32,7 @@
 typedef void (*sample_callback_t)(void *, const uint8_t *, size_t);
 
 char *dshow_error_msg(HRESULT hr);
-HRESULT dshow_enum(const CLSID *category, IEnumMoniker **out);
+HRESULT dshow_enum(const CLSID *category, IEnumMoniker **out, DWORD flags);
 HRESULT dshow_filter_by_index(const CLSID *category, size_t index
                               , IBaseFilter **out, char **fname);
 HRESULT dshow_filter_by_path(const CLSID *category, const char *devpath

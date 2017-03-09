@@ -218,7 +218,7 @@ int bda_enumerate(lua_State *L)
     need_uninit = true;
 
     /* list BDA tuners */
-    hr = dshow_enum(&KSCATEGORY_BDA_NETWORK_TUNER, &enum_moniker);
+    hr = dshow_enum(&KSCATEGORY_BDA_NETWORK_TUNER, &enum_moniker, 0);
     if (FAILED(hr))
         ENUM_THROW("couldn't create device enumerator");
     else if (hr != S_OK)

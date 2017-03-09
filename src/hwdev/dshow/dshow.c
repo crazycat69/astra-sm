@@ -49,7 +49,7 @@ char *dshow_error_msg(HRESULT hr)
 }
 
 /* create moniker enumerator for a specified device category */
-HRESULT dshow_enum(const CLSID *category, IEnumMoniker **out)
+HRESULT dshow_enum(const CLSID *category, IEnumMoniker **out, DWORD flags)
 {
     if (category == NULL || out == NULL)
         return E_POINTER;
@@ -64,7 +64,7 @@ HRESULT dshow_enum(const CLSID *category, IEnumMoniker **out)
     if (FAILED(hr))
         return hr;
 
-    hr = ICreateDevEnum_CreateClassEnumerator(dev_enum, category, out, 0);
+    hr = ICreateDevEnum_CreateClassEnumerator(dev_enum, category, out, flags);
     ASC_WANT_ENUM(hr, *out);
     ASC_RELEASE(dev_enum);
 
@@ -85,7 +85,7 @@ HRESULT dshow_filter_by_index(const CLSID *category, size_t index
 
     *out = NULL;
 
-    hr = dshow_enum(category, &enum_moniker);
+    hr = dshow_enum(category, &enum_moniker, 0);
     if (hr != S_OK)
         return hr; /* empty category */
 
@@ -119,7 +119,7 @@ HRESULT dshow_filter_by_path(const CLSID *category, const char *devpath
     *out = NULL;
 
     IEnumMoniker *enum_moniker = NULL;
-    HRESULT hr = dshow_enum(category, &enum_moniker);
+    HRESULT hr = dshow_enum(category, &enum_moniker, 0);
     if (hr != S_OK)
         return hr; /* empty category */
 

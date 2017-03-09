@@ -120,7 +120,7 @@ HRESULT create_receiver(const module_data_t *mod, IBaseFilter *source
     BDA_CKHR_D(hr, "couldn't find output pin on source filter");
 
     /* list possible candidates for attaching to source filter */
-    hr = dshow_enum(&KSCATEGORY_BDA_RECEIVER_COMPONENT, &enum_moniker);
+    hr = dshow_enum(&KSCATEGORY_BDA_RECEIVER_COMPONENT, &enum_moniker, 0);
     if (FAILED(hr))
         BDA_THROW_D(hr, "couldn't enumerate BDA receiver filters");
     else if (hr != S_OK)
