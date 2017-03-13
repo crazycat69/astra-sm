@@ -285,7 +285,8 @@ libstream_la_SOURCES += \
     hwdev/it95x/api-win32.c \
     hwdev/it95x/it95x.h \
     hwdev/it95x/module.c \
-    hwdev/it95x/device.c
+    hwdev/it95x/device.c \
+    hwdev/enum/it95x.c
 endif
 
 # dynamically generated symbol lists

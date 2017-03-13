@@ -76,7 +76,7 @@ struct module_data_t
     //asc_mutex_t mutex;
 
     /* device context */
-    it95x_device_t *dev;
+    it95x_dev_t *dev;
 };
 
 #endif /* _HWDEV_IT95X_H_ */
