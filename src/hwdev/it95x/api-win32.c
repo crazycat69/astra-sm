@@ -20,14 +20,51 @@
 #include "api.h"
 
 #include "../dshow/dshow.h"
+#include <winioctl.h>
 #include <ks.h>
 #include <ksproxy.h>
 
 struct it95x_dev_t
 {
-    IKsPropertySet *prop;
     it95x_dev_info_t info;
+
+    IKsPropertySet *prop;
+    HANDLE file;
+#if 1
+    HANDLE event;
+#endif
 };
+
+/*
+ * IKsObject declaration (it's not in MinGW-w64 headers).
+ */
+
+typedef struct IKsObject IKsObject;
+
+typedef struct
+{
+    HRESULT (WINAPI *QueryInterface)(IKsObject *obj, REFIID iid, void **out);
+    ULONG (WINAPI *AddRef)(IKsObject *obj);
+    ULONG (WINAPI *Release)(IKsObject *obj);
+    HANDLE (WINAPI *KsGetObjectHandle)(IKsObject *obj);
+} IKsObjectVtbl;
+
+struct IKsObject
+{
+    IKsObjectVtbl *lpVtbl;
+};
+
+#define IKsObject_QueryInterface(_obj, _iid, _out) \
+    (_obj)->lpVtbl->QueryInterface(_obj, _iid, _out)
+
+#define IKsObject_AddRef(_obj) \
+    (_obj)->lpVtbl->AddRef(_obj)
+
+#define IKsObject_Release(_obj) \
+    (_obj)->lpVtbl->Release(_obj)
+
+#define IKsObject_KsGetObjectHandle(_obj) \
+    (_obj)->lpVtbl->KsGetObjectHandle(_obj)
 
 /*
  * Main property set. This is used to control device operation as well
@@ -63,7 +100,7 @@ enum
 
 struct ks_bus_info
 {
-    uint16_t usb_mode; /* see it95x_usb_mode_t */
+    uint16_t usb_mode;
     uint16_t vendor_id;
     uint16_t product_id;
 };
@@ -74,40 +111,40 @@ struct ks_bus_info
 
 enum
 {
-    IOCTL_GET_DRIVER_INFO = 1,
-    IOCTL_SET_POWER = 4,
-    IOCTL_SET_DVBT_MODULATION = 8,
-    IOCTL_SET_RF_OUTPUT = 9,
-    IOCTL_SEND_TS_DATA = 30,
-    IOCTL_SET_CHANNEL = 31,
-    IOCTL_SET_DEVICE_TYPE = 32,
-    IOCTL_GET_DEVICE_TYPE = 33,
-    IOCTL_SET_GAIN = 34,
-    IOCTL_RD_REG_OFDM = 35,
-    IOCTL_WR_REG_OFDM = 36,
-    IOCTL_RD_REG_LINK = 37,
-    IOCTL_WR_REG_LINK = 38,
-    IOCTL_SEND_PSI_ONCE = 39,
-    IOCTL_SET_PSI_PACKET = 40,
-    IOCTL_SET_PSI_TIMER = 41,
-    IOCTL_GET_GAIN_RANGE = 42,
-    IOCTL_SET_TPS = 43,
-    IOCTL_GET_TPS = 44,
-    IOCTL_GET_GAIN = 45,
-    IOCTL_SET_IQ_TABLE = 46,
-    IOCTL_SET_DC_CAL = 47,
-    IOCTL_SET_ISDBT_MODULATION = 60,
-    IOCTL_ADD_ISDBT_PID_FILTER = 61,
-    IOCTL_SET_TMCC = 62, /* XXX: ITE_TxSetTMCCInfo2() uses 63 (0x3F) */
-    IOCTL_GET_TMCC = 64,
-    IOCTL_GET_TS_BITRATE = 65,
-    IOCTL_SET_ISDBT_PID_FILTER = 66,
-    IOCTL_SET_PCR_MODE = 67,
-    IOCTL_SET_PCR_ENABLE = 68,
-    IOCTL_RESET_ISDBT_PID_FILTER = 69,
-    IOCTL_SET_OFS_CAL = 70,
-    IOCTL_ENABLE_TPS_CRYPT = 71,
-    IOCTL_DISABLE_TPS_CRYPT = 72,
+    IOCTL_IT95X_GET_DRIVER_INFO = 1,
+    IOCTL_IT95X_SET_POWER = 4,
+    IOCTL_IT95X_SET_DVBT_MODULATION = 8,
+    IOCTL_IT95X_SET_RF_OUTPUT = 9,
+    IOCTL_IT95X_SEND_TS_DATA = 30,
+    IOCTL_IT95X_SET_CHANNEL = 31,
+    IOCTL_IT95X_SET_DEVICE_TYPE = 32,
+    IOCTL_IT95X_GET_DEVICE_TYPE = 33,
+    IOCTL_IT95X_SET_GAIN = 34,
+    IOCTL_IT95X_RD_REG_OFDM = 35,
+    IOCTL_IT95X_WR_REG_OFDM = 36,
+    IOCTL_IT95X_RD_REG_LINK = 37,
+    IOCTL_IT95X_WR_REG_LINK = 38,
+    IOCTL_IT95X_SEND_PSI_ONCE = 39,
+    IOCTL_IT95X_SET_PSI_PACKET = 40,
+    IOCTL_IT95X_SET_PSI_TIMER = 41,
+    IOCTL_IT95X_GET_GAIN_RANGE = 42,
+    IOCTL_IT95X_SET_TPS = 43,
+    IOCTL_IT95X_GET_TPS = 44,
+    IOCTL_IT95X_GET_GAIN = 45,
+    IOCTL_IT95X_SET_IQ_TABLE = 46,
+    IOCTL_IT95X_SET_DC_CAL = 47,
+    IOCTL_IT95X_SET_ISDBT_MODULATION = 60,
+    IOCTL_IT95X_ADD_ISDBT_PID_FILTER = 61,
+    IOCTL_IT95X_SET_TMCC = 62, /* XXX: ITE_TxSetTMCCInfo2() uses 63 (0x3F) */
+    IOCTL_IT95X_GET_TMCC = 64,
+    IOCTL_IT95X_GET_TS_BITRATE = 65,
+    IOCTL_IT95X_CONTROL_ISDBT_PID_FILTER = 66,
+    IOCTL_IT95X_SET_PCR_MODE = 67,
+    IOCTL_IT95X_SET_PCR_ENABLE = 68,
+    IOCTL_IT95X_RESET_ISDBT_PID_FILTER = 69,
+    IOCTL_IT95X_SET_OFS_CAL = 70,
+    IOCTL_IT95X_ENABLE_TPS_CRYPT = 71,
+    IOCTL_IT95X_DISABLE_TPS_CRYPT = 72,
 };
 
 enum
@@ -139,6 +176,98 @@ struct ioctl_gain_range
     uint32_t bandwidth;
     int32_t max_gain;
     int32_t min_gain;
+};
+
+struct ioctl_psi
+{
+    uint32_t code;
+    uint8_t timer_id;
+    uint8_t interval_ms;
+    uint8_t packet[TS_PACKET_SIZE];
+};
+
+struct ioctl_tmcc
+{
+    uint32_t code;
+    uint32_t a_constellation;
+    uint32_t a_coderate;
+    uint32_t b_constellation;
+    uint32_t b_coderate;
+    uint32_t partial;
+    uint32_t reserved;
+};
+
+struct ioctl_tps
+{
+    uint32_t code;
+    uint8_t high_coderate;
+    uint8_t low_coderate;
+    uint8_t transmitmode;
+    uint8_t constellation;
+    uint8_t guardinterval;
+    uint16_t cell_id;
+};
+
+struct ioctl_tps_crypt
+{
+    uint32_t code;
+    uint8_t reserved[12];
+    uint32_t key;
+};
+
+struct ioctl_dc_cal
+{
+    uint32_t code;
+    int32_t dc_i;
+    int32_t dc_q;
+    uint8_t reserved[8];
+};
+
+struct ioctl_ofs_cal
+{
+    uint32_t code;
+    uint8_t reserved[8];
+    uint8_t ofs_i;
+    uint8_t ofs_q;
+};
+
+struct ioctl_dvbt
+{
+    uint32_t code;
+    uint8_t coderate;
+    uint8_t transmitmode;
+    uint8_t constellation;
+    uint8_t guardinterval;
+};
+
+struct ioctl_isdbt
+{
+    uint32_t code;
+    uint8_t reserved[8];
+    uint32_t transmitmode;
+    uint32_t guardinterval;
+    uint32_t a_constellation;
+    uint32_t a_coderate;
+    uint32_t b_constellation;
+    uint32_t b_coderate;
+    uint32_t partial;
+};
+
+struct ioctl_add_pid
+{
+    uint32_t code;
+    uint16_t idx;
+    uint16_t pid;
+    uint32_t layer;
+    uint32_t reserved;
+};
+
+struct ioctl_ctl_pid
+{
+    uint32_t code;
+    uint8_t reserved[8];
+    uint8_t control;
+    uint8_t layer;
 };
 
 /*
@@ -244,7 +373,7 @@ HRESULT check_moniker(IMoniker *moniker, bool *result)
     return hr;
 }
 
-/* get property set object from filter */
+/* get KS property set object from filter */
 static
 HRESULT prop_from_filter(IBaseFilter *filter, IKsPropertySet **out)
 {
@@ -314,6 +443,29 @@ HRESULT prop_from_filter(IBaseFilter *filter, IKsPropertySet **out)
     return hr;
 }
 
+/* get KS handle from filter */
+static
+HRESULT handle_from_filter(IBaseFilter *filter, HANDLE *out)
+{
+    *out = NULL;
+
+    IKsObject *obj = NULL;
+    HRESULT hr = IBaseFilter_QueryInterface(filter, &IID_IKsObject
+                                            , (void **)&obj);
+    ASC_WANT_PTR(hr, obj);
+
+    if (SUCCEEDED(hr))
+    {
+        *out = IKsObject_KsGetObjectHandle(obj);
+        if (*out == NULL)
+            hr = E_POINTER;
+
+        ASC_RELEASE(obj);
+    }
+
+    return hr;
+}
+
 /* get bus mode and device IDs */
 static
 HRESULT get_bus_info(IKsPropertySet *prop, struct ks_bus_info *bus_info)
@@ -334,7 +486,7 @@ HRESULT get_drv_info(IKsPropertySet *prop, struct ioctl_drv_info *drv_info)
 
     struct ioctl_generic ioc =
     {
-        .code = IOCTL_GET_DRIVER_INFO,
+        .code = IOCTL_IT95X_GET_DRIVER_INFO,
     };
 
     HRESULT hr = prop->lpVtbl->Set(prop, &KSPROPSETID_IT9500Properties
@@ -353,7 +505,49 @@ HRESULT get_drv_info(IKsPropertySet *prop, struct ioctl_drv_info *drv_info)
 }
 
 /* get chip type */
-// TODO
+#define REG_CHIP_VERSION 0x1222
+
+static
+HRESULT get_chip_type(IKsPropertySet *prop, uint16_t *chip_type)
+{
+    *chip_type = 0;
+
+    struct ioctl_generic ioc_lsb =
+    {
+        .code = IOCTL_IT95X_RD_REG_LINK,
+        .param1 = REG_CHIP_VERSION + 1,
+    };
+    HRESULT hr = ioctl_set(prop, &ioc_lsb, sizeof(ioc_lsb));
+
+    if (SUCCEEDED(hr))
+    {
+        uint32_t lsb = 0;
+        hr = ioctl_get(prop, &lsb, sizeof(lsb));
+
+        if (SUCCEEDED(hr))
+        {
+            struct ioctl_generic ioc_msb =
+            {
+                .code = IOCTL_IT95X_RD_REG_LINK,
+                .param1 = REG_CHIP_VERSION + 2,
+            };
+            hr = ioctl_set(prop, &ioc_msb, sizeof(ioc_msb));
+
+            if (SUCCEEDED(hr))
+            {
+                uint32_t msb = 0;
+                hr = ioctl_get(prop, &msb, sizeof(msb));
+
+                if (SUCCEEDED(hr))
+                {
+                    *chip_type = ((msb << 8) & 0xff00) | (lsb & 0xff);
+                }
+            }
+        }
+    }
+
+    return hr;
+}
 
 /* get device type */
 static
@@ -363,7 +557,7 @@ HRESULT get_dev_type(IKsPropertySet *prop, uint8_t *dev_type)
 
     struct ioctl_generic ioc =
     {
-        .code = IOCTL_GET_DEVICE_TYPE,
+        .code = IOCTL_IT95X_GET_DEVICE_TYPE,
     };
 
     HRESULT hr = ioctl_set(prop, &ioc, sizeof(ioc));
@@ -383,11 +577,9 @@ HRESULT dev_from_moniker(IMoniker *moniker, it95x_dev_t **out)
 {
     HRESULT hr = E_FAIL;
 
+    it95x_dev_t *dev = NULL;
     char *name = NULL, *devpath = NULL;
-    struct ks_bus_info bus_info = { 0 };
-    struct ioctl_drv_info drv_info = { 0 };
-    uint16_t chip_type = 0;
-    uint8_t dev_type = 0;
+    HANDLE file = NULL, event = NULL;
 
     IBaseFilter *filter = NULL;
     IKsPropertySet *prop = NULL;
@@ -402,45 +594,74 @@ HRESULT dev_from_moniker(IMoniker *moniker, it95x_dev_t **out)
     hr = prop_from_filter(filter, &prop);
     if (FAILED(hr)) goto out;
 
+    hr = handle_from_filter(filter, &file);
+    if (FAILED(hr)) goto out;
+
+    event = CreateEventW(NULL, TRUE, FALSE, NULL);
+    if (event == NULL)
+    {
+        hr = HRESULT_FROM_WIN32(GetLastError());
+        goto out;
+    }
+
     /* cache device information for application use */
+    struct ks_bus_info bus_info;
     hr = get_bus_info(prop, &bus_info);
     if (FAILED(hr)) goto out;
 
+    struct ioctl_drv_info drv_info;
     hr = get_drv_info(prop, &drv_info);
     if (FAILED(hr)) goto out;
 
-    // TODO: chip type
+    uint16_t chip_type;
+    hr = get_chip_type(prop, &chip_type);
+    if (FAILED(hr)) goto out;
 
+    uint8_t dev_type;
     hr = get_dev_type(prop, &dev_type);
     if (FAILED(hr)) goto out;
 
-out:
-    if (SUCCEEDED(hr))
+    /* fill out device struct */
+    dev = (it95x_dev_t *)calloc(1, sizeof(*dev));
+    if (dev == NULL)
     {
-        it95x_dev_t *const dev = ASC_ALLOC(1, it95x_dev_t);
-
-        dev->prop = prop;
-
-        dev->info.name = name;
-        dev->info.devpath = devpath;
-
-        dev->info.usb_mode = bus_info.usb_mode;
-        dev->info.vendor_id = bus_info.vendor_id;
-        dev->info.product_id = bus_info.product_id;
-
-        dev->info.drv_pid = drv_info.drv_pid;
-        dev->info.drv_version = drv_info.drv_version;
-        dev->info.fw_link = drv_info.fw_link;
-        dev->info.fw_ofdm = drv_info.fw_ofdm;
-        dev->info.tuner_id = drv_info.tuner_id;
-
-        dev->info.chip_type = chip_type;
-        dev->info.dev_type = dev_type;
-
-        *out = dev;
+        hr = E_OUTOFMEMORY;
+        goto out;
     }
-    else
+
+    dev->prop = prop;
+    dev->file = file;
+    dev->event = event;
+
+    dev->info.name = name;
+    dev->info.devpath = devpath;
+
+    switch (bus_info.usb_mode)
     {
+        case 0x0110: dev->info.usb_mode = IT95X_USB_11; break;
+        case 0x0200: dev->info.usb_mode = IT95X_USB_20; break;
+        default:
+            dev->info.usb_mode = IT95X_USB_UNKNOWN;
+    }
+
+    dev->info.vendor_id = bus_info.vendor_id;
+    dev->info.product_id = bus_info.product_id;
+
+    dev->info.drv_pid = drv_info.drv_pid;
+    dev->info.drv_version = drv_info.drv_version;
+    dev->info.fw_link = drv_info.fw_link;
+    dev->info.fw_ofdm = drv_info.fw_ofdm;
+    dev->info.tuner_id = drv_info.tuner_id;
+
+    dev->info.chip_type = chip_type;
+    dev->info.dev_type = dev_type;
+
+    *out = dev;
+
+out:
+    if (FAILED(hr))
+    {
+        ASC_FREE(event, CloseHandle);
         ASC_FREE(devpath, free);
         ASC_FREE(name, free);
 
@@ -582,10 +803,11 @@ void it95x_get_info(const it95x_dev_t *dev, it95x_dev_info_t *info)
 
 void it95x_close(it95x_dev_t *dev)
 {
-    ASC_RELEASE(dev->prop);
-
     free(dev->info.name);
     free(dev->info.devpath);
+
+    ASC_RELEASE(dev->prop);
+    CloseHandle(dev->event);
 
     free(dev);
 }
@@ -596,7 +818,7 @@ int it95x_get_gain(it95x_dev_t *dev, int *gain)
 
     struct ioctl_generic ioc =
     {
-        .code = IOCTL_GET_GAIN,
+        .code = IOCTL_IT95X_GET_GAIN,
     };
 
     HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
@@ -623,23 +845,76 @@ int it95x_get_gain_range(it95x_dev_t *dev
 {
     *max = *min = 0;
 
-    struct ioctl_gain_range gain_range =
+    struct ioctl_gain_range ioc =
     {
-        .code = IOCTL_GET_GAIN_RANGE,
+        .code = IOCTL_IT95X_GET_GAIN_RANGE,
         .frequency = frequency,
         .bandwidth = bandwidth,
     };
 
-    HRESULT hr = ioctl_set(dev->prop, &gain_range, sizeof(gain_range));
+    HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
     if (SUCCEEDED(hr))
     {
-        hr = ioctl_get(dev->prop, &gain_range, sizeof(gain_range));
+        hr = ioctl_get(dev->prop, &ioc, sizeof(ioc));
         if (SUCCEEDED(hr))
         {
-            // TODO: double check integer cast
-            //       try using 'long long' for min/max
-            *max = gain_range.max_gain;
-            *min = gain_range.min_gain;
+            *max = ioc.max_gain;
+            *min = ioc.min_gain;
+        }
+    }
+
+    return ret_hr(hr);
+}
+
+int it95x_get_tmcc(it95x_dev_t *dev, it95x_tmcc_t *tmcc)
+{
+    memset(tmcc, 0, sizeof(*tmcc));
+
+    struct ioctl_tmcc ioc =
+    {
+        .code = IOCTL_IT95X_GET_TMCC,
+    };
+
+    HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    if (SUCCEEDED(hr))
+    {
+        hr = ioctl_get(dev->prop, &ioc, sizeof(ioc));
+        if (SUCCEEDED(hr))
+        {
+            tmcc->partial = ioc.partial;
+
+            tmcc->a.coderate = (it95x_coderate_t)ioc.a_coderate;
+            tmcc->a.constellation = (it95x_constellation_t)ioc.a_constellation;
+
+            tmcc->b.coderate = (it95x_coderate_t)ioc.b_coderate;
+            tmcc->b.constellation = (it95x_constellation_t)ioc.b_constellation;
+        }
+    }
+
+    return ret_hr(hr);
+}
+
+int it95x_get_tps(it95x_dev_t *dev, it95x_tps_t *tps)
+{
+    memset(tps, 0, sizeof(*tps));
+
+    struct ioctl_tps ioc =
+    {
+        .code = IOCTL_IT95X_GET_TPS,
+    };
+
+    HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    if (SUCCEEDED(hr))
+    {
+        hr = ioctl_get(dev->prop, &ioc, sizeof(ioc));
+        if (SUCCEEDED(hr))
+        {
+            tps->high_coderate = (it95x_coderate_t)ioc.high_coderate;
+            tps->low_coderate = (it95x_coderate_t)ioc.low_coderate;
+            tps->transmitmode = (it95x_transmitmode_t)ioc.transmitmode;
+            tps->constellation = (it95x_constellation_t)ioc.constellation;
+            tps->guardinterval = (it95x_guardinterval_t)ioc.guardinterval;
+            tps->cell_id = ntohs(ioc.cell_id);
         }
     }
 
@@ -651,19 +926,20 @@ int it95x_set_channel(it95x_dev_t *dev
 {
     struct ioctl_generic ioc =
     {
-        .code = IOCTL_SET_CHANNEL,
+        .code = IOCTL_IT95X_SET_CHANNEL,
         .param1 = frequency,
         .param2 = bandwidth,
     };
 
-    return ret_hr(ioctl_set(dev->prop, &ioc, sizeof(ioc)));
+    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    return ret_hr(hr);
 }
 
 int it95x_set_gain(it95x_dev_t *dev, int *gain)
 {
     struct ioctl_generic ioc =
     {
-        .code = IOCTL_SET_GAIN,
+        .code = IOCTL_IT95X_SET_GAIN,
     };
 
     if (*gain >= 0)
@@ -697,26 +973,307 @@ int it95x_set_gain(it95x_dev_t *dev, int *gain)
     return ret_hr(hr);
 }
 
-int it95x_set_power(it95x_dev_t *dev, bool power)
+int it95x_set_power(it95x_dev_t *dev, bool enable)
 {
     struct ioctl_generic ioc =
     {
-        .code = IOCTL_SET_POWER,
-        .param1 = power,
+        .code = IOCTL_IT95X_SET_POWER,
+        .param1 = enable,
     };
 
-    return ret_hr(ioctl_set(dev->prop, &ioc, sizeof(ioc)));
+    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    return ret_hr(hr);
 }
 
 int it95x_set_pcr(it95x_dev_t *dev, it95x_pcr_mode_t mode)
 {
     struct ioctl_generic ioc =
     {
-        .code = IOCTL_SET_PCR_MODE,
+        .code = IOCTL_IT95X_SET_PCR_MODE,
         .param2 = mode,
     };
 
-    return ret_hr(ioctl_set(dev->prop, &ioc, sizeof(ioc)));
+    // XXX: use "pcr enable" ioctl?
+    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    return ret_hr(hr);
+}
+
+int it95x_set_psi(it95x_dev_t *dev
+                  , unsigned int timer_id, unsigned int interval_ms
+                  , const uint8_t packet[TS_PACKET_SIZE])
+{
+    if (timer_id < 1 || timer_id > 5)
+        return ret_win32(ERROR_BAD_ARGUMENTS);
+
+    HRESULT hr = S_OK;
+
+    if (packet != NULL && interval_ms > 0)
+    {
+        struct ioctl_psi ioc =
+        {
+            .code = IOCTL_IT95X_SET_PSI_PACKET,
+            .timer_id = timer_id,
+            .interval_ms = 0xff,
+        };
+
+        memcpy(ioc.packet, packet, TS_PACKET_SIZE);
+        hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    }
+
+    if (SUCCEEDED(hr))
+    {
+        struct ioctl_psi ioc =
+        {
+            .code = IOCTL_IT95X_SET_PSI_TIMER,
+            .timer_id = timer_id,
+            .interval_ms = interval_ms,
+        };
+
+        hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    }
+
+    return ret_hr(hr);
+}
+
+int it95x_set_rf(it95x_dev_t *dev, bool enable)
+{
+    struct ioctl_generic ioc =
+    {
+        .code = IOCTL_IT95X_SET_RF_OUTPUT,
+        .param1 = enable,
+    };
+
+    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    return ret_hr(hr);
+}
+
+int it95x_set_tmcc(it95x_dev_t *dev, const it95x_tmcc_t *tmcc)
+{
+    struct ioctl_tmcc ioc =
+    {
+        .code = IOCTL_IT95X_SET_TMCC,
+        .a_constellation = tmcc->a.constellation,
+        .a_coderate = tmcc->a.coderate,
+        .b_constellation = tmcc->b.constellation,
+        .b_coderate = tmcc->b.coderate,
+        .partial = tmcc->partial,
+    };
+
+    // XXX: add SET_TMCC2 ioctl ?
+    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    return ret_hr(hr);
+}
+
+int it95x_set_tps(it95x_dev_t *dev, const it95x_tps_t *tps)
+{
+    struct ioctl_tps ioc =
+    {
+        .code = IOCTL_IT95X_SET_TPS,
+        .high_coderate = tps->high_coderate,
+        .low_coderate = tps->low_coderate,
+        .transmitmode = tps->transmitmode,
+        .constellation = tps->constellation,
+        .guardinterval = tps->guardinterval,
+        .cell_id = htons(tps->cell_id),
+    };
+
+    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    return ret_hr(hr);
+}
+
+int it95x_set_tps_crypt(it95x_dev_t *dev, bool enable, uint32_t key)
+{
+    struct ioctl_tps_crypt ioc;
+    memset(&ioc, 0, sizeof(ioc));
+
+    if (enable)
+    {
+        ioc.code = IOCTL_IT95X_ENABLE_TPS_CRYPT;
+        ioc.key = key;
+    }
+    else
+    {
+        ioc.code = IOCTL_IT95X_DISABLE_TPS_CRYPT;
+    }
+
+    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    return ret_hr(hr);
+}
+
+int it95x_set_dc_cal(it95x_dev_t *dev, int dc_i, int dc_q)
+{
+    struct ioctl_dc_cal ioc =
+    {
+        .code = IOCTL_IT95X_SET_DC_CAL,
+        .dc_i = dc_i,
+        .dc_q = dc_q,
+    };
+
+    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    return ret_hr(hr);
+}
+
+int it95x_set_ofs_cal(it95x_dev_t *dev
+                      , unsigned int ofs_i, unsigned int ofs_q)
+{
+    struct ioctl_ofs_cal ioc =
+    {
+        .code = IOCTL_IT95X_SET_OFS_CAL,
+        .ofs_i = ofs_i,
+        .ofs_q = ofs_q,
+    };
+
+    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    return ret_hr(hr);
+}
+
+int it95x_set_dvbt(it95x_dev_t *dev, const it95x_dvbt_t *dvbt)
+{
+    struct ioctl_dvbt ioc =
+    {
+        .code = IOCTL_IT95X_SET_DVBT_MODULATION,
+        .coderate = dvbt->coderate,
+        .transmitmode = dvbt->transmitmode,
+        .constellation = dvbt->constellation,
+        .guardinterval = dvbt->guardinterval,
+    };
+
+    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    return ret_hr(hr);
+}
+
+int it95x_set_isdbt(it95x_dev_t *dev, const it95x_isdbt_t *isdbt)
+{
+    struct ioctl_isdbt ioc =
+    {
+        .code = IOCTL_IT95X_SET_ISDBT_MODULATION,
+        .transmitmode = isdbt->transmitmode,
+        .guardinterval = isdbt->guardinterval,
+        .a_constellation = isdbt->a.constellation,
+        .a_coderate = isdbt->a.coderate,
+        .b_constellation = isdbt->b.constellation,
+        .b_coderate = isdbt->b.coderate,
+        .partial = isdbt->partial,
+    };
+
+    if (!ioc.partial)
+    {
+        ioc.b_constellation = ioc.a_constellation;
+        ioc.b_coderate = ioc.a_coderate;
+    }
+
+    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    return ret_hr(hr);
+}
+
+int it95x_add_pid(it95x_dev_t *dev, unsigned int idx
+                  , unsigned int pid, it95x_layer_t layer)
+{
+    struct ioctl_add_pid ioc =
+    {
+        .code = IOCTL_IT95X_ADD_ISDBT_PID_FILTER,
+        .idx = idx,
+        .pid = pid,
+        .layer = layer,
+    };
+
+    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    return ret_hr(hr);
+}
+
+int it95x_ctl_pid(it95x_dev_t *dev, it95x_layer_t layer)
+{
+    struct ioctl_ctl_pid ioc =
+    {
+        .code = IOCTL_IT95X_CONTROL_ISDBT_PID_FILTER,
+        .layer = layer,
+    };
+
+    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    return ret_hr(hr);
+}
+
+int it95x_reset_pid(it95x_dev_t *dev)
+{
+    struct ioctl_generic ioc =
+    {
+        .code = IOCTL_IT95X_RESET_ISDBT_PID_FILTER,
+    };
+
+    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    return ret_hr(hr);
+}
+
+int it95x_send_ts(it95x_dev_t *dev, it95x_tx_block_t *data)
+{
+    data->code = IOCTL_IT95X_SEND_TS_DATA;
+
+    const HRESULT hr = ioctl_set(dev->prop, data, sizeof(*data));
+    return ret_hr(hr);
+}
+
+int it95x_rd_reg(it95x_dev_t *dev, it95x_processor_t processor
+                 , uint32_t address, uint8_t *value)
+{
+    *value = 0;
+
+    struct ioctl_generic ioc =
+    {
+        .param1 = address,
+    };
+
+    switch (processor)
+    {
+        case IT95X_PROCESSOR_LINK:
+            ioc.code = IOCTL_IT95X_RD_REG_LINK;
+            break;
+
+        case IT95X_PROCESSOR_OFDM:
+            ioc.code = IOCTL_IT95X_RD_REG_OFDM;
+            break;
+
+        default:
+            return ret_win32(ERROR_BAD_ARGUMENTS);
+    }
+
+    HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    if (SUCCEEDED(hr))
+    {
+        uint32_t out = 0;
+        hr = ioctl_get(dev->prop, &out, sizeof(out));
+
+        if (SUCCEEDED(hr))
+            *value = out;
+    }
+
+    return ret_hr(hr);
+}
+
+int it95x_wr_reg(it95x_dev_t *dev, it95x_processor_t processor
+                 , uint32_t address, uint8_t value)
+{
+    struct ioctl_generic ioc =
+    {
+        .param1 = address,
+        .param2 = value,
+    };
+
+    switch (processor)
+    {
+        case IT95X_PROCESSOR_LINK:
+            ioc.code = IOCTL_IT95X_WR_REG_LINK;
+            break;
+
+        case IT95X_PROCESSOR_OFDM:
+            ioc.code = IOCTL_IT95X_WR_REG_OFDM;
+            break;
+
+        default:
+            return ret_win32(ERROR_BAD_ARGUMENTS);
+    }
+
+    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    return ret_hr(hr);
 }
 
 char *it95x_strerror(int error)
