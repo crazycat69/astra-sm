@@ -281,6 +281,7 @@ endif
 # IT95x output
 if HAVE_WIN32
 libstream_la_SOURCES += \
+    hwdev/it95x/api.c \
     hwdev/it95x/api.h \
     hwdev/it95x/api-win32.c \
     hwdev/it95x/it95x.h \

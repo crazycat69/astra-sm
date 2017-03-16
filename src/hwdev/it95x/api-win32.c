@@ -202,7 +202,7 @@ struct ioctl_tps
     uint32_t code;
     uint8_t high_coderate;
     uint8_t low_coderate;
-    uint8_t transmitmode;
+    uint8_t txmode;
     uint8_t constellation;
     uint8_t guardinterval;
     uint16_t cell_id;
@@ -235,7 +235,7 @@ struct ioctl_dvbt
 {
     uint32_t code;
     uint8_t coderate;
-    uint8_t transmitmode;
+    uint8_t txmode;
     uint8_t constellation;
     uint8_t guardinterval;
 };
@@ -244,7 +244,7 @@ struct ioctl_isdbt
 {
     uint32_t code;
     uint8_t reserved[8];
-    uint32_t transmitmode;
+    uint32_t txmode;
     uint32_t guardinterval;
     uint32_t a_constellation;
     uint32_t a_coderate;
@@ -911,7 +911,7 @@ int it95x_get_tps(it95x_dev_t *dev, it95x_tps_t *tps)
         {
             tps->high_coderate = (it95x_coderate_t)ioc.high_coderate;
             tps->low_coderate = (it95x_coderate_t)ioc.low_coderate;
-            tps->transmitmode = (it95x_transmitmode_t)ioc.transmitmode;
+            tps->txmode = (it95x_txmode_t)ioc.txmode;
             tps->constellation = (it95x_constellation_t)ioc.constellation;
             tps->guardinterval = (it95x_guardinterval_t)ioc.guardinterval;
             tps->cell_id = ntohs(ioc.cell_id);
@@ -1071,7 +1071,7 @@ int it95x_set_tps(it95x_dev_t *dev, const it95x_tps_t *tps)
         .code = IOCTL_IT95X_SET_TPS,
         .high_coderate = tps->high_coderate,
         .low_coderate = tps->low_coderate,
-        .transmitmode = tps->transmitmode,
+        .txmode = tps->txmode,
         .constellation = tps->constellation,
         .guardinterval = tps->guardinterval,
         .cell_id = htons(tps->cell_id),
@@ -1133,7 +1133,7 @@ int it95x_set_dvbt(it95x_dev_t *dev, const it95x_dvbt_t *dvbt)
     {
         .code = IOCTL_IT95X_SET_DVBT_MODULATION,
         .coderate = dvbt->coderate,
-        .transmitmode = dvbt->transmitmode,
+        .txmode = dvbt->txmode,
         .constellation = dvbt->constellation,
         .guardinterval = dvbt->guardinterval,
     };
@@ -1147,7 +1147,7 @@ int it95x_set_isdbt(it95x_dev_t *dev, const it95x_isdbt_t *isdbt)
     struct ioctl_isdbt ioc =
     {
         .code = IOCTL_IT95X_SET_ISDBT_MODULATION,
-        .transmitmode = isdbt->transmitmode,
+        .txmode = isdbt->txmode,
         .guardinterval = isdbt->guardinterval,
         .a_constellation = isdbt->a.constellation,
         .a_coderate = isdbt->a.coderate,

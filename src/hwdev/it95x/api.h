@@ -29,7 +29,7 @@
 /* opaque type for device context */
 typedef struct it95x_dev_t it95x_dev_t;
 
-/* code rate */
+/* FEC code rate */
 typedef enum
 {
     IT95X_CODERATE_UNKNOWN = -1,
@@ -56,7 +56,7 @@ typedef enum
     IT95X_TXMODE_2K = 0,
     IT95X_TXMODE_8K = 1,
     IT95X_TXMODE_4K = 2,
-} it95x_transmitmode_t;
+} it95x_txmode_t;
 
 /* guard interval */
 typedef enum
@@ -114,7 +114,7 @@ typedef enum
 typedef struct
 {
     it95x_coderate_t coderate;
-    it95x_transmitmode_t transmitmode;
+    it95x_txmode_t txmode;
     it95x_constellation_t constellation;
     it95x_guardinterval_t guardinterval;
 } it95x_dvbt_t;
@@ -124,7 +124,7 @@ typedef struct
 {
     it95x_coderate_t high_coderate;
     it95x_coderate_t low_coderate;
-    it95x_transmitmode_t transmitmode;
+    it95x_txmode_t txmode;
     it95x_constellation_t constellation;
     it95x_guardinterval_t guardinterval;
     uint16_t cell_id;
@@ -133,7 +133,7 @@ typedef struct
 /* ISDB-T modulation settings */
 typedef struct
 {
-    it95x_transmitmode_t transmitmode;
+    it95x_txmode_t txmode;
     it95x_guardinterval_t guardinterval;
     bool partial;
 
@@ -204,6 +204,11 @@ int it95x_dev_count(size_t *count);
 int it95x_open(ssize_t idx, const char *path, it95x_dev_t **dev);
 void it95x_get_info(const it95x_dev_t *dev, it95x_dev_info_t *info);
 void it95x_close(it95x_dev_t *dev);
+
+int it95x_bitrate_dvbt(uint32_t bandwidth, const it95x_dvbt_t *dvbt
+                       , uint32_t *bitrate);
+int it95x_bitrate_isdbt(uint32_t bandwidth, const it95x_isdbt_t *isdbt
+                        , uint32_t *a_bitrate, uint32_t *b_bitrate);
 
 int it95x_get_gain(it95x_dev_t *dev, int *gain);
 int it95x_get_gain_range(it95x_dev_t *dev
