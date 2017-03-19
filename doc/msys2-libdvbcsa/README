@@ -1,0 +1,11 @@
+This is an MSYS2 PKGBUILD for libdvbcsa. How to build and install:
+
+1. Install build prerequisites:
+$ pacman -Su mingw-w64-{x86_64,i686}-gcc git make patch pkg-config
+
+2. Go to this directory and run makepkg:
+$ cd doc/msys2-libdvbcsa
+$ makepkg
+
+3. Install the newly-built package:
+$ pacman -U ./mingw-w64-*.tar.xz
