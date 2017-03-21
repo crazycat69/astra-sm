@@ -95,6 +95,14 @@ typedef enum
     IT95X_LAYER_AB = 3,
 } it95x_layer_t;
 
+/* ISDB-T system identification */
+typedef enum
+{
+    IT95X_SYSID_UNKNOWN = -1,
+    IT95X_SYSID_ARIB_STD_B31 = 0,
+    IT95X_SYSID_ISDB_TSB = 1,
+} it95x_system_id_t;
+
 /* IT9500 processor */
 typedef enum
 {
@@ -153,6 +161,7 @@ typedef struct
 /* ISDB-T TMCC (Transmission and Multiplexing Configuration Control) */
 typedef struct
 {
+    it95x_system_id_t system_id;
     bool partial;
 
     struct

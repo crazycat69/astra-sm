@@ -69,16 +69,6 @@ int it95x_enumerate(lua_State *L)
             lua_pushstring(L, info.devpath);
             lua_setfield(L, -2, "devpath");
 
-            switch(info.usb_mode)
-            {
-                case IT95X_USB_11: lua_pushstring(L, "1.1"); break;
-                case IT95X_USB_20: lua_pushstring(L, "2.0"); break;
-                default:
-                    lua_pushstring(L, "unknown");
-                    break;
-            }
-            lua_setfield(L, -2, "usb_mode");
-
             char buf[16] = { 0 };
             snprintf(buf, sizeof(buf), "%08x", info.drv_version);
             lua_pushstring(L, buf);
@@ -92,9 +82,42 @@ int it95x_enumerate(lua_State *L)
             lua_pushstring(L, buf);
             lua_setfield(L, -2, "fw_ofdm");
 
-            snprintf(buf, sizeof(buf), "%04x", info.chip_type);
-            lua_pushstring(L, buf);
-            lua_setfield(L, -2, "type");
+            if (asc_log_is_debug())
+            {
+                snprintf(buf, sizeof(buf), "%08x", info.drv_pid);
+                lua_pushstring(L, buf);
+                lua_setfield(L, -2, "drv_pid");
+
+                snprintf(buf, sizeof(buf), "0x%04x", info.chip_type);
+                lua_pushstring(L, buf);
+                lua_setfield(L, -2, "type_chip");
+
+                snprintf(buf, sizeof(buf), "0x%02x", info.dev_type);
+                lua_pushstring(L, buf);
+                lua_setfield(L, -2, "type_dev");
+
+                snprintf(buf, sizeof(buf), "0x%02x", info.tuner_id);
+                lua_pushstring(L, buf);
+                lua_setfield(L, -2, "type_tuner");
+
+                switch(info.usb_mode)
+                {
+                    case IT95X_USB_11: lua_pushstring(L, "USB 1.1"); break;
+                    case IT95X_USB_20: lua_pushstring(L, "USB 2.0"); break;
+                    default:
+                        lua_pushstring(L, "unknown");
+                        break;
+                }
+                lua_setfield(L, -2, "usb_mode");
+
+                snprintf(buf, sizeof(buf), "0x%04x", info.vendor_id);
+                lua_pushstring(L, buf);
+                lua_setfield(L, -2, "usb_vid");
+
+                snprintf(buf, sizeof(buf), "0x%04x", info.product_id);
+                lua_pushstring(L, buf);
+                lua_setfield(L, -2, "usb_pid");
+            }
 
             it95x_close(dev);
         }

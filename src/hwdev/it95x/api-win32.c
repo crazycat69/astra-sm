@@ -30,9 +30,7 @@ struct it95x_dev_t
 
     IKsPropertySet *prop;
     HANDLE file;
-#if 1
     HANDLE event;
-#endif
 };
 
 /*
@@ -135,7 +133,8 @@ enum
     IOCTL_IT95X_SET_DC_CAL = 47,
     IOCTL_IT95X_SET_ISDBT_MODULATION = 60,
     IOCTL_IT95X_ADD_ISDBT_PID_FILTER = 61,
-    IOCTL_IT95X_SET_TMCC = 62, /* XXX: ITE_TxSetTMCCInfo2() uses 63 (0x3F) */
+    IOCTL_IT95X_SET_TMCC = 62,
+    IOCTL_IT95X_SET_TMCC2 = 63,
     IOCTL_IT95X_GET_TMCC = 64,
     IOCTL_IT95X_GET_TS_BITRATE = 65,
     IOCTL_IT95X_CONTROL_ISDBT_PID_FILTER = 66,
@@ -194,7 +193,7 @@ struct ioctl_tmcc
     uint32_t b_constellation;
     uint32_t b_coderate;
     uint32_t partial;
-    uint32_t reserved;
+    uint32_t system_id;
 };
 
 struct ioctl_tps
@@ -243,7 +242,8 @@ struct ioctl_dvbt
 struct ioctl_isdbt
 {
     uint32_t code;
-    uint8_t reserved[8];
+    uint32_t frequency; // XXX: unused?
+    uint32_t bandwidth; // XXX: also unused? test w/signal meter
     uint32_t txmode;
     uint32_t guardinterval;
     uint32_t a_constellation;
@@ -882,6 +882,7 @@ int it95x_get_tmcc(it95x_dev_t *dev, it95x_tmcc_t *tmcc)
         if (SUCCEEDED(hr))
         {
             tmcc->partial = ioc.partial;
+            tmcc->system_id = (it95x_system_id_t)ioc.system_id;
 
             tmcc->a.coderate = (it95x_coderate_t)ioc.a_coderate;
             tmcc->a.constellation = (it95x_constellation_t)ioc.a_constellation;
@@ -1057,9 +1058,15 @@ int it95x_set_tmcc(it95x_dev_t *dev, const it95x_tmcc_t *tmcc)
         .b_constellation = tmcc->b.constellation,
         .b_coderate = tmcc->b.coderate,
         .partial = tmcc->partial,
+        .system_id = tmcc->system_id,
     };
 
-    // XXX: add SET_TMCC2 ioctl ?
+    if (!ioc.partial)
+    {
+        ioc.b_constellation = ioc.a_constellation;
+        ioc.b_coderate = ioc.a_coderate;
+    }
+
     const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
@@ -1286,10 +1293,12 @@ char *it95x_strerror(int error)
     else
     {
         /* modulator error code */
-        return strdup("TODO");
+        return strdup("Modulator firmware error");
 
         /*
-         * TODO: get listing of modulator firmware error codes
+         * NOTE: Windows drivers don't set firmware error code on failed
+         *       ioctl, so no API in this implementation can actually return
+         *       a positive value.
          */
     }
 }
