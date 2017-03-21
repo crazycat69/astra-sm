@@ -24,15 +24,6 @@
 #include <ks.h>
 #include <ksproxy.h>
 
-struct it95x_dev_t
-{
-    it95x_dev_info_t info;
-
-    IKsPropertySet *prop;
-    HANDLE file;
-    HANDLE event;
-};
-
 /*
  * IKsObject declaration (it's not in MinGW-w64 headers).
  */
@@ -69,13 +60,16 @@ struct IKsObject
  * as send TS data blocks for transmission.
  */
 
+#define STATIC_KSPROPSETID_IT9500Properties \
+    0xf23fac2d,0xe1af,0x48e0,{0x8b,0xbe,0xa1,0x40,0x29,0xc9,0x2f,0x11}
+
 static
 const GUID KSPROPSETID_IT9500Properties =
-    {0xf23fac2d,0xe1af,0x48e0,{0x8b,0xbe,0xa1,0x40,0x29,0xc9,0x2f,0x11}};
+    { STATIC_KSPROPSETID_IT9500Properties };
 
 enum
 {
-    KSPROPERTY_IT95X_DRIVER_INFO = 0,
+    KSPROPERTY_IT95X_DRV_INFO = 0,
     KSPROPERTY_IT95X_IOCTL = 1,
 };
 
@@ -87,20 +81,89 @@ enum
  *       used by some vendors whose engineers are too lazy to run guidgen.exe.
  */
 
+#define STATIC_KSPROPSETID_IT9500PropertiesAux \
+    0xc6efe5eb,0x855a,0x4f1b,{0xb7,0xaa,0x87,0xb5,0xe1,0xdc,0x41,0x13}
+
 static
 const GUID KSPROPSETID_IT9500PropertiesAux =
-    {0xc6efe5eb,0x855a,0x4f1b,{0xb7,0xaa,0x87,0xb5,0xe1,0xdc,0x41,0x13}};
+    { STATIC_KSPROPSETID_IT9500PropertiesAux };
 
 enum
 {
     KSPROPERTY_IT95X_BUS_INFO = 5,
 };
 
-struct ks_bus_info
+/*
+ * KS property list for DeviceIoControl
+ */
+
+enum
 {
-    uint16_t usb_mode;
-    uint16_t vendor_id;
-    uint16_t product_id;
+    KSLIST_DRV_INFO_GET = 0,
+    KSLIST_DRV_INFO_SET = 1,
+    KSLIST_IOCTL_GET = 2,
+    KSLIST_IOCTL_SET = 3,
+    KSLIST_BUS_INFO_GET = 4,
+    KSLIST_MAX = 5,
+};
+
+static
+const KSPROPERTY kslist[KSLIST_MAX] =
+{
+    /* KSLIST_DRV_INFO_GET */
+    {
+        {
+            {
+                .Set = { STATIC_KSPROPSETID_IT9500Properties },
+                .Id = KSPROPERTY_IT95X_DRV_INFO,
+                .Flags = KSPROPERTY_TYPE_GET,
+            },
+        },
+    },
+
+    /* KSLIST_DRV_INFO_SET */
+    {
+        {
+            {
+                .Set = { STATIC_KSPROPSETID_IT9500Properties },
+                .Id = KSPROPERTY_IT95X_DRV_INFO,
+                .Flags = KSPROPERTY_TYPE_SET,
+            },
+        },
+    },
+
+    /* KSLIST_IOCTL_GET */
+    {
+        {
+            {
+                .Set = { STATIC_KSPROPSETID_IT9500Properties },
+                .Id = KSPROPERTY_IT95X_IOCTL,
+                .Flags = KSPROPERTY_TYPE_GET,
+            },
+        },
+    },
+
+    /* KSLIST_IOCTL_SET */
+    {
+        {
+            {
+                .Set = { STATIC_KSPROPSETID_IT9500Properties },
+                .Id = KSPROPERTY_IT95X_IOCTL,
+                .Flags = KSPROPERTY_TYPE_SET,
+            },
+        },
+    },
+
+    /* KSLIST_BUS_INFO_GET */
+    {
+        {
+            {
+                .Set = { STATIC_KSPROPSETID_IT9500PropertiesAux },
+                .Id = KSPROPERTY_IT95X_BUS_INFO,
+                .Flags = KSPROPERTY_TYPE_GET,
+            },
+        },
+    },
 };
 
 /*
@@ -109,7 +172,7 @@ struct ks_bus_info
 
 enum
 {
-    IOCTL_IT95X_GET_DRIVER_INFO = 1,
+    IOCTL_IT95X_GET_DRV_INFO = 1,
     IOCTL_IT95X_SET_POWER = 4,
     IOCTL_IT95X_SET_DVBT_MODULATION = 8,
     IOCTL_IT95X_SET_RF_OUTPUT = 9,
@@ -157,6 +220,13 @@ struct ioctl_generic
     uint32_t code;
     uint32_t param1;
     uint32_t param2;
+};
+
+struct ioctl_bus_info
+{
+    uint16_t usb_mode;
+    uint16_t vendor_id;
+    uint16_t product_id;
 };
 
 struct ioctl_drv_info
@@ -271,6 +341,20 @@ struct ioctl_ctl_pid
 };
 
 /*
+ * device context
+ */
+
+struct it95x_dev_t
+{
+    it95x_dev_info_t info;
+
+    IBaseFilter *filter;
+    HANDLE file;
+    KSPROPERTY kslist[KSLIST_MAX];
+    OVERLAPPED overlapped;
+};
+
+/*
  * helper functions
  */
 
@@ -289,161 +373,39 @@ int ret_win32(DWORD error)
     return HRESULT_FROM_WIN32(error);
 }
 
-/* IKsPropertySet::Set shorthand for ioctls */
-static inline
-HRESULT ioctl_set(IKsPropertySet *prop, void *data, DWORD size)
-{
-    return IKsPropertySet_Set(prop, &KSPROPSETID_IT9500Properties
-                              , KSPROPERTY_IT95X_IOCTL, NULL, 0
-                              , data, size);
-}
-
-/* IKsPropertySet::Get shorthand for ioctls */
-static inline
-HRESULT ioctl_get(IKsPropertySet *prop, void *data, DWORD size)
-{
-    DWORD written = 0;
-    return IKsPropertySet_Get(prop, &KSPROPSETID_IT9500Properties
-                              , KSPROPERTY_IT95X_IOCTL, NULL, 0
-                              , data, size, &written);
-}
-
-/* compare moniker's device path against string argument */
+/* access KS property via device handle */
 static
-HRESULT check_devpath(IMoniker *moniker, const char *path, bool *result)
+HRESULT ks_prop(HANDLE file, OVERLAPPED *overlapped
+                , KSPROPERTY *prop, void *data, DWORD size)
 {
-    *result = false;
+    DWORD written;
+    BOOL ok = DeviceIoControl(file, IOCTL_KS_PROPERTY
+                              , prop, sizeof(*prop), data, size
+                              , &written, overlapped);
 
-    char *buf = NULL;
-    const HRESULT hr = dshow_get_property(moniker, "DevicePath", &buf);
+    if (!ok && GetLastError() == ERROR_IO_PENDING)
+        ok = GetOverlappedResult(file, overlapped, &written, TRUE);
 
-    if (SUCCEEDED(hr))
-    {
-        if (strstr(buf, path) == buf)
-            *result = true;
-
-        free(buf);
-    }
-
-    return hr;
+    return (ok ? S_OK : HRESULT_FROM_WIN32(GetLastError()));
 }
 
-/* check whether a moniker points to a supported device */
+/* issue modulator ioctl */
 static
-HRESULT check_moniker(IMoniker *moniker, bool *result)
+HRESULT ioctl_set(it95x_dev_t *dev, void *data, DWORD size)
 {
-    *result = false;
-
-    char *prop_name = NULL;
-    HRESULT hr = dshow_get_property(moniker, "FriendlyName", &prop_name);
-
-    if (SUCCEEDED(hr))
-    {
-        if (strstr(prop_name, "IT95") == prop_name)
-        {
-            char *prop_clsid = NULL;
-            wchar_t *wbuf = NULL;
-
-            hr = dshow_get_property(moniker, "CLSID", &prop_clsid);
-            if (SUCCEEDED(hr))
-            {
-                wbuf = cx_widen(prop_clsid);
-                if (wbuf == NULL)
-                    hr = E_OUTOFMEMORY;
-
-                free(prop_clsid);
-            }
-
-            if (wbuf != NULL)
-            {
-                CLSID clsid;
-                memset(&clsid, 0, sizeof(clsid));
-
-                hr = CLSIDFromString(wbuf, &clsid);
-                if (SUCCEEDED(hr))
-                    *result = IsEqualCLSID(&clsid, &CLSID_Proxy);
-
-                free(wbuf);
-            }
-        }
-
-        free(prop_name);
-    }
-
-    return hr;
+    return ks_prop(dev->file, &dev->overlapped
+                   , &dev->kslist[KSLIST_IOCTL_SET], data, size);
 }
 
-/* get KS property set object from filter */
+/* retrieve ioctl result data */
 static
-HRESULT prop_from_filter(IBaseFilter *filter, IKsPropertySet **out)
+HRESULT ioctl_get(it95x_dev_t *dev, void *data, DWORD size)
 {
-    *out = NULL;
-
-    IKsPropertySet *prop = NULL;
-    HRESULT hr = IBaseFilter_QueryInterface(filter, &IID_IKsPropertySet
-                                            , (void **)&prop);
-    ASC_WANT_PTR(hr, prop);
-
-    if (SUCCEEDED(hr))
-    {
-        const unsigned int want_sets = 3;
-        unsigned int got_sets = 0;
-
-        /* main set, driver info */
-        DWORD type = 0;
-        hr = prop->lpVtbl->QuerySupported(prop
-                                          , &KSPROPSETID_IT9500Properties
-                                          , KSPROPERTY_IT95X_DRIVER_INFO
-                                          , &type);
-        if (SUCCEEDED(hr)
-            && (type & KSPROPERTY_SUPPORT_GET)
-            && (type & KSPROPERTY_SUPPORT_SET))
-        {
-            got_sets++;
-        }
-
-        /* main set, ioctl */
-        type = 0;
-        hr = prop->lpVtbl->QuerySupported(prop
-                                          , &KSPROPSETID_IT9500Properties
-                                          , KSPROPERTY_IT95X_IOCTL
-                                          , &type);
-        if (SUCCEEDED(hr)
-            && (type & KSPROPERTY_SUPPORT_GET)
-            && (type & KSPROPERTY_SUPPORT_SET))
-        {
-            got_sets++;
-        }
-
-        /* aux set, device info */
-        type = 0;
-        hr = prop->lpVtbl->QuerySupported(prop
-                                          , &KSPROPSETID_IT9500PropertiesAux
-                                          , KSPROPERTY_IT95X_BUS_INFO
-                                          , &type);
-        if (SUCCEEDED(hr)
-            && (type & KSPROPERTY_SUPPORT_GET))
-        {
-            /* NOTE: this one's read-only */
-            got_sets++;
-        }
-
-        if (got_sets == want_sets)
-        {
-            *out = prop;
-            hr = S_OK;
-        }
-        else
-        {
-            ASC_RELEASE(prop);
-            hr = E_PROP_SET_UNSUPPORTED;
-        }
-    }
-
-    return hr;
+    return ks_prop(dev->file, &dev->overlapped
+                   , &dev->kslist[KSLIST_IOCTL_GET], data, size);
 }
 
-/* get KS handle from filter */
+/* get device handle from filter */
 static
 HRESULT handle_from_filter(IBaseFilter *filter, HANDLE *out)
 {
@@ -466,39 +428,68 @@ HRESULT handle_from_filter(IBaseFilter *filter, HANDLE *out)
     return hr;
 }
 
+/* check property set support */
+static
+HRESULT check_properties(it95x_dev_t *dev)
+{
+    for (size_t i = 0; i < ASC_ARRAY_SIZE(dev->kslist); i++)
+    {
+        KSPROPERTY prop = dev->kslist[i];
+        const ULONG flags = prop.Flags;
+        prop.Flags = KSPROPERTY_TYPE_BASICSUPPORT;
+
+        DWORD got = 0;
+        HRESULT hr = ks_prop(dev->file, &dev->overlapped, &prop
+                             , &got, sizeof(got));
+
+        if (SUCCEEDED(hr))
+        {
+            DWORD want = 0;
+            if (flags == KSPROPERTY_TYPE_GET)
+                want = KSPROPERTY_SUPPORT_GET;
+            else if (flags == KSPROPERTY_TYPE_SET)
+                want = KSPROPERTY_SUPPORT_SET;
+
+            if (!(got & want))
+                hr = E_PROP_ID_UNSUPPORTED;
+        }
+
+        if (FAILED(hr))
+            return hr;
+    }
+
+    return S_OK;
+}
+
 /* get bus mode and device IDs */
 static
-HRESULT get_bus_info(IKsPropertySet *prop, struct ks_bus_info *bus_info)
+HRESULT get_bus_info(it95x_dev_t *dev, struct ioctl_bus_info *bus_info)
 {
     memset(bus_info, 0, sizeof(*bus_info));
-
-    DWORD written = 0;
-    return prop->lpVtbl->Get(prop, &KSPROPSETID_IT9500PropertiesAux
-                             , KSPROPERTY_IT95X_BUS_INFO, NULL, 0
-                             , bus_info, sizeof(*bus_info), &written);
+    return ks_prop(dev->file, &dev->overlapped
+                   , &dev->kslist[KSLIST_BUS_INFO_GET]
+                   , bus_info, sizeof(*bus_info));
 }
 
 /* get driver and firmware versions */
 static
-HRESULT get_drv_info(IKsPropertySet *prop, struct ioctl_drv_info *drv_info)
+HRESULT get_drv_info(it95x_dev_t *dev, struct ioctl_drv_info *drv_info)
 {
     memset(drv_info, 0, sizeof(*drv_info));
 
     struct ioctl_generic ioc =
     {
-        .code = IOCTL_IT95X_GET_DRIVER_INFO,
+        .code = IOCTL_IT95X_GET_DRV_INFO,
     };
 
-    HRESULT hr = prop->lpVtbl->Set(prop, &KSPROPSETID_IT9500Properties
-                                   , KSPROPERTY_IT95X_DRIVER_INFO, NULL, 0
-                                   , &ioc, sizeof(ioc));
-
+    HRESULT hr = ks_prop(dev->file, &dev->overlapped
+                         , &dev->kslist[KSLIST_DRV_INFO_SET]
+                         , &ioc, sizeof(ioc));
     if (SUCCEEDED(hr))
     {
-        DWORD written = 0;
-        hr = prop->lpVtbl->Get(prop, &KSPROPSETID_IT9500Properties
-                               , KSPROPERTY_IT95X_DRIVER_INFO, NULL, 0
-                               , drv_info, sizeof(*drv_info), &written);
+        hr = ks_prop(dev->file, &dev->overlapped
+                     , &dev->kslist[KSLIST_DRV_INFO_GET]
+                     , drv_info, sizeof(*drv_info));
     }
 
     return hr;
@@ -508,7 +499,7 @@ HRESULT get_drv_info(IKsPropertySet *prop, struct ioctl_drv_info *drv_info)
 #define REG_CHIP_VERSION 0x1222
 
 static
-HRESULT get_chip_type(IKsPropertySet *prop, uint16_t *chip_type)
+HRESULT get_chip_type(it95x_dev_t *dev, uint16_t *chip_type)
 {
     *chip_type = 0;
 
@@ -517,13 +508,13 @@ HRESULT get_chip_type(IKsPropertySet *prop, uint16_t *chip_type)
         .code = IOCTL_IT95X_RD_REG_LINK,
         .param1 = REG_CHIP_VERSION + 1,
     };
-    HRESULT hr = ioctl_set(prop, &ioc_lsb, sizeof(ioc_lsb));
 
+    HRESULT hr = ioctl_set(dev, &ioc_lsb, sizeof(ioc_lsb));
     if (SUCCEEDED(hr))
     {
         uint32_t lsb = 0;
-        hr = ioctl_get(prop, &lsb, sizeof(lsb));
 
+        hr = ioctl_get(dev, &lsb, sizeof(lsb));
         if (SUCCEEDED(hr))
         {
             struct ioctl_generic ioc_msb =
@@ -531,13 +522,13 @@ HRESULT get_chip_type(IKsPropertySet *prop, uint16_t *chip_type)
                 .code = IOCTL_IT95X_RD_REG_LINK,
                 .param1 = REG_CHIP_VERSION + 2,
             };
-            hr = ioctl_set(prop, &ioc_msb, sizeof(ioc_msb));
 
+            hr = ioctl_set(dev, &ioc_msb, sizeof(ioc_msb));
             if (SUCCEEDED(hr))
             {
                 uint32_t msb = 0;
-                hr = ioctl_get(prop, &msb, sizeof(msb));
 
+                hr = ioctl_get(dev, &msb, sizeof(msb));
                 if (SUCCEEDED(hr))
                 {
                     *chip_type = ((msb << 8) & 0xff00) | (lsb & 0xff);
@@ -551,7 +542,7 @@ HRESULT get_chip_type(IKsPropertySet *prop, uint16_t *chip_type)
 
 /* get device type */
 static
-HRESULT get_dev_type(IKsPropertySet *prop, uint8_t *dev_type)
+HRESULT get_dev_type(it95x_dev_t *dev, uint8_t *dev_type)
 {
     *dev_type = 0;
 
@@ -560,10 +551,10 @@ HRESULT get_dev_type(IKsPropertySet *prop, uint8_t *dev_type)
         .code = IOCTL_IT95X_GET_DEVICE_TYPE,
     };
 
-    HRESULT hr = ioctl_set(prop, &ioc, sizeof(ioc));
+    HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     if (SUCCEEDED(hr))
     {
-        hr = ioctl_get(prop, &ioc, sizeof(ioc));
+        hr = ioctl_get(dev, &ioc, sizeof(ioc));
         if (SUCCEEDED(hr))
             *dev_type = ioc.param2;
     }
@@ -582,16 +573,22 @@ HRESULT dev_from_moniker(IMoniker *moniker, it95x_dev_t **out)
     HANDLE file = NULL, event = NULL;
 
     IBaseFilter *filter = NULL;
-    IKsPropertySet *prop = NULL;
 
-    /* get device strings and its property set interface */
+    /* allocate device context */
+    dev = (it95x_dev_t *)calloc(1, sizeof(*dev));
+    if (dev == NULL)
+    {
+        hr = E_OUTOFMEMORY;
+        goto out;
+    }
+
+    memcpy(dev->kslist, kslist, sizeof(kslist));
+
+    /* get device strings and check its property sets */
     hr = dshow_filter_from_moniker(moniker, &filter, &name);
     if (FAILED(hr)) goto out;
 
     hr = dshow_get_property(moniker, "DevicePath", &devpath);
-    if (FAILED(hr)) goto out;
-
-    hr = prop_from_filter(filter, &prop);
     if (FAILED(hr)) goto out;
 
     hr = handle_from_filter(filter, &file);
@@ -604,35 +601,31 @@ HRESULT dev_from_moniker(IMoniker *moniker, it95x_dev_t **out)
         goto out;
     }
 
+    dev->filter = filter;
+    dev->file = file;
+    dev->overlapped.hEvent = event;
+
+    hr = check_properties(dev);
+    if (FAILED(hr)) goto out;
+
     /* cache device information for application use */
-    struct ks_bus_info bus_info;
-    hr = get_bus_info(prop, &bus_info);
+    struct ioctl_bus_info bus_info;
+    hr = get_bus_info(dev, &bus_info);
     if (FAILED(hr)) goto out;
 
     struct ioctl_drv_info drv_info;
-    hr = get_drv_info(prop, &drv_info);
+    hr = get_drv_info(dev, &drv_info);
     if (FAILED(hr)) goto out;
 
     uint16_t chip_type;
-    hr = get_chip_type(prop, &chip_type);
+    hr = get_chip_type(dev, &chip_type);
     if (FAILED(hr)) goto out;
 
     uint8_t dev_type;
-    hr = get_dev_type(prop, &dev_type);
+    hr = get_dev_type(dev, &dev_type);
     if (FAILED(hr)) goto out;
 
-    /* fill out device struct */
-    dev = (it95x_dev_t *)calloc(1, sizeof(*dev));
-    if (dev == NULL)
-    {
-        hr = E_OUTOFMEMORY;
-        goto out;
-    }
-
-    dev->prop = prop;
-    dev->file = file;
-    dev->event = event;
-
+    /* fill in device information */
     dev->info.name = name;
     dev->info.devpath = devpath;
 
@@ -664,11 +657,78 @@ out:
         ASC_FREE(event, CloseHandle);
         ASC_FREE(devpath, free);
         ASC_FREE(name, free);
+        ASC_FREE(dev, free);
 
-        ASC_RELEASE(prop);
+        /* NOTE: file handle is closed when filter is released */
+        ASC_RELEASE(filter);
     }
 
-    ASC_RELEASE(filter);
+    return hr;
+}
+
+/* compare moniker's device path against string argument */
+static
+HRESULT check_devpath(IMoniker *moniker, const char *path, bool *result)
+{
+    *result = false;
+
+    char *buf = NULL;
+    const HRESULT hr = dshow_get_property(moniker, "DevicePath", &buf);
+
+    if (SUCCEEDED(hr))
+    {
+        if (strstr(buf, path) == buf)
+            *result = true;
+
+        free(buf);
+    }
+
+    return hr;
+}
+
+/* check whether a moniker points to a supported device */
+#define IT95X_NAME_FILTER "IT95"
+
+static
+HRESULT check_moniker(IMoniker *moniker, bool *result)
+{
+    *result = false;
+
+    char *prop_name = NULL;
+    HRESULT hr = dshow_get_property(moniker, "FriendlyName", &prop_name);
+
+    if (SUCCEEDED(hr))
+    {
+        if (strstr(prop_name, IT95X_NAME_FILTER) == prop_name)
+        {
+            char *prop_clsid = NULL;
+            wchar_t *wbuf = NULL;
+
+            hr = dshow_get_property(moniker, "CLSID", &prop_clsid);
+            if (SUCCEEDED(hr))
+            {
+                wbuf = cx_widen(prop_clsid);
+                if (wbuf == NULL)
+                    hr = E_OUTOFMEMORY;
+
+                free(prop_clsid);
+            }
+
+            if (wbuf != NULL)
+            {
+                CLSID clsid;
+                memset(&clsid, 0, sizeof(clsid));
+
+                hr = CLSIDFromString(wbuf, &clsid);
+                if (SUCCEEDED(hr))
+                    *result = IsEqualCLSID(&clsid, &CLSID_Proxy);
+
+                free(wbuf);
+            }
+        }
+
+        free(prop_name);
+    }
 
     return hr;
 }
@@ -806,8 +866,8 @@ void it95x_close(it95x_dev_t *dev)
     free(dev->info.name);
     free(dev->info.devpath);
 
-    ASC_RELEASE(dev->prop);
-    CloseHandle(dev->event);
+    ASC_RELEASE(dev->filter);
+    CloseHandle(dev->overlapped.hEvent);
 
     free(dev);
 }
@@ -821,10 +881,10 @@ int it95x_get_gain(it95x_dev_t *dev, int *gain)
         .code = IOCTL_IT95X_GET_GAIN,
     };
 
-    HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     if (SUCCEEDED(hr))
     {
-        hr = ioctl_get(dev->prop, &ioc, sizeof(ioc));
+        hr = ioctl_get(dev, &ioc, sizeof(ioc));
         if (SUCCEEDED(hr))
         {
             if (ioc.param2 == GAIN_POSITIVE)
@@ -852,10 +912,10 @@ int it95x_get_gain_range(it95x_dev_t *dev
         .bandwidth = bandwidth,
     };
 
-    HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     if (SUCCEEDED(hr))
     {
-        hr = ioctl_get(dev->prop, &ioc, sizeof(ioc));
+        hr = ioctl_get(dev, &ioc, sizeof(ioc));
         if (SUCCEEDED(hr))
         {
             *max = ioc.max_gain;
@@ -875,10 +935,10 @@ int it95x_get_tmcc(it95x_dev_t *dev, it95x_tmcc_t *tmcc)
         .code = IOCTL_IT95X_GET_TMCC,
     };
 
-    HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     if (SUCCEEDED(hr))
     {
-        hr = ioctl_get(dev->prop, &ioc, sizeof(ioc));
+        hr = ioctl_get(dev, &ioc, sizeof(ioc));
         if (SUCCEEDED(hr))
         {
             tmcc->partial = ioc.partial;
@@ -904,10 +964,10 @@ int it95x_get_tps(it95x_dev_t *dev, it95x_tps_t *tps)
         .code = IOCTL_IT95X_GET_TPS,
     };
 
-    HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     if (SUCCEEDED(hr))
     {
-        hr = ioctl_get(dev->prop, &ioc, sizeof(ioc));
+        hr = ioctl_get(dev, &ioc, sizeof(ioc));
         if (SUCCEEDED(hr))
         {
             tps->high_coderate = (it95x_coderate_t)ioc.high_coderate;
@@ -932,7 +992,7 @@ int it95x_set_channel(it95x_dev_t *dev
         .param2 = bandwidth,
     };
 
-    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
 
@@ -956,10 +1016,10 @@ int it95x_set_gain(it95x_dev_t *dev, int *gain)
         ioc.param2 = GAIN_NEGATIVE;
     }
 
-    HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     if (SUCCEEDED(hr))
     {
-        hr = ioctl_get(dev->prop, &ioc, sizeof(ioc));
+        hr = ioctl_get(dev, &ioc, sizeof(ioc));
         if (SUCCEEDED(hr))
         {
             if (ioc.param2 == GAIN_POSITIVE)
@@ -982,7 +1042,7 @@ int it95x_set_power(it95x_dev_t *dev, bool enable)
         .param1 = enable,
     };
 
-    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
 
@@ -995,7 +1055,7 @@ int it95x_set_pcr(it95x_dev_t *dev, it95x_pcr_mode_t mode)
     };
 
     // XXX: use "pcr enable" ioctl?
-    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
 
@@ -1018,7 +1078,7 @@ int it95x_set_psi(it95x_dev_t *dev
         };
 
         memcpy(ioc.packet, packet, TS_PACKET_SIZE);
-        hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+        hr = ioctl_set(dev, &ioc, sizeof(ioc));
     }
 
     if (SUCCEEDED(hr))
@@ -1030,7 +1090,7 @@ int it95x_set_psi(it95x_dev_t *dev
             .interval_ms = interval_ms,
         };
 
-        hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+        hr = ioctl_set(dev, &ioc, sizeof(ioc));
     }
 
     return ret_hr(hr);
@@ -1044,7 +1104,7 @@ int it95x_set_rf(it95x_dev_t *dev, bool enable)
         .param1 = enable,
     };
 
-    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
 
@@ -1067,7 +1127,7 @@ int it95x_set_tmcc(it95x_dev_t *dev, const it95x_tmcc_t *tmcc)
         ioc.b_coderate = ioc.a_coderate;
     }
 
-    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
 
@@ -1084,7 +1144,7 @@ int it95x_set_tps(it95x_dev_t *dev, const it95x_tps_t *tps)
         .cell_id = htons(tps->cell_id),
     };
 
-    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
 
@@ -1103,7 +1163,7 @@ int it95x_set_tps_crypt(it95x_dev_t *dev, bool enable, uint32_t key)
         ioc.code = IOCTL_IT95X_DISABLE_TPS_CRYPT;
     }
 
-    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
 
@@ -1116,7 +1176,7 @@ int it95x_set_dc_cal(it95x_dev_t *dev, int dc_i, int dc_q)
         .dc_q = dc_q,
     };
 
-    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
 
@@ -1130,7 +1190,7 @@ int it95x_set_ofs_cal(it95x_dev_t *dev
         .ofs_q = ofs_q,
     };
 
-    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
 
@@ -1145,7 +1205,7 @@ int it95x_set_dvbt(it95x_dev_t *dev, const it95x_dvbt_t *dvbt)
         .guardinterval = dvbt->guardinterval,
     };
 
-    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
 
@@ -1169,7 +1229,7 @@ int it95x_set_isdbt(it95x_dev_t *dev, const it95x_isdbt_t *isdbt)
         ioc.b_coderate = ioc.a_coderate;
     }
 
-    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
 
@@ -1184,7 +1244,7 @@ int it95x_add_pid(it95x_dev_t *dev, unsigned int idx
         .layer = layer,
     };
 
-    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
 
@@ -1196,7 +1256,7 @@ int it95x_ctl_pid(it95x_dev_t *dev, it95x_layer_t layer)
         .layer = layer,
     };
 
-    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
 
@@ -1207,7 +1267,7 @@ int it95x_reset_pid(it95x_dev_t *dev)
         .code = IOCTL_IT95X_RESET_ISDBT_PID_FILTER,
     };
 
-    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
 
@@ -1215,7 +1275,7 @@ int it95x_send_ts(it95x_dev_t *dev, it95x_tx_block_t *data)
 {
     data->code = IOCTL_IT95X_SEND_TS_DATA;
 
-    const HRESULT hr = ioctl_set(dev->prop, data, sizeof(*data));
+    const HRESULT hr = ioctl_set(dev, data, sizeof(*data));
     return ret_hr(hr);
 }
 
@@ -1243,11 +1303,11 @@ int it95x_rd_reg(it95x_dev_t *dev, it95x_processor_t processor
             return ret_win32(ERROR_BAD_ARGUMENTS);
     }
 
-    HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     if (SUCCEEDED(hr))
     {
         uint32_t out = 0;
-        hr = ioctl_get(dev->prop, &out, sizeof(out));
+        hr = ioctl_get(dev, &out, sizeof(out));
 
         if (SUCCEEDED(hr))
             *value = out;
@@ -1279,7 +1339,7 @@ int it95x_wr_reg(it95x_dev_t *dev, it95x_processor_t processor
             return ret_win32(ERROR_BAD_ARGUMENTS);
     }
 
-    const HRESULT hr = ioctl_set(dev->prop, &ioc, sizeof(ioc));
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }
 
