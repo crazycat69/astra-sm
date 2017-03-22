@@ -1,5 +1,5 @@
 /*
- * Astra Module: IT95x (Modulator thread)
+ * Astra Module: IT95x (Worker thread)
  *
  * Copyright (C) 2017, Artem Kharitonov <artem@3phase.pw>
  *

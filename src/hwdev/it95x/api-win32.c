@@ -741,9 +741,13 @@ int it95x_dev_count(size_t *count)
 {
     *count = 0;
 
+    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
+    if (FAILED(hr))
+        return ret_hr(hr);
+
     IEnumMoniker *enum_moniker = NULL;
-    HRESULT hr = dshow_enum(&KSCATEGORY_AUDIO_DEVICE, &enum_moniker
-                            , CDEF_DEVMON_PNP_DEVICE);
+    hr = dshow_enum(&KSCATEGORY_AUDIO_DEVICE, &enum_moniker
+                    , CDEF_DEVMON_PNP_DEVICE);
 
     if (hr == S_OK)
     {
@@ -773,6 +777,8 @@ int it95x_dev_count(size_t *count)
         ASC_RELEASE(enum_moniker);
     }
 
+    CoUninitialize();
+
     return ret_hr(hr);
 }
 
@@ -780,77 +786,85 @@ int it95x_open(ssize_t idx, const char *path, it95x_dev_t **dev)
 {
     *dev = NULL;
 
-    /* search for requested device */
     const size_t pathlen = (path != NULL ? strlen(path) : 0);
     if (idx < 0 && pathlen == 0)
         return ret_win32(ERROR_BAD_ARGUMENTS);
 
-    IEnumMoniker *enum_moniker = NULL;
-    HRESULT hr = dshow_enum(&KSCATEGORY_AUDIO_DEVICE, &enum_moniker
-                            , CDEF_DEVMON_PNP_DEVICE);
-
+    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
     if (FAILED(hr))
         return ret_hr(hr);
-    else if (hr != S_OK)
-        return ret_win32(ERROR_BAD_UNIT);
 
+    /* search for requested device */
+    IEnumMoniker *enum_moniker = NULL;
     IMoniker *dev_moniker = NULL;
-    ssize_t count = -1;
 
-    do
+    hr = dshow_enum(&KSCATEGORY_AUDIO_DEVICE, &enum_moniker
+                    , CDEF_DEVMON_PNP_DEVICE);
+
+    if (hr == S_OK)
     {
-        IMoniker *moniker = NULL;
-        hr = IEnumMoniker_Next(enum_moniker, 1, &moniker, NULL);
-        ASC_WANT_ENUM(hr, moniker);
+        ssize_t count = -1;
 
-        if (hr == S_OK)
+        do
         {
-            bool match = false;
-            hr = check_moniker(moniker, &match);
+            IMoniker *moniker = NULL;
+            hr = IEnumMoniker_Next(enum_moniker, 1, &moniker, NULL);
+            ASC_WANT_ENUM(hr, moniker);
 
-            if (SUCCEEDED(hr) && match)
+            if (hr == S_OK)
             {
-                count++;
-
-                if (pathlen > 0)
-                {
-                    hr = check_devpath(moniker, path, &match);
-                }
-                else
-                {
-                    match = (idx == count);
-                }
+                bool match = false;
+                hr = check_moniker(moniker, &match);
 
                 if (SUCCEEDED(hr) && match)
                 {
-                    /* found it */
-                    dev_moniker = moniker;
-                    break;
+                    count++;
+
+                    if (pathlen > 0)
+                    {
+                        hr = check_devpath(moniker, path, &match);
+                    }
+                    else
+                    {
+                        match = (idx == count);
+                    }
+
+                    if (SUCCEEDED(hr) && match)
+                    {
+                        /* found it */
+                        dev_moniker = moniker;
+                        break;
+                    }
                 }
+
+                ASC_RELEASE(moniker);
             }
+            else
+            {
+                /* no more devices */
+                break;
+            }
+        } while (true);
 
-            ASC_RELEASE(moniker);
-        }
-        else
-        {
-            /* no more devices */
-            break;
-        }
-    } while (true);
-
-    ASC_RELEASE(enum_moniker);
+        ASC_RELEASE(enum_moniker);
+    }
 
     /* attempt initialization if found */
-    int ret = ret_win32(ERROR_BAD_UNIT);
-
     if (dev_moniker != NULL)
     {
-        ret = ret_hr(dev_from_moniker(dev_moniker, dev));
+        hr = dev_from_moniker(dev_moniker, dev);
         IMoniker_Release(dev_moniker);
     }
-    else if (FAILED(hr))
+
+    int ret = 0;
+    if (*dev == NULL)
     {
-        ret = ret_hr(hr);
+        if (FAILED(hr))
+            ret = ret_hr(hr);
+        else
+            ret = ret_win32(ERROR_BAD_UNIT);
+
+        CoUninitialize();
     }
 
     return ret;
@@ -867,9 +881,11 @@ void it95x_close(it95x_dev_t *dev)
     free(dev->info.devpath);
 
     ASC_RELEASE(dev->filter);
-    CloseHandle(dev->overlapped.hEvent);
+    ASC_FREE(dev->overlapped.hEvent, CloseHandle);
 
     free(dev);
+
+    CoUninitialize();
 }
 
 int it95x_get_gain(it95x_dev_t *dev, int *gain)

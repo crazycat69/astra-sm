@@ -27,12 +27,6 @@
 static
 int it95x_enumerate(lua_State *L)
 {
-#ifdef _WIN32
-    HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-    if (FAILED(hr))
-        luaL_error(L, "CoInitializeEx() failed");
-#endif
-
     size_t cnt = 0;
     int ret = it95x_dev_count(&cnt);
 
@@ -41,9 +35,6 @@ int it95x_enumerate(lua_State *L)
         char *const err = it95x_strerror(ret);
         lua_pushfstring(L, "couldn't retrieve device count: %s", err);
         free(err);
-#ifdef _WIN32
-        CoUninitialize();
-#endif
         lua_error(L);
     }
 
@@ -132,10 +123,6 @@ int it95x_enumerate(lua_State *L)
         const int pos = luaL_len(L, -2) + 1;
         lua_rawseti(L, -2, pos);
     }
-
-#ifdef _WIN32
-    CoUninitialize();
-#endif
 
     return 1;
 }
