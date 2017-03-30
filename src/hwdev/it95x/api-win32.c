@@ -263,7 +263,7 @@ struct ioctl_tmcc
     uint32_t b_constellation;
     uint32_t b_coderate;
     uint32_t partial;
-    uint32_t system_id;
+    uint32_t sysid;
 };
 
 struct ioctl_tps
@@ -271,7 +271,7 @@ struct ioctl_tps
     uint32_t code;
     uint8_t high_coderate;
     uint8_t low_coderate;
-    uint8_t txmode;
+    uint8_t tx_mode;
     uint8_t constellation;
     uint8_t guardinterval;
     uint16_t cell_id;
@@ -304,7 +304,7 @@ struct ioctl_dvbt
 {
     uint32_t code;
     uint8_t coderate;
-    uint8_t txmode;
+    uint8_t tx_mode;
     uint8_t constellation;
     uint8_t guardinterval;
 };
@@ -314,7 +314,7 @@ struct ioctl_isdbt
     uint32_t code;
     uint32_t frequency; // XXX: unused?
     uint32_t bandwidth; // XXX: also unused? test w/signal meter
-    uint32_t txmode;
+    uint32_t tx_mode;
     uint32_t guardinterval;
     uint32_t a_constellation;
     uint32_t a_coderate;
@@ -958,7 +958,7 @@ int it95x_get_tmcc(it95x_dev_t *dev, it95x_tmcc_t *tmcc)
         if (SUCCEEDED(hr))
         {
             tmcc->partial = ioc.partial;
-            tmcc->system_id = (it95x_system_id_t)ioc.system_id;
+            tmcc->sysid = (it95x_sysid_t)ioc.sysid;
 
             tmcc->a.coderate = (it95x_coderate_t)ioc.a_coderate;
             tmcc->a.constellation = (it95x_constellation_t)ioc.a_constellation;
@@ -988,7 +988,7 @@ int it95x_get_tps(it95x_dev_t *dev, it95x_tps_t *tps)
         {
             tps->high_coderate = (it95x_coderate_t)ioc.high_coderate;
             tps->low_coderate = (it95x_coderate_t)ioc.low_coderate;
-            tps->txmode = (it95x_txmode_t)ioc.txmode;
+            tps->tx_mode = (it95x_tx_mode_t)ioc.tx_mode;
             tps->constellation = (it95x_constellation_t)ioc.constellation;
             tps->guardinterval = (it95x_guardinterval_t)ioc.guardinterval;
             tps->cell_id = ntohs(ioc.cell_id);
@@ -1134,7 +1134,7 @@ int it95x_set_tmcc(it95x_dev_t *dev, const it95x_tmcc_t *tmcc)
         .b_constellation = tmcc->b.constellation,
         .b_coderate = tmcc->b.coderate,
         .partial = tmcc->partial,
-        .system_id = tmcc->system_id,
+        .sysid = tmcc->sysid,
     };
 
     if (!ioc.partial)
@@ -1154,7 +1154,7 @@ int it95x_set_tps(it95x_dev_t *dev, const it95x_tps_t *tps)
         .code = IOCTL_IT95X_SET_TPS,
         .high_coderate = tps->high_coderate,
         .low_coderate = tps->low_coderate,
-        .txmode = tps->txmode,
+        .tx_mode = tps->tx_mode,
         .constellation = tps->constellation,
         .guardinterval = tps->guardinterval,
         .cell_id = htons(tps->cell_id),
@@ -1216,7 +1216,7 @@ int it95x_set_dvbt(it95x_dev_t *dev, const it95x_dvbt_t *dvbt)
     {
         .code = IOCTL_IT95X_SET_DVBT_MODULATION,
         .coderate = dvbt->coderate,
-        .txmode = dvbt->txmode,
+        .tx_mode = dvbt->tx_mode,
         .constellation = dvbt->constellation,
         .guardinterval = dvbt->guardinterval,
     };
@@ -1230,7 +1230,7 @@ int it95x_set_isdbt(it95x_dev_t *dev, const it95x_isdbt_t *isdbt)
     struct ioctl_isdbt ioc =
     {
         .code = IOCTL_IT95X_SET_ISDBT_MODULATION,
-        .txmode = isdbt->txmode,
+        .tx_mode = isdbt->tx_mode,
         .guardinterval = isdbt->guardinterval,
         .a_constellation = isdbt->a.constellation,
         .a_coderate = isdbt->a.coderate,

@@ -26,6 +26,12 @@
 #define IT95X_TX_BLOCK_PKTS 348
 #define IT95X_TX_BLOCK_SIZE (IT95X_TX_BLOCK_PKTS * TS_PACKET_SIZE)
 
+/* maximum entries in I/Q calibration table */
+#define IT95X_IQ_TABLE_SIZE 65536
+
+/* maximum PID list size for ISDB-T PID filter */
+#define IT95X_PID_LIST_SIZE 31
+
 /* opaque type for device context */
 typedef struct it95x_dev_t it95x_dev_t;
 
@@ -52,11 +58,11 @@ typedef enum
 /* transmission mode */
 typedef enum
 {
-    IT95X_TXMODE_UNKNOWN = -1,
-    IT95X_TXMODE_2K = 0,
-    IT95X_TXMODE_8K = 1,
-    IT95X_TXMODE_4K = 2,
-} it95x_txmode_t;
+    IT95X_TX_MODE_UNKNOWN = -1,
+    IT95X_TX_MODE_2K = 0,
+    IT95X_TX_MODE_8K = 1,
+    IT95X_TX_MODE_4K = 2,
+} it95x_tx_mode_t;
 
 /* guard interval */
 typedef enum
@@ -89,6 +95,7 @@ typedef enum
 /* ISDB-T layers */
 typedef enum
 {
+    IT95X_LAYER_UNKNOWN = -1,
     IT95X_LAYER_NONE = 0,
     IT95X_LAYER_B = 1,
     IT95X_LAYER_A = 2,
@@ -101,7 +108,7 @@ typedef enum
     IT95X_SYSID_UNKNOWN = -1,
     IT95X_SYSID_ARIB_STD_B31 = 0,
     IT95X_SYSID_ISDB_TSB = 1,
-} it95x_system_id_t;
+} it95x_sysid_t;
 
 /* IT9500 processor */
 typedef enum
@@ -122,7 +129,7 @@ typedef enum
 typedef struct
 {
     it95x_coderate_t coderate;
-    it95x_txmode_t txmode;
+    it95x_tx_mode_t tx_mode;
     it95x_constellation_t constellation;
     it95x_guardinterval_t guardinterval;
 } it95x_dvbt_t;
@@ -132,49 +139,36 @@ typedef struct
 {
     it95x_coderate_t high_coderate;
     it95x_coderate_t low_coderate;
-    it95x_txmode_t txmode;
+    it95x_tx_mode_t tx_mode;
     it95x_constellation_t constellation;
     it95x_guardinterval_t guardinterval;
     uint16_t cell_id;
 } it95x_tps_t;
 
+/* ISDB-T per-layer modulation settings */
+typedef struct
+{
+    it95x_coderate_t coderate;
+    it95x_constellation_t constellation;
+} it95x_isdbt_layer_t;
+
 /* ISDB-T modulation settings */
 typedef struct
 {
-    it95x_txmode_t txmode;
+    it95x_tx_mode_t tx_mode;
     it95x_guardinterval_t guardinterval;
+    it95x_isdbt_layer_t a;
+    it95x_isdbt_layer_t b;
     bool partial;
-
-    struct
-    {
-        it95x_coderate_t coderate;
-        it95x_constellation_t constellation;
-    } a;
-
-    struct
-    {
-        it95x_coderate_t coderate;
-        it95x_constellation_t constellation;
-    } b;
 } it95x_isdbt_t;
 
 /* ISDB-T TMCC (Transmission and Multiplexing Configuration Control) */
 typedef struct
 {
-    it95x_system_id_t system_id;
+    it95x_sysid_t sysid;
+    it95x_isdbt_layer_t a;
+    it95x_isdbt_layer_t b;
     bool partial;
-
-    struct
-    {
-        it95x_coderate_t coderate;
-        it95x_constellation_t constellation;
-    } a;
-
-    struct
-    {
-        it95x_coderate_t coderate;
-        it95x_constellation_t constellation;
-    } b;
 } it95x_tmcc_t;
 
 /* TS data block for transmission */
@@ -184,6 +178,21 @@ typedef struct
     uint32_t size;
     uint8_t data[IT95X_TX_BLOCK_SIZE];
 } it95x_tx_block_t;
+
+/* I/Q calibration table entry */
+typedef struct
+{
+    uint32_t frequency;
+    int amp;
+    int phi;
+} it95x_iq_t;
+
+/* ISDB-T PID list entry */
+typedef struct
+{
+    uint16_t pid;
+    it95x_layer_t layer;
+} it95x_pid_t;
 
 /* device information */
 typedef struct
