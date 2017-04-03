@@ -20,10 +20,6 @@
 #include "enum.h"
 #include "../it95x/api.h"
 
-#ifdef _WIN32
-#   include <objbase.h>
-#endif
-
 static
 int it95x_enumerate(lua_State *L)
 {

@@ -78,7 +78,7 @@ enum
  * and device IDs.
  *
  * NOTE: This is actually KSPROPERTYSET_Wd3KsproxySample, an example GUID
- *       used by some vendors whose engineers are too lazy to run guidgen.exe.
+ *       used by some vendors whose engineers are too cool to run guidgen.exe.
  */
 
 #define STATIC_KSPROPSETID_IT9500PropertiesAux \
@@ -245,6 +245,20 @@ struct ioctl_gain_range
     uint32_t bandwidth;
     int32_t max_gain;
     int32_t min_gain;
+};
+
+struct ioctl_iq_table
+{
+    uint32_t code;
+    uint32_t version;
+    uint32_t size;
+
+    struct
+    {
+        uint32_t frequency;
+        int32_t amp;
+        int32_t phi;
+    } data[IT95X_IQ_TABLE_SIZE];
 };
 
 struct ioctl_psi
@@ -1050,6 +1064,30 @@ int it95x_set_gain(it95x_dev_t *dev, int *gain)
     return ret_hr(hr);
 }
 
+int it95x_set_iq(it95x_dev_t *dev, uint32_t version
+                 , size_t size, const it95x_iq_t *data)
+{
+    if (size < 1 || size > IT95X_IQ_TABLE_SIZE)
+        return ret_win32(ERROR_BAD_ARGUMENTS);
+
+    struct ioctl_iq_table ioc =
+    {
+        .code = IOCTL_IT95X_SET_IQ_TABLE,
+        .version = version,
+        .size = size,
+    };
+
+    for (size_t i = 0; i < size; i++)
+    {
+        ioc.data[i].frequency = data[i].frequency;
+        ioc.data[i].amp = data[i].amp;
+        ioc.data[i].phi = data[i].phi;
+    }
+
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
+    return ret_hr(hr);
+}
+
 int it95x_set_power(it95x_dev_t *dev, bool enable)
 {
     struct ioctl_generic ioc =
@@ -1252,6 +1290,9 @@ int it95x_set_isdbt(it95x_dev_t *dev, const it95x_isdbt_t *isdbt)
 int it95x_add_pid(it95x_dev_t *dev, unsigned int idx
                   , unsigned int pid, it95x_layer_t layer)
 {
+    if (idx < 1 || idx > IT95X_PID_LIST_SIZE)
+        return ret_win32(ERROR_BAD_ARGUMENTS);
+
     struct ioctl_add_pid ioc =
     {
         .code = IOCTL_IT95X_ADD_ISDBT_PID_FILTER,
@@ -1285,6 +1326,19 @@ int it95x_reset_pid(it95x_dev_t *dev)
 
     const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
+}
+
+int it95x_send_psi(it95x_dev_t *dev, const uint8_t packet[TS_PACKET_SIZE])
+{
+    struct ioctl_psi ioc =
+    {
+        .code = IOCTL_IT95X_SEND_PSI_ONCE,
+    };
+
+    memcpy(ioc.packet, packet, TS_PACKET_SIZE);
+
+    const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
+    return hr;
 }
 
 int it95x_send_ts(it95x_dev_t *dev, it95x_tx_block_t *data)

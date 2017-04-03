@@ -238,6 +238,8 @@ int it95x_get_tps(it95x_dev_t *dev, it95x_tps_t *tps);
 int it95x_set_channel(it95x_dev_t *dev
                       , uint32_t frequency, uint32_t bandwidth);
 int it95x_set_gain(it95x_dev_t *dev, int *gain);
+int it95x_set_iq(it95x_dev_t *dev, uint32_t version
+                 , size_t size, const it95x_iq_t *data);
 int it95x_set_power(it95x_dev_t *dev, bool enable);
 int it95x_set_pcr(it95x_dev_t *dev, it95x_pcr_mode_t mode);
 int it95x_set_psi(it95x_dev_t *dev
@@ -260,6 +262,7 @@ int it95x_add_pid(it95x_dev_t *dev, unsigned int idx
 int it95x_ctl_pid(it95x_dev_t *dev, it95x_layer_t layer);
 int it95x_reset_pid(it95x_dev_t *dev);
 
+int it95x_send_psi(it95x_dev_t *dev, const uint8_t packet[TS_PACKET_SIZE]);
 int it95x_send_ts(it95x_dev_t *dev, it95x_tx_block_t *data);
 
 int it95x_rd_reg(it95x_dev_t *dev, it95x_processor_t processor
