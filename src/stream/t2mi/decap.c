@@ -47,12 +47,12 @@ struct module_data_t
     unsigned int plp;
 
     /* decapsulator context */
-    mpegts_t2mi_t *decap;
+    ts_t2mi_t *decap;
 };
 
 static void on_ts(module_data_t *mod, const uint8_t *ts)
 {
-    mpegts_t2mi_decap(mod->decap, ts);
+    ts_t2mi_decap(mod->decap, ts);
 }
 
 static void module_init(lua_State *L, module_data_t *mod)
@@ -73,20 +73,20 @@ static void module_init(lua_State *L, module_data_t *mod)
     module_option_integer(L, "pid", (int *)&mod->pid);
 
     /* create decapsulator */
-    mod->decap = mpegts_t2mi_init();
-    mpegts_t2mi_set_fname(mod->decap, "%s", mod->name);
+    mod->decap = ts_t2mi_init();
+    ts_t2mi_set_fname(mod->decap, "%s", mod->name);
 
-    mpegts_t2mi_set_demux(mod->decap, mod, module_demux_join
-                          , module_demux_leave);
-    mpegts_t2mi_set_payload(mod->decap, mod->pnr, mod->pid);
-    mpegts_t2mi_set_plp(mod->decap, mod->plp);
+    ts_t2mi_set_demux(mod->decap, mod
+                      , module_demux_join, module_demux_leave);
+    ts_t2mi_set_payload(mod->decap, mod->pnr, mod->pid);
+    ts_t2mi_set_plp(mod->decap, mod->plp);
 
-    mpegts_t2mi_set_callback(mod->decap, module_stream_send, mod);
+    ts_t2mi_set_callback(mod->decap, module_stream_send, mod);
 }
 
 static void module_destroy(module_data_t *mod)
 {
-    ASC_FREE(mod->decap, mpegts_t2mi_destroy);
+    ASC_FREE(mod->decap, ts_t2mi_destroy);
     module_stream_destroy(mod);
 }
 

@@ -39,7 +39,7 @@ typedef struct
 
     /* PSI */
     uint32_t pmt_crc32;
-    mpegts_psi_t *custom_pmt;
+    ts_psi_t *custom_pmt;
 
     /* ES pid list */
     uint16_t *pids;
@@ -85,15 +85,15 @@ struct module_data_t
     uint64_t offset;
 
     /* PSI */
-    mpegts_psi_t *pat;
-    mpegts_psi_t *cat;
-    mpegts_psi_t *sdt;
+    ts_psi_t *pat;
+    ts_psi_t *cat;
+    ts_psi_t *sdt;
 
-    mpegts_psi_t *custom_pat;
-    mpegts_psi_t *custom_cat;
-    mpegts_psi_t *custom_sdt;
+    ts_psi_t *custom_pat;
+    ts_psi_t *custom_cat;
+    ts_psi_t *custom_sdt;
 
-    mpegts_psi_t *pmt;
+    ts_psi_t *pmt;
 
     /* packet intervals */
     unsigned pcr_interval;
@@ -107,8 +107,8 @@ struct module_data_t
     unsigned sdt_count;
 
     /* TS data */
-    mpegts_packet_type_t stream[TS_MAX_PID];
-    mpegts_pes_t *pes[TS_MAX_PID];
+    ts_type_t stream[TS_MAX_PID];
+    ts_pes_t *pes[TS_MAX_PID];
     uint16_t nit_pid;
     uint8_t buf[TS_PACKET_SIZE];
 
@@ -123,7 +123,7 @@ struct module_data_t
 };
 
 void remux_ts_out(void *arg, const uint8_t *ts);
-void remux_pes(void *arg, mpegts_pes_t *pes);
+void remux_pes(void *arg, ts_pes_t *pes);
 void remux_ts_in(module_data_t *mod, const uint8_t *orig_ts);
 
 /* default PCR insertion interval, ms */
@@ -138,10 +138,10 @@ void remux_ts_in(module_data_t *mod, const uint8_t *orig_ts);
 /*
  * service information
  */
-void remux_pat(void *arg, mpegts_psi_t *psi);
-void remux_cat(void *arg, mpegts_psi_t *psi);
-void remux_sdt(void *arg, mpegts_psi_t *psi);
-void remux_pmt(void *arg, mpegts_psi_t *psi);
+void remux_pat(void *arg, ts_psi_t *psi);
+void remux_cat(void *arg, ts_psi_t *psi);
+void remux_sdt(void *arg, ts_psi_t *psi);
+void remux_pmt(void *arg, ts_psi_t *psi);
 
 /* SI intervals, ms */
 #define PAT_INTERVAL 100

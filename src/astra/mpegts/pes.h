@@ -82,8 +82,8 @@
 #define PES_SET_PTS(__x, __v) PES_SET_XTS(__x, 9, 0x2, __v)
 #define PES_SET_DTS(__x, __v) PES_SET_XTS(__x, 14, 0x1, __v)
 
-typedef struct mpegts_pes_t mpegts_pes_t;
-typedef void (*pes_callback_t)(void *, mpegts_pes_t *);
+typedef struct ts_pes_t ts_pes_t;
+typedef void (*pes_callback_t)(void *, ts_pes_t *);
 
 /* preferred PES buffering mode */
 typedef enum {
@@ -92,7 +92,7 @@ typedef enum {
 
     /* wait until we have the whole packet */
     PES_MODE_WHOLE,
-} mpegts_pes_mode_t;
+} ts_pes_mode_t;
 
 /* extension header struct */
 typedef struct __attribute__((__packed__)) {
@@ -135,10 +135,10 @@ typedef struct __attribute__((__packed__)) {
 #endif /* BYTE_ORDER */
     /* byte 8 */
     unsigned hdrlen    : 8;
-} mpegts_pes_ext_t;
+} ts_pes_ext_t;
 
 /* (de)muxer context struct */
-struct mpegts_pes_t
+struct ts_pes_t
 {
     /* TS header */
     uint16_t pid;
@@ -151,7 +151,7 @@ struct mpegts_pes_t
     size_t expect_size;
 
     /* PES extension header */
-    mpegts_pes_ext_t ext;
+    ts_pes_ext_t ext;
 
     /* timing data */
     uint64_t pts;
@@ -172,7 +172,7 @@ struct mpegts_pes_t
     uint8_t ts[TS_PACKET_SIZE];
 
     /* output mode */
-    mpegts_pes_mode_t mode;
+    ts_pes_mode_t mode;
 
     /* callbacks */
     void *cb_arg;
@@ -180,9 +180,9 @@ struct mpegts_pes_t
     ts_callback_t on_ts;
 };
 
-mpegts_pes_t *mpegts_pes_init(uint16_t pid) __asc_result;
-void mpegts_pes_destroy(mpegts_pes_t *pes);
+ts_pes_t *ts_pes_init(uint16_t pid) __asc_result;
+void ts_pes_destroy(ts_pes_t *pes);
 
-bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts);
+bool ts_pes_mux(ts_pes_t *pes, const uint8_t *ts);
 
 #endif /* _TS_PES_ */

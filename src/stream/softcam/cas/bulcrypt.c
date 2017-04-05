@@ -26,7 +26,7 @@ struct module_data_t
     CAS_MODULE_DATA();
 };
 
-static bool cas_check_em(module_data_t *mod, mpegts_psi_t *em)
+static bool cas_check_em(module_data_t *mod, ts_psi_t *em)
 {
     static const uint8_t z[] = { 0x00, 0x00, 0x00 };
 

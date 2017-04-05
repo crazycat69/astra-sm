@@ -249,7 +249,7 @@ static void thread_loop(void *arg)
         }
 
         // get PCR
-        block_time = mpegts_pcr_block_us(&mod->pcr, &pcr);
+        block_time = ts_pcr_block_us(&mod->pcr, &pcr);
         if(block_time == 0 || block_time > 500000)
         {
             asc_log_error(MSG("block time out of range: %llums block_size: %zu")

@@ -28,6 +28,6 @@
 
 #include <astra/luaapi/luaapi.h>
 
-void mpegts_desc_to_lua(lua_State *L, const uint8_t *desc);
+void ts_desc_to_lua(lua_State *L, const uint8_t *desc);
 
 #endif /* _TS_DESCRIPTORS_ */

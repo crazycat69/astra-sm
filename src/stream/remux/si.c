@@ -61,8 +61,8 @@ static inline bool list_contains_item(const void *list
     return false;
 }
 
-static inline void copy_psi(mpegts_psi_t *dst
-                            , const mpegts_psi_t *src)
+static inline void copy_psi(ts_psi_t *dst
+                            , const ts_psi_t *src)
 {
     dst->buffer_size = src->buffer_size;
     memcpy(dst->buffer, src->buffer, PSI_MAX_SIZE);
@@ -74,14 +74,14 @@ static void stream_reload(module_data_t *mod)
     for(size_t pid = 16; pid < TS_NULL_PID; pid++)
     {
         /* try to find pid's owner */
-        if((mod->stream[pid] != MPEGTS_PACKET_NIT
+        if((mod->stream[pid] != TS_TYPE_NIT
             && pid < 32)
-           || (mod->stream[pid] == MPEGTS_PACKET_NIT
+           || (mod->stream[pid] == TS_TYPE_NIT
                && pid == mod->nit_pid))
             /* NIT or pre-defined SI pid */
             goto found;
 
-        else if(mod->stream[pid] == MPEGTS_PACKET_CA
+        else if(mod->stream[pid] == TS_TYPE_CA
                 && list_contains_pid(mod->emms, mod->emm_cnt, pid))
             /* pid contains CAS EMM's */
             goto found;
@@ -107,14 +107,14 @@ static void stream_reload(module_data_t *mod)
         if(mod->stream[pid])
         {
             asc_log_debug(MSG("deregistering pid %zu"), pid);
-            mod->stream[pid] = MPEGTS_PACKET_UNKNOWN;
+            mod->stream[pid] = TS_TYPE_UNKNOWN;
         }
 
         if(mod->pes[pid])
         {
             asc_log_debug(MSG("deleting PES muxer on pid %zu"), pid);
 
-            mpegts_pes_destroy(mod->pes[pid]);
+            ts_pes_destroy(mod->pes[pid]);
             mod->pes[pid] = NULL;
         }
 
@@ -162,7 +162,7 @@ static void stream_reload(module_data_t *mod)
     mod->pcrs = list;
 }
 
-void remux_pat(void *arg, mpegts_psi_t *psi)
+void remux_pat(void *arg, ts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
 
@@ -198,7 +198,7 @@ void remux_pat(void *arg, mpegts_psi_t *psi)
         if(pnr && pid >= 32 && pid <= 8190)
         {
             /* PMT */
-            mod->stream[pid] = MPEGTS_PACKET_PMT;
+            mod->stream[pid] = TS_TYPE_PMT;
             ts_program_t *prog = ts_program_find(mod, pid);
 
             if(!prog)
@@ -222,7 +222,7 @@ void remux_pat(void *arg, mpegts_psi_t *psi)
         else if(!pnr && pid >= 16 && pid <= 31)
         {
             /* NIT */
-            mod->stream[pid] = MPEGTS_PACKET_NIT;
+            mod->stream[pid] = TS_TYPE_NIT;
             mod->nit_pid = pid;
         }
     }
@@ -254,7 +254,7 @@ void remux_pat(void *arg, mpegts_psi_t *psi)
     copy_psi(mod->custom_pat, psi);
 }
 
-void remux_cat(void *arg, mpegts_psi_t *psi)
+void remux_cat(void *arg, ts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
 
@@ -290,7 +290,7 @@ void remux_cat(void *arg, mpegts_psi_t *psi)
             /* non-CAS data or invalid pid */
             continue;
 
-        mod->stream[pid] = MPEGTS_PACKET_CA;
+        mod->stream[pid] = TS_TYPE_CA;
         LIST_APPEND(list, cnt, pid, uint16_t);
     }
 
@@ -306,7 +306,7 @@ void remux_cat(void *arg, mpegts_psi_t *psi)
     copy_psi(mod->custom_cat, psi);
 }
 
-void remux_sdt(void *arg, mpegts_psi_t *psi)
+void remux_sdt(void *arg, ts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
 
@@ -321,7 +321,7 @@ void remux_sdt(void *arg, mpegts_psi_t *psi)
     copy_psi(mod->custom_sdt, psi);
 }
 
-void remux_pmt(void *arg, mpegts_psi_t *psi)
+void remux_pmt(void *arg, ts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
     ts_program_t *const prog = ts_program_find(mod, psi->pid);
@@ -370,7 +370,7 @@ void remux_pmt(void *arg, mpegts_psi_t *psi)
                 continue;
 
             /* add ECM pid */
-            mod->stream[ca_pid] = MPEGTS_PACKET_CA;
+            mod->stream[ca_pid] = TS_TYPE_CA;
             LIST_APPEND(list, cnt, ca_pid, uint16_t);
         }
     }
@@ -381,8 +381,8 @@ void remux_pmt(void *arg, mpegts_psi_t *psi)
         const uint16_t pid = PMT_ITEM_GET_PID(psi, item);
         const uint8_t item_type = PMT_ITEM_GET_TYPE(psi, item);
 
-        const stream_type_t *const st = mpegts_stream_type(item_type);
-        mpegts_packet_type_t ts_type = st->pkt_type;
+        const ts_stream_type_t *const st = ts_stream_type(item_type);
+        ts_type_t ts_type = st->pkt_type;
 
         if(pid < 32 || pid > 8190)
             /* invalid pid */
@@ -401,24 +401,24 @@ void remux_pmt(void *arg, mpegts_psi_t *psi)
                     continue;
 
                 /* add ECM pid */
-                mod->stream[ca_pid] = MPEGTS_PACKET_CA;
+                mod->stream[ca_pid] = TS_TYPE_CA;
                 LIST_APPEND(list, cnt, ca_pid, uint16_t);
             }
             /* FIXME: ditto */
-            else if(item_type == 0x06 && ts_type == MPEGTS_PACKET_DATA)
-                ts_type = mpegts_priv_type(desc[0]);
+            else if(item_type == 0x06 && ts_type == TS_TYPE_DATA)
+                ts_type = ts_priv_type(desc[0]);
         }
 
         /* add elementary stream */
         mod->stream[pid] = ts_type;
         LIST_APPEND(list, cnt, pid, uint16_t);
 
-        if(ts_type != MPEGTS_PACKET_DATA && !mod->pes[pid])
+        if(ts_type != TS_TYPE_DATA && !mod->pes[pid])
         {
             /* create muxers for A/V streams */
             asc_log_debug(MSG("creating PES muxer on pid %hu"), pid);
 
-            mpegts_pes_t * const pes = mpegts_pes_init(pid);
+            ts_pes_t *const pes = ts_pes_init(pid);
             pes->on_pes = remux_pes;
             pes->on_ts = remux_ts_out;
             pes->cb_arg = mod;
@@ -442,7 +442,7 @@ void remux_pmt(void *arg, mpegts_psi_t *psi)
     else if(!list_contains_pid(list, cnt, pcr_pid))
     {
         /* in case PCR is in its own pid */
-        mod->stream[pcr_pid] = MPEGTS_PACKET_DATA;
+        mod->stream[pcr_pid] = TS_TYPE_DATA;
         LIST_APPEND(list, cnt, pcr_pid, uint16_t);
 
         if(mod->pes[pcr_pid])
@@ -451,7 +451,7 @@ void remux_pmt(void *arg, mpegts_psi_t *psi)
             asc_log_debug(MSG("deleting PES muxer on PCR-only pid %hu")
                           , pcr_pid);
 
-            mpegts_pes_destroy(mod->pes[pcr_pid]);
+            ts_pes_destroy(mod->pes[pcr_pid]);
             mod->pes[pcr_pid] = NULL;
         }
     }

@@ -131,7 +131,7 @@ struct module_data_t
         size_t buf_write;
         size_t buf_fill;
 
-        mpegts_sync_t *sync;
+        ts_sync_t *sync;
         asc_timer_t *sync_loop;
         size_t sync_ration_size;
         ssize_t sync_feed;
@@ -274,7 +274,7 @@ static void on_close(void *arg)
 
     ASC_FREE(mod->ts.buf, free);
     ASC_FREE(mod->ts.sync_loop, asc_timer_destroy);
-    ASC_FREE(mod->ts.sync, mpegts_sync_destroy);
+    ASC_FREE(mod->ts.sync, ts_sync_destroy);
 
     if(mod->idx_response)
     {
@@ -367,10 +367,10 @@ static void on_ts_read(void *arg)
 
         if(mod->ts.sync != NULL)
         {
-            if (!mpegts_sync_push(mod->ts.sync, &mod->ts.buf[mod->ts.buf_read], 1))
+            if (!ts_sync_push(mod->ts.sync, &mod->ts.buf[mod->ts.buf_read], 1))
             {
                 asc_log_error(MSG("sync push failed, resetting buffer"));
-                mpegts_sync_reset(mod->ts.sync, SYNC_RESET_ALL);
+                ts_sync_reset(mod->ts.sync, SYNC_RESET_ALL);
 
                 return;
             }
@@ -378,7 +378,7 @@ static void on_ts_read(void *arg)
             if (mod->ts.sync_feed > 0 && --mod->ts.sync_feed <= 0)
             {
                 asc_socket_set_on_read(mod->sock, NULL);
-                mpegts_sync_set_on_ready(mod->ts.sync, on_sync_ready);
+                ts_sync_set_on_ready(mod->ts.sync, on_sync_ready);
             }
         }
         else
@@ -394,7 +394,7 @@ static void on_sync_ready(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
 
-    mpegts_sync_set_on_ready(mod->ts.sync, NULL);
+    ts_sync_set_on_ready(mod->ts.sync, NULL);
     asc_socket_set_on_read(mod->sock, on_ts_read);
 
     mod->ts.sync_feed = mod->ts.sync_ration_size;
@@ -614,16 +614,16 @@ static void on_read(void *arg)
 
             if (mod->config.sync)
             {
-                mod->ts.sync = mpegts_sync_init();
+                mod->ts.sync = ts_sync_init();
 
-                mpegts_sync_set_on_write(mod->ts.sync, module_stream_send);
-                mpegts_sync_set_arg(mod->ts.sync, mod);
-                mpegts_sync_set_fname(mod->ts.sync, "http_request %s:%d%s"
-                                      , mod->config.host, mod->config.port
-                                      , mod->config.path);
+                ts_sync_set_on_write(mod->ts.sync, module_stream_send);
+                ts_sync_set_arg(mod->ts.sync, mod);
+                ts_sync_set_fname(mod->ts.sync, "http_request %s:%d%s"
+                                  , mod->config.host, mod->config.port
+                                  , mod->config.path);
 
                 if (mod->config.sync_opts != NULL
-                    && !mpegts_sync_parse_opts(mod->ts.sync, mod->config.sync_opts))
+                    && !ts_sync_parse_opts(mod->ts.sync, mod->config.sync_opts))
                 {
                     asc_log_error(MSG("invalid value for option 'sync_opts'"));
                 }
@@ -632,7 +632,7 @@ static void on_read(void *arg)
                 mod->ts.sync_feed = mod->ts.sync_ration_size;
 
                 mod->ts.sync_loop = asc_timer_init(SYNC_INTERVAL_MSEC
-                                                   , mpegts_sync_loop
+                                                   , ts_sync_loop
                                                    , mod->ts.sync);
             }
 

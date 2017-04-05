@@ -244,16 +244,16 @@ typedef struct
 } t2mi_packet_t;
 
 /* decapsulator context */
-struct mpegts_t2mi_t
+struct ts_t2mi_t
 {
     char name[128];
     unsigned prefer_pnr;
     unsigned prefer_plp;
 
-    mpegts_psi_t *pat;
-    mpegts_psi_t *pmt;
+    ts_psi_t *pat;
+    ts_psi_t *pmt;
 
-    mpegts_packet_type_t streams[TS_MAX_PID];
+    ts_type_t stream[TS_MAX_PID];
     unsigned pmt_pid;
     unsigned payload_pid;
     unsigned last_cc;
@@ -386,14 +386,14 @@ const char *plp_type_name(unsigned type)
  */
 
 static inline
-void outer_join_pid(const mpegts_t2mi_t *mi, uint16_t pid)
+void outer_join_pid(const ts_t2mi_t *mi, uint16_t pid)
 {
     if (mi->join_pid != NULL)
         mi->join_pid(mi->demux_mod, pid);
 }
 
 static inline
-void outer_leave_pid(const mpegts_t2mi_t *mi, uint16_t pid)
+void outer_leave_pid(const ts_t2mi_t *mi, uint16_t pid)
 {
     if (mi->leave_pid != NULL)
         mi->leave_pid(mi->demux_mod, pid);
@@ -403,31 +403,31 @@ void outer_leave_pid(const mpegts_t2mi_t *mi, uint16_t pid)
  * init/destroy
  */
 
-mpegts_t2mi_t *mpegts_t2mi_init(void)
+ts_t2mi_t *ts_t2mi_init(void)
 {
-    mpegts_t2mi_t *const mi = ASC_ALLOC(1, mpegts_t2mi_t);
+    ts_t2mi_t *const mi = ASC_ALLOC(1, ts_t2mi_t);
 
     static const char def_name[] = "t2mi";
     memcpy(mi->name, def_name, sizeof(def_name));
 
-    mi->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
-    mi->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, 0);
+    mi->pat = ts_psi_init(TS_TYPE_PAT, 0);
+    mi->pmt = ts_psi_init(TS_TYPE_PMT, 0);
 
     mi->prefer_plp = T2MI_PLP_AUTO;
 
     return mi;
 }
 
-void mpegts_t2mi_destroy(mpegts_t2mi_t *mi)
+void ts_t2mi_destroy(ts_t2mi_t *mi)
 {
     for (size_t i = 0; i < TS_MAX_PID; i++)
     {
-        if (mi->streams[i] != MPEGTS_PACKET_UNKNOWN)
+        if (mi->stream[i] != TS_TYPE_UNKNOWN)
             outer_leave_pid(mi, i);
     }
 
-    mpegts_psi_destroy(mi->pat);
-    mpegts_psi_destroy(mi->pmt);
+    ts_psi_destroy(mi->pat);
+    ts_psi_destroy(mi->pmt);
 
     for (size_t i = 0; i < PLP_LIST_SIZE; i++)
         free(mi->plps[i]);
@@ -439,7 +439,7 @@ void mpegts_t2mi_destroy(mpegts_t2mi_t *mi)
  * setters
  */
 
-void mpegts_t2mi_set_fname(mpegts_t2mi_t *mi, const char *format, ...)
+void ts_t2mi_set_fname(ts_t2mi_t *mi, const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);
@@ -449,13 +449,13 @@ void mpegts_t2mi_set_fname(mpegts_t2mi_t *mi, const char *format, ...)
     va_end(ap);
 }
 
-void mpegts_t2mi_set_callback(mpegts_t2mi_t *mi, ts_callback_t cb, void *arg)
+void ts_t2mi_set_callback(ts_t2mi_t *mi, ts_callback_t cb, void *arg)
 {
     mi->on_ts = cb;
     mi->arg = arg;
 }
 
-void mpegts_t2mi_set_plp(mpegts_t2mi_t *mi, unsigned plp_id)
+void ts_t2mi_set_plp(ts_t2mi_t *mi, unsigned plp_id)
 {
     if (plp_id > T2MI_PLP_AUTO)
         plp_id = T2MI_PLP_AUTO;
@@ -464,16 +464,16 @@ void mpegts_t2mi_set_plp(mpegts_t2mi_t *mi, unsigned plp_id)
     mi->l1_current.cksum = 0;
 }
 
-void mpegts_t2mi_set_demux(mpegts_t2mi_t *mi, module_data_t *mod
-                           , demux_callback_t join_pid
-                           , demux_callback_t leave_pid)
+void ts_t2mi_set_demux(ts_t2mi_t *mi, module_data_t *mod
+                       , demux_callback_t join_pid
+                       , demux_callback_t leave_pid)
 {
     mi->demux_mod = mod;
     mi->join_pid = join_pid;
     mi->leave_pid = leave_pid;
 }
 
-void mpegts_t2mi_set_payload(mpegts_t2mi_t *mi, uint16_t pnr, uint16_t pid)
+void ts_t2mi_set_payload(ts_t2mi_t *mi, uint16_t pnr, uint16_t pid)
 {
     /* sanitize input */
     pid &= 0x1FFF;
@@ -493,30 +493,30 @@ void mpegts_t2mi_set_payload(mpegts_t2mi_t *mi, uint16_t pnr, uint16_t pid)
     /* reset pid map */
     for (size_t i = 0; i < TS_MAX_PID; i++)
     {
-        if (mi->streams[i] != MPEGTS_PACKET_UNKNOWN)
+        if (mi->stream[i] != TS_TYPE_UNKNOWN)
         {
             outer_leave_pid(mi, i);
-            mi->streams[i] = MPEGTS_PACKET_UNKNOWN;
+            mi->stream[i] = TS_TYPE_UNKNOWN;
         }
     }
 
     if (pid == 0)
     {
         /* auto pid discovery through SI */
-        mi->streams[0] = MPEGTS_PACKET_PAT;
+        mi->stream[0] = TS_TYPE_PAT;
         outer_join_pid(mi, 0);
     }
     else
     {
         /* force payload pid */
-        mi->streams[pid] = MPEGTS_PACKET_DATA;
+        mi->stream[pid] = TS_TYPE_DATA;
         outer_join_pid(mi, pid);
 
         asc_log_debug(MSG("set payload pid to %hu"), pid);
     }
 
     // XXX: do we need this?
-    mi->streams[1] = MPEGTS_PACKET_CAT;
+    mi->stream[1] = TS_TYPE_CAT;
     outer_join_pid(mi, 1);
 }
 
@@ -528,7 +528,7 @@ void mpegts_t2mi_set_payload(mpegts_t2mi_t *mi, uint16_t pnr, uint16_t pid)
  */
 
 static
-bool bb_reassemble_up(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
+bool bb_reassemble_up(ts_t2mi_t *mi, t2mi_packet_t *pkt)
 {
     t2_plp_t *const plp = pkt->bb.plp;
     if (!plp->frag_skip)
@@ -573,14 +573,14 @@ bool bb_reassemble_up(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
 }
 
 static inline
-void bb_reinsert_null(mpegts_t2mi_t *mi, size_t dnp)
+void bb_reinsert_null(ts_t2mi_t *mi, size_t dnp)
 {
     for (size_t i = 0; i < dnp; i++)
         mi->on_ts(mi->arg, ts_null_pkt);
 }
 
 static
-bool on_bbframe_ts(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
+bool on_bbframe_ts(ts_t2mi_t *mi, t2mi_packet_t *pkt)
 {
     bb_frame_t *const bb = &pkt->bb;
     t2_plp_t *const plp = bb->plp;
@@ -648,7 +648,7 @@ bool on_bbframe_ts(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
  */
 
 static
-bool on_bbframe(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
+bool on_bbframe(ts_t2mi_t *mi, t2mi_packet_t *pkt)
 {
     bb_frame_t *const bb = &pkt->bb;
     uint8_t *const ptr = bb->header;
@@ -727,7 +727,7 @@ bool on_bbframe(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
  */
 
 static
-bool on_l1_current(mpegts_t2mi_t *mi, const t2mi_packet_t *pkt)
+bool on_l1_current(ts_t2mi_t *mi, const t2mi_packet_t *pkt)
 {
     l1_current_t *const l1 = &mi->l1_current;
 
@@ -960,7 +960,7 @@ bool on_l1_current(mpegts_t2mi_t *mi, const t2mi_packet_t *pkt)
  */
 
 static
-bool on_t2mi(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
+bool on_t2mi(ts_t2mi_t *mi, t2mi_packet_t *pkt)
 {
     uint8_t *const ptr = &pkt->data[T2MI_HEADER_SIZE];
 
@@ -1042,7 +1042,7 @@ bool on_t2mi(mpegts_t2mi_t *mi, t2mi_packet_t *pkt)
  */
 
 static
-void on_outer_ts(mpegts_t2mi_t *mi, const uint8_t *ts)
+void on_outer_ts(ts_t2mi_t *mi, const uint8_t *ts)
 {
     /* look for TS payload */
     const uint8_t *pay = TS_GET_PAYLOAD(ts);
@@ -1177,21 +1177,21 @@ void on_outer_ts(mpegts_t2mi_t *mi, const uint8_t *ts)
  */
 
 #define psi_type \
-    mpegts_type_name(psi->type)
+    ts_type_name(psi->type)
 
 #define psi_is_pat \
-    ( psi->type == MPEGTS_PACKET_PAT )
+    ( psi->type == TS_TYPE_PAT )
 
 #define psi_next_type \
-    ( psi_is_pat ? MPEGTS_PACKET_PMT : MPEGTS_PACKET_DATA )
+    ( psi_is_pat ? TS_TYPE_PMT : TS_TYPE_DATA )
 
 #define psi_ref \
     ( psi_is_pat ? "PMT pid" : "payload pid" )
 
 static
-void on_psi(void *arg, mpegts_psi_t *psi)
+void on_psi(void *arg, ts_psi_t *psi)
 {
-    mpegts_t2mi_t *const mi = (mpegts_t2mi_t *)arg;
+    ts_t2mi_t *const mi = (ts_t2mi_t *)arg;
 
     const uint32_t crc32 = PSI_GET_CRC32(psi);
     if (crc32 == psi->crc32)
@@ -1271,7 +1271,7 @@ void on_psi(void *arg, mpegts_psi_t *psi)
 
         asc_log_debug(MSG("discarding old %s %u"), psi_ref, *next_pid);
 
-        mi->streams[*next_pid] = MPEGTS_PACKET_UNKNOWN;
+        mi->stream[*next_pid] = TS_TYPE_UNKNOWN;
         outer_leave_pid(mi, *next_pid);
     }
 
@@ -1280,7 +1280,7 @@ void on_psi(void *arg, mpegts_psi_t *psi)
         asc_log_debug(MSG("%s: selected %s %u"), psi_type, psi_ref, new_pid);
 
         *next_pid = new_pid;
-        mi->streams[new_pid] = psi_next_type;
+        mi->stream[new_pid] = psi_next_type;
         outer_join_pid(mi, new_pid);
     }
     else
@@ -1291,21 +1291,21 @@ void on_psi(void *arg, mpegts_psi_t *psi)
  * input function
  */
 
-void mpegts_t2mi_decap(mpegts_t2mi_t *mi, const uint8_t *ts)
+void ts_t2mi_decap(ts_t2mi_t *mi, const uint8_t *ts)
 {
     const unsigned pid = TS_GET_PID(ts);
 
-    switch (mi->streams[pid])
+    switch (mi->stream[pid])
     {
-        case MPEGTS_PACKET_PAT:
-            mpegts_psi_mux(mi->pat, ts, on_psi, mi);
+        case TS_TYPE_PAT:
+            ts_psi_mux(mi->pat, ts, on_psi, mi);
             break;
 
-        case MPEGTS_PACKET_PMT:
-            mpegts_psi_mux(mi->pmt, ts, on_psi, mi);
+        case TS_TYPE_PMT:
+            ts_psi_mux(mi->pmt, ts, on_psi, mi);
             break;
 
-        case MPEGTS_PACKET_DATA:
+        case TS_TYPE_DATA:
             on_outer_ts(mi, ts);
             break;
 

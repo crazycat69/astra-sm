@@ -25,9 +25,9 @@
 
 #define MSG(_msg) "[pes] %s(): " _msg, __func__
 
-mpegts_pes_t *mpegts_pes_init(uint16_t pid)
+ts_pes_t *ts_pes_init(uint16_t pid)
 {
-    mpegts_pes_t *const pes = ASC_ALLOC(1, mpegts_pes_t);
+    ts_pes_t *const pes = ASC_ALLOC(1, ts_pes_t);
 
     pes->pid = pid;
     pes->o_cc = 15; /* wraps over to zero */
@@ -35,14 +35,14 @@ mpegts_pes_t *mpegts_pes_init(uint16_t pid)
     return pes;
 }
 
-void mpegts_pes_destroy(mpegts_pes_t *pes)
+void ts_pes_destroy(ts_pes_t *pes)
 {
     free(pes);
 }
 
-static void pes_demux(mpegts_pes_t *pes, bool fast);
+static void pes_demux(ts_pes_t *pes, bool fast);
 
-bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts)
+bool ts_pes_mux(ts_pes_t *pes, const uint8_t *ts)
 {
     /* locate payload */
     const uint8_t *payload = TS_GET_PAYLOAD(ts);
@@ -73,7 +73,7 @@ bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts)
         }
 
         pes->expect_size = pes->buf_write = pes->buf_read = 0;
-        pes->pcr = pes->pts = pes->dts = XTS_NONE;
+        pes->pcr = pes->pts = pes->dts = TS_TIME_NONE;
 
         /* check payload length and start code */
         if (paylen < PES_HEADER_SIZE
@@ -155,7 +155,7 @@ bool mpegts_pes_mux(mpegts_pes_t *pes, const uint8_t *ts)
 }
 
 static
-void pes_demux(mpegts_pes_t *pes, bool fast)
+void pes_demux(ts_pes_t *pes, bool fast)
 {
     uint8_t *const ts = pes->ts;
 
@@ -202,7 +202,7 @@ void pes_demux(mpegts_pes_t *pes, bool fast)
             }
 
             /* add PCR if requested */
-            if (pes->pcr != XTS_NONE)
+            if (pes->pcr != TS_TIME_NONE)
             {
                 ts[5] |= 0x10;
                 TS_SET_PCR(ts, pes->pcr);
@@ -213,11 +213,11 @@ void pes_demux(mpegts_pes_t *pes, bool fast)
             memset((uint8_t *)(&pes->ext) + 1, 0, sizeof(pes->ext) - 1);
 
             /* calculate PES header size */
-            if (pes->pts != XTS_NONE)
+            if (pes->pts != TS_TIME_NONE)
             {
                 pes->ext.pts = 1;
                 pes_hlen += 5;
-                if (pes->dts != XTS_NONE)
+                if (pes->dts != TS_TIME_NONE)
                 {
                     pes->ext.dts = 1;
                     pes_hlen += 5;

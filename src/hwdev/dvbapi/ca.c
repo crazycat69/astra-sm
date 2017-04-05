@@ -1516,7 +1516,7 @@ static void ca_slot_loop(dvb_ca_t *ca)
  *
  */
 
-static void on_pat(void *arg, mpegts_psi_t *psi)
+static void on_pat(void *arg, ts_psi_t *psi)
 {
     dvb_ca_t *ca = (dvb_ca_t *)arg;
 
@@ -1544,7 +1544,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
     psi->crc32 = crc32;
 
     memset(ca->stream, 0, sizeof(ca->stream));
-    ca->stream[0] = MPEGTS_PACKET_PAT;
+    ca->stream[0] = TS_TYPE_PAT;
 
     const uint8_t *pointer = PAT_ITEMS_FIRST(psi);
     while(!PAT_ITEMS_EOL(psi, pointer))
@@ -1554,14 +1554,14 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
         if(pnr)
         {
             const uint16_t pid = PAT_ITEM_GET_PID(psi, pointer);
-            ca->stream[pid] = MPEGTS_PACKET_PMT;
+            ca->stream[pid] = TS_TYPE_PMT;
         }
 
         PAT_ITEMS_NEXT(psi, pointer);
     }
 }
 
-static void on_pmt(void *arg, mpegts_psi_t *psi)
+static void on_pmt(void *arg, ts_psi_t *psi)
 {
     dvb_ca_t *ca = (dvb_ca_t *)arg;
 
@@ -1599,8 +1599,8 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
         ca_pmt_t *const ca_pmt = ASC_ALLOC(1, ca_pmt_t);
         ca_pmt->pnr = pnr;
         ca_pmt->buffer_size = 0;
-        ca_pmt->psi = mpegts_psi_init(MPEGTS_PACKET_PMT, psi->pid);
-        memcpy(ca_pmt->psi, psi, sizeof(mpegts_psi_t));
+        ca_pmt->psi = ts_psi_init(TS_TYPE_PMT, psi->pid);
+        memcpy(ca_pmt->psi, psi, sizeof(ts_psi_t));
 
         asc_list_for(ca->ca_pmt_list_new)
         {
@@ -1625,11 +1625,11 @@ void ca_on_ts(dvb_ca_t *ca, const uint8_t *ts)
     const uint16_t pid = TS_GET_PID(ts);
     switch(ca->stream[pid])
     {
-        case MPEGTS_PACKET_PAT:
-            mpegts_psi_mux(ca->pat, ts, on_pat, ca);
+        case TS_TYPE_PAT:
+            ts_psi_mux(ca->pat, ts, on_pat, ca);
             return;
-        case MPEGTS_PACKET_PMT:
-            mpegts_psi_mux(ca->pmt, ts, on_pmt, ca);
+        case TS_TYPE_PMT:
+            ts_psi_mux(ca->pmt, ts, on_pmt, ca);
             return;
         default:
             return;
@@ -1778,10 +1778,10 @@ void ca_open(dvb_ca_t *ca)
     ca->ca_pmt_list_new = asc_list_init();
     ca->ca_pmt_list_del = asc_list_init();
 
-    ca->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0x00);
-    ca->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, TS_MAX_PID);
+    ca->pat = ts_psi_init(TS_TYPE_PAT, 0x00);
+    ca->pmt = ts_psi_init(TS_TYPE_PMT, TS_MAX_PID);
 
-    ca->stream[0] = MPEGTS_PACKET_PAT;
+    ca->stream[0] = TS_TYPE_PAT;
 }
 
 void ca_close(dvb_ca_t *ca)
@@ -1790,13 +1790,13 @@ void ca_close(dvb_ca_t *ca)
 
     if(ca->pat)
     {
-        mpegts_psi_destroy(ca->pat);
+        ts_psi_destroy(ca->pat);
         ca->pat = NULL;
     }
 
     if(ca->pmt)
     {
-        mpegts_psi_destroy(ca->pmt);
+        ts_psi_destroy(ca->pmt);
         ca->pmt = NULL;
     }
 

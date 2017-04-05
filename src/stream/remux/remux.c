@@ -41,7 +41,7 @@ static inline uint64_t offset_to_pcr(const module_data_t *mod)
      * number of bytes written rescaled to PCR time base
      * (see libavformat/mpegtsenc.c)
      */
-    return ((mod->offset + PCR_LAST_BYTE) * 8 * PCR_TIME_BASE) / mod->rate;
+    return ((mod->offset + TS_PCR_LAST_BYTE) * 8 * TS_PCR_FREQ) / mod->rate;
 }
 
 static inline uint64_t get_pcr_value(const module_data_t *mod
@@ -115,20 +115,20 @@ void remux_ts_out(void *arg, const uint8_t *ts)
     if(can_insert(&mod->pat_count, mod->pat_interval))
     {
         /* PAT */
-        mpegts_psi_demux(mod->custom_pat, remux_ts_out, mod);
+        ts_psi_demux(mod->custom_pat, remux_ts_out, mod);
 
         /* PMT */
         for(size_t i = 0; i < mod->prog_cnt; i++)
-            mpegts_psi_demux(mod->progs[i]->custom_pmt, remux_ts_out, mod);
+            ts_psi_demux(mod->progs[i]->custom_pmt, remux_ts_out, mod);
     }
 
     /* CAT */
     if(can_insert(&mod->cat_count, mod->cat_interval))
-        mpegts_psi_demux(mod->custom_cat, remux_ts_out, mod);
+        ts_psi_demux(mod->custom_cat, remux_ts_out, mod);
 
     /* SDT */
     if(can_insert(&mod->sdt_count, mod->sdt_interval))
-        mpegts_psi_demux(mod->custom_sdt, remux_ts_out, mod);
+        ts_psi_demux(mod->custom_sdt, remux_ts_out, mod);
 
     /* PCR */
     for(size_t i = 0; i < mod->pcr_cnt; i++)
@@ -140,7 +140,7 @@ void remux_ts_out(void *arg, const uint8_t *ts)
     }
 }
 
-void remux_pes(void *arg, mpegts_pes_t *pes)
+void remux_pes(void *arg, ts_pes_t *pes)
 {
     /*
      * PES output hook
@@ -181,7 +181,7 @@ void remux_pes(void *arg, mpegts_pes_t *pes)
         pes->pcr = get_pcr_value(mod, pcr);
         pcr->count = 0;
     } else
-        pes->pcr = XTS_NONE;
+        pes->pcr = TS_TIME_NONE;
 
     /*
      * TODO
@@ -216,13 +216,13 @@ void remux_ts_in(module_data_t *mod, const uint8_t *orig_ts)
 
         while(1)
         {
-            if(pcr->last == XTS_NONE)
+            if(pcr->last == TS_TIME_NONE)
                 break;
 
             const int64_t delta =
                 (int64_t)(pcr->last - get_pcr_value(mod, pcr));
 
-            if(pcr->base == XTS_NONE || llabs(delta) > PCR_DRIFT)
+            if(pcr->base == TS_TIME_NONE || llabs(delta) > PCR_DRIFT)
             {
                 asc_log_debug(MSG("reset time base on PCR pid %hu"), pcr->pid);
 
@@ -239,14 +239,14 @@ void remux_ts_in(module_data_t *mod, const uint8_t *orig_ts)
 
     switch(mod->stream[pid])
     {
-        case MPEGTS_PACKET_VIDEO:
-        case MPEGTS_PACKET_AUDIO:
-        case MPEGTS_PACKET_SUB:
+        case TS_TYPE_VIDEO:
+        case TS_TYPE_AUDIO:
+        case TS_TYPE_SUB:
             /* elementary stream */
             if(!TS_IS_SCRAMBLED(ts) && mod->pes[pid])
             {
                 /* pass it on for reassembly */
-                mpegts_pes_mux(mod->pes[pid], ts);
+                ts_pes_mux(mod->pes[pid], ts);
                 break;
             }
             else if(TS_IS_PCR(ts))
@@ -272,33 +272,33 @@ void remux_ts_in(module_data_t *mod, const uint8_t *orig_ts)
                 ts = copy;
             }
 
-        case MPEGTS_PACKET_CA:
-        case MPEGTS_PACKET_EIT:
-        case MPEGTS_PACKET_NIT:
-        case MPEGTS_PACKET_DATA:
+        case TS_TYPE_CA:
+        case TS_TYPE_EIT:
+        case TS_TYPE_NIT:
+        case TS_TYPE_DATA:
             /* non-PES/scrambled payload, EIT, NIT, etc */
             remux_ts_out(mod, ts);
             break;
 
-        case MPEGTS_PACKET_PAT:
+        case TS_TYPE_PAT:
             /* global program list */
-            mpegts_psi_mux(mod->pat, ts, remux_pat, mod);
+            ts_psi_mux(mod->pat, ts, remux_pat, mod);
             break;
 
-        case MPEGTS_PACKET_CAT:
+        case TS_TYPE_CAT:
             /* conditional access table */
-            mpegts_psi_mux(mod->cat, ts, remux_cat, mod);
+            ts_psi_mux(mod->cat, ts, remux_cat, mod);
             break;
 
-        case MPEGTS_PACKET_SDT:
+        case TS_TYPE_SDT:
             /* service description table */
-            mpegts_psi_mux(mod->sdt, ts, remux_sdt, mod);
+            ts_psi_mux(mod->sdt, ts, remux_sdt, mod);
             break;
 
-        case MPEGTS_PACKET_PMT:
+        case TS_TYPE_PMT:
             /* stream list, program-specific */
             mod->pmt->pid = pid;
-            mpegts_psi_mux(mod->pmt, ts, remux_pmt, mod);
+            ts_psi_mux(mod->pmt, ts, remux_pmt, mod);
             break;
 
         default:
@@ -339,7 +339,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     if(!(mod->pcr_delay >= -5000 && mod->pcr_delay <= 5000))
         luaL_error(L, MSG("pcr delay must be between -5000 and 5000 ms"));
 
-    mod->pcr_delay *= (PCR_TIME_BASE / 1000);
+    mod->pcr_delay *= (TS_PCR_FREQ / 1000);
 
     /* packet intervals */
     mod->pcr_interval = msecs_to_pkts(mod->rate, mod->pcr_interval);
@@ -349,24 +349,24 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->sdt_interval = msecs_to_pkts(mod->rate, SDT_INTERVAL);
 
     /* PSI init */
-    mod->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0x00);
-    mod->cat = mpegts_psi_init(MPEGTS_PACKET_CAT, 0x01);
-    mod->sdt = mpegts_psi_init(MPEGTS_PACKET_SDT, 0x11);
+    mod->pat = ts_psi_init(TS_TYPE_PAT, 0x00);
+    mod->cat = ts_psi_init(TS_TYPE_CAT, 0x01);
+    mod->sdt = ts_psi_init(TS_TYPE_SDT, 0x11);
 
-    mod->custom_pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0x00);
-    mod->custom_cat = mpegts_psi_init(MPEGTS_PACKET_CAT, 0x01);
-    mod->custom_sdt = mpegts_psi_init(MPEGTS_PACKET_SDT, 0x11);
+    mod->custom_pat = ts_psi_init(TS_TYPE_PAT, 0x00);
+    mod->custom_cat = ts_psi_init(TS_TYPE_CAT, 0x01);
+    mod->custom_sdt = ts_psi_init(TS_TYPE_SDT, 0x11);
 
-    mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, 0);
+    mod->pmt = ts_psi_init(TS_TYPE_PMT, 0);
 
     /* pid list init */
-    mod->stream[0x00] = MPEGTS_PACKET_PAT;
-    mod->stream[0x01] = MPEGTS_PACKET_CAT;
-    mod->stream[0x02] = MPEGTS_PACKET_DATA; /* TSDT */
-    mod->stream[0x11] = MPEGTS_PACKET_SDT;
-    mod->stream[0x12] = MPEGTS_PACKET_EIT;
-    mod->stream[0x13] = MPEGTS_PACKET_DATA; /* RST */
-    mod->stream[0x14] = MPEGTS_PACKET_DATA; /* TDT, TOT */
+    mod->stream[0x00] = TS_TYPE_PAT;
+    mod->stream[0x01] = TS_TYPE_CAT;
+    mod->stream[0x02] = TS_TYPE_DATA; /* TSDT */
+    mod->stream[0x11] = TS_TYPE_SDT;
+    mod->stream[0x12] = TS_TYPE_EIT;
+    mod->stream[0x13] = TS_TYPE_DATA; /* RST */
+    mod->stream[0x14] = TS_TYPE_DATA; /* TDT, TOT */
 
     module_stream_init(L, mod, remux_ts_in);
     module_demux_set(mod, NULL, NULL);
@@ -377,23 +377,23 @@ static void module_destroy(module_data_t *mod)
     module_stream_destroy(mod);
 
     /* PSI deinit */
-    mpegts_psi_destroy(mod->pat);
-    mpegts_psi_destroy(mod->cat);
-    mpegts_psi_destroy(mod->sdt);
+    ts_psi_destroy(mod->pat);
+    ts_psi_destroy(mod->cat);
+    ts_psi_destroy(mod->sdt);
 
-    mpegts_psi_destroy(mod->custom_pat);
-    mpegts_psi_destroy(mod->custom_cat);
-    mpegts_psi_destroy(mod->custom_sdt);
+    ts_psi_destroy(mod->custom_pat);
+    ts_psi_destroy(mod->custom_cat);
+    ts_psi_destroy(mod->custom_sdt);
 
-    mpegts_psi_destroy(mod->pmt);
+    ts_psi_destroy(mod->pmt);
 
     /* pid list deinit */
     for(size_t i = 0; i < TS_MAX_PID; i++)
     {
-        mod->stream[i] = MPEGTS_PACKET_UNKNOWN;
+        mod->stream[i] = TS_TYPE_UNKNOWN;
 
         if(mod->pes[i])
-            mpegts_pes_destroy(mod->pes[i]);
+            ts_pes_destroy(mod->pes[i]);
     }
 
     /* free structs */

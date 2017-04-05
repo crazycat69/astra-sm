@@ -35,7 +35,7 @@
 #define MAX_BUFFER_SIZE ((32 * 1024 * 1024) / TS_PACKET_SIZE) /* 32 MiB */
 
 /* maximum allowed PCR spacing */
-#define MAX_PCR_DELTA ((PCR_TIME_BASE * 150) / 1000) /* 150ms */
+#define MAX_PCR_DELTA ((TS_PCR_FREQ * 150) / 1000) /* 150ms */
 
 /* don't report inter-packet jitter smaller than this value */
 #define MIN_IDLE_TIME (5 * 1000) /* 5ms */
@@ -43,7 +43,7 @@
 /* timeout for new block arrival */
 #define MAX_IDLE_TIME (200 * 1000) /* 200ms */
 
-struct mpegts_sync_t
+struct ts_sync_t
 {
     char name[128];
     ts_packet_t *buf;
@@ -87,9 +87,9 @@ struct mpegts_sync_t
  * create and destroy
  */
 
-mpegts_sync_t *mpegts_sync_init(void)
+ts_sync_t *ts_sync_init(void)
 {
-    mpegts_sync_t *const sx = ASC_ALLOC(1, mpegts_sync_t);
+    ts_sync_t *const sx = ASC_ALLOC(1, ts_sync_t);
 
     sx->low_blocks = LOW_BUFFER_BLOCKS;
     sx->enough_blocks = ENOUGH_BUFFER_BLOCKS;
@@ -99,15 +99,15 @@ mpegts_sync_t *mpegts_sync_init(void)
     static const char def_name[] = "sync";
     memcpy(sx->name, def_name, sizeof(def_name));
 
-    sx->pcr_last = XTS_NONE;
-    sx->pcr_cur = XTS_NONE;
+    sx->pcr_last = TS_TIME_NONE;
+    sx->pcr_cur = TS_TIME_NONE;
 
     sx->buf = ASC_ALLOC(sx->size, ts_packet_t);
 
     return sx;
 }
 
-void mpegts_sync_destroy(mpegts_sync_t *sx)
+void ts_sync_destroy(ts_sync_t *sx)
 {
     free(sx->buf);
     free(sx);
@@ -117,7 +117,7 @@ void mpegts_sync_destroy(mpegts_sync_t *sx)
  * setters and getters
  */
 
-void mpegts_sync_set_fname(mpegts_sync_t *sx, const char *format, ...)
+void ts_sync_set_fname(ts_sync_t *sx, const char *format, ...)
 {
     va_list ap;
     va_start(ap, format);
@@ -127,22 +127,22 @@ void mpegts_sync_set_fname(mpegts_sync_t *sx, const char *format, ...)
     va_end(ap);
 }
 
-void mpegts_sync_set_on_ready(mpegts_sync_t *sx, sync_callback_t on_ready)
+void ts_sync_set_on_ready(ts_sync_t *sx, sync_callback_t on_ready)
 {
     sx->on_ready = on_ready;
 }
 
-void mpegts_sync_set_on_write(mpegts_sync_t *sx, ts_callback_t on_write)
+void ts_sync_set_on_write(ts_sync_t *sx, ts_callback_t on_write)
 {
     sx->on_write = on_write;
 }
 
-void mpegts_sync_set_arg(mpegts_sync_t *sx, void *arg)
+void ts_sync_set_arg(ts_sync_t *sx, void *arg)
 {
     sx->arg = arg;
 }
 
-bool mpegts_sync_parse_opts(mpegts_sync_t *sx, const char *opts)
+bool ts_sync_parse_opts(ts_sync_t *sx, const char *opts)
 {
     unsigned int numopts[3] = { 0, 0, 0 };
 
@@ -171,7 +171,7 @@ bool mpegts_sync_parse_opts(mpegts_sync_t *sx, const char *opts)
     const unsigned int low = numopts[1];
 
     if ((enough > 0 || low > 0)
-        && !mpegts_sync_set_blocks(sx, enough, low))
+        && !ts_sync_set_blocks(sx, enough, low))
     {
         return false;
     }
@@ -180,7 +180,7 @@ bool mpegts_sync_parse_opts(mpegts_sync_t *sx, const char *opts)
     const unsigned int mbytes = numopts[2];
 
     if (mbytes > 0
-        && !mpegts_sync_set_max_size(sx, mbytes))
+        && !ts_sync_set_max_size(sx, mbytes))
     {
         return false;
     }
@@ -188,7 +188,7 @@ bool mpegts_sync_parse_opts(mpegts_sync_t *sx, const char *opts)
     return true;
 }
 
-bool mpegts_sync_set_max_size(mpegts_sync_t *sx, unsigned int mbytes)
+bool ts_sync_set_max_size(ts_sync_t *sx, unsigned int mbytes)
 {
     const size_t max_size = (mbytes * 1024ULL * 1024ULL) / TS_PACKET_SIZE;
 
@@ -204,8 +204,7 @@ bool mpegts_sync_set_max_size(mpegts_sync_t *sx, unsigned int mbytes)
     return true;
 }
 
-bool mpegts_sync_set_blocks(mpegts_sync_t *sx, unsigned int enough
-                            , unsigned int low)
+bool ts_sync_set_blocks(ts_sync_t *sx, unsigned int enough, unsigned int low)
 {
     if (enough == 0)
         enough = sx->enough_blocks;
@@ -233,9 +232,9 @@ bool mpegts_sync_set_blocks(mpegts_sync_t *sx, unsigned int enough
 }
 
 static
-size_t buffer_slots(const mpegts_sync_t *sx, bool filled);
+size_t buffer_slots(const ts_sync_t *sx, bool filled);
 
-void mpegts_sync_query(const mpegts_sync_t *sx, mpegts_sync_stat_t *out)
+void ts_sync_query(const ts_sync_t *sx, ts_sync_stat_t *out)
 {
     out->size = sx->size;
     out->filled = buffer_slots(sx, true);
@@ -267,7 +266,7 @@ void mpegts_sync_query(const mpegts_sync_t *sx, mpegts_sync_stat_t *out)
  */
 
 static
-unsigned int block_count(const mpegts_sync_t *sx)
+unsigned int block_count(const ts_sync_t *sx)
 {
     unsigned int count = 1;
 
@@ -291,7 +290,7 @@ unsigned int block_count(const mpegts_sync_t *sx)
 }
 
 static
-bool seek_pcr(mpegts_sync_t *sx)
+bool seek_pcr(ts_sync_t *sx)
 {
     while (sx->pos.pcr != sx->pos.rcv)
     {
@@ -324,7 +323,7 @@ bool seek_pcr(mpegts_sync_t *sx)
         sx->pcr_cur = TS_GET_PCR(ts);
         sx->offset = 0;
 
-        if (sx->pcr_last == XTS_NONE)
+        if (sx->pcr_last == TS_TIME_NONE)
         {
             /* beginning of the first block; start output from here */
             sx->pos.send = lookahead;
@@ -355,7 +354,7 @@ bool seek_pcr(mpegts_sync_t *sx)
         }
         else if (delta >= MAX_PCR_DELTA)
         {
-            const unsigned int ms = delta / (PCR_TIME_BASE / 1000);
+            const unsigned int ms = delta / (TS_PCR_FREQ / 1000);
             asc_log_error(MSG("PCR jumped forward by %ums, skipping block"), ms);
 
             /* in case this happens during initial buffering */
@@ -366,7 +365,7 @@ bool seek_pcr(mpegts_sync_t *sx)
         }
 
         /* calculate momentary bitrate */
-        const double inv_usecs = (double)PCR_TIME_BASE / delta;
+        const double inv_usecs = (double)TS_PCR_FREQ / delta;
         sx->bitrate = (bytes + TS_PACKET_SIZE) * inv_usecs;
         /* NOTE: inv_usecs = (1000 / PCR_INTERVAL) */
 
@@ -378,7 +377,7 @@ bool seek_pcr(mpegts_sync_t *sx)
 }
 
 static
-unsigned int usecs_elapsed(mpegts_sync_t *sx, uint64_t time_now)
+unsigned int usecs_elapsed(ts_sync_t *sx, uint64_t time_now)
 {
     unsigned int elapsed;
 
@@ -389,7 +388,7 @@ unsigned int usecs_elapsed(mpegts_sync_t *sx, uint64_t time_now)
         if (time_now < sx->last_run || elapsed > 1000000)
         {
             asc_log_error(MSG("time travel detected; resetting"));
-            mpegts_sync_reset(sx, SYNC_RESET_ALL);
+            ts_sync_reset(sx, SYNC_RESET_ALL);
 
             elapsed = 0;
         }
@@ -405,7 +404,7 @@ unsigned int usecs_elapsed(mpegts_sync_t *sx, uint64_t time_now)
 }
 
 static
-size_t buffer_slots(const mpegts_sync_t *sx, bool filled)
+size_t buffer_slots(const ts_sync_t *sx, bool filled)
 {
     ssize_t cnt;
 
@@ -426,7 +425,7 @@ size_t buffer_slots(const mpegts_sync_t *sx, bool filled)
 }
 
 static
-bool buffer_resize(mpegts_sync_t *sx, size_t new_size)
+bool buffer_resize(ts_sync_t *sx, size_t new_size)
 {
     if (!new_size)
         new_size = sx->size * 2;
@@ -515,9 +514,9 @@ bool buffer_resize(mpegts_sync_t *sx, size_t new_size)
     return true;
 }
 
-void mpegts_sync_loop(void *arg)
+void ts_sync_loop(void *arg)
 {
-    mpegts_sync_t *const sx = (mpegts_sync_t *)arg;
+    ts_sync_t *const sx = (ts_sync_t *)arg;
 
     /* timekeeping */
     const uint64_t time_now = asc_utime();
@@ -539,7 +538,7 @@ void mpegts_sync_loop(void *arg)
             if (sx->num_blocks >= sx->enough_blocks)
             {
                 /* got enough data to start output */
-                mpegts_sync_reset(sx, SYNC_RESET_PCR);
+                ts_sync_reset(sx, SYNC_RESET_PCR);
                 sx->buffered = true;
             }
 
@@ -553,7 +552,7 @@ void mpegts_sync_loop(void *arg)
         else if (!buffer_slots(sx, false) && !buffer_resize(sx, 0))
         {
             asc_log_error(MSG("PCR absent or invalid; resetting buffer"));
-            mpegts_sync_reset(sx, SYNC_RESET_ALL);
+            ts_sync_reset(sx, SYNC_RESET_ALL);
         }
 
         return;
@@ -567,7 +566,7 @@ void mpegts_sync_loop(void *arg)
         if (!found)
         {
             asc_log_error(MSG("next PCR not found; buffering..."));
-            mpegts_sync_reset(sx, SYNC_RESET_BLOCKS);
+            ts_sync_reset(sx, SYNC_RESET_BLOCKS);
 
             return;
         }
@@ -617,7 +616,7 @@ void mpegts_sync_loop(void *arg)
             asc_log_error(MSG("no input in %.2fms; resetting")
                           , downtime / 1000.0);
 
-            mpegts_sync_reset(sx, SYNC_RESET_ALL);
+            ts_sync_reset(sx, SYNC_RESET_ALL);
         }
 
         return;
@@ -652,7 +651,7 @@ void mpegts_sync_loop(void *arg)
     }
 }
 
-bool mpegts_sync_push(mpegts_sync_t *sx, const void *buf, size_t count)
+bool ts_sync_push(ts_sync_t *sx, const void *buf, size_t count)
 {
     while (buffer_slots(sx, false) < count)
     {
@@ -698,7 +697,7 @@ bool mpegts_sync_push(mpegts_sync_t *sx, const void *buf, size_t count)
     return true;
 }
 
-void mpegts_sync_reset(mpegts_sync_t *sx, enum mpegts_sync_reset type)
+void ts_sync_reset(ts_sync_t *sx, enum ts_sync_reset type)
 {
     switch (type) {
         case SYNC_RESET_ALL:
@@ -715,7 +714,7 @@ void mpegts_sync_reset(mpegts_sync_t *sx, enum mpegts_sync_reset type)
         case SYNC_RESET_PCR:
             /* reset PCR lookahead routine */
             sx->pcr_pid = sx->offset = 0;
-            sx->pcr_last = sx->pcr_cur = XTS_NONE;
+            sx->pcr_last = sx->pcr_cur = TS_TIME_NONE;
             sx->bitrate = sx->pending = 0.0;
 
             /* start searching from first packet in queue */

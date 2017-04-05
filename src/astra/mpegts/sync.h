@@ -28,10 +28,10 @@
 /* default timer interval */
 #define SYNC_INTERVAL_MSEC 1 /* 1ms */
 
-typedef struct mpegts_sync_t mpegts_sync_t;
+typedef struct ts_sync_t ts_sync_t;
 typedef void (*sync_callback_t)(void *);
 
-enum mpegts_sync_reset
+enum ts_sync_reset
 {
     SYNC_RESET_ALL = 0,
     SYNC_RESET_BLOCKS,
@@ -51,17 +51,17 @@ typedef struct
     size_t want;
     double bitrate;
     unsigned int num_blocks;
-} mpegts_sync_stat_t;
+} ts_sync_stat_t;
 
-mpegts_sync_t *mpegts_sync_init(void) __asc_result;
-void mpegts_sync_destroy(mpegts_sync_t *sx);
+ts_sync_t *ts_sync_init(void) __asc_result;
+void ts_sync_destroy(ts_sync_t *sx);
 
-void mpegts_sync_set_fname(mpegts_sync_t *sx, const char *format
-                           , ...) __asc_printf(2, 3);
+void ts_sync_set_fname(ts_sync_t *sx, const char *format
+                       , ...) __asc_printf(2, 3);
 
-void mpegts_sync_set_on_ready(mpegts_sync_t *sx, sync_callback_t on_ready);
-void mpegts_sync_set_on_write(mpegts_sync_t *sx, ts_callback_t on_write);
-void mpegts_sync_set_arg(mpegts_sync_t *sx, void *arg);
+void ts_sync_set_on_ready(ts_sync_t *sx, sync_callback_t on_ready);
+void ts_sync_set_on_write(ts_sync_t *sx, ts_callback_t on_write);
+void ts_sync_set_arg(ts_sync_t *sx, void *arg);
 
 /*
  * Option string format:
@@ -76,16 +76,14 @@ void mpegts_sync_set_arg(mpegts_sync_t *sx, void *arg);
  *
  * Default is "20,10,32".
  */
-bool mpegts_sync_parse_opts(mpegts_sync_t *sx, const char *opts);
-bool mpegts_sync_set_max_size(mpegts_sync_t *sx, unsigned int mbytes);
-bool mpegts_sync_set_blocks(mpegts_sync_t *sx, unsigned int enough
-                            , unsigned int low);
+bool ts_sync_parse_opts(ts_sync_t *sx, const char *opts);
+bool ts_sync_set_max_size(ts_sync_t *sx, unsigned int mbytes);
+bool ts_sync_set_blocks(ts_sync_t *sx, unsigned int enough, unsigned int low);
 
-void mpegts_sync_query(const mpegts_sync_t *sx, mpegts_sync_stat_t *out);
+void ts_sync_query(const ts_sync_t *sx, ts_sync_stat_t *out);
 
-void mpegts_sync_loop(void *arg);
-bool mpegts_sync_push(mpegts_sync_t *sx, const void *buf
-                      , size_t count) __asc_result;
-void mpegts_sync_reset(mpegts_sync_t *sx, enum mpegts_sync_reset type);
+void ts_sync_loop(void *arg);
+bool ts_sync_push(ts_sync_t *sx, const void *buf, size_t count) __asc_result;
+void ts_sync_reset(ts_sync_t *sx, enum ts_sync_reset type);
 
 #endif /* _TS_SYNC_ */

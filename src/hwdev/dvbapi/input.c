@@ -61,7 +61,7 @@ struct module_data_t
 
     uint32_t dvr_read;
 
-    mpegts_psi_t *pat;
+    ts_psi_t *pat;
     int pat_error;
 
     /* DMX config */
@@ -97,7 +97,7 @@ static void on_thread_close(void *arg);
 static void thread_loop(void *arg);
 static void thread_loop_slave(void *arg);
 
-static void on_pat(void *arg, mpegts_psi_t *psi)
+static void on_pat(void *arg, ts_psi_t *psi)
 {
     module_data_t *mod = (module_data_t *)arg;
 
@@ -193,7 +193,7 @@ static void dvr_on_read(void *arg)
         module_stream_send(mod, ts);
 
         if(TS_IS_SYNC(ts) && TS_GET_PID(ts) == 0)
-            mpegts_psi_mux(mod->pat, ts, on_pat, mod);
+            ts_psi_mux(mod->pat, ts, on_pat, mod);
     }
 }
 
@@ -1031,7 +1031,7 @@ static int method_close(lua_State *L, module_data_t *mod)
     dvr_close(mod);
     on_thread_close(mod);
 
-    ASC_FREE(mod->pat, mpegts_psi_destroy);
+    ASC_FREE(mod->pat, ts_psi_destroy);
     ASC_FREE(mod->fe, free);
     ASC_FREE(mod->ca, free);
     ASC_FREE(mod->retry_timer, asc_timer_destroy);
@@ -1066,7 +1066,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     else
         lua_pop(L, 1);
 
-    mod->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
+    mod->pat = ts_psi_init(TS_TYPE_PAT, 0);
 
     dvr_on_retry(mod);
 }

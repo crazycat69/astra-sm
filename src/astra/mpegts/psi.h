@@ -39,7 +39,7 @@
 
 typedef struct
 {
-    mpegts_packet_type_t type;
+    ts_type_t type;
     uint16_t pid;
     uint8_t cc;
 
@@ -52,17 +52,16 @@ typedef struct
     uint16_t buffer_size;
     uint16_t buffer_skip;
     uint8_t buffer[PSI_MAX_SIZE];
-} mpegts_psi_t;
+} ts_psi_t;
 
-typedef void (*psi_callback_t)(void *, mpegts_psi_t *);
+typedef void (*psi_callback_t)(void *, ts_psi_t *);
 
-mpegts_psi_t *mpegts_psi_init(mpegts_packet_type_t type
-                              , uint16_t pid) __asc_result;
-void mpegts_psi_destroy(mpegts_psi_t *psi);
+ts_psi_t *ts_psi_init(ts_type_t type, uint16_t pid) __asc_result;
+void ts_psi_destroy(ts_psi_t *psi);
 
-void mpegts_psi_mux(mpegts_psi_t *psi, const uint8_t *ts
-                    , psi_callback_t callback, void *arg);
-void mpegts_psi_demux(mpegts_psi_t *psi, ts_callback_t callback, void *arg);
+void ts_psi_mux(ts_psi_t *psi, const uint8_t *ts
+                , psi_callback_t callback, void *arg);
+void ts_psi_demux(ts_psi_t *psi, ts_callback_t callback, void *arg);
 
 #define PSI_CALC_CRC32(_psi) \
     au_crc32b(_psi->buffer, _psi->buffer_size - CRC32_SIZE)

@@ -30,7 +30,7 @@ ts_program_t *ts_program_init(uint16_t pnr, uint16_t pid)
     prog->pmt_pid = pid;
     prog->pcr_pid = TS_NULL_PID;
 
-    prog->custom_pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, pid);
+    prog->custom_pmt = ts_psi_init(TS_TYPE_PMT, pid);
 
     return prog;
 }
@@ -48,7 +48,7 @@ void ts_program_destroy(ts_program_t *p)
 {
     if(p)
     {
-        mpegts_psi_destroy(p->custom_pmt);
+        ts_psi_destroy(p->custom_pmt);
         free(p->pids);
     }
 
@@ -64,8 +64,8 @@ pcr_stream_t *pcr_stream_init(uint16_t pid)
 
     st->pid = pid;
 
-    st->base = XTS_NONE;
-    st->last = XTS_NONE;
+    st->base = TS_TIME_NONE;
+    st->last = TS_TIME_NONE;
 
     return st;
 }

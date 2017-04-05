@@ -68,7 +68,7 @@ struct module_data_t
         uint8_t buffer[UDP_BUFFER_SIZE];
     } packet;
 
-    mpegts_sync_t *sync;
+    ts_sync_t *sync;
     asc_timer_t *sync_loop;
 };
 
@@ -88,12 +88,12 @@ static void on_ready(void *arg)
 
 static void on_sync_ts(module_data_t *mod, const uint8_t *ts)
 {
-    const bool ret = mpegts_sync_push(mod->sync, ts, 1);
+    const bool ret = ts_sync_push(mod->sync, ts, 1);
 
     if (!ret)
     {
         asc_log_error(MSG("sync push failed, resetting buffer"));
-        mpegts_sync_reset(mod->sync, SYNC_RESET_ALL);
+        ts_sync_reset(mod->sync, SYNC_RESET_ALL);
     }
 }
 
@@ -200,19 +200,19 @@ static void module_init(lua_State *L, module_data_t *mod)
 
     if(sync_on)
     {
-        mod->sync = mpegts_sync_init();
+        mod->sync = ts_sync_init();
 
-        mpegts_sync_set_on_write(mod->sync, (ts_callback_t)on_ts);
-        mpegts_sync_set_arg(mod->sync, (void *)mod);
-        mpegts_sync_set_fname(mod->sync, "udp_output/sync %s:%d"
-                              , mod->addr, mod->port);
+        ts_sync_set_on_write(mod->sync, (ts_callback_t)on_ts);
+        ts_sync_set_arg(mod->sync, (void *)mod);
+        ts_sync_set_fname(mod->sync, "udp_output/sync %s:%d"
+                          , mod->addr, mod->port);
 
         const char *optstr = NULL;
         module_option_string(L, "sync_opts", &optstr, NULL);
-        if (optstr != NULL && !mpegts_sync_parse_opts(mod->sync, optstr))
+        if (optstr != NULL && !ts_sync_parse_opts(mod->sync, optstr))
             luaL_error(L, MSG("invalid value for option 'sync_opts'"));
 
-        mod->sync_loop = asc_timer_init(SYNC_INTERVAL_MSEC, mpegts_sync_loop
+        mod->sync_loop = asc_timer_init(SYNC_INTERVAL_MSEC, ts_sync_loop
                                         , mod->sync);
 
         on_ts = on_sync_ts;
@@ -227,7 +227,7 @@ static void module_destroy(module_data_t *mod)
     module_stream_destroy(mod);
 
     ASC_FREE(mod->sync_loop, asc_timer_destroy);
-    ASC_FREE(mod->sync, mpegts_sync_destroy);
+    ASC_FREE(mod->sync, ts_sync_destroy);
     ASC_FREE(mod->sock, asc_socket_close);
 }
 

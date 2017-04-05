@@ -27,16 +27,16 @@
 #endif /* !_ASTRA_H_ */
 
 /* PCR frequency, Hz */
-#define PCR_TIME_BASE 27000000LL
+#define TS_PCR_FREQ 27000000LL
 
 /* position of last byte in PCR field */
-#define PCR_LAST_BYTE 11
+#define TS_PCR_LAST_BYTE 11
 
 /* maximum possible PCR value */
-#define PCR_MAX ((0x1FFFFFFFFLL * 300) + 299)
+#define TS_PCR_MAX ((0x1FFFFFFFFLL * 300) + 299)
 
 /* absent timestamp marker */
-#define XTS_NONE UINT64_MAX
+#define TS_TIME_NONE UINT64_MAX
 
 /* whether TS packet contains PCR */
 #define TS_IS_PCR(__x) \
@@ -95,7 +95,7 @@
     TS_SET_PCR_FIELDS(__x, ((__v) / 300), ((__v) % 300));
 
 /* usecs between two PCR values */
-uint64_t mpegts_pcr_block_us(uint64_t *pcr_last
-                             , const uint64_t *pcr_current) __asc_result;
+uint64_t ts_pcr_block_us(uint64_t *pcr_last
+                         , const uint64_t *pcr_current) __asc_result;
 
 #endif /* _TS_PCR_ */
