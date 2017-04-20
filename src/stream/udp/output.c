@@ -93,7 +93,7 @@ static void on_sync_ts(module_data_t *mod, const uint8_t *ts)
     if (!ret)
     {
         asc_log_error(MSG("sync push failed, resetting buffer"));
-        ts_sync_reset(mod->sync, SYNC_RESET_ALL);
+        ts_sync_reset(mod->sync);
     }
 }
 
@@ -200,16 +200,13 @@ static void module_init(lua_State *L, module_data_t *mod)
 
     if(sync_on)
     {
-        mod->sync = ts_sync_init();
-
-        ts_sync_set_on_write(mod->sync, (ts_callback_t)on_ts);
-        ts_sync_set_arg(mod->sync, (void *)mod);
+        mod->sync = ts_sync_init((ts_callback_t)on_ts, mod);
         ts_sync_set_fname(mod->sync, "udp_output/sync %s:%d"
                           , mod->addr, mod->port);
 
         const char *optstr = NULL;
         module_option_string(L, "sync_opts", &optstr, NULL);
-        if (optstr != NULL && !ts_sync_parse_opts(mod->sync, optstr))
+        if (optstr != NULL && !ts_sync_set_opts(mod->sync, optstr))
             luaL_error(L, MSG("invalid value for option 'sync_opts'"));
 
         mod->sync_loop = asc_timer_init(SYNC_INTERVAL_MSEC, ts_sync_loop

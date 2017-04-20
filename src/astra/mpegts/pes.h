@@ -1,5 +1,5 @@
 /*
- * Astra Module: MPEG-TS (PES headers)
+ * Astra TS Library (PES processing)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>

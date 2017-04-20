@@ -1,5 +1,5 @@
 /*
- * Astra Module: MPEG-TS (T2-MI de-encapsulator)
+ * Astra TS Library (T2-MI de-encapsulator)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>

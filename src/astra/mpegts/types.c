@@ -1,5 +1,5 @@
 /*
- * Astra Module: MPEG-TS (Type definitions)
+ * Astra TS Library (Type definitions)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>

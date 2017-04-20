@@ -136,6 +136,7 @@ endif
 libastra_la_SOURCES += \
     astra/mpegts/descriptors.c \
     astra/mpegts/descriptors.h \
+    astra/mpegts/mpegts.h \
     astra/mpegts/pcr.c \
     astra/mpegts/pcr.h \
     astra/mpegts/pes.c \
@@ -146,7 +147,6 @@ libastra_la_SOURCES += \
     astra/mpegts/sync.h \
     astra/mpegts/t2mi.c \
     astra/mpegts/t2mi.h \
-    astra/mpegts/tscore.h \
     astra/mpegts/types.c \
     astra/mpegts/types.h
 
@@ -372,6 +372,9 @@ tests_libastra_SOURCES += \
     tests/luaapi/lib/sha1.c \
     tests/luaapi/lib/strhex.c \
     tests/luaapi/lib/utils.c
+
+tests_libastra_SOURCES += \
+    tests/mpegts/sync.c
 
 tests_libastra_SOURCES += \
     tests/utils/base64.c \

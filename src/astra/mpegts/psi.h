@@ -1,5 +1,5 @@
 /*
- * Astra Module: MPEG-TS (PSI headers)
+ * Astra TS Library (PSI processing)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>

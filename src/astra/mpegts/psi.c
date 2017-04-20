@@ -1,5 +1,5 @@
 /*
- * Astra Module: MPEG-TS (PSI processing)
+ * Astra TS Library (PSI processing)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
@@ -206,4 +206,4 @@ void ts_psi_demux(ts_psi_t *psi, ts_callback_t callback, void *arg)
             ts[1] &= ~0x40; /* turn off pusi bit */
         }
     }
-} /* ts_packet_demux */
+} /* ts_psi_demux */

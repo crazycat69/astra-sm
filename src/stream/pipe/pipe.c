@@ -268,7 +268,7 @@ void on_child_ts_sync(void *arg, const void *buf, size_t packets)
     if (!ts_sync_push(mod->sync, ts, packets))
     {
         asc_log_error(MSG("sync push failed, resetting buffer"));
-        ts_sync_reset(mod->sync, SYNC_RESET_ALL);
+        ts_sync_reset(mod->sync);
 
         return;
     }
@@ -472,15 +472,12 @@ void module_init(lua_State *L, module_data_t *mod)
         if (!is_stream)
             luaL_error(L, MSG("buffering is only supported with TS input"));
 
-        mod->sync = ts_sync_init();
-
-        ts_sync_set_on_write(mod->sync, module_stream_send);
-        ts_sync_set_arg(mod->sync, mod);
+        mod->sync = ts_sync_init(module_stream_send, mod);
         ts_sync_set_fname(mod->sync, "sync/%s", mod->config.name);
 
         const char *optstr = NULL;
         module_option_string(L, "sync_opts", &optstr, NULL);
-        if (optstr != NULL && !ts_sync_parse_opts(mod->sync, optstr))
+        if (optstr != NULL && !ts_sync_set_opts(mod->sync, optstr))
             luaL_error(L, MSG("invalid value for option 'sync_opts'"));
 
         ts_sync_stat_t data;

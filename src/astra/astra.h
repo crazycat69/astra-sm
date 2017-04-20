@@ -122,7 +122,7 @@
 #include "core/clock.h"
 #include "core/error.h"
 
-#include "mpegts/tscore.h"
+#include "mpegts/mpegts.h"
 #include "mpegts/types.h"
 
 #endif /* _ASTRA_H_ */

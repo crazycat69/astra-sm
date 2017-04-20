@@ -370,7 +370,7 @@ static void on_ts_read(void *arg)
             if (!ts_sync_push(mod->ts.sync, &mod->ts.buf[mod->ts.buf_read], 1))
             {
                 asc_log_error(MSG("sync push failed, resetting buffer"));
-                ts_sync_reset(mod->ts.sync, SYNC_RESET_ALL);
+                ts_sync_reset(mod->ts.sync);
 
                 return;
             }
@@ -614,16 +614,14 @@ static void on_read(void *arg)
 
             if (mod->config.sync)
             {
-                mod->ts.sync = ts_sync_init();
+                mod->ts.sync = ts_sync_init(module_stream_send, mod);
 
-                ts_sync_set_on_write(mod->ts.sync, module_stream_send);
-                ts_sync_set_arg(mod->ts.sync, mod);
                 ts_sync_set_fname(mod->ts.sync, "http_request %s:%d%s"
                                   , mod->config.host, mod->config.port
                                   , mod->config.path);
 
                 if (mod->config.sync_opts != NULL
-                    && !ts_sync_parse_opts(mod->ts.sync, mod->config.sync_opts))
+                    && !ts_sync_set_opts(mod->ts.sync, mod->config.sync_opts))
                 {
                     asc_log_error(MSG("invalid value for option 'sync_opts'"));
                 }

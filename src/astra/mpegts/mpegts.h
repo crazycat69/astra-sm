@@ -1,5 +1,5 @@
 /*
- * Astra Module: MPEG-TS (basic definitions)
+ * Astra TS Library (Base definitions)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _TS_CORE_
-#define _TS_CORE_ 1
+#ifndef _TS_MPEGTS_
+#define _TS_MPEGTS_ 1
 
 #ifndef _ASTRA_H_
 #   error "Please include <astra/astra.h> first"
@@ -81,4 +81,4 @@ typedef void (*ts_callback_t)(void *, const uint8_t *);
  */
 typedef uint8_t ts_packet_t[TS_PACKET_SIZE];
 
-#endif /* _TS_CORE_ */
+#endif /* _TS_MPEGTS_ */

@@ -1,5 +1,5 @@
 /*
- * Astra Module: MPEG-TS (PCR)
+ * Astra TS Library (PCR)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2014, Andrey Dyldin <and@cesbo.com>
