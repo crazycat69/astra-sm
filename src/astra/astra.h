@@ -101,11 +101,14 @@
 #endif /* !__GNUC__ */
 
 #ifdef __GNUC__
+#define __asc_noinline \
+    __attribute__((__noinline__))
 #define __asc_printf(_index, _first) \
     __attribute__((__format__(__printf__, _index, _first)))
 #define __asc_result \
     __attribute__((__warn_unused_result__))
 #else /* __GNUC__ */
+#define __asc_noinline
 #define __asc_printf(_index, _first)
 #define __asc_result
 #endif /* !__GNUC__ */

@@ -282,7 +282,7 @@ struct ts_t2mi_t
  * bit juggling
  */
 
-static
+static __asc_noinline
 uint64_t read_bit_field(const uint8_t **ptr, unsigned *off, unsigned size)
 {
     static const unsigned masks[8][8] = {
