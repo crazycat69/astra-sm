@@ -1619,15 +1619,16 @@ void bench_on_ts(void *arg, const uint8_t *ts)
 
             const int pcr_timediff = pcr_delta / (TS_PCR_FREQ / 1000000);
             const int clk_timediff = now - t->pcr_time;
-            ck_assert(pcr_timediff > 0 && clk_timediff > 0);
+            ck_assert(pcr_timediff > 0);
             t->pcr_duration += pcr_timediff;
             t->clk_duration += clk_timediff;
 
             const double pcr_bitrate =
                 ((double)t->offset * 8 * TS_PCR_FREQ) / pcr_delta;
 
-            const double clk_bitrate =
-                ((double)t->offset * 8 * 1000000) / clk_timediff;
+            double clk_bitrate = 0.0;
+            if (clk_timediff > 0)
+                clk_bitrate = ((double)t->offset * 8 * 1000000) / clk_timediff;
 
             t->pcr_bits += pcr_bitrate;
             t->clk_bits += clk_bitrate;
@@ -1712,38 +1713,43 @@ START_TEST(ts_bench)
     asc_log_debug("ts_bench: pass rate %.2f%% (%u/%u)"
                   , pass_rate, t.pass, t.pass + t.fail);
 
-    ck_assert(pass_rate >= 80.0);
-
     const int cfg_drift = duration - (t.clk_duration / 1000);
     asc_log_debug("ts_bench: configured for %ums, got %ums (%s%dms)"
                   , duration, t.clk_duration / 1000
                   , (((t.clk_duration / 1000) > duration) ? "+" : "")
                   , (t.clk_duration / 1000) - duration);
 
-    ck_assert(cfg_drift > -35 && cfg_drift < 35); /* 35 ms */
-
     const int pcr_clk_drift = t.pcr_duration - t.clk_duration;
     asc_log_debug("ts_bench: pcr_clk_drift: %dus", pcr_clk_drift);
-    ck_assert(pcr_clk_drift > -50000 && pcr_clk_drift < 50000); /* 50 ms */
 
     const int clk_diff = diff - t.clk_duration;
     asc_log_debug("ts_bench: clk_diff: %dus", clk_diff);
-    ck_assert(clk_diff > -50000 && clk_diff < 50000); /* 50 ms */
 
     const int pcr_diff = diff - t.pcr_duration;
     asc_log_debug("ts_bench: pcr_diff: %dus", pcr_diff);
-    ck_assert(pcr_diff > -50000 && pcr_diff < 50000); /* 50 ms */
 
     /* check average bitrate */
-    const double lo = BENCH_BITRATE * 0.95;
-    const double hi = BENCH_BITRATE * 1.05;
-
     t.clk_bits /= t.rx_idx;
     t.pcr_bits /= t.rx_idx;
-
     asc_log_debug("avg rate: clk: %.2f, pcr: %.2f\n", t.clk_bits, t.pcr_bits);
-    ck_assert((t.clk_bits >= lo && t.clk_bits <= hi)
-              && (t.pcr_bits >= lo && t.pcr_bits <= hi));
+
+    const unsigned int res = get_timer_res();
+    if (res <= 10000) /* 10ms or better */
+    {
+        const double lo = BENCH_BITRATE * 0.9;
+        const double hi = BENCH_BITRATE * 1.1;
+
+        ck_assert((t.clk_bits >= lo && t.clk_bits <= hi)
+                  && (t.pcr_bits >= lo && t.pcr_bits <= hi));
+
+        ck_assert(pass_rate >= 80.0);
+    }
+
+    /* 50 ms tolerance */
+    ck_assert(cfg_drift > -50 && cfg_drift < 50);
+    ck_assert(pcr_clk_drift > -50000 && pcr_clk_drift < 50000);
+    ck_assert(clk_diff > -50000 && clk_diff < 50000);
+    ck_assert(pcr_diff > -50000 && pcr_diff < 50000);
 
     ASC_FREE(sx, ts_sync_destroy);
 }
