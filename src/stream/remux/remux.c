@@ -35,19 +35,10 @@
 /*
  * stuffing and PCR restamping
  */
-static inline uint64_t offset_to_pcr(const module_data_t *mod)
-{
-    /*
-     * number of bytes written rescaled to PCR time base
-     * (see libavformat/mpegtsenc.c)
-     */
-    return ((mod->offset + TS_PCR_LAST_BYTE) * 8 * TS_PCR_FREQ) / mod->rate;
-}
-
 static inline uint64_t get_pcr_value(const module_data_t *mod
                                     , const pcr_stream_t *pcr)
 {
-    return pcr->base + offset_to_pcr(mod);
+    return pcr->base + TS_PCR_CALC(mod->offset, mod->rate);
 }
 
 static inline void insert_pcr_packet(module_data_t *mod
@@ -82,11 +73,6 @@ static inline void insert_null_packet(module_data_t *mod
                                       , ts_callback_t callback)
 {
     callback(mod, ts_null_pkt);
-}
-
-static inline unsigned msecs_to_pkts(unsigned rate, unsigned msec)
-{
-    return (msec * rate) / (TS_PACKET_SIZE * 8 * 1000);
 }
 
 static inline bool can_insert(unsigned *count, unsigned interval)
@@ -226,7 +212,7 @@ void remux_ts_in(module_data_t *mod, const uint8_t *orig_ts)
             {
                 asc_log_debug(MSG("reset time base on PCR pid %hu"), pcr->pid);
 
-                pcr->base = pcr->last - offset_to_pcr(mod);
+                pcr->base = pcr->last - TS_PCR_CALC(mod->offset, mod->rate);
                 continue;
             }
 
@@ -342,11 +328,11 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->pcr_delay *= (TS_PCR_FREQ / 1000);
 
     /* packet intervals */
-    mod->pcr_interval = msecs_to_pkts(mod->rate, mod->pcr_interval);
+    mod->pcr_interval = TS_PCR_PACKETS(mod->pcr_interval, mod->rate);
     /* SI (non-configurable) */
-    mod->pat_interval = msecs_to_pkts(mod->rate, PAT_INTERVAL);
-    mod->cat_interval = msecs_to_pkts(mod->rate, CAT_INTERVAL);
-    mod->sdt_interval = msecs_to_pkts(mod->rate, SDT_INTERVAL);
+    mod->pat_interval = TS_PCR_PACKETS(PAT_INTERVAL, mod->rate);
+    mod->cat_interval = TS_PCR_PACKETS(CAT_INTERVAL, mod->rate);
+    mod->sdt_interval = TS_PCR_PACKETS(SDT_INTERVAL, mod->rate);
 
     /* PSI init */
     mod->pat = ts_psi_init(TS_TYPE_PAT, 0x00);
