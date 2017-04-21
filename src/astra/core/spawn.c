@@ -153,14 +153,18 @@ void perror_s(const char *s)
         msg = sys_errlist[errno];
 
     size_t slen;
+    ssize_t ret;
+
     if (s != NULL && (slen = strlen_s(s)))
     {
-        write(STDERR_FILENO, s, slen);
-        write(STDERR_FILENO, ": ", 2);
+        ret = write(STDERR_FILENO, s, slen);
+        ret = write(STDERR_FILENO, ": ", 2);
     }
 
-    write(STDERR_FILENO, msg, strlen_s(msg));
-    write(STDERR_FILENO, "\n", 1);
+    ret = write(STDERR_FILENO, msg, strlen_s(msg));
+    ret = write(STDERR_FILENO, "\n", 1);
+
+    ASC_UNUSED(ret);
 }
 
 /* fork, redirect stdio and execute `command' */
@@ -209,7 +213,7 @@ int fork_and_exec(const char *command, pid_t *out_pid
 
         /* try to run command */
         execle("/bin/sh", "sh", "-c", command, NULL, environ);
-        perror_s("execle()");
+        perror_s("execle(): /bin/sh");
         _exit(127);
     }
 
