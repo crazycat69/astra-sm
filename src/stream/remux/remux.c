@@ -229,7 +229,7 @@ void remux_ts_in(module_data_t *mod, const uint8_t *orig_ts)
         case TS_TYPE_AUDIO:
         case TS_TYPE_SUB:
             /* elementary stream */
-            if(!TS_IS_SCRAMBLED(ts) && mod->pes[pid])
+            if(TS_GET_SC(ts) == TS_SC_NONE && mod->pes[pid])
             {
                 /* pass it on for reassembly */
                 ts_pes_mux(mod->pes[pid], ts);
@@ -374,7 +374,7 @@ static void module_destroy(module_data_t *mod)
     ts_psi_destroy(mod->pmt);
 
     /* pid list deinit */
-    for(size_t i = 0; i < TS_MAX_PID; i++)
+    for(size_t i = 0; i < TS_MAX_PIDS; i++)
     {
         mod->stream[i] = TS_TYPE_UNKNOWN;
 

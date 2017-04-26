@@ -374,6 +374,8 @@ tests_libastra_SOURCES += \
     tests/luaapi/lib/utils.c
 
 tests_libastra_SOURCES += \
+    tests/mpegts/mpegts.c \
+    tests/mpegts/mpegts_vectors.h \
     tests/mpegts/sync.c
 
 tests_libastra_SOURCES += \

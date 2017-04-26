@@ -147,7 +147,9 @@ unsigned int block_count(const ts_sync_t *sx)
     while (pos != sx->pos.rcv)
     {
         const uint8_t *const ts = sx->buf[pos];
-        if (TS_IS_PCR(ts) && TS_GET_PID(ts) == sx->pcr_pid)
+        const unsigned int pid = TS_GET_PID(ts);
+
+        if (TS_IS_PCR(ts) && pid == sx->pcr_pid)
         {
             if (++count >= sx->enough_blocks)
                 break;

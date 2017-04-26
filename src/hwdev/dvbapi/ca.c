@@ -1779,7 +1779,7 @@ void ca_open(dvb_ca_t *ca)
     ca->ca_pmt_list_del = asc_list_init();
 
     ca->pat = ts_psi_init(TS_TYPE_PAT, 0x00);
-    ca->pmt = ts_psi_init(TS_TYPE_PMT, TS_MAX_PID);
+    ca->pmt = ts_psi_init(TS_TYPE_PMT, TS_MAX_PIDS);
 
     ca->stream[0] = TS_TYPE_PAT;
 }

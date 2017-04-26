@@ -100,7 +100,7 @@ struct dvb_ca_t
 
     /* CA PMT */
 
-    ts_type_t stream[TS_MAX_PID];
+    ts_type_t stream[TS_MAX_PIDS];
     ts_psi_t *pat;
     ts_psi_t *pmt;
 

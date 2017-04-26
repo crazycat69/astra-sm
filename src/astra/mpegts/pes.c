@@ -61,7 +61,7 @@ bool ts_pes_mux(ts_pes_t *pes, const uint8_t *ts)
     pes->i_cc = cc;
 
     /* flush buffer on packet start */
-    if (TS_IS_PAYLOAD_START(ts))
+    if (TS_IS_PUSI(ts))
     {
         if (pes->expect_size > 0 && pes->buf_read < pes->buf_write)
         {
@@ -89,7 +89,7 @@ bool ts_pes_mux(ts_pes_t *pes, const uint8_t *ts)
             return false;
 
         /* parse headers */
-        pes->key = TS_IS_RAI(ts); /* random access indicator */
+        pes->key = TS_IS_RANDOM(ts);
         pes->expect_size = PES_BUFFER_GET_SIZE(payload);
         pes->stream_id = PES_BUFFER_GET_SID(payload);
 

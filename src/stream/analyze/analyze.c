@@ -83,7 +83,7 @@ struct module_data_t
     uint16_t tsid;
 
     asc_timer_t *check_stat;
-    analyze_item_t *stream[TS_MAX_PID];
+    analyze_item_t *stream[TS_MAX_PIDS];
 
     ts_psi_t *pat;
     ts_psi_t *cat;
@@ -599,7 +599,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 
     const uint16_t pid = TS_GET_PID(ts);
     analyze_item_t *item = NULL;
-    if(ts[0] == 0x47 && pid < TS_MAX_PID)
+    if(TS_IS_SYNC(ts))
         item = mod->stream[pid];
     if(!item)
         item = mod->stream[TS_NULL_PID];
@@ -644,13 +644,13 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
     if(cc != last_cc)
         ++item->cc_error;
 
-    if(TS_IS_SCRAMBLED(ts))
+    if(TS_GET_SC(ts) != TS_SC_NONE)
         ++item->sc_error;
 
     if(!(item->type & TS_TYPE_PES))
         return;
 
-    if(item->type == TS_TYPE_VIDEO && TS_IS_PAYLOAD_START(ts))
+    if(item->type == TS_TYPE_VIDEO && TS_IS_PUSI(ts))
     {
         const uint8_t *payload = TS_GET_PAYLOAD(ts);
         if(payload && PES_BUFFER_GET_HEADER(payload) != 0x000001)
@@ -687,7 +687,7 @@ static void on_check_stat(void *arg)
                                  : ((mod->video_check) ? 256 : 32);
 
     lua_newtable(L);
-    for(int i = 0; i < TS_MAX_PID; ++i)
+    for(int i = 0; i < TS_MAX_PIDS; ++i)
     {
         analyze_item_t *item = mod->stream[i];
 
@@ -821,7 +821,7 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->stream[0x12] = ASC_ALLOC(1, analyze_item_t);
     mod->stream[0x12]->type = TS_TYPE_EIT;
     // PMT
-    mod->pmt = ts_psi_init(TS_TYPE_PMT, TS_MAX_PID);
+    mod->pmt = ts_psi_init(TS_TYPE_PMT, TS_MAX_PIDS);
     // NULL
     mod->stream[TS_NULL_PID] = ASC_ALLOC(1, analyze_item_t);
     mod->stream[TS_NULL_PID]->type = TS_TYPE_NULL;
@@ -839,7 +839,7 @@ static void module_destroy(module_data_t *mod)
         mod->idx_callback = 0;
     }
 
-    for(int i = 0; i < TS_MAX_PID; ++i)
+    for(int i = 0; i < TS_MAX_PIDS; ++i)
     {
         if(mod->stream[i])
             free(mod->stream[i]);

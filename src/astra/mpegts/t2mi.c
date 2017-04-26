@@ -253,7 +253,7 @@ struct ts_t2mi_t
     ts_psi_t *pat;
     ts_psi_t *pmt;
 
-    ts_type_t stream[TS_MAX_PID];
+    ts_type_t stream[TS_MAX_PIDS];
     unsigned pmt_pid;
     unsigned payload_pid;
     unsigned last_cc;
@@ -420,7 +420,7 @@ ts_t2mi_t *ts_t2mi_init(void)
 
 void ts_t2mi_destroy(ts_t2mi_t *mi)
 {
-    for (size_t i = 0; i < TS_MAX_PID; i++)
+    for (size_t i = 0; i < TS_MAX_PIDS; i++)
     {
         if (mi->stream[i] != TS_TYPE_UNKNOWN)
             outer_leave_pid(mi, i);
@@ -491,7 +491,7 @@ void ts_t2mi_set_payload(ts_t2mi_t *mi, uint16_t pnr, uint16_t pid)
     mi->payload_pid = mi->pmt_pid = 0;
 
     /* reset pid map */
-    for (size_t i = 0; i < TS_MAX_PID; i++)
+    for (size_t i = 0; i < TS_MAX_PIDS; i++)
     {
         if (mi->stream[i] != TS_TYPE_UNKNOWN)
         {
@@ -1065,7 +1065,7 @@ void on_outer_ts(ts_t2mi_t *mi, const uint8_t *ts)
 
     /* locate T2-MI header in PUSI packets */
     bool new_packet = false;
-    if (TS_IS_PAYLOAD_START(ts))
+    if (TS_IS_PUSI(ts))
     {
         /* eat byte indicating header offset */
         size_t offset = 1;

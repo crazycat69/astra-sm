@@ -44,7 +44,7 @@ void ts_psi_mux(ts_psi_t *psi, const uint8_t *ts, psi_callback_t callback, void 
 
     const uint8_t cc = TS_GET_CC(ts);
 
-    if(TS_IS_PAYLOAD_START(ts))
+    if(TS_IS_PUSI(ts))
     {
         const uint8_t ptr_field = *payload;
         ++payload; // skip pointer field

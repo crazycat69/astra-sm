@@ -48,6 +48,7 @@
 #endif
 
 #define FILE_BUFFER_SIZE 32
+#define TS_PACKET_SIZE_BDAV 192
 
 #define ALIGN 4096
 #define align(_size) ((_size / ALIGN) * ALIGN)

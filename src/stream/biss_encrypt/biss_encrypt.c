@@ -37,7 +37,7 @@ struct module_data_t
 {
     STREAM_MODULE_DATA();
 
-    ts_type_t stream[TS_MAX_PID];
+    ts_type_t stream[TS_MAX_PIDS];
 
     ts_psi_t *pat;
     ts_psi_t *pmt;
@@ -60,7 +60,7 @@ static void process_ts(module_data_t *mod, const uint8_t *ts, uint8_t hdr_size)
 
     if(hdr_size)
     {
-        dst[3] |= 0x80;
+        TS_SET_SC(dst, TS_SC_EVEN);
         mod->batch[mod->batch_skip].data = &dst[hdr_size];
         mod->batch[mod->batch_skip].len = TS_PACKET_SIZE - hdr_size;
         ++mod->batch_skip;

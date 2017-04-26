@@ -38,15 +38,6 @@
 /* absent timestamp marker */
 #define TS_TIME_NONE UINT64_MAX
 
-/* check whether TS packet contains PCR */
-#define TS_IS_PCR(_ts) \
-    ( \
-        (TS_IS_SYNC(_ts)) && \
-        (TS_IS_AF(_ts)) && \
-        (_ts[4] >= 7) && /* AF length */ \
-        (_ts[5] & 0x10) /* PCR flag */ \
-    )
-
 /* extract PCR base (90KHz) */
 #define TS_PCR_BASE(_ts) \
     ( \
@@ -87,12 +78,12 @@
 /* get PCR value */
 #define TS_GET_PCR(_ts) \
     ( \
-        (TS_PCR_BASE(_ts) * 300) + TS_PCR_EXT(_ts) \
+        (TS_PCR_BASE(_ts) * 300LL) + TS_PCR_EXT(_ts) \
     )
 
 /* set PCR value */
 #define TS_SET_PCR(_ts, _val) \
-    TS_SET_PCR_FIELDS(_ts, ((_val) / 300LL), ((_val) % 300LL));
+    TS_SET_PCR_FIELDS((_ts), ((_val) / 300LL), ((_val) % 300LL));
 
 /* get delta between two PCR values */
 #define TS_PCR_DELTA(_a, _b) \

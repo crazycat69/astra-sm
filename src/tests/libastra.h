@@ -63,6 +63,7 @@ Suite *luaapi_lib_strhex(void);
 Suite *luaapi_lib_utils(void);
 
 /* mpegts */
+Suite *mpegts_mpegts(void);
 Suite *mpegts_sync(void);
 
 /* utils */
@@ -109,6 +110,7 @@ static suite_func_t suite_list[] = {
     luaapi_lib_utils,
 
     /* mpegts */
+    mpegts_mpegts,
     mpegts_sync,
 
     /* utils */

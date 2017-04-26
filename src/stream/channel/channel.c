@@ -75,7 +75,7 @@ struct module_data_t
 
     /* */
     asc_list_t *map;
-    uint16_t pid_map[TS_MAX_PID];
+    uint16_t pid_map[TS_MAX_PIDS];
     uint8_t custom_ts[TS_PACKET_SIZE];
 
     ts_psi_t *pat;
@@ -84,7 +84,7 @@ struct module_data_t
     ts_psi_t *sdt;
     ts_psi_t *eit;
 
-    ts_type_t stream[TS_MAX_PID];
+    ts_type_t stream[TS_MAX_PIDS];
 
     uint16_t tsid;
     ts_psi_t *custom_pat;
@@ -109,7 +109,7 @@ static void stream_reload(module_data_t *mod)
 {
     memset(mod->stream, 0, sizeof(mod->stream));
 
-    for(int __i = 0; __i < TS_MAX_PID; ++__i)
+    for(int __i = 0; __i < TS_MAX_PIDS; ++__i)
     {
         if(module_demux_check(mod, __i))
             module_demux_leave(mod, __i);
@@ -345,7 +345,7 @@ static void on_cat(void *arg, ts_psi_t *psi)
             if(mod->stream[ca_pid] == TS_TYPE_UNKNOWN && ca_pid != TS_NULL_PID)
             {
                 mod->stream[ca_pid] = TS_TYPE_CA;
-                if(mod->pid_map[ca_pid] == TS_MAX_PID)
+                if(mod->pid_map[ca_pid] == TS_MAX_PIDS)
                     mod->pid_map[ca_pid] = 0;
                 module_demux_join(mod, ca_pid);
             }
@@ -447,7 +447,7 @@ static void on_pmt(void *arg, ts_psi_t *psi)
             if(mod->stream[ca_pid] == TS_TYPE_UNKNOWN && ca_pid != TS_NULL_PID)
             {
                 mod->stream[ca_pid] = TS_TYPE_CA;
-                if(mod->pid_map[ca_pid] == TS_MAX_PID)
+                if(mod->pid_map[ca_pid] == TS_MAX_PIDS)
                     mod->pid_map[ca_pid] = 0;
                 module_demux_join(mod, ca_pid);
             }
@@ -474,7 +474,7 @@ static void on_pmt(void *arg, ts_psi_t *psi)
     {
         const uint16_t pid = PMT_ITEM_GET_PID(psi, pointer);
 
-        if(mod->pid_map[pid] == TS_MAX_PID) // skip filtered pid
+        if(mod->pid_map[pid] == TS_MAX_PIDS) // skip filtered pid
             continue;
 
         const uint8_t item_type = PMT_ITEM_GET_TYPE(psi, pointer);
@@ -506,7 +506,7 @@ static void on_pmt(void *arg, ts_psi_t *psi)
                 if(mod->stream[ca_pid] == TS_TYPE_UNKNOWN && ca_pid != TS_NULL_PID)
                 {
                     mod->stream[ca_pid] = TS_TYPE_CA;
-                    if(mod->pid_map[ca_pid] == TS_MAX_PID)
+                    if(mod->pid_map[ca_pid] == TS_MAX_PIDS)
                         mod->pid_map[ca_pid] = 0;
                     module_demux_join(mod, ca_pid);
                 }
@@ -582,7 +582,7 @@ static void on_pmt(void *arg, ts_psi_t *psi)
     if(join_pcr)
     {
         mod->stream[pcr_pid] = TS_TYPE_PES;
-        if(mod->pid_map[pcr_pid] == TS_MAX_PID)
+        if(mod->pid_map[pcr_pid] == TS_MAX_PIDS)
             mod->pid_map[pcr_pid] = 0;
         module_demux_join(mod, pcr_pid);
     }
@@ -779,7 +779,7 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
             break;
     }
 
-    if(mod->pid_map[pid] == TS_MAX_PID)
+    if(mod->pid_map[pid] == TS_MAX_PIDS)
         return;
 
     if(mod->map)
@@ -822,9 +822,9 @@ static void module_init(lua_State *L, module_data_t *mod)
         module_option_boolean(L, "cas", &mod->config.cas);
 
         mod->pat = ts_psi_init(TS_TYPE_PAT, 0);
-        mod->pmt = ts_psi_init(TS_TYPE_PMT, TS_MAX_PID);
+        mod->pmt = ts_psi_init(TS_TYPE_PMT, TS_MAX_PIDS);
         mod->custom_pat = ts_psi_init(TS_TYPE_PAT, 0);
-        mod->custom_pmt = ts_psi_init(TS_TYPE_PMT, TS_MAX_PID);
+        mod->custom_pmt = ts_psi_init(TS_TYPE_PMT, TS_MAX_PIDS);
         mod->stream[0] = TS_TYPE_PAT;
         module_demux_join(mod, 0);
         if(mod->config.cas)
@@ -871,7 +871,7 @@ static void module_init(lua_State *L, module_data_t *mod)
             lua_foreach(L, -2)
             {
                 const int pid = lua_tointeger(L, -1);
-                if(!(pid >= 0 && pid < TS_MAX_PID))
+                if(!ts_pid_valid(pid))
                     luaL_error(L, MSG("option 'pid': pid is out of range"));
 
                 mod->stream[pid] = TS_TYPE_PES;
@@ -921,10 +921,10 @@ static void module_init(lua_State *L, module_data_t *mod)
         lua_foreach(L, -2)
         {
             const int pid = lua_tointeger(L, -1);
-            if(!(pid >= 0 && pid < TS_MAX_PID))
+            if(!ts_pid_valid(pid))
                 luaL_error(L, MSG("option 'filter': pid is out of range"));
 
-            mod->pid_map[pid] = TS_MAX_PID;
+            mod->pid_map[pid] = TS_MAX_PIDS;
         }
     }
     lua_pop(L, 1); // filter
@@ -933,12 +933,12 @@ static void module_init(lua_State *L, module_data_t *mod)
     if(lua_istable(L, -1))
     {
         for(uint32_t i = 0; i < ASC_ARRAY_SIZE(mod->pid_map); ++i)
-            mod->pid_map[i] = TS_MAX_PID;
+            mod->pid_map[i] = TS_MAX_PIDS;
 
         lua_foreach(L, -2)
         {
             const int pid = lua_tointeger(L, -1);
-            if(!(pid >= 0 && pid < TS_MAX_PID))
+            if(!ts_pid_valid(pid))
                 luaL_error(L, MSG("option 'filter~': pid is out of range"));
 
             mod->pid_map[pid] = 0;

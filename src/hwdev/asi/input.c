@@ -46,7 +46,7 @@ struct module_data_t
 
     int fd;
     asc_event_t *event;
-    uint8_t filter[TS_MAX_PID / 8];
+    uint8_t filter[TS_MAX_PIDS / 8];
 
     uint8_t buffer[ASI_BUFFER_SIZE];
 };
@@ -83,9 +83,9 @@ static void set_pid(module_data_t *mod, uint16_t pid, int is_set)
     if(mod->budget)
         return;
 
-    if(pid >= TS_MAX_PID)
+    if(!ts_pid_valid(pid))
     {
-        asc_log_error(MSG("PID value must be less then %d"), TS_MAX_PID);
+        asc_log_error(MSG("PID value must be less then %d"), TS_MAX_PIDS);
         asc_lib_abort();
     }
 

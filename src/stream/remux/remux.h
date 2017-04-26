@@ -107,8 +107,8 @@ struct module_data_t
     unsigned sdt_count;
 
     /* TS data */
-    ts_type_t stream[TS_MAX_PID];
-    ts_pes_t *pes[TS_MAX_PID];
+    ts_type_t stream[TS_MAX_PIDS];
+    ts_pes_t *pes[TS_MAX_PIDS];
     uint16_t nit_pid;
     uint8_t buf[TS_PACKET_SIZE];
 

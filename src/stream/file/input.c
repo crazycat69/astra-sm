@@ -42,6 +42,7 @@
 #define MSG(_msg) "[file_input %s] " _msg, mod->filename
 
 #define INPUT_BUFFER_SIZE 2
+#define TS_PACKET_SIZE_BDAV 192
 
 struct module_data_t
 {
