@@ -177,6 +177,7 @@ libstream_la_LDFLAGS = -module -static
 libstream_la_LIBADD = libastra.la
 libstream_la_SOURCES = \
     stream/analyze/analyze.c \
+    stream/cbr/cbr.c \
     stream/channel/channel.c \
     stream/file/input.c \
     stream/file/output.c \

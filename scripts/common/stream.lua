@@ -206,12 +206,31 @@ init_output_option.biss = function(channel_data, output_id)
         upstream = channel_data.tail:stream(),
         key = output_data.config.biss,
     })
+
     channel_data.tail = output_data.biss
 end
 
 kill_output_option.biss = function(channel_data, output_id)
     local output_data = channel_data.output[output_id]
     output_data.biss = nil
+end
+
+init_output_option.cbr = function(channel_data, output_id)
+    local output_data = channel_data.output[output_id]
+
+    output_data.cbr = ts_cbr({
+        name = output_data.config.name .. " #" .. output_id,
+        bitrate = output_data.config.cbr,
+        pcr_interval = output_data.config.cbr_pcr_interval,
+        buffer_size = output_data.config.cbr_buffer_size,
+    })
+
+    channel_data.tail = output_data.cbr
+end
+
+kill_output_option.cbr = function(channel_data, output_id)
+    local output_data = channel_data.output[output_id]
+    output_data.cbr = nil
 end
 
 init_output_option.remux = function(channel_data, output_id)
@@ -239,7 +258,6 @@ end
 
 kill_output_option.remux = function(channel_data, output_id)
     local output_data = channel_data.output[output_id]
-
     output_data.tail = nil
 end
 
