@@ -78,14 +78,12 @@ bool ts_generator(ts_generator_t *gen, uint8_t ts[TS_PACKET_SIZE])
         gen->left--;
 
     memset(ts, 0, TS_PACKET_SIZE);
-    ts[0] = 0x47;
+    TS_INIT(ts);
 
     if (gen->insert_pcr)
     {
         TS_SET_PID(ts, GEN_PCR_PID);
-        ts[3] = 0x20; /* af only, cc = 0 */
-        ts[4] = TS_BODY_SIZE - 1;
-        ts[5] = 0x10; /* pcr */
+        TS_SET_AF(ts, TS_BODY_SIZE - 1);
 
         gen->pcr_base += (gen->offset * TS_PCR_FREQ * 8) / gen->bitrate;
         gen->pcr_base %= TS_PCR_MAX;
@@ -96,7 +94,8 @@ bool ts_generator(ts_generator_t *gen, uint8_t ts[TS_PACKET_SIZE])
     else
     {
         TS_SET_PID(ts, GEN_DATA_PID);
-        ts[3] = 0x10 | gen->cc; /* payload only, set cc */
+        TS_SET_PAYLOAD(ts, true);
+        TS_SET_CC(ts, gen->cc);
 
         gen->cc = (gen->cc + 1) & 0xf;
     }
@@ -386,16 +385,11 @@ void clk_on_push(void *arg)
             t->pcr_value = (t->pcr_value + inc) % TS_PCR_MAX;
 
             /* push PCR packet */
-            uint8_t ts[TS_PACKET_SIZE] =
-            {
-                0x47, /* sync byte */
-                0x00, 0x00, /* pid */
-                0x20, /* af bit */
-                TS_BODY_SIZE - 1, /* af len */
-                0x10, /* pcr bit */
-            };
+            uint8_t ts[TS_PACKET_SIZE];
 
+            TS_INIT(ts);
             TS_SET_PID(ts, GEN_PCR_PID);
+            TS_SET_AF(ts, TS_BODY_SIZE - 1);
             TS_SET_PCR(ts, t->pcr_value);
             ck_assert(ts_sync_push(t->sx, ts, 1) == true);
 
@@ -403,14 +397,12 @@ void clk_on_push(void *arg)
         }
 
         /* push data packet */
-        uint8_t ts[TS_PACKET_SIZE] =
-        {
-            0x47, /* sync byte */
-            0x00, 0x00, /* pid */
-            0x10 | (t->tx_cc & 0xf), /* payload, cc */
-        };
+        uint8_t ts[TS_PACKET_SIZE] = { 0 };
 
+        TS_INIT(ts);
         TS_SET_PID(ts, GEN_DATA_PID);
+        TS_SET_PAYLOAD(ts, true);
+        TS_SET_CC(ts, t->tx_cc);
         ck_assert(ts_sync_push(t->sx, ts, 1) == true);
 
         t->tx_cc = (t->tx_cc + 1) & 0xf;
@@ -422,7 +414,7 @@ void clk_on_ts(void *arg, const uint8_t *ts)
 {
     clk_test_t *const t = (clk_test_t *)arg;
 
-    ck_assert(ts[0] == 0x47);
+    ck_assert(TS_IS_SYNC(ts));
     const unsigned int pid = TS_GET_PID(ts);
 
     t->rx_clk_packets++;
@@ -943,15 +935,15 @@ void jump_insert_bogus(jump_test_t *t, unsigned int marker)
 
     for (unsigned int i = 0; i < 100; i++)
     {
-        uint8_t ts[TS_PACKET_SIZE] = { 0x47 };
+        uint8_t ts[TS_PACKET_SIZE] = { 0 };
+
+        TS_INIT(ts);
         ts[TS_PACKET_SIZE - 1] = marker;
 
         if (!(i % 10))
         {
             TS_SET_PID(ts, GEN_PCR_PID);
-            ts[3] = 0x20; /* af only, cc = 0 */
-            ts[4] = TS_BODY_SIZE - 1;
-            ts[5] = 0x10; /* pcr */
+            TS_SET_AF(ts, TS_BODY_SIZE - 1);
             TS_SET_PCR(ts, pcr);
             pcr -= TS_PCR_FREQ;
         }
@@ -1103,14 +1095,9 @@ START_TEST(outer_limits)
      */
     t.idx = OUTER_CASE_HUGE;
 
-    const uint8_t ts_tpl[TS_PACKET_SIZE] =
-    {
-        0x47, /* sync byte */
-        0x00, 0x00, /* pid */
-        0x20, /* af bit */
-        TS_BODY_SIZE - 1, /* af len */
-        0x10, /* pcr bit */
-    };
+    uint8_t ts_tpl[TS_PACKET_SIZE];
+    TS_INIT(ts_tpl);
+    TS_SET_AF(ts_tpl, TS_BODY_SIZE - 1);
 
     for (unsigned int i = 0; i < 1000; i++)
     {
@@ -1187,7 +1174,7 @@ void delay_on_ts(void *arg, const uint8_t *ts)
 {
     delay_test_t *const t = (delay_test_t *)arg;
 
-    ck_assert(ts[0] == 0x47);
+    ck_assert(TS_IS_SYNC(ts));
     t->rx_cnt++;
 }
 
@@ -1370,7 +1357,7 @@ void pull_on_ts(void *arg, const uint8_t *ts)
 
     t->offset += TS_PACKET_SIZE;
 
-    ck_assert(ts[0] == 0x47);
+    ck_assert(TS_IS_SYNC(ts));
     const unsigned int pid = TS_GET_PID(ts);
 
     if (pid == GEN_DATA_PID)
@@ -1592,7 +1579,7 @@ void bench_on_ts(void *arg, const uint8_t *ts)
     if (!t->running)
         return;
 
-    ck_assert(ts[0] == 0x47);
+    ck_assert(TS_IS_SYNC(ts));
     const unsigned int pid = TS_GET_PID(ts);
 
     t->offset += TS_PACKET_SIZE;

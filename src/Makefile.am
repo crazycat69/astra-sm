@@ -375,7 +375,9 @@ tests_libastra_SOURCES += \
 
 tests_libastra_SOURCES += \
     tests/mpegts/mpegts.c \
-    tests/mpegts/mpegts_vectors.h \
+    tests/mpegts/mpegts_packets.h \
+    tests/mpegts/pcr.c \
+    tests/mpegts/pcr_packets.h \
     tests/mpegts/sync.c
 
 tests_libastra_SOURCES += \

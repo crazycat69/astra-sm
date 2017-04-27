@@ -39,7 +39,7 @@
 #define TS_TIME_NONE UINT64_MAX
 
 /* extract PCR base (90KHz) */
-#define TS_PCR_BASE(_ts) \
+#define TS_GET_PCR_BASE(_ts) \
     ( \
         ( \
             (uint64_t)((_ts)[6]) << 25 \
@@ -55,7 +55,7 @@
     )
 
 /* extract PCR extension (27MHz) */
-#define TS_PCR_EXT(_ts) \
+#define TS_GET_PCR_EXT(_ts) \
     ( \
         ( \
             ((uint64_t)((_ts)[10]) & 0x1) << 8 \
@@ -64,9 +64,14 @@
         ) \
     )
 
+/* get PCR value */
+#define TS_GET_PCR(_ts) \
+    ((TS_GET_PCR_BASE(_ts) * 300LL) + TS_GET_PCR_EXT(_ts))
+
 /* set PCR fields in a packet, separately */
 #define TS_SET_PCR_FIELDS(_ts, _base, _ext) \
     do { \
+        (_ts)[5] |= 0x10; \
         (_ts)[6] = ((_base) >> 25) & 0xff; \
         (_ts)[7] = ((_base) >> 17) & 0xff; \
         (_ts)[8] = ((_base) >> 9) & 0xff; \
@@ -75,33 +80,23 @@
         (_ts)[11] = (_ext) & 0xff; \
     } while (0)
 
-/* get PCR value */
-#define TS_GET_PCR(_ts) \
-    ( \
-        (TS_PCR_BASE(_ts) * 300LL) + TS_PCR_EXT(_ts) \
-    )
-
 /* set PCR value */
 #define TS_SET_PCR(_ts, _val) \
-    TS_SET_PCR_FIELDS((_ts), ((_val) / 300LL), ((_val) % 300LL));
+    do { \
+        TS_SET_PCR_FIELDS((_ts), ((_val) / 300LL), ((_val) % 300LL)); \
+    } while (0)
 
 /* get delta between two PCR values */
 #define TS_PCR_DELTA(_a, _b) \
-    ( \
-        ((_b) >= (_a)) ? ((_b) - (_a)) : (((_b) - (_a)) + TS_PCR_MAX) \
-    )
+    (((_b) >= (_a)) ? ((_b) - (_a)) : (((_b) - (_a)) + TS_PCR_MAX))
 
 /* convert milliseconds to packet count based on TS bitrate */
 #define TS_PCR_PACKETS(_ms, _rate) \
-    ( \
-        ((_ms) * ((_rate) / 1000)) / (TS_PACKET_SIZE * 8) \
-    )
+    (((_ms) * ((_rate) / 1000)) / (TS_PACKET_SIZE * 8))
 
 /* calculate PCR value based on offset and bitrate */
 #define TS_PCR_CALC(_offset, _rate) \
-    ( \
-        (((_offset) + TS_PCR_LAST_BYTE) * TS_PCR_FREQ * 8) / (_rate) \
-    )
+    ((((_offset) + TS_PCR_LAST_BYTE) * TS_PCR_FREQ * 8) / (_rate))
 
 /* usecs between two PCR values (deprecated) */
 uint64_t ts_pcr_block_us(uint64_t *pcr_last
