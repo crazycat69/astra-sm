@@ -219,9 +219,11 @@ init_output_option.cbr = function(channel_data, output_id)
     local output_data = channel_data.output[output_id]
 
     output_data.cbr = ts_cbr({
-        name = output_data.config.name .. " #" .. output_id,
-        bitrate = output_data.config.cbr,
+        upstream = channel_data.tail:stream(),
+        name = output_data.config.name,
+        rate = output_data.config.cbr,
         pcr_interval = output_data.config.cbr_pcr_interval,
+        pcr_delay = output_data.config.cbr_pcr_delay,
         buffer_size = output_data.config.cbr_buffer_size,
     })
 
@@ -642,7 +644,7 @@ end
 --
 
 init_transform_module.cbr = function(conf)
-    return remux(conf)
+    return ts_cbr(conf)
 end
 
 kill_transform_module.cbr = function(instance)
