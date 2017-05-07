@@ -28,6 +28,7 @@
 
 /* sizes and limits */
 #define TS_PACKET_SIZE 188
+#define TS_PACKET_BITS 1504
 #define TS_HEADER_SIZE 4
 #define TS_BODY_SIZE 184
 #define TS_MAX_PIDS 8192

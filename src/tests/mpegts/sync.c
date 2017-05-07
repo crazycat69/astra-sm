@@ -85,7 +85,7 @@ bool ts_generator(ts_generator_t *gen, uint8_t ts[TS_PACKET_SIZE])
         TS_SET_PID(ts, GEN_PCR_PID);
         TS_SET_AF(ts, TS_BODY_SIZE - 1);
 
-        gen->pcr_base += (gen->offset * TS_PCR_FREQ * 8) / gen->bitrate;
+        gen->pcr_base += TS_PCR_CALC(gen->offset, gen->bitrate);
         gen->pcr_base %= TS_PCR_MAX;
         gen->offset = 0;
 

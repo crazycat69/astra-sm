@@ -131,7 +131,7 @@ START_TEST(calc)
         /* simulate packet offset */
         uint32_t offset = 0;
         const uint64_t pcr_a = TS_PCR_CALC(offset, rate);
-        ck_assert(pcr_a > 0);
+        ck_assert(pcr_a == 0);
 
         while (pkt-- > 0)
             offset += TS_PACKET_SIZE;

@@ -29,9 +29,6 @@
 /* PCR frequency, Hz */
 #define TS_PCR_FREQ 27000000LL
 
-/* position of last byte in PCR field */
-#define TS_PCR_LAST_BYTE 11
-
 /* maximum possible PCR value */
 #define TS_PCR_MAX (0x200000000LL * 300)
 
@@ -92,11 +89,11 @@
 
 /* convert milliseconds to packet count based on TS bitrate */
 #define TS_PCR_PACKETS(_ms, _rate) \
-    (((_ms) * ((_rate) / 1000)) / (TS_PACKET_SIZE * 8))
+    (((_ms) * ((_rate) / 1000)) / TS_PACKET_BITS)
 
 /* calculate PCR value based on offset and bitrate */
 #define TS_PCR_CALC(_offset, _rate) \
-    ((((_offset) + TS_PCR_LAST_BYTE) * TS_PCR_FREQ * 8) / (_rate))
+    (((_offset) * TS_PCR_FREQ * 8) / (_rate))
 
 /* usecs between two PCR values (deprecated) */
 uint64_t ts_pcr_block_us(uint64_t *pcr_last

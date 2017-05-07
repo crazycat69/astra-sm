@@ -132,7 +132,7 @@ static inline
 double calc_bitrate(double quantum)
 {
     if (quantum > 0.0)
-        return (TS_PCR_FREQ / quantum) * TS_PACKET_SIZE * 8;
+        return (TS_PCR_FREQ / quantum) * TS_PACKET_BITS;
     else
         return 0.0;
 }
