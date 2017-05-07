@@ -29,8 +29,8 @@
  *      name        - string, instance identifier for logging
  *      rate        - number, target bitrate in bits per second
  *      pcr_interval - number, maximum PCR insertion interval in milliseconds
- *                      default is 35 ms for DVB compliance
- *      pcr_delay   - number, apply delay in milliseconds to output PCRs
+ *                      default is 38 ms for DVB compliance
+ *      pcr_delay   - number, value in milliseconds to subtract from PCRs
  *                      can be negative, disabled by default
  *      buffer_size - number, buffer size in milliseconds at target bitrate
  *                      default is 150 ms (e.g. ~187 KiB if rate is 10 Mbit)
@@ -45,13 +45,16 @@
 #define MSG(_msg) "[cbr %s] " _msg, mod->name
 
 /* default PCR insertion interval, milliseconds */
-#define DEFAULT_PCR_INTERVAL 35
+#define DEFAULT_PCR_INTERVAL 38
 
 /* default buffer size, milliseconds */
 #define DEFAULT_BUFFER_SIZE 150
 
 /* maximum allowed PCR delta on receive */
-#define MAX_PCR_DELTA ((TS_PCR_FREQ / 1000) * 120) /* 120ms */
+#define MAX_PCR_DELTA ((TS_PCR_FREQ / 1000) * 100) /* 100ms */
+
+/* maximum allowed clock drift when restamping PCRs */
+#define MAX_CLOCK_DRIFT ((TS_PCR_FREQ / 1000) * 25) /* 25ms */
 
 typedef struct
 {
@@ -63,7 +66,7 @@ typedef struct
 typedef struct
 {
     unsigned int pid;
-    unsigned int insert;
+    unsigned int cc;
     uint64_t last;
     size_t offset;
 } pcr_item_t;
@@ -73,9 +76,9 @@ struct module_data_t
     STREAM_MODULE_DATA();
 
     const char *name;
-    unsigned int rate;
-    unsigned int pcr_interval;
-    int pcr_delay;
+    size_t bitrate;
+    size_t pcr_interval;
+    int64_t pcr_delay;
 
     ts_type_t stream[TS_MAX_PIDS];
     ts_psi_t *psi[TS_MAX_PIDS];
@@ -93,11 +96,8 @@ struct module_data_t
 
     uint64_t master_pcr_last;
     unsigned int master_pcr_pid;
-    double pending;
-    double feedback;
-    //
-    // TODO: use integers
-    //
+    unsigned int pending;
+    int64_t feedback;
 };
 
 /*
@@ -129,14 +129,13 @@ void next_master_pcr(module_data_t *mod)
         }
 
         /* reset restamping state */
-        pcr->insert = mod->pcr_interval;
         pcr->last = TS_TIME_NONE;
-        pcr->offset = 0;
+        pcr->offset = pcr->cc = 0;
     }
 }
 
 static
-void buffer_reset(module_data_t *mod);
+void buffer_flush(module_data_t *mod);
 
 static
 void update_pcr_list(module_data_t *mod)
@@ -156,7 +155,6 @@ void update_pcr_list(module_data_t *mod)
             /* new PCR PID */
             pcr_item_t *const pcr = ASC_ALLOC(1, pcr_item_t);
             pcr->pid = pid;
-            pcr->insert = mod->pcr_interval;
             pcr->last = TS_TIME_NONE;
 
             mod->pcr[pid] = pcr;
@@ -181,7 +179,7 @@ void update_pcr_list(module_data_t *mod)
             if (mod->master_pcr_pid == pid)
             {
                 mod->master_pcr_pid = TS_NULL_PID;
-                buffer_reset(mod);
+                buffer_flush(mod);
 
                 asc_log_debug(MSG("master PCR PID %u has gone away"), pid);
             }
@@ -297,34 +295,143 @@ void on_psi(void *arg, ts_psi_t *psi)
 }
 
 /*
- * null padding and PCR restamping
+ * PCR restamping and TS output
  */
 
-static
-void restamp_pcr(module_data_t *mod, uint8_t *ts)
+static inline
+uint64_t pcr_add(uint64_t pcr, int64_t add)
 {
-    //
-    // TODO: implement PCR restamping
-    //
-
-    if (ts != NULL)
-        module_stream_send(mod, ts);
-    else
-        module_stream_send(mod, ts_null_pkt);
+    return (TS_PCR_MAX + pcr + (uint64_t)add) % TS_PCR_MAX;
 }
 
 static
-void buffer_pad(module_data_t *mod, double ratio)
+void send_null(module_data_t *mod)
+{
+    const uint8_t *ts = NULL;
+    uint8_t pcr_ts[TS_PACKET_SIZE];
+
+    asc_list_for(mod->pcr_list)
+    {
+        pcr_item_t *const pcr = (pcr_item_t *)asc_list_data(mod->pcr_list);
+
+        /* force PCR insertion to maintain configured interval */
+        if (ts == NULL
+            && pcr->offset >= mod->pcr_interval
+            && pcr->last != TS_TIME_NONE)
+        {
+            uint64_t new_pcr = pcr->last;
+            new_pcr += TS_PCR_CALC(pcr->offset, mod->bitrate);
+            new_pcr %= TS_PCR_MAX;
+
+            pcr->last = new_pcr;
+            pcr->offset = 0;
+
+            /* replace nearest null packet with a PCR one */
+            new_pcr = pcr_add(new_pcr, mod->pcr_delay);
+
+            TS_INIT(pcr_ts);
+            TS_SET_PID(pcr_ts, pcr->pid);
+            TS_SET_CC(pcr_ts, pcr->cc);
+            TS_SET_AF(pcr_ts, TS_BODY_SIZE - 1);
+            TS_SET_PCR(pcr_ts, new_pcr);
+
+            ts = pcr_ts;
+        }
+
+        pcr->offset += TS_PACKET_SIZE;
+    }
+
+    if (ts == NULL)
+        ts = ts_null_pkt;
+
+    module_stream_send(mod, ts);
+}
+
+static
+void send_nonnull(module_data_t *mod, uint8_t *ts)
+{
+    const unsigned int pid = TS_GET_PID(ts);
+
+    asc_list_for(mod->pcr_list)
+    {
+        pcr_item_t *const pcr = (pcr_item_t *)asc_list_data(mod->pcr_list);
+
+        if (pcr->pid == pid)
+        {
+            pcr->cc = TS_GET_CC(ts);
+
+            /* restamp existing PCR values */
+            if (TS_IS_PCR(ts))
+            {
+                const uint64_t old_pcr = TS_GET_PCR(ts);
+                uint64_t new_pcr = old_pcr;
+
+                if (pcr->last != TS_TIME_NONE)
+                {
+                    new_pcr = pcr->last;
+                    new_pcr += TS_PCR_CALC(pcr->offset, mod->bitrate);
+                    new_pcr %= TS_PCR_MAX;
+                }
+
+                /* compensate for clock drift */
+                int64_t drift = (int64_t)new_pcr - (int64_t)old_pcr;
+
+                if (drift >= TS_PCR_MAX / 2)
+                    drift -= TS_PCR_MAX;
+                else if (drift <= -(TS_PCR_MAX / 2))
+                    drift += TS_PCR_MAX;
+
+                if (drift < -MAX_CLOCK_DRIFT || drift > MAX_CLOCK_DRIFT)
+                {
+                    asc_log_debug(MSG("reset time base on PCR PID %u"), pid);
+
+                    new_pcr = old_pcr;
+                    drift = 0;
+                }
+
+                if (pid == mod->master_pcr_pid)
+                {
+                    /* master clock is adjusted via padding buffer */
+                    mod->feedback = drift / 10;
+                }
+                else if (drift != 0)
+                {
+                    /* FIXME: add proper clock correction for slave PIDs */
+                    const int adj = (drift > 0) ? -1 : 1;
+                    new_pcr = pcr_add(new_pcr, adj);
+                }
+
+                /* rewrite PCR field */
+                pcr->last = new_pcr;
+                pcr->offset = 0;
+
+                new_pcr = pcr_add(new_pcr, mod->pcr_delay);
+                TS_SET_PCR(ts, new_pcr);
+            }
+        }
+
+        pcr->offset += TS_PACKET_SIZE;
+    }
+
+    module_stream_send(mod, ts);
+}
+
+/*
+ * buffering and null padding
+ */
+
+static
+void buffer_dequeue(module_data_t *mod, unsigned int null_bits)
 {
     for (size_t i = 0; i < mod->buf_fill; i++)
     {
-        restamp_pcr(mod, mod->buf[i]);
+        send_nonnull(mod, mod->buf[i]);
 
-        mod->pending += ratio;
-        while (mod->pending >= TS_PACKET_SIZE * 8)
+        mod->pending += null_bits;
+        while (mod->pending >= TS_PACKET_BITS)
         {
-            mod->pending -= TS_PACKET_SIZE * 8;
-            restamp_pcr(mod, NULL);
+            mod->pending -= TS_PACKET_BITS;
+            send_null(mod);
         }
     }
 
@@ -332,7 +439,7 @@ void buffer_pad(module_data_t *mod, double ratio)
 }
 
 static
-void buffer_reset(module_data_t *mod)
+void buffer_flush(module_data_t *mod)
 {
     for (size_t i = 0; i < mod->buf_fill; i++)
         module_stream_send(mod, mod->buf[i]);
@@ -348,7 +455,7 @@ void buffer_push(module_data_t *mod, const uint8_t *ts)
         asc_log_error(MSG("buffer overflow, resetting master clock"));
 
         next_master_pcr(mod);
-        buffer_reset(mod);
+        buffer_flush(mod);
     }
 
     memcpy(mod->buf[mod->buf_fill], ts, TS_PACKET_SIZE);
@@ -362,37 +469,28 @@ void receive_pcr(module_data_t *mod, const uint8_t *ts)
     const uint64_t pcr_last = mod->master_pcr_last;
     mod->master_pcr_last = pcr_now;
 
-    const uint64_t delta = TS_PCR_DELTA(pcr_last, pcr_now);
+    int64_t delta = TS_PCR_DELTA(pcr_last, pcr_now);
+    delta -= mod->feedback;
+
     if (delta > 0 && delta < MAX_PCR_DELTA)
     {
         /* calculate padding bits per packet */
-        const double got = mod->buf_fill * TS_PACKET_SIZE * 8;
-        const double want = (mod->rate * delta) / (double)TS_PCR_FREQ;
+        const unsigned int got = mod->buf_fill * TS_PACKET_BITS;
+        const unsigned int want = (mod->bitrate * delta) / TS_PCR_FREQ;
 
-        //
-        // TODO: implement feedback
-        // want += mod->feedback;
-        //
-
-        double ratio = 0;
+        unsigned int null_bits = 0;
         if (want > got && mod->buf_fill > 0)
-        {
-            ratio = (want - got) / (double)mod->buf_fill;
-        }
-
-        //
-        // TODO: use integers
-        //
+            null_bits = (want - got) / mod->buf_fill;
 
         if (got > want)
         {
-            const unsigned int in_rate = (got * TS_PCR_FREQ) / delta;
+            const size_t bitrate = (got * TS_PCR_FREQ) / delta;
             asc_log_warning(MSG("input bitrate exceeds configured target "
-                                "(%u bps > %u bps)"), in_rate, mod->rate);
+                                "(%zu bps > %zu bps)"), bitrate, mod->bitrate);
         }
 
         /* distribute padding evenly among buffered packets */
-        buffer_pad(mod, ratio);
+        buffer_dequeue(mod, null_bits);
     }
     else
     {
@@ -411,7 +509,7 @@ void receive_pcr(module_data_t *mod, const uint8_t *ts)
             next_master_pcr(mod);
         }
 
-        buffer_reset(mod);
+        buffer_flush(mod);
     }
 }
 
@@ -438,9 +536,7 @@ void on_ts(module_data_t *mod, const uint8_t *ts)
     if (mod->master_pcr_pid != TS_NULL_PID)
     {
         if (pid == mod->master_pcr_pid && TS_IS_PCR(ts))
-        {
             receive_pcr(mod, ts);
-        }
 
         buffer_push(mod, ts);
     }
@@ -469,13 +565,13 @@ void module_init(lua_State *L, module_data_t *mod)
         if (opt < 0)
             luaL_error(L, MSG("bitrate cannot be a negative number"));
 
-        if (opt <= 1000) /* in case rate is in mbps */
-            opt *= 1000000;
+        if (opt <= 1000)
+            opt *= 1000000; /* Mbit/s */
 
         if (!(opt >= 100000 && opt <= 1000000000))
             luaL_error(L, MSG("bitrate must be between 100 Kbps and 1 Gbps"));
 
-        mod->rate = opt;
+        mod->bitrate = opt;
     }
     else
     {
@@ -488,9 +584,11 @@ void module_init(lua_State *L, module_data_t *mod)
     if (!(opt >= 10 && opt <= 100))
         luaL_error(L, MSG("PCR interval must be between 10 and 100 ms"));
 
-    mod->pcr_interval = TS_PCR_PACKETS(opt, mod->rate);
+    mod->pcr_interval = TS_PCR_PACKETS(opt, mod->bitrate);
     if (mod->pcr_interval <= 1)
         luaL_error(L, MSG("PCR interval is too small for configured bitrate"));
+
+    mod->pcr_interval *= TS_PACKET_SIZE;
 
     /* PCR delay, ms */
     opt = 0;
@@ -498,7 +596,7 @@ void module_init(lua_State *L, module_data_t *mod)
     if (!(opt >= -10000 && opt <= 10000))
         luaL_error(L, MSG("PCR delay cannot exceed 10 seconds"));
 
-    mod->pcr_delay = opt * (TS_PCR_FREQ / 1000);
+    mod->pcr_delay = -(opt * (TS_PCR_FREQ / 1000));
 
     /* buffer size, ms */
     opt = DEFAULT_BUFFER_SIZE;
@@ -506,7 +604,7 @@ void module_init(lua_State *L, module_data_t *mod)
     if (!(opt >= 100 && opt <= 1000))
         luaL_error(L, MSG("buffer size must be between 100 and 1000 ms"));
 
-    mod->buf_size = ((mod->rate / 1000) * opt) / (TS_PACKET_SIZE * 8);
+    mod->buf_size = TS_PCR_PACKETS(opt, mod->bitrate);
     ASC_ASSERT(mod->buf_size > 0, MSG("invalid buffer size"));
 
     mod->buf = ASC_ALLOC(mod->buf_size, ts_packet_t);
