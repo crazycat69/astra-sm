@@ -245,8 +245,10 @@ enum
 static inline
 unsigned int ts_payload_len(const uint8_t *ts, const uint8_t *payload)
 {
-    if ((uintptr_t)payload > (uintptr_t)ts)
-        return TS_PACKET_SIZE - (payload - ts);
+    const ptrdiff_t off = payload - ts;
+
+    if (off >= TS_HEADER_SIZE && off < TS_PACKET_SIZE)
+        return TS_PACKET_SIZE - (unsigned int)off;
     else
         return 0;
 }
