@@ -22,6 +22,15 @@
 #include <astra/astra.h>
 #include <astra/mpegts/types.h>
 
+const uint8_t ts_null_pkt[TS_PACKET_SIZE] =
+{
+    /*
+     * PID 8191 (0x1FFF), CC 0
+     * Payload all zeroes
+     */
+    0x47, 0x1f, 0xff, 0x10
+};
+
 static
 const ts_stream_type_t stream_types[256] =
 {

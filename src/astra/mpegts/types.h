@@ -68,15 +68,7 @@ typedef struct
 } ts_stream_type_t;
 
 /* pre-defined null packet */
-static
-const uint8_t ts_null_pkt[TS_PACKET_SIZE] =
-{
-    /*
-     * PID 8191 (0x1FFF), CC 0
-     * Payload all zeroes
-     */
-    0x47, 0x1f, 0xff, 0x10
-};
+extern const uint8_t ts_null_pkt[TS_PACKET_SIZE];
 
 const ts_stream_type_t *ts_stream_type(uint8_t type_id) __asc_result;
 ts_type_t ts_priv_type(uint8_t desc_type) __asc_result;
