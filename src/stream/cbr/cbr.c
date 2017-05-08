@@ -201,6 +201,21 @@ void update_pcr_list(module_data_t *mod)
 }
 
 static
+void reload_pcr_list(module_data_t *mod)
+{
+    for (size_t i = 0; i < TS_MAX_PIDS; i++)
+    {
+        if (mod->psi[i] != NULL)
+            mod->psi[i]->crc32 = 0;
+
+        if (mod->pmt[i] != NULL)
+            mod->pmt[i]->pcr_pid = TS_NULL_PID;
+    }
+
+    update_pcr_list(mod);
+}
+
+static
 void on_pmt(module_data_t *mod, ts_psi_t *psi)
 {
     pmt_item_t *const pmt = mod->pmt[psi->pid];
@@ -452,10 +467,8 @@ void buffer_push(module_data_t *mod, const uint8_t *ts)
 {
     if (mod->buf_fill >= mod->buf_size)
     {
-        asc_log_error(MSG("buffer overflow, resetting master clock"));
-
-        next_master_pcr(mod);
-        buffer_flush(mod);
+        asc_log_error(MSG("buffer overflow, reloading PCR PID list"));
+        reload_pcr_list(mod);
     }
 
     memcpy(mod->buf[mod->buf_fill], ts, TS_PACKET_SIZE);
