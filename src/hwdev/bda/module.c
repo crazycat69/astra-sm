@@ -918,7 +918,7 @@ int method_ca(lua_State *L, module_data_t *mod)
     const bool enable = lua_toboolean(L, -1);
     const int pnr = luaL_checkinteger(L, -2);
 
-    if (pnr < 1 || pnr >= TS_MAX_PNR)
+    if (!ts_pnr_valid(pnr))
         luaL_error(L, MSG("program number %d out of range"), pnr);
 
     const bda_user_cmd_t cmd =

@@ -42,6 +42,7 @@
 #define MSG(_msg) "[file_input %s] " _msg, mod->filename
 
 #define INPUT_BUFFER_SIZE 2
+#define TS_PACKET_SIZE_BDAV 192
 
 struct module_data_t
 {
@@ -249,7 +250,7 @@ static void thread_loop(void *arg)
         }
 
         // get PCR
-        block_time = mpegts_pcr_block_us(&mod->pcr, &pcr);
+        block_time = ts_pcr_block_us(&mod->pcr, &pcr);
         if(block_time == 0 || block_time > 500000)
         {
             asc_log_error(MSG("block time out of range: %llums block_size: %zu")

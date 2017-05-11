@@ -1,5 +1,5 @@
 /*
- * Astra Module: MPEG-TS (PCR)
+ * Astra TS Library (PCR)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2014, Andrey Dyldin <and@cesbo.com>
@@ -21,7 +21,7 @@
 #include <astra/astra.h>
 #include <astra/mpegts/pcr.h>
 
-uint64_t mpegts_pcr_block_us(uint64_t *pcr_last, const uint64_t *pcr_current)
+uint64_t ts_pcr_block_us(uint64_t *pcr_last, const uint64_t *pcr_current)
 {
     if(*pcr_current <= *pcr_last)
     {

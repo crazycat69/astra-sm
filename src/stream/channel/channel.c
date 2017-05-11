@@ -75,22 +75,22 @@ struct module_data_t
 
     /* */
     asc_list_t *map;
-    uint16_t pid_map[TS_MAX_PID];
+    uint16_t pid_map[TS_MAX_PIDS];
     uint8_t custom_ts[TS_PACKET_SIZE];
 
-    mpegts_psi_t *pat;
-    mpegts_psi_t *cat;
-    mpegts_psi_t *pmt;
-    mpegts_psi_t *sdt;
-    mpegts_psi_t *eit;
+    ts_psi_t *pat;
+    ts_psi_t *cat;
+    ts_psi_t *pmt;
+    ts_psi_t *sdt;
+    ts_psi_t *eit;
 
-    mpegts_packet_type_t stream[TS_MAX_PID];
+    ts_type_t stream[TS_MAX_PIDS];
 
     uint16_t tsid;
-    mpegts_psi_t *custom_pat;
-    mpegts_psi_t *custom_cat;
-    mpegts_psi_t *custom_pmt;
-    mpegts_psi_t *custom_sdt;
+    ts_psi_t *custom_pat;
+    ts_psi_t *custom_cat;
+    ts_psi_t *custom_pmt;
+    ts_psi_t *custom_sdt;
 
     /* */
     uint8_t sdt_original_section_id;
@@ -109,7 +109,7 @@ static void stream_reload(module_data_t *mod)
 {
     memset(mod->stream, 0, sizeof(mod->stream));
 
-    for(int __i = 0; __i < TS_MAX_PID; ++__i)
+    for(int __i = 0; __i < TS_MAX_PIDS; ++__i)
     {
         if(module_demux_check(mod, __i))
             module_demux_leave(mod, __i);
@@ -118,19 +118,19 @@ static void stream_reload(module_data_t *mod)
     mod->pat->crc32 = 0;
     mod->pmt->crc32 = 0;
 
-    mod->stream[0x00] = MPEGTS_PACKET_PAT;
+    mod->stream[0x00] = TS_TYPE_PAT;
     module_demux_join(mod, 0x00);
 
     if(mod->config.cas)
     {
         mod->cat->crc32 = 0;
-        mod->stream[0x01] = MPEGTS_PACKET_CAT;
+        mod->stream[0x01] = TS_TYPE_CAT;
         module_demux_join(mod, 0x01);
     }
 
     if(mod->config.no_sdt == false)
     {
-        mod->stream[0x11] = MPEGTS_PACKET_SDT;
+        mod->stream[0x11] = TS_TYPE_SDT;
         module_demux_join(mod, 0x11);
         if(mod->sdt_checksum_list)
         {
@@ -141,10 +141,10 @@ static void stream_reload(module_data_t *mod)
 
     if(mod->config.no_eit == false)
     {
-        mod->stream[0x12] = MPEGTS_PACKET_EIT;
+        mod->stream[0x12] = TS_TYPE_EIT;
         module_demux_join(mod, 0x12);
 
-        mod->stream[0x14] = MPEGTS_PACKET_TDT;
+        mod->stream[0x14] = TS_TYPE_TDT;
         module_demux_join(mod, 0x14);
     }
 
@@ -163,16 +163,16 @@ static void on_si_timer(void *arg)
     module_data_t *mod = (module_data_t *)arg;
 
     if(mod->custom_pat)
-        mpegts_psi_demux(mod->custom_pat, module_stream_send, mod);
+        ts_psi_demux(mod->custom_pat, module_stream_send, mod);
 
     if(mod->custom_cat)
-        mpegts_psi_demux(mod->custom_cat, module_stream_send, mod);
+        ts_psi_demux(mod->custom_cat, module_stream_send, mod);
 
     if(mod->custom_pmt)
-        mpegts_psi_demux(mod->custom_pmt, module_stream_send, mod);
+        ts_psi_demux(mod->custom_pmt, module_stream_send, mod);
 
     if(mod->custom_sdt)
-        mpegts_psi_demux(mod->custom_sdt, module_stream_send, mod);
+        ts_psi_demux(mod->custom_sdt, module_stream_send, mod);
 }
 
 /*
@@ -184,7 +184,7 @@ static void on_si_timer(void *arg)
  *
  */
 
-static void on_pat(void *arg, mpegts_psi_t *psi)
+static void on_pat(void *arg, ts_psi_t *psi)
 {
     module_data_t *mod = (module_data_t *)arg;
 
@@ -195,7 +195,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
     const uint32_t crc32 = PSI_GET_CRC32(psi);
     if(crc32 == psi->crc32)
     {
-        mpegts_psi_demux(mod->custom_pat, module_stream_send, mod);
+        ts_psi_demux(mod->custom_pat, module_stream_send, mod);
         return;
     }
 
@@ -231,7 +231,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
         if(pnr == mod->config.pnr)
         {
             const uint16_t pid = PAT_ITEM_GET_PID(psi, pointer);
-            mod->stream[pid] = MPEGTS_PACKET_PMT;
+            mod->stream[pid] = TS_TYPE_PMT;
             module_demux_join(mod, pid);
             mod->pmt->pid = pid;
             mod->pmt->crc32 = 0;
@@ -288,10 +288,10 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
     PSI_SET_SIZE(mod->custom_pat);
     PSI_SET_CRC32(mod->custom_pat);
 
-    mpegts_psi_demux(mod->custom_pat, module_stream_send, mod);
+    ts_psi_demux(mod->custom_pat, module_stream_send, mod);
 
     if(mod->config.no_reload)
-        mod->stream[psi->pid] = MPEGTS_PACKET_UNKNOWN;
+        mod->stream[psi->pid] = TS_TYPE_UNKNOWN;
 }
 
 /*
@@ -303,7 +303,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
  *
  */
 
-static void on_cat(void *arg, mpegts_psi_t *psi)
+static void on_cat(void *arg, ts_psi_t *psi)
 {
     module_data_t *mod = (module_data_t *)arg;
 
@@ -314,7 +314,7 @@ static void on_cat(void *arg, mpegts_psi_t *psi)
     const uint32_t crc32 = PSI_GET_CRC32(psi);
     if(crc32 == psi->crc32)
     {
-        mpegts_psi_demux(mod->custom_cat, module_stream_send, mod);
+        ts_psi_demux(mod->custom_cat, module_stream_send, mod);
         return;
     }
 
@@ -342,10 +342,10 @@ static void on_cat(void *arg, mpegts_psi_t *psi)
         if(desc_pointer[0] == 0x09)
         {
             const uint16_t ca_pid = DESC_CA_PID(desc_pointer);
-            if(mod->stream[ca_pid] == MPEGTS_PACKET_UNKNOWN && ca_pid != TS_NULL_PID)
+            if(mod->stream[ca_pid] == TS_TYPE_UNKNOWN && ca_pid != TS_NULL_PID)
             {
-                mod->stream[ca_pid] = MPEGTS_PACKET_CA;
-                if(mod->pid_map[ca_pid] == TS_MAX_PID)
+                mod->stream[ca_pid] = TS_TYPE_CA;
+                if(mod->pid_map[ca_pid] == TS_MAX_PIDS)
                     mod->pid_map[ca_pid] = 0;
                 module_demux_join(mod, ca_pid);
             }
@@ -356,10 +356,10 @@ static void on_cat(void *arg, mpegts_psi_t *psi)
     mod->custom_cat->buffer_size = psi->buffer_size;
     mod->custom_cat->cc = 0;
 
-    mpegts_psi_demux(mod->custom_cat, module_stream_send, mod);
+    ts_psi_demux(mod->custom_cat, module_stream_send, mod);
 
     if(mod->config.no_reload)
-        mod->stream[psi->pid] = MPEGTS_PACKET_UNKNOWN;
+        mod->stream[psi->pid] = TS_TYPE_UNKNOWN;
 }
 
 /*
@@ -391,7 +391,7 @@ static uint16_t map_custom_pid(module_data_t *mod, uint16_t pid, const char *typ
     return 0;
 }
 
-static void on_pmt(void *arg, mpegts_psi_t *psi)
+static void on_pmt(void *arg, ts_psi_t *psi)
 {
     module_data_t *mod = (module_data_t *)arg;
 
@@ -407,7 +407,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     const uint32_t crc32 = PSI_GET_CRC32(psi);
     if(crc32 == psi->crc32)
     {
-        mpegts_psi_demux(mod->custom_pmt, module_stream_send, mod);
+        ts_psi_demux(mod->custom_pmt, module_stream_send, mod);
         return;
     }
 
@@ -444,10 +444,10 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
                 continue;
 
             const uint16_t ca_pid = DESC_CA_PID(desc_pointer);
-            if(mod->stream[ca_pid] == MPEGTS_PACKET_UNKNOWN && ca_pid != TS_NULL_PID)
+            if(mod->stream[ca_pid] == TS_TYPE_UNKNOWN && ca_pid != TS_NULL_PID)
             {
-                mod->stream[ca_pid] = MPEGTS_PACKET_CA;
-                if(mod->pid_map[ca_pid] == TS_MAX_PID)
+                mod->stream[ca_pid] = TS_TYPE_CA;
+                if(mod->pid_map[ca_pid] == TS_MAX_PIDS)
                     mod->pid_map[ca_pid] = 0;
                 module_demux_join(mod, ca_pid);
             }
@@ -474,12 +474,12 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     {
         const uint16_t pid = PMT_ITEM_GET_PID(psi, pointer);
 
-        if(mod->pid_map[pid] == TS_MAX_PID) // skip filtered pid
+        if(mod->pid_map[pid] == TS_MAX_PIDS) // skip filtered pid
             continue;
 
         const uint8_t item_type = PMT_ITEM_GET_TYPE(psi, pointer);
-        const stream_type_t *const st = mpegts_stream_type(item_type);
-        mpegts_packet_type_t mpegts_type = st->pkt_type;
+        const ts_stream_type_t *const st = ts_stream_type(item_type);
+        ts_type_t ts_type = st->pkt_type;
         const uint8_t *language_desc = NULL;
 
         const uint16_t skip_last = skip;
@@ -487,7 +487,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
         memcpy(&mod->custom_pmt->buffer[skip], pointer, 5);
         skip += 5;
 
-        mod->stream[pid] = MPEGTS_PACKET_PES;
+        mod->stream[pid] = TS_TYPE_PES;
         module_demux_join(mod, pid);
 
         if(pid == pcr_pid)
@@ -503,10 +503,10 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
                     continue;
 
                 const uint16_t ca_pid = DESC_CA_PID(desc_pointer);
-                if(mod->stream[ca_pid] == MPEGTS_PACKET_UNKNOWN && ca_pid != TS_NULL_PID)
+                if(mod->stream[ca_pid] == TS_TYPE_UNKNOWN && ca_pid != TS_NULL_PID)
                 {
-                    mod->stream[ca_pid] = MPEGTS_PACKET_CA;
-                    if(mod->pid_map[ca_pid] == TS_MAX_PID)
+                    mod->stream[ca_pid] = TS_TYPE_CA;
+                    if(mod->pid_map[ca_pid] == TS_MAX_PIDS)
                         mod->pid_map[ca_pid] = 0;
                     module_demux_join(mod, ca_pid);
                 }
@@ -515,9 +515,9 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
             {
                 language_desc = desc_pointer;
             }
-            else if(item_type == 0x06 && mpegts_type == MPEGTS_PACKET_DATA)
+            else if(item_type == 0x06 && ts_type == TS_TYPE_DATA)
             {
-                mpegts_type = mpegts_priv_type(desc_type);
+                ts_type = ts_priv_type(desc_type);
             }
 
             const uint8_t size = desc_pointer[1] + 2;
@@ -535,14 +535,14 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
         {
             uint16_t custom_pid = 0;
 
-            switch(mpegts_type)
+            switch(ts_type)
             {
-                case MPEGTS_PACKET_VIDEO:
+                case TS_TYPE_VIDEO:
                 {
                     custom_pid = map_custom_pid(mod, pid, "video");
                     break;
                 }
-                case MPEGTS_PACKET_AUDIO:
+                case TS_TYPE_AUDIO:
                 {
                     if(language_desc)
                     {
@@ -557,7 +557,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
                         custom_pid = map_custom_pid(mod, pid, "audio");
                     break;
                 }
-                case MPEGTS_PACKET_SUB:
+                case TS_TYPE_SUB:
                 {
                     custom_pid = map_custom_pid(mod, pid, "sub");
                     break;
@@ -581,8 +581,8 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
 
     if(join_pcr)
     {
-        mod->stream[pcr_pid] = MPEGTS_PACKET_PES;
-        if(mod->pid_map[pcr_pid] == TS_MAX_PID)
+        mod->stream[pcr_pid] = TS_TYPE_PES;
+        if(mod->pid_map[pcr_pid] == TS_MAX_PIDS)
             mod->pid_map[pcr_pid] = 0;
         module_demux_join(mod, pcr_pid);
     }
@@ -595,10 +595,10 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
 
     PSI_SET_SIZE(mod->custom_pmt);
     PSI_SET_CRC32(mod->custom_pmt);
-    mpegts_psi_demux(mod->custom_pmt, module_stream_send, mod);
+    ts_psi_demux(mod->custom_pmt, module_stream_send, mod);
 
     if(mod->config.no_reload)
-        mod->stream[psi->pid] = MPEGTS_PACKET_UNKNOWN;
+        mod->stream[psi->pid] = TS_TYPE_UNKNOWN;
 }
 
 /*
@@ -610,7 +610,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
  *
  */
 
-static void on_sdt(void *arg, mpegts_psi_t *psi)
+static void on_sdt(void *arg, ts_psi_t *psi)
 {
     module_data_t *mod = (module_data_t *)arg;
 
@@ -645,7 +645,7 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
     if(mod->sdt_checksum_list[section_id] == crc32)
     {
         if(mod->sdt_original_section_id == section_id)
-            mpegts_psi_demux(mod->custom_sdt, module_stream_send, mod);
+            ts_psi_demux(mod->custom_sdt, module_stream_send, mod);
 
         return;
     }
@@ -689,10 +689,10 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
     PSI_SET_SIZE(mod->custom_sdt);
     PSI_SET_CRC32(mod->custom_sdt);
 
-    mpegts_psi_demux(mod->custom_sdt, module_stream_send, mod);
+    ts_psi_demux(mod->custom_sdt, module_stream_send, mod);
 
     if(mod->config.no_reload)
-        mod->stream[psi->pid] = MPEGTS_PACKET_UNKNOWN;
+        mod->stream[psi->pid] = TS_TYPE_UNKNOWN;
 }
 
 /*
@@ -704,7 +704,7 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
  *
  */
 
-static void on_eit(void *arg, mpegts_psi_t *psi)
+static void on_eit(void *arg, ts_psi_t *psi)
 {
     module_data_t *mod = (module_data_t *)arg;
 
@@ -727,7 +727,7 @@ static void on_eit(void *arg, mpegts_psi_t *psi)
         PSI_SET_CRC32(psi);
     }
 
-    mpegts_psi_demux(psi, module_stream_send, mod);
+    ts_psi_demux(psi, module_stream_send, mod);
 
     mod->eit_cc = psi->cc;
 }
@@ -752,34 +752,34 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 
     switch(mod->stream[pid])
     {
-        case MPEGTS_PACKET_PES:
+        case TS_TYPE_PES:
             break;
-        case MPEGTS_PACKET_PAT:
-            mpegts_psi_mux(mod->pat, ts, on_pat, mod);
+        case TS_TYPE_PAT:
+            ts_psi_mux(mod->pat, ts, on_pat, mod);
             return;
-        case MPEGTS_PACKET_CAT:
-            mpegts_psi_mux(mod->cat, ts, on_cat, mod);
+        case TS_TYPE_CAT:
+            ts_psi_mux(mod->cat, ts, on_cat, mod);
             return;
-        case MPEGTS_PACKET_PMT:
-            mpegts_psi_mux(mod->pmt, ts, on_pmt, mod);
+        case TS_TYPE_PMT:
+            ts_psi_mux(mod->pmt, ts, on_pmt, mod);
             return;
-        case MPEGTS_PACKET_SDT:
+        case TS_TYPE_SDT:
             if(mod->config.pass_sdt)
                 break;
-            mpegts_psi_mux(mod->sdt, ts, on_sdt, mod);
+            ts_psi_mux(mod->sdt, ts, on_sdt, mod);
             return;
-        case MPEGTS_PACKET_EIT:
+        case TS_TYPE_EIT:
             if(mod->config.pass_eit)
                 break;
-            mpegts_psi_mux(mod->eit, ts, on_eit, mod);
+            ts_psi_mux(mod->eit, ts, on_eit, mod);
             return;
-        case MPEGTS_PACKET_UNKNOWN:
+        case TS_TYPE_UNKNOWN:
             return;
         default:
             break;
     }
 
-    if(mod->pid_map[pid] == TS_MAX_PID)
+    if(mod->pid_map[pid] == TS_MAX_PIDS)
         return;
 
     if(mod->map)
@@ -821,26 +821,26 @@ static void module_init(lua_State *L, module_data_t *mod)
 
         module_option_boolean(L, "cas", &mod->config.cas);
 
-        mod->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
-        mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, TS_MAX_PID);
-        mod->custom_pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
-        mod->custom_pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, TS_MAX_PID);
-        mod->stream[0] = MPEGTS_PACKET_PAT;
+        mod->pat = ts_psi_init(TS_TYPE_PAT, 0);
+        mod->pmt = ts_psi_init(TS_TYPE_PMT, TS_MAX_PIDS);
+        mod->custom_pat = ts_psi_init(TS_TYPE_PAT, 0);
+        mod->custom_pmt = ts_psi_init(TS_TYPE_PMT, TS_MAX_PIDS);
+        mod->stream[0] = TS_TYPE_PAT;
         module_demux_join(mod, 0);
         if(mod->config.cas)
         {
-            mod->cat = mpegts_psi_init(MPEGTS_PACKET_CAT, 1);
-            mod->custom_cat = mpegts_psi_init(MPEGTS_PACKET_CAT, 1);
-            mod->stream[1] = MPEGTS_PACKET_CAT;
+            mod->cat = ts_psi_init(TS_TYPE_CAT, 1);
+            mod->custom_cat = ts_psi_init(TS_TYPE_CAT, 1);
+            mod->stream[1] = TS_TYPE_CAT;
             module_demux_join(mod, 1);
         }
 
         module_option_boolean(L, "no_sdt", &mod->config.no_sdt);
         if(mod->config.no_sdt == false)
         {
-            mod->sdt = mpegts_psi_init(MPEGTS_PACKET_SDT, 0x11);
-            mod->custom_sdt = mpegts_psi_init(MPEGTS_PACKET_SDT, 0x11);
-            mod->stream[0x11] = MPEGTS_PACKET_SDT;
+            mod->sdt = ts_psi_init(TS_TYPE_SDT, 0x11);
+            mod->custom_sdt = ts_psi_init(TS_TYPE_SDT, 0x11);
+            mod->stream[0x11] = TS_TYPE_SDT;
             module_demux_join(mod, 0x11);
 
             module_option_boolean(L, "pass_sdt", &mod->config.pass_sdt);
@@ -849,11 +849,11 @@ static void module_init(lua_State *L, module_data_t *mod)
         module_option_boolean(L, "no_eit", &mod->config.no_eit);
         if(mod->config.no_eit == false)
         {
-            mod->eit = mpegts_psi_init(MPEGTS_PACKET_EIT, 0x12);
-            mod->stream[0x12] = MPEGTS_PACKET_EIT;
+            mod->eit = ts_psi_init(TS_TYPE_EIT, 0x12);
+            mod->stream[0x12] = TS_TYPE_EIT;
             module_demux_join(mod, 0x12);
 
-            mod->stream[0x14] = MPEGTS_PACKET_TDT;
+            mod->stream[0x14] = TS_TYPE_TDT;
             module_demux_join(mod, 0x14);
 
             module_option_boolean(L, "pass_eit", &mod->config.pass_eit);
@@ -871,10 +871,10 @@ static void module_init(lua_State *L, module_data_t *mod)
             lua_foreach(L, -2)
             {
                 const int pid = lua_tointeger(L, -1);
-                if(!(pid >= 0 && pid < TS_MAX_PID))
+                if(!ts_pid_valid(pid))
                     luaL_error(L, MSG("option 'pid': pid is out of range"));
 
-                mod->stream[pid] = MPEGTS_PACKET_PES;
+                mod->stream[pid] = TS_TYPE_PES;
                 module_demux_join(mod, pid);
             }
         }
@@ -921,10 +921,10 @@ static void module_init(lua_State *L, module_data_t *mod)
         lua_foreach(L, -2)
         {
             const int pid = lua_tointeger(L, -1);
-            if(!(pid >= 0 && pid < TS_MAX_PID))
+            if(!ts_pid_valid(pid))
                 luaL_error(L, MSG("option 'filter': pid is out of range"));
 
-            mod->pid_map[pid] = TS_MAX_PID;
+            mod->pid_map[pid] = TS_MAX_PIDS;
         }
     }
     lua_pop(L, 1); // filter
@@ -933,12 +933,12 @@ static void module_init(lua_State *L, module_data_t *mod)
     if(lua_istable(L, -1))
     {
         for(uint32_t i = 0; i < ASC_ARRAY_SIZE(mod->pid_map); ++i)
-            mod->pid_map[i] = TS_MAX_PID;
+            mod->pid_map[i] = TS_MAX_PIDS;
 
         lua_foreach(L, -2)
         {
             const int pid = lua_tointeger(L, -1);
-            if(!(pid >= 0 && pid < TS_MAX_PID))
+            if(!ts_pid_valid(pid))
                 luaL_error(L, MSG("option 'filter~': pid is out of range"));
 
             mod->pid_map[pid] = 0;
@@ -951,26 +951,26 @@ static void module_destroy(module_data_t *mod)
 {
     module_stream_destroy(mod);
 
-    mpegts_psi_destroy(mod->pat);
+    ts_psi_destroy(mod->pat);
     if(mod->cat)
     {
-        mpegts_psi_destroy(mod->cat);
-        mpegts_psi_destroy(mod->custom_cat);
+        ts_psi_destroy(mod->cat);
+        ts_psi_destroy(mod->custom_cat);
     }
-    mpegts_psi_destroy(mod->pmt);
-    mpegts_psi_destroy(mod->custom_pat);
-    mpegts_psi_destroy(mod->custom_pmt);
+    ts_psi_destroy(mod->pmt);
+    ts_psi_destroy(mod->custom_pat);
+    ts_psi_destroy(mod->custom_pmt);
 
     if(mod->sdt)
     {
-        mpegts_psi_destroy(mod->sdt);
-        mpegts_psi_destroy(mod->custom_sdt);
+        ts_psi_destroy(mod->sdt);
+        ts_psi_destroy(mod->custom_sdt);
 
         free(mod->sdt_checksum_list);
     }
 
     if(mod->eit)
-        mpegts_psi_destroy(mod->eit);
+        ts_psi_destroy(mod->eit);
 
     if(mod->map)
     {

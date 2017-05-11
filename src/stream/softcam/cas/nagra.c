@@ -25,7 +25,7 @@ struct module_data_t
     CAS_MODULE_DATA();
 };
 
-static bool cas_check_em(module_data_t *mod, mpegts_psi_t *em)
+static bool cas_check_em(module_data_t *mod, ts_psi_t *em)
 {
     const uint8_t em_type = em->buffer[0];
     switch(em_type)
@@ -36,7 +36,7 @@ static bool cas_check_em(module_data_t *mod, mpegts_psi_t *em)
         {
             return true;
         }
-        // EMM ( ret = MPEGTS_PACKET_EMM )
+        // EMM ( ret = TS_TYPE_EMM )
         case 0x83:
         {
             const uint8_t *ua = mod->__cas.decrypt->cam->ua;

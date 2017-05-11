@@ -71,7 +71,7 @@ static inline size_t __emm_size(const uint8_t *payload)
 
 /* cas api */
 
-static bool cas_check_em(module_data_t *mod, mpegts_psi_t *em)
+static bool cas_check_em(module_data_t *mod, ts_psi_t *em)
 {
     const uint8_t em_type = em->buffer[0];
     switch(em_type)

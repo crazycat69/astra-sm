@@ -536,8 +536,15 @@ AS_IF([test "x${with_check}" != "xno"], [
     AX_SAVE_FLAGS
     PKG_CHECK_MODULES([CHECK], [check], [
         CFLAGS="$CFLAGS $CHECK_CFLAGS"
+        # libcheck may need -lm -lrt if it's compiled statically
+        LIBS="$LIBS $LIBM $LIBRT $CHECK_LIBS"
         AC_CHECK_HEADERS([check.h], [
-            have_check="yes"
+            AC_CHECK_LIB([check], [tcase_set_timeout], [
+                have_check="yes"
+            ], [
+                # linking check failed
+                CHECK_PKG_ERRORS="could not link with libcheck"
+            ])
         ], [
             # header check failed
             CHECK_PKG_ERRORS="could not find check headers"

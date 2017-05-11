@@ -1,5 +1,5 @@
 /*
- * Astra Module: MPEG-TS (T2-MI de-encapsulator)
+ * Astra TS Library (T2-MI de-encapsulator)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
@@ -29,20 +29,20 @@
 
 #define T2MI_PLP_AUTO 0x100
 
-typedef struct mpegts_t2mi_t mpegts_t2mi_t;
+typedef struct ts_t2mi_t ts_t2mi_t;
 
-mpegts_t2mi_t *mpegts_t2mi_init(void) __asc_result;
-void mpegts_t2mi_destroy(mpegts_t2mi_t *mi);
+ts_t2mi_t *ts_t2mi_init(void) __asc_result;
+void ts_t2mi_destroy(ts_t2mi_t *mi);
 
-void mpegts_t2mi_set_fname(mpegts_t2mi_t *mi, const char *format
-                           , ...) __asc_printf(2, 3);
-void mpegts_t2mi_set_callback(mpegts_t2mi_t *mi, ts_callback_t cb, void *arg);
-void mpegts_t2mi_set_plp(mpegts_t2mi_t *mi, unsigned plp_id);
-void mpegts_t2mi_set_payload(mpegts_t2mi_t *mi, uint16_t pnr, uint16_t pid);
-void mpegts_t2mi_set_demux(mpegts_t2mi_t *mi, module_data_t *mod
-                           , demux_callback_t join_pid
-                           , demux_callback_t leave_pid);
+void ts_t2mi_set_fname(ts_t2mi_t *mi, const char *format
+                       , ...) __asc_printf(2, 3);
+void ts_t2mi_set_callback(ts_t2mi_t *mi, ts_callback_t cb, void *arg);
+void ts_t2mi_set_plp(ts_t2mi_t *mi, unsigned plp_id);
+void ts_t2mi_set_payload(ts_t2mi_t *mi, uint16_t pnr, uint16_t pid);
+void ts_t2mi_set_demux(ts_t2mi_t *mi, module_data_t *mod
+                       , demux_callback_t join_pid
+                       , demux_callback_t leave_pid);
 
-void mpegts_t2mi_decap(mpegts_t2mi_t *mi, const uint8_t *ts);
+void ts_t2mi_decap(ts_t2mi_t *mi, const uint8_t *ts);
 
 #endif /* _TS_T2MI_ */

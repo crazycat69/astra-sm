@@ -120,7 +120,7 @@ static void bulk_send(module_data_t *mod, uint16_t pid, unsigned int cnt)
 }
 
 /* input selector test */
-static unsigned int select_cnt[TS_MAX_PID];
+static unsigned int select_cnt[TS_MAX_PIDS];
 
 static void select_on_ts(module_data_t *mod, const uint8_t *ts)
 {
@@ -319,8 +319,8 @@ START_TEST(demux_discard)
 END_TEST
 
 /* make sure requested pids are flooded to all children */
-static bool flood_pids[TS_MAX_PID];
-static unsigned int flood_sink_cnt[2][TS_MAX_PID];
+static bool flood_pids[TS_MAX_PIDS];
+static unsigned int flood_sink_cnt[2][TS_MAX_PIDS];
 
 static void flood_join(module_data_t *mod, uint16_t pid)
 {
@@ -340,7 +340,7 @@ static void flood_leave(module_data_t *mod, uint16_t pid)
 
 static void flood_send(void)
 {
-    for (unsigned int i = 0; i < TS_MAX_PID; i++)
+    for (unsigned int i = 0; i < TS_MAX_PIDS; i++)
     {
         if (flood_pids[i])
         {

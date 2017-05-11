@@ -22,7 +22,17 @@
 /* 256KiB writes */
 #define WRITE_PKTS ((256 * 1024) / TS_PACKET_SIZE)
 
-static const char *unit_list[] = { "B", "KiB", "MiB", "GiB", "TiB", "PiB", NULL };
+static
+const char *unit_list[] =
+{
+    "B", "KiB", "MiB", "GiB", "TiB", "PiB", NULL
+};
+
+static
+uint8_t null_pkt[TS_PACKET_SIZE] =
+{
+    0x47, 0x1f, 0xff, 0x10
+};
 
 int main(void)
 {
@@ -35,7 +45,7 @@ int main(void)
     /* prepare null packets */
     uint8_t buffer[WRITE_PKTS][TS_PACKET_SIZE];
     for (size_t i = 0; i < ASC_ARRAY_SIZE(buffer); i++)
-        memcpy(buffer[i], ts_null_pkt, TS_PACKET_SIZE);
+        memcpy(buffer[i], null_pkt, TS_PACKET_SIZE);
 
     /* spam them until we get an error */
     size_t written = 0;

@@ -130,22 +130,22 @@ int main(int argc, char *argv[])
         fatal("fopen: %s: %s", outfile, strerror(errno));
 
     /* feed TS to decapsulator */
-    mpegts_t2mi_t *const mi = mpegts_t2mi_init();
-    mpegts_t2mi_set_fname(mi, "decap");
+    ts_t2mi_t *const mi = ts_t2mi_init();
+    ts_t2mi_set_fname(mi, "decap");
 
-    mpegts_t2mi_set_demux(mi, NULL, join_pid, leave_pid);
-    mpegts_t2mi_set_payload(mi, outer_pnr, outer_pid);
-    mpegts_t2mi_set_plp(mi, plp_id);
+    ts_t2mi_set_demux(mi, NULL, join_pid, leave_pid);
+    ts_t2mi_set_payload(mi, outer_pnr, outer_pid);
+    ts_t2mi_set_plp(mi, plp_id);
 
-    mpegts_t2mi_set_callback(mi, on_ts, f_out);
+    ts_t2mi_set_callback(mi, on_ts, f_out);
 
     uint8_t ts[TS_PACKET_SIZE];
     while (fread(ts, sizeof(ts), 1, f_in) == 1)
-        mpegts_t2mi_decap(mi, ts);
+        ts_t2mi_decap(mi, ts);
 
     /* clean up */
     asc_log_info(MSG("cleaning up"));
-    mpegts_t2mi_destroy(mi);
+    ts_t2mi_destroy(mi);
 
     fclose(f_in);
     fclose(f_out);

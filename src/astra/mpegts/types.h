@@ -1,5 +1,5 @@
 /*
- * Astra Module: MPEG-TS (type definitions)
+ * Astra TS Library (Type definitions)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
@@ -26,46 +26,52 @@
 #   error "Please include <astra/astra.h> first"
 #endif /* !_ASTRA_H_ */
 
+/* TS packet type */
 typedef enum
 {
-    MPEGTS_PACKET_UNKNOWN   = 0x00000000,
-    MPEGTS_PACKET_TS        = 0x10000000,
-    MPEGTS_PACKET_PSI       = 0x00100000, // Program Specific Information
-    MPEGTS_PACKET_PAT       = MPEGTS_PACKET_PSI | 0x01,
-    MPEGTS_PACKET_CAT       = MPEGTS_PACKET_PSI | 0x02,
-    MPEGTS_PACKET_PMT       = MPEGTS_PACKET_PSI | 0x04,
-    MPEGTS_PACKET_SI        = 0x00200000, // Service Information
-    MPEGTS_PACKET_NIT       = MPEGTS_PACKET_SI | 0x01,
-    MPEGTS_PACKET_SDT       = MPEGTS_PACKET_SI | 0x02,
-    MPEGTS_PACKET_EIT       = MPEGTS_PACKET_SI | 0x04,
-    MPEGTS_PACKET_TDT       = MPEGTS_PACKET_SI | 0x08,
-    MPEGTS_PACKET_CA        = 0x00400000, // Conditional Access
-    MPEGTS_PACKET_ECM       = MPEGTS_PACKET_CA | 0x01,
-    MPEGTS_PACKET_EMM       = MPEGTS_PACKET_CA | 0x02,
-    MPEGTS_PACKET_PES       = 0x00800000, // Elementary Stream
-    MPEGTS_PACKET_VIDEO     = MPEGTS_PACKET_PES | 0x01,
-    MPEGTS_PACKET_AUDIO     = MPEGTS_PACKET_PES | 0x02,
-    MPEGTS_PACKET_SUB       = MPEGTS_PACKET_PES | 0x04,
-    MPEGTS_PACKET_DATA      = 0x01000000,
-    MPEGTS_PACKET_NULL      = 0x02000000
-} mpegts_packet_type_t;
+    TS_TYPE_UNKNOWN = 0x00000000,
 
+    /* Program Specific Information */
+    TS_TYPE_PSI     = 0x00100000,
+    TS_TYPE_PAT     = TS_TYPE_PSI | 0x01,
+    TS_TYPE_CAT     = TS_TYPE_PSI | 0x02,
+    TS_TYPE_PMT     = TS_TYPE_PSI | 0x04,
+
+    /* Service Information */
+    TS_TYPE_SI      = 0x00200000,
+    TS_TYPE_NIT     = TS_TYPE_SI | 0x01,
+    TS_TYPE_SDT     = TS_TYPE_SI | 0x02,
+    TS_TYPE_EIT     = TS_TYPE_SI | 0x04,
+    TS_TYPE_TDT     = TS_TYPE_SI | 0x08,
+
+    /* Conditional Access */
+    TS_TYPE_CA      = 0x00400000,
+    TS_TYPE_ECM     = TS_TYPE_CA | 0x01,
+    TS_TYPE_EMM     = TS_TYPE_CA | 0x02,
+
+    /* Elementary Stream */
+    TS_TYPE_PES     = 0x00800000,
+    TS_TYPE_VIDEO   = TS_TYPE_PES | 0x01,
+    TS_TYPE_AUDIO   = TS_TYPE_PES | 0x02,
+    TS_TYPE_SUB     = TS_TYPE_PES | 0x04,
+
+    TS_TYPE_DATA    = 0x01000000,
+    TS_TYPE_NULL    = 0x02000000
+} ts_type_t;
+
+/* mapping between PMT stream_type and TS packet type */
 typedef struct
 {
-    mpegts_packet_type_t pkt_type;
+    uint8_t type_id;
+    ts_type_t pkt_type;
     const char *description;
-} stream_type_t;
+} ts_stream_type_t;
 
-static const uint8_t ts_null_pkt[TS_PACKET_SIZE] = {
-    /*
-     * pid 0x1fff, cc 0
-     * payload all zeroes
-     */
-    0x47, 0x1f, 0xff, 0x10
-};
+/* pre-defined null packet */
+extern const uint8_t ts_null_pkt[TS_PACKET_SIZE];
 
-const stream_type_t *mpegts_stream_type(uint8_t type_id) __asc_result;
-mpegts_packet_type_t mpegts_priv_type(uint8_t desc_type) __asc_result;
-const char *mpegts_type_name(mpegts_packet_type_t type) __asc_result;
+const ts_stream_type_t *ts_stream_type(uint8_t type_id) __asc_result;
+ts_type_t ts_priv_type(uint8_t desc_type) __asc_result;
+const char *ts_type_name(ts_type_t type) __asc_result;
 
 #endif /* _TS_TYPES_ */

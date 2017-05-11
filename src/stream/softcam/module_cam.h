@@ -143,7 +143,7 @@ struct module_cas_t
     module_decrypt_t *decrypt;
 
     bool (*check_descriptor)(module_data_t *cas_data, const uint8_t *desc);
-    bool (*check_em)(module_data_t *cas_data, mpegts_psi_t *em);
+    bool (*check_em)(module_data_t *cas_data, ts_psi_t *em);
     bool (*check_keys)(module_data_t *cas_data, const uint8_t *keys);
 };
 

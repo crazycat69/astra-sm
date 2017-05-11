@@ -55,7 +55,7 @@ struct module_data_t
     unsigned int delay;
     int idx_callback;
 
-    mpegts_sync_t *sync;
+    ts_sync_t *sync;
     asc_timer_t *sync_loop;
     ssize_t sync_feed;
 
@@ -184,7 +184,7 @@ void on_child_restart(void *arg)
     {
         /* don't read from pipe until sync requests data */
         mod->config.sout.ignore_read = true;
-        mpegts_sync_set_on_ready(mod->sync, on_sync_ready);
+        ts_sync_set_on_ready(mod->sync, on_sync_ready);
     }
     else
         mod->config.sout.ignore_read = false;
@@ -234,7 +234,7 @@ void on_child_close(void *arg, int exit_code)
         asc_log_error(MSG("process exited with code %d; %s"), exit_code, buf);
 
     if (mod->sync != NULL)
-        mpegts_sync_set_on_ready(mod->sync, NULL);
+        ts_sync_set_on_ready(mod->sync, NULL);
 
     callback_exited(mod, exit_code);
 
@@ -251,11 +251,11 @@ void on_sync_ready(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
 
-    mpegts_sync_set_on_ready(mod->sync, NULL);
+    ts_sync_set_on_ready(mod->sync, NULL);
     asc_child_toggle_input(mod->child, STDOUT_FILENO, true);
 
-    mpegts_sync_stat_t data;
-    mpegts_sync_query(mod->sync, &data);
+    ts_sync_stat_t data;
+    ts_sync_query(mod->sync, &data);
     mod->sync_feed = data.want;
 }
 
@@ -265,10 +265,10 @@ void on_child_ts_sync(void *arg, const void *buf, size_t packets)
     module_data_t *const mod = (module_data_t *)arg;
     const uint8_t *const ts = (uint8_t *)buf;
 
-    if (!mpegts_sync_push(mod->sync, ts, packets))
+    if (!ts_sync_push(mod->sync, ts, packets))
     {
         asc_log_error(MSG("sync push failed, resetting buffer"));
-        mpegts_sync_reset(mod->sync, SYNC_RESET_ALL);
+        ts_sync_reset(mod->sync);
 
         return;
     }
@@ -279,7 +279,7 @@ void on_child_ts_sync(void *arg, const void *buf, size_t packets)
         if (mod->sync_feed <= 0)
         {
             asc_child_toggle_input(mod->child, STDOUT_FILENO, false);
-            mpegts_sync_set_on_ready(mod->sync, on_sync_ready);
+            ts_sync_set_on_ready(mod->sync, on_sync_ready);
         }
     }
 }
@@ -472,22 +472,19 @@ void module_init(lua_State *L, module_data_t *mod)
         if (!is_stream)
             luaL_error(L, MSG("buffering is only supported with TS input"));
 
-        mod->sync = mpegts_sync_init();
-
-        mpegts_sync_set_on_write(mod->sync, module_stream_send);
-        mpegts_sync_set_arg(mod->sync, mod);
-        mpegts_sync_set_fname(mod->sync, "sync/%s", mod->config.name);
+        mod->sync = ts_sync_init(module_stream_send, mod);
+        ts_sync_set_fname(mod->sync, "sync/%s", mod->config.name);
 
         const char *optstr = NULL;
         module_option_string(L, "sync_opts", &optstr, NULL);
-        if (optstr != NULL && !mpegts_sync_parse_opts(mod->sync, optstr))
+        if (optstr != NULL && !ts_sync_set_opts(mod->sync, optstr))
             luaL_error(L, MSG("invalid value for option 'sync_opts'"));
 
-        mpegts_sync_stat_t data;
-        mpegts_sync_query(mod->sync, &data);
+        ts_sync_stat_t data;
+        ts_sync_query(mod->sync, &data);
         mod->sync_feed = data.want;
 
-        mod->sync_loop = asc_timer_init(SYNC_INTERVAL_MSEC, mpegts_sync_loop
+        mod->sync_loop = asc_timer_init(SYNC_INTERVAL_MSEC, ts_sync_loop
                                         , mod->sync);
 
         mod->config.sout.on_flush = on_child_ts_sync;
@@ -522,7 +519,7 @@ void module_destroy(module_data_t *mod)
     ASC_FREE(mod->restart, asc_timer_destroy);
     ASC_FREE(mod->child, asc_child_destroy);
     ASC_FREE(mod->sync_loop, asc_timer_destroy);
-    ASC_FREE(mod->sync, mpegts_sync_destroy);
+    ASC_FREE(mod->sync, ts_sync_destroy);
 }
 
 static

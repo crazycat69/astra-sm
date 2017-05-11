@@ -37,10 +37,10 @@ struct module_data_t
 {
     STREAM_MODULE_DATA();
 
-    mpegts_packet_type_t stream[TS_MAX_PID];
+    ts_type_t stream[TS_MAX_PIDS];
 
-    mpegts_psi_t *pat;
-    mpegts_psi_t *pmt;
+    ts_psi_t *pat;
+    ts_psi_t *pmt;
 
     struct dvbcsa_bs_key_s *key;
 
@@ -60,7 +60,7 @@ static void process_ts(module_data_t *mod, const uint8_t *ts, uint8_t hdr_size)
 
     if(hdr_size)
     {
-        dst[3] |= 0x80;
+        TS_SET_SC(dst, TS_SC_EVEN);
         mod->batch[mod->batch_skip].data = &dst[hdr_size];
         mod->batch[mod->batch_skip].len = TS_PACKET_SIZE - hdr_size;
         ++mod->batch_skip;
@@ -85,7 +85,7 @@ static void process_ts(module_data_t *mod, const uint8_t *ts, uint8_t hdr_size)
     }
 }
 
-static void on_pat(void *arg, mpegts_psi_t *psi)
+static void on_pat(void *arg, ts_psi_t *psi)
 {
     module_data_t *mod = (module_data_t *)arg;
 
@@ -101,7 +101,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
     psi->crc32 = crc32;
 
     memset(mod->stream, 0, sizeof(mod->stream));
-    mod->stream[0] = MPEGTS_PACKET_PAT;
+    mod->stream[0] = TS_TYPE_PAT;
     mod->pmt->crc32 = 0;
 
     const uint8_t *pointer = PAT_ITEMS_FIRST(psi);
@@ -109,12 +109,12 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
     {
         const uint16_t pnr = PAT_ITEM_GET_PNR(psi, pointer);
         const uint16_t pid = PAT_ITEM_GET_PID(psi, pointer);
-        mod->stream[pid] = (pnr) ? MPEGTS_PACKET_PMT : MPEGTS_PACKET_NIT;
+        mod->stream[pid] = (pnr) ? TS_TYPE_PMT : TS_TYPE_NIT;
         PAT_ITEMS_NEXT(psi, pointer);
     }
 }
 
-static void on_pmt(void *arg, mpegts_psi_t *psi)
+static void on_pmt(void *arg, ts_psi_t *psi)
 {
     module_data_t *mod = (module_data_t *)arg;
 
@@ -136,7 +136,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     while(!PMT_ITEMS_EOL(psi, pointer))
     {
         const uint16_t pid = PMT_ITEM_GET_PID(psi, pointer);
-        mod->stream[pid] = MPEGTS_PACKET_PES;
+        mod->stream[pid] = TS_TYPE_PES;
         PMT_ITEMS_NEXT(psi, pointer);
     }
 }
@@ -146,14 +146,14 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
     const uint16_t pid = TS_GET_PID(ts);
     switch(mod->stream[pid])
     {
-        case MPEGTS_PACKET_PES:
+        case TS_TYPE_PES:
             break;
-        case MPEGTS_PACKET_PAT:
-            mpegts_psi_mux(mod->pat, ts, on_pat, mod);
+        case TS_TYPE_PAT:
+            ts_psi_mux(mod->pat, ts, on_pat, mod);
             process_ts(mod, ts, 0);
             return;
-        case MPEGTS_PACKET_PMT:
-            mpegts_psi_mux(mod->pmt, ts, on_pmt, mod);
+        case TS_TYPE_PMT:
+            ts_psi_mux(mod->pmt, ts, on_pmt, mod);
             process_ts(mod, ts, 0);
             return;
         default:
@@ -192,9 +192,9 @@ static void module_init(lua_State *L, module_data_t *mod)
     mod->key = dvbcsa_bs_key_alloc();
     dvbcsa_bs_key_set(key, mod->key);
 
-    mod->stream[0x00] = MPEGTS_PACKET_PAT;
-    mod->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0);
-    mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, 0);
+    mod->stream[0x00] = TS_TYPE_PAT;
+    mod->pat = ts_psi_init(TS_TYPE_PAT, 0);
+    mod->pmt = ts_psi_init(TS_TYPE_PMT, 0);
 }
 
 static void module_destroy(module_data_t *mod)
@@ -205,8 +205,8 @@ static void module_destroy(module_data_t *mod)
     ASC_FREE(mod->batch_storage_recv, free);
     ASC_FREE(mod->key, dvbcsa_bs_key_free);
 
-    ASC_FREE(mod->pat, mpegts_psi_destroy);
-    ASC_FREE(mod->pmt, mpegts_psi_destroy);
+    ASC_FREE(mod->pat, ts_psi_destroy);
+    ASC_FREE(mod->pmt, ts_psi_destroy);
 }
 
 STREAM_MODULE_REGISTER(biss_encrypt)

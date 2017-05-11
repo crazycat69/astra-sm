@@ -1,9 +1,9 @@
 /*
- * Astra Module: MPEG-TS (DVB descriptors)
+ * Astra TS Library (DVB descriptors)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
- *                    2015, Artem Kharitonov <artem@sysert.ru>
+ *               2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -415,7 +415,7 @@ static const dvb_descriptor_t known_descriptors[] = {
     DESC_LIST(0x100, unknown),
 };
 
-void mpegts_desc_to_lua(lua_State *L, const uint8_t *desc)
+void ts_desc_to_lua(lua_State *L, const uint8_t *desc)
 {
     const unsigned type_id = desc[0];
 

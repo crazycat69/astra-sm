@@ -623,7 +623,7 @@ HRESULT ms_pidmap_set(void *data, uint16_t pid, bool join)
 }
 
 static
-HRESULT ms_pidmap_bulk(void *data, const bool pids[TS_MAX_PID])
+HRESULT ms_pidmap_bulk(void *data, const bool pids[TS_MAX_PIDS])
 {
     IMPEG2PIDMap *const pidmap = (IMPEG2PIDMap *)data;
 
@@ -900,7 +900,7 @@ HRESULT bda_ext_pid_set(module_data_t *mod, uint16_t pid, bool join)
 }
 
 /* load a complete PID list into filter */
-HRESULT bda_ext_pid_bulk(module_data_t *mod, const bool pids[TS_MAX_PID])
+HRESULT bda_ext_pid_bulk(module_data_t *mod, const bool pids[TS_MAX_PIDS])
 {
     HRESULT hr = E_NOTIMPL;
 

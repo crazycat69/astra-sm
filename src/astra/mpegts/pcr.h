@@ -1,5 +1,5 @@
 /*
- * Astra Module: MPEG-TS (PCR headers)
+ * Astra TS Library (PCR)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
@@ -27,75 +27,76 @@
 #endif /* !_ASTRA_H_ */
 
 /* PCR frequency, Hz */
-#define PCR_TIME_BASE 27000000LL
-
-/* position of last byte in PCR field */
-#define PCR_LAST_BYTE 11
+#define TS_PCR_FREQ 27000000LL
 
 /* maximum possible PCR value */
-#define PCR_MAX ((0x1FFFFFFFFLL * 300) + 299)
+#define TS_PCR_MAX (0x200000000LL * 300)
 
 /* absent timestamp marker */
-#define XTS_NONE UINT64_MAX
-
-/* whether TS packet contains PCR */
-#define TS_IS_PCR(__x) \
-    ( \
-        (TS_IS_SYNC(__x)) && \
-        (TS_IS_AF(__x)) && \
-        (__x[4] >= 7) && /* AF length */ \
-        (__x[5] & 0x10) /* PCR flag */ \
-    )
+#define TS_TIME_NONE UINT64_MAX
 
 /* extract PCR base (90KHz) */
-#define TS_PCR_BASE(__x) \
+#define TS_GET_PCR_BASE(_ts) \
     ( \
         ( \
-            (uint64_t)((__x)[6]) << 25 \
+            (uint64_t)((_ts)[6]) << 25 \
         ) | ( \
-            (uint64_t)((__x)[7]) << 17 \
+            (uint64_t)((_ts)[7]) << 17 \
         ) | ( \
-            (uint64_t)((__x)[8]) << 9 \
+            (uint64_t)((_ts)[8]) << 9 \
         ) | ( \
-            (uint64_t)((__x)[9]) << 1 \
+            (uint64_t)((_ts)[9]) << 1 \
         ) | ( \
-            (uint64_t)((__x)[10]) >> 7 \
+            (uint64_t)((_ts)[10]) >> 7 \
         ) \
     )
 
 /* extract PCR extension (27MHz) */
-#define TS_PCR_EXT(__x) \
+#define TS_GET_PCR_EXT(_ts) \
     ( \
         ( \
-            ((uint64_t)((__x)[10]) & 0x1) << 8 \
+            ((uint64_t)((_ts)[10]) & 0x1) << 8 \
         ) | ( \
-            (uint64_t)((__x)[11]) \
+            (uint64_t)((_ts)[11]) \
         ) \
     )
 
+/* get PCR value */
+#define TS_GET_PCR(_ts) \
+    ((TS_GET_PCR_BASE(_ts) * 300LL) + TS_GET_PCR_EXT(_ts))
+
 /* set PCR fields in a packet, separately */
-#define TS_SET_PCR_FIELDS(__x, __b, __e) \
+#define TS_SET_PCR_FIELDS(_ts, _base, _ext) \
     do { \
-        (__x)[6] = ((__b) >> 25) & 0xff; \
-        (__x)[7] = ((__b) >> 17) & 0xff; \
-        (__x)[8] = ((__b) >> 9) & 0xff; \
-        (__x)[9] = ((__b) >> 1) & 0xff; \
-        (__x)[10] = 0x7e | (((__b) << 7) & 0x80) | (((__e) >> 8) & 0x1); \
-        (__x)[11] = (__e) & 0xff; \
+        (_ts)[5] |= 0x10; \
+        (_ts)[6] = ((_base) >> 25) & 0xff; \
+        (_ts)[7] = ((_base) >> 17) & 0xff; \
+        (_ts)[8] = ((_base) >> 9) & 0xff; \
+        (_ts)[9] = ((_base) >> 1) & 0xff; \
+        (_ts)[10] = 0x7e | (((_base) << 7) & 0x80) | (((_ext) >> 8) & 0x1); \
+        (_ts)[11] = (_ext) & 0xff; \
     } while (0)
 
-/* get PCR value */
-#define TS_GET_PCR(__x) \
-    ( \
-        (TS_PCR_BASE(__x) * 300) + TS_PCR_EXT(__x) \
-    )
-
 /* set PCR value */
-#define TS_SET_PCR(__x, __v) \
-    TS_SET_PCR_FIELDS(__x, ((__v) / 300), ((__v) % 300));
+#define TS_SET_PCR(_ts, _val) \
+    do { \
+        TS_SET_PCR_FIELDS((_ts), ((_val) / 300LL), ((_val) % 300LL)); \
+    } while (0)
 
-/* usecs between two PCR values */
-uint64_t mpegts_pcr_block_us(uint64_t *pcr_last
-                             , const uint64_t *pcr_current) __asc_result;
+/* get delta between two PCR values */
+#define TS_PCR_DELTA(_a, _b) \
+    (((_b) >= (_a)) ? ((_b) - (_a)) : (((_b) - (_a)) + TS_PCR_MAX))
+
+/* convert milliseconds to packet count based on TS bitrate */
+#define TS_PCR_PACKETS(_ms, _rate) \
+    (((_ms) * ((_rate) / 1000)) / TS_PACKET_BITS)
+
+/* calculate PCR value based on offset and bitrate */
+#define TS_PCR_CALC(_offset, _rate) \
+    (((_offset) * TS_PCR_FREQ * 8) / (_rate))
+
+/* usecs between two PCR values (deprecated) */
+uint64_t ts_pcr_block_us(uint64_t *pcr_last
+                         , const uint64_t *pcr_current) __asc_result;
 
 #endif /* _TS_PCR_ */

@@ -47,7 +47,7 @@
 
 typedef struct
 {
-    mpegts_packet_type_t type;
+    ts_type_t type;
 
     uint8_t cc;
 
@@ -83,12 +83,12 @@ struct module_data_t
     uint16_t tsid;
 
     asc_timer_t *check_stat;
-    analyze_item_t *stream[TS_MAX_PID];
+    analyze_item_t *stream[TS_MAX_PIDS];
 
-    mpegts_psi_t *pat;
-    mpegts_psi_t *cat;
-    mpegts_psi_t *pmt;
-    mpegts_psi_t *sdt;
+    ts_psi_t *pat;
+    ts_psi_t *cat;
+    ts_psi_t *pmt;
+    ts_psi_t *sdt;
 
     int pmt_ready;
     int pmt_count;
@@ -135,7 +135,7 @@ static void callback(lua_State *L, module_data_t *mod)
  *
  */
 
-static void on_pat(void *arg, mpegts_psi_t *psi)
+static void on_pat(void *arg, ts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
     lua_State *const L = module_lua(mod);
@@ -201,14 +201,14 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
 
         if(pnr != 0)
         {
-            mod->stream[pid]->type = MPEGTS_PACKET_PMT;
+            mod->stream[pid]->type = TS_TYPE_PMT;
             if(mod->join_pid)
                 module_demux_join(mod, pid);
             ++ mod->pmt_count;
         }
         else
         {
-            mod->stream[pid]->type = MPEGTS_PACKET_NIT;
+            mod->stream[pid]->type = TS_TYPE_NIT;
             if(mod->join_pid)
                 module_demux_join(mod, pid);
         }
@@ -231,7 +231,7 @@ static void on_pat(void *arg, mpegts_psi_t *psi)
  *
  */
 
-static void on_cat(void *arg, mpegts_psi_t *psi)
+static void on_cat(void *arg, ts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
     lua_State *const L = module_lua(mod);
@@ -271,7 +271,7 @@ static void on_cat(void *arg, mpegts_psi_t *psi)
     while(!CAT_DESC_EOL(psi, desc_pointer))
     {
         lua_pushinteger(L, descriptors_count++);
-        mpegts_desc_to_lua(L, desc_pointer);
+        ts_desc_to_lua(L, desc_pointer);
         lua_settable(L, -3); // append to the "descriptors" table
 
         CAT_DESC_NEXT(psi, desc_pointer);
@@ -290,7 +290,7 @@ static void on_cat(void *arg, mpegts_psi_t *psi)
  *
  */
 
-static void on_pmt(void *arg, mpegts_psi_t *psi)
+static void on_pmt(void *arg, ts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
     lua_State *const L = module_lua(mod);
@@ -363,7 +363,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
     while(!PMT_DESC_EOL(psi, desc_pointer))
     {
         lua_pushinteger(L, descriptors_count++);
-        mpegts_desc_to_lua(L, desc_pointer);
+        ts_desc_to_lua(L, desc_pointer);
         lua_settable(L, -3); // append to the "descriptors" table
 
         PMT_DESC_NEXT(psi, desc_pointer);
@@ -390,7 +390,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
         if(!mod->stream[pid])
             mod->stream[pid] = ASC_ALLOC(1, analyze_item_t);
 
-        const stream_type_t *const st = mpegts_stream_type(type);
+        const ts_stream_type_t *const st = ts_stream_type(type);
         mod->stream[pid]->type = st->pkt_type;
 
         lua_pushinteger(L, pid);
@@ -401,15 +401,15 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
         PMT_ITEM_DESC_FOREACH(pointer, desc_pointer)
         {
             lua_pushinteger(L, descriptors_count++);
-            mpegts_desc_to_lua(L, desc_pointer);
+            ts_desc_to_lua(L, desc_pointer);
             lua_settable(L, -3); // append to the "streams[X].descriptors" table
 
-            if(type == 0x06 && mod->stream[pid]->type == MPEGTS_PACKET_DATA)
-                mod->stream[pid]->type = mpegts_priv_type(desc_pointer[0]);
+            if(type == 0x06 && mod->stream[pid]->type == TS_TYPE_DATA)
+                mod->stream[pid]->type = ts_priv_type(desc_pointer[0]);
         }
         lua_setfield(L, -2, __descriptors);
 
-        lua_pushstring(L, mpegts_type_name(mod->stream[pid]->type));
+        lua_pushstring(L, ts_type_name(mod->stream[pid]->type));
         lua_setfield(L, -2, "type_name");
 
         lua_pushinteger(L, type);
@@ -420,7 +420,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
 
         lua_settable(L, -3); // append to the "streams" table
 
-        if(mod->stream[pid]->type == MPEGTS_PACKET_VIDEO)
+        if(mod->stream[pid]->type == TS_TYPE_VIDEO)
             mod->video_check = true;
     }
     lua_setfield(L, -2, "streams");
@@ -437,7 +437,7 @@ static void on_pmt(void *arg, mpegts_psi_t *psi)
  *
  */
 
-static void on_sdt(void *arg, mpegts_psi_t *psi)
+static void on_sdt(void *arg, ts_psi_t *psi)
 {
     module_data_t *const mod = (module_data_t *)arg;
     lua_State *const L = module_lua(mod);
@@ -524,7 +524,7 @@ static void on_sdt(void *arg, mpegts_psi_t *psi)
         SDT_ITEM_DESC_FOREACH(pointer, desc_pointer)
         {
             lua_pushinteger(L, descriptors_count++);
-            mpegts_desc_to_lua(L, desc_pointer);
+            ts_desc_to_lua(L, desc_pointer);
             lua_settable(L, -3);
         }
         lua_setfield(L, -2, __descriptors);
@@ -599,32 +599,32 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
 
     const uint16_t pid = TS_GET_PID(ts);
     analyze_item_t *item = NULL;
-    if(ts[0] == 0x47 && pid < TS_MAX_PID)
+    if(TS_IS_SYNC(ts))
         item = mod->stream[pid];
     if(!item)
         item = mod->stream[TS_NULL_PID];
 
     ++item->packets;
 
-    if(item->type == MPEGTS_PACKET_NULL)
+    if(item->type == TS_TYPE_NULL)
         return;
 
-    if(item->type & (MPEGTS_PACKET_PSI | MPEGTS_PACKET_SI))
+    if(item->type & (TS_TYPE_PSI | TS_TYPE_SI))
     {
         switch(item->type)
         {
-            case MPEGTS_PACKET_PAT:
-                mpegts_psi_mux(mod->pat, ts, on_pat, mod);
+            case TS_TYPE_PAT:
+                ts_psi_mux(mod->pat, ts, on_pat, mod);
                 break;
-            case MPEGTS_PACKET_CAT:
-                mpegts_psi_mux(mod->cat, ts, on_cat, mod);
+            case TS_TYPE_CAT:
+                ts_psi_mux(mod->cat, ts, on_cat, mod);
                 break;
-            case MPEGTS_PACKET_PMT:
+            case TS_TYPE_PMT:
                 mod->pmt->pid = pid;
-                mpegts_psi_mux(mod->pmt, ts, on_pmt, mod);
+                ts_psi_mux(mod->pmt, ts, on_pmt, mod);
                 break;
-            case MPEGTS_PACKET_SDT:
-                mpegts_psi_mux(mod->sdt, ts, on_sdt, mod);
+            case TS_TYPE_SDT:
+                ts_psi_mux(mod->sdt, ts, on_sdt, mod);
                 break;
             default:
                 break;
@@ -644,13 +644,13 @@ static void on_ts(module_data_t *mod, const uint8_t *ts)
     if(cc != last_cc)
         ++item->cc_error;
 
-    if(TS_IS_SCRAMBLED(ts))
+    if(TS_GET_SC(ts) != TS_SC_NONE)
         ++item->sc_error;
 
-    if(!(item->type & MPEGTS_PACKET_PES))
+    if(!(item->type & TS_TYPE_PES))
         return;
 
-    if(item->type == MPEGTS_PACKET_VIDEO && TS_IS_PAYLOAD_START(ts))
+    if(item->type == TS_TYPE_VIDEO && TS_IS_PUSI(ts))
     {
         const uint8_t *payload = TS_GET_PAYLOAD(ts);
         if(payload && PES_BUFFER_GET_HEADER(payload) != 0x000001)
@@ -687,7 +687,7 @@ static void on_check_stat(void *arg)
                                  : ((mod->video_check) ? 256 : 32);
 
     lua_newtable(L);
-    for(int i = 0; i < TS_MAX_PID; ++i)
+    for(int i = 0; i < TS_MAX_PIDS; ++i)
     {
         analyze_item_t *item = mod->stream[i];
 
@@ -720,7 +720,7 @@ static void on_check_stat(void *arg)
         cc_errors += item->cc_error;
         pes_errors += item->pes_error;
 
-        if(item->type == MPEGTS_PACKET_VIDEO || item->type == MPEGTS_PACKET_AUDIO)
+        if(item->type == TS_TYPE_VIDEO || item->type == TS_TYPE_AUDIO)
         {
             if(item->sc_error)
             {
@@ -807,24 +807,24 @@ static void module_init(lua_State *L, module_data_t *mod)
 
     // PAT
     mod->stream[0x00] = ASC_ALLOC(1, analyze_item_t);
-    mod->stream[0x00]->type = MPEGTS_PACKET_PAT;
-    mod->pat = mpegts_psi_init(MPEGTS_PACKET_PAT, 0x00);
+    mod->stream[0x00]->type = TS_TYPE_PAT;
+    mod->pat = ts_psi_init(TS_TYPE_PAT, 0x00);
     // CAT
     mod->stream[0x01] = ASC_ALLOC(1, analyze_item_t);
-    mod->stream[0x01]->type = MPEGTS_PACKET_CAT;
-    mod->cat = mpegts_psi_init(MPEGTS_PACKET_CAT, 0x01);
+    mod->stream[0x01]->type = TS_TYPE_CAT;
+    mod->cat = ts_psi_init(TS_TYPE_CAT, 0x01);
     // SDT
     mod->stream[0x11] = ASC_ALLOC(1, analyze_item_t);
-    mod->stream[0x11]->type = MPEGTS_PACKET_SDT;
-    mod->sdt = mpegts_psi_init(MPEGTS_PACKET_SDT, 0x11);
+    mod->stream[0x11]->type = TS_TYPE_SDT;
+    mod->sdt = ts_psi_init(TS_TYPE_SDT, 0x11);
     // EIT
     mod->stream[0x12] = ASC_ALLOC(1, analyze_item_t);
-    mod->stream[0x12]->type = MPEGTS_PACKET_EIT;
+    mod->stream[0x12]->type = TS_TYPE_EIT;
     // PMT
-    mod->pmt = mpegts_psi_init(MPEGTS_PACKET_PMT, TS_MAX_PID);
+    mod->pmt = ts_psi_init(TS_TYPE_PMT, TS_MAX_PIDS);
     // NULL
     mod->stream[TS_NULL_PID] = ASC_ALLOC(1, analyze_item_t);
-    mod->stream[TS_NULL_PID]->type = MPEGTS_PACKET_NULL;
+    mod->stream[TS_NULL_PID]->type = TS_TYPE_NULL;
 
     mod->check_stat = asc_timer_init(1000, on_check_stat, mod);
 }
@@ -839,16 +839,16 @@ static void module_destroy(module_data_t *mod)
         mod->idx_callback = 0;
     }
 
-    for(int i = 0; i < TS_MAX_PID; ++i)
+    for(int i = 0; i < TS_MAX_PIDS; ++i)
     {
         if(mod->stream[i])
             free(mod->stream[i]);
     }
 
-    mpegts_psi_destroy(mod->pat);
-    mpegts_psi_destroy(mod->cat);
-    mpegts_psi_destroy(mod->sdt);
-    mpegts_psi_destroy(mod->pmt);
+    ts_psi_destroy(mod->pat);
+    ts_psi_destroy(mod->cat);
+    ts_psi_destroy(mod->sdt);
+    ts_psi_destroy(mod->pmt);
 
     ASC_FREE(mod->check_stat, asc_timer_destroy);
 

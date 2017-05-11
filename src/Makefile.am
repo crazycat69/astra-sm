@@ -136,9 +136,9 @@ endif
 libastra_la_SOURCES += \
     astra/mpegts/descriptors.c \
     astra/mpegts/descriptors.h \
+    astra/mpegts/mpegts.h \
     astra/mpegts/pcr.c \
     astra/mpegts/pcr.h \
-    astra/mpegts/pes.c \
     astra/mpegts/pes.h \
     astra/mpegts/psi.c \
     astra/mpegts/psi.h \
@@ -146,7 +146,6 @@ libastra_la_SOURCES += \
     astra/mpegts/sync.h \
     astra/mpegts/t2mi.c \
     astra/mpegts/t2mi.h \
-    astra/mpegts/tscore.h \
     astra/mpegts/types.c \
     astra/mpegts/types.h
 
@@ -177,6 +176,7 @@ libstream_la_LDFLAGS = -module -static
 libstream_la_LIBADD = libastra.la
 libstream_la_SOURCES = \
     stream/analyze/analyze.c \
+    stream/cbr/cbr.c \
     stream/channel/channel.c \
     stream/file/input.c \
     stream/file/output.c \
@@ -192,10 +192,6 @@ libstream_la_SOURCES = \
     stream/http/modules/upstream.c \
     stream/http/modules/websocket.c \
     stream/pipe/pipe.c \
-    stream/remux/remux.c \
-    stream/remux/remux.h \
-    stream/remux/si.c \
-    stream/remux/utils.c \
     stream/t2mi/decap.c \
     stream/transmit/transmit.c \
     stream/udp/input.c \
@@ -372,6 +368,13 @@ tests_libastra_SOURCES += \
     tests/luaapi/lib/sha1.c \
     tests/luaapi/lib/strhex.c \
     tests/luaapi/lib/utils.c
+
+tests_libastra_SOURCES += \
+    tests/mpegts/mpegts.c \
+    tests/mpegts/mpegts_packets.h \
+    tests/mpegts/pcr.c \
+    tests/mpegts/pcr_packets.h \
+    tests/mpegts/sync.c
 
 tests_libastra_SOURCES += \
     tests/utils/base64.c \

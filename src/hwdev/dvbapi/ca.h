@@ -80,7 +80,7 @@ typedef struct
 {
     uint16_t pnr;
 
-    mpegts_psi_t *psi;
+    ts_psi_t *psi;
 
     uint8_t buffer[PSI_MAX_SIZE];
     uint16_t buffer_size;
@@ -100,9 +100,9 @@ struct dvb_ca_t
 
     /* CA PMT */
 
-    mpegts_packet_type_t stream[TS_MAX_PID];
-    mpegts_psi_t *pat;
-    mpegts_psi_t *pmt;
+    ts_type_t stream[TS_MAX_PIDS];
+    ts_psi_t *pat;
+    ts_psi_t *pmt;
 
     int pmt_count;
     pmt_checksum_t *pmt_checksum_list;

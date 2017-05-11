@@ -206,6 +206,7 @@ init_output_option.biss = function(channel_data, output_id)
         upstream = channel_data.tail:stream(),
         key = output_data.config.biss,
     })
+
     channel_data.tail = output_data.biss
 end
 
@@ -214,33 +215,35 @@ kill_output_option.biss = function(channel_data, output_id)
     output_data.biss = nil
 end
 
+init_output_option.cbr = function(channel_data, output_id)
+    local output_data = channel_data.output[output_id]
+
+    output_data.cbr = ts_cbr({
+        upstream = channel_data.tail:stream(),
+        name = output_data.config.name,
+        rate = output_data.config.cbr,
+        pcr_interval = output_data.config.cbr_pcr_interval,
+        pcr_delay = output_data.config.cbr_pcr_delay,
+        buffer_size = output_data.config.cbr_buffer_size,
+    })
+
+    channel_data.tail = output_data.cbr
+end
+
+kill_output_option.cbr = function(channel_data, output_id)
+    local output_data = channel_data.output[output_id]
+    output_data.cbr = nil
+end
+
+-- TODO: remove this eventually
 init_output_option.remux = function(channel_data, output_id)
     local output_data = channel_data.output[output_id]
-    local output_conf = output_data.config
-
-    if remux == nil then
-        log.error("[" .. channel_data.config.name .. " #" .. output_id .. "] " ..
-                  "remux module not found")
-        return nil
-    end
-
-    local remux_conf = {
-        upstream = channel_data.tail:stream(),
-        name = channel_data.config.name,
-    }
-
-    if output_conf.rate then remux_conf.rate = output_conf.rate end
-    if output_conf.pcr_interval then remux_conf.pcr_interval = output_conf.pcr_interval end
-    if output_conf.pcr_delay then remux_conf.pcr_delay = output_conf.pcr_delay end
-
-    output_data.remux = remux(remux_conf)
-    channel_data.tail = output_data.remux
+    error("[" .. output_data.config.name .. "] " ..
+          "remux is no longer available, please use 'cbr=<BPS>' instead")
 end
 
 kill_output_option.remux = function(channel_data, output_id)
-    local output_data = channel_data.output[output_id]
-
-    output_data.tail = nil
+    --
 end
 
 init_output_module = {}
@@ -624,7 +627,7 @@ end
 --
 
 init_transform_module.cbr = function(conf)
-    return remux(conf)
+    return ts_cbr(conf)
 end
 
 kill_transform_module.cbr = function(instance)

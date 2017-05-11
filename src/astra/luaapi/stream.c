@@ -38,7 +38,7 @@ struct module_stream_t
 
     demux_callback_t join_pid;
     demux_callback_t leave_pid;
-    uint8_t pid_list[TS_MAX_PID];
+    uint8_t pid_list[TS_MAX_PIDS];
 };
 
 struct module_data_t
@@ -116,7 +116,7 @@ void module_stream_destroy(module_data_t *mod)
         return;
 
     /* leave all joined pids */
-    for (unsigned int i = 0; i < TS_MAX_PID; i++)
+    for (unsigned int i = 0; i < TS_MAX_PIDS; i++)
     {
         while (module_demux_check(mod, i))
             module_demux_leave(mod, i);
@@ -171,8 +171,8 @@ int method_set_upstream(lua_State *L, module_data_t *mod)
 void module_stream_attach(module_data_t *mod, module_data_t *child)
 {
     /* save pid membership data, leave all pids */
-    uint8_t saved_list[TS_MAX_PID] = { 0 };
-    for (unsigned int i = 0; i < TS_MAX_PID; i++)
+    uint8_t saved_list[TS_MAX_PIDS] = { 0 };
+    for (unsigned int i = 0; i < TS_MAX_PIDS; i++)
     {
         while (module_demux_check(child, i))
         {
@@ -201,7 +201,7 @@ void module_stream_attach(module_data_t *mod, module_data_t *child)
     }
 
     /* re-request pids from new parent */
-    for (unsigned int i = 0; i < TS_MAX_PID; i++)
+    for (unsigned int i = 0; i < TS_MAX_PIDS; i++)
     {
         while (saved_list[i]-- > 0)
             module_demux_join(child, i);
@@ -234,7 +234,7 @@ void module_demux_set(module_data_t *mod, demux_callback_t join_pid
 
 void module_demux_join(module_data_t *mod, uint16_t pid)
 {
-    ASC_ASSERT(pid < TS_MAX_PID, MSG("join: pid %hu out of range"), pid);
+    ASC_ASSERT(ts_pid_valid(pid), MSG("join: pid %hu out of range"), pid);
     module_stream_t *const st = mod->stream;
 
     ++st->pid_list[pid];
@@ -247,7 +247,7 @@ void module_demux_join(module_data_t *mod, uint16_t pid)
 
 void module_demux_leave(module_data_t *mod, uint16_t pid)
 {
-    ASC_ASSERT(pid < TS_MAX_PID, MSG("leave: pid %hu out of range"), pid);
+    ASC_ASSERT(ts_pid_valid(pid), MSG("leave: pid %hu out of range"), pid);
     module_stream_t *const st = mod->stream;
 
     if (st->pid_list[pid] > 0)
@@ -267,6 +267,6 @@ void module_demux_leave(module_data_t *mod, uint16_t pid)
 
 bool module_demux_check(const module_data_t *mod, uint16_t pid)
 {
-    ASC_ASSERT(pid < TS_MAX_PID, MSG("check: pid %hu out of range"), pid);
+    ASC_ASSERT(ts_pid_valid(pid), MSG("check: pid %hu out of range"), pid);
     return (mod->stream->pid_list[pid] > 0);
 }

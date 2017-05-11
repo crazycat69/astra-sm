@@ -62,6 +62,11 @@ Suite *luaapi_lib_sha1(void);
 Suite *luaapi_lib_strhex(void);
 Suite *luaapi_lib_utils(void);
 
+/* mpegts */
+Suite *mpegts_mpegts(void);
+Suite *mpegts_pcr(void);
+Suite *mpegts_sync(void);
+
 /* utils */
 Suite *utils_base64(void);
 Suite *utils_crc32b(void);
@@ -104,6 +109,11 @@ static suite_func_t suite_list[] = {
     luaapi_lib_sha1,
     luaapi_lib_strhex,
     luaapi_lib_utils,
+
+    /* mpegts */
+    mpegts_mpegts,
+    mpegts_pcr,
+    mpegts_sync,
 
     /* utils */
     utils_base64,

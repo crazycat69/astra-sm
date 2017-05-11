@@ -1,5 +1,5 @@
 /*
- * Astra Module: MPEG-TS (PSI processing)
+ * Astra TS Library (PSI processing)
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2014, Andrey Dyldin <and@cesbo.com>
@@ -21,9 +21,9 @@
 #include <astra/astra.h>
 #include <astra/mpegts/psi.h>
 
-mpegts_psi_t *mpegts_psi_init(mpegts_packet_type_t type, uint16_t pid)
+ts_psi_t *ts_psi_init(ts_type_t type, uint16_t pid)
 {
-    mpegts_psi_t *const psi = ASC_ALLOC(1, mpegts_psi_t);
+    ts_psi_t *const psi = ASC_ALLOC(1, ts_psi_t);
 
     psi->type = type;
     psi->pid = pid;
@@ -31,12 +31,12 @@ mpegts_psi_t *mpegts_psi_init(mpegts_packet_type_t type, uint16_t pid)
     return psi;
 }
 
-void mpegts_psi_destroy(mpegts_psi_t *psi)
+void ts_psi_destroy(ts_psi_t *psi)
 {
     free(psi);
 }
 
-void mpegts_psi_mux(mpegts_psi_t *psi, const uint8_t *ts, psi_callback_t callback, void *arg)
+void ts_psi_mux(ts_psi_t *psi, const uint8_t *ts, psi_callback_t callback, void *arg)
 {
     const uint8_t *payload = TS_GET_PAYLOAD(ts);
     if(!payload)
@@ -44,7 +44,7 @@ void mpegts_psi_mux(mpegts_psi_t *psi, const uint8_t *ts, psi_callback_t callbac
 
     const uint8_t cc = TS_GET_CC(ts);
 
-    if(TS_IS_PAYLOAD_START(ts))
+    if(TS_IS_PUSI(ts))
     {
         const uint8_t ptr_field = *payload;
         ++payload; // skip pointer field
@@ -159,9 +159,9 @@ void mpegts_psi_mux(mpegts_psi_t *psi, const uint8_t *ts, psi_callback_t callbac
         }
     }
     psi->cc = cc;
-} /* mpegts_psi_mux */
+} /* ts_psi_mux */
 
-void mpegts_psi_demux(mpegts_psi_t *psi, ts_callback_t callback, void *arg)
+void ts_psi_demux(ts_psi_t *psi, ts_callback_t callback, void *arg)
 {
     const size_t buffer_size = psi->buffer_size;
     if(!buffer_size)
@@ -206,4 +206,4 @@ void mpegts_psi_demux(mpegts_psi_t *psi, ts_callback_t callback, void *arg)
             ts[1] &= ~0x40; /* turn off pusi bit */
         }
     }
-} /* mpegts_packet_demux */
+} /* ts_psi_demux */

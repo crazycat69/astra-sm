@@ -259,7 +259,7 @@ typedef struct
 
     /* PID filter */
     HRESULT (*pid_set)(void *, uint16_t, bool);
-    HRESULT (*pid_bulk)(void *, const bool[TS_MAX_PID]);
+    HRESULT (*pid_bulk)(void *, const bool[TS_MAX_PIDS]);
 
     void *data;
 } bda_extension_t;
@@ -275,7 +275,7 @@ HRESULT bda_ext_lnbpower(module_data_t *mod, bda_lnbpower_mode_t mode);
 HRESULT bda_ext_22k(module_data_t *mod, bda_22k_mode_t mode);
 HRESULT bda_ext_toneburst(module_data_t *mod, bda_toneburst_mode_t mode);
 HRESULT bda_ext_pid_set(module_data_t *mod, uint16_t pid, bool join);
-HRESULT bda_ext_pid_bulk(module_data_t *mod, const bool pids[TS_MAX_PID]);
+HRESULT bda_ext_pid_bulk(module_data_t *mod, const bool pids[TS_MAX_PIDS]);
 
 /*
  * BDA graph
@@ -358,7 +358,7 @@ struct module_data_t
     /* module state and tuning data */
     bda_tune_cmd_t tune;
     bda_diseqc_cmd_t diseqc;
-    bool joined_pids[TS_MAX_PID];
+    bool joined_pids[TS_MAX_PIDS];
 
     bda_state_t state;
     bool sw_pidmap;
