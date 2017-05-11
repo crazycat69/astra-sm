@@ -193,10 +193,6 @@ libstream_la_SOURCES = \
     stream/http/modules/upstream.c \
     stream/http/modules/websocket.c \
     stream/pipe/pipe.c \
-    stream/remux/remux.c \
-    stream/remux/remux.h \
-    stream/remux/si.c \
-    stream/remux/utils.c \
     stream/t2mi/decap.c \
     stream/transmit/transmit.c \
     stream/udp/input.c \

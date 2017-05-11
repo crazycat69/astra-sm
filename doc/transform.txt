@@ -3,13 +3,13 @@ Author: Artem Kharitonov <artem@3phase.pw>
 Date:   Thu Jun 9 14:13:47 2016 +0500
 
     scripts/stream: add transform feature
-    
+
     This allows adding additional stream modules between channel input
-    and output. As of now, two such modules are available: remux (CBR padding)
+    and output. As of now, two such modules are available: cbr (null padding)
     and pipe (filter TS through an external process).
-    
+
     Usage examples:
-    
+
         make_channel({
             ...
             transform = {
@@ -19,10 +19,10 @@ Date:   Thu Jun 9 14:13:47 2016 +0500
                     command = "ffmpeg -i pipe:0 -c copy -f mpegts pipe:1",
                     -- see stream/pipe/pipe.c for more options
                 },
-    
+
                 -- URL syntax:
                 "pipe:///bin/cat",
-    
+
                 -- CBR example (table only):
                 {
                     format = "cbr",
