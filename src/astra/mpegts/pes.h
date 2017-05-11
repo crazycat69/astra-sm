@@ -27,10 +27,10 @@
 #endif /* !_ASTRA_H_ */
 
 /* header sizes */
-#define PES_HDR_BASIC   6U
-#define PES_HDR_EXT     3U
+#define PES_HDR_BASIC 6U
+#define PES_HDR_EXT 3U
 #define PES_HEADER_SIZE (PES_HDR_BASIC + PES_HDR_EXT)
-#define PES_MAX_BUFFER  524288U
+#define PES_MAX_BUFFER 524288U
 
 /* start code */
 #define PES_BUFFER_GET_HEADER(_pes) \
@@ -81,108 +81,5 @@
 /* wrappers */
 #define PES_SET_PTS(__x, __v) PES_SET_XTS(__x, 9, 0x2, __v)
 #define PES_SET_DTS(__x, __v) PES_SET_XTS(__x, 14, 0x1, __v)
-
-typedef struct ts_pes_t ts_pes_t;
-typedef void (*pes_callback_t)(void *, ts_pes_t *);
-
-/* preferred PES buffering mode */
-typedef enum {
-    /* output as soon as possible (default) */
-    PES_MODE_FAST = 0,
-
-    /* wait until we have the whole packet */
-    PES_MODE_WHOLE,
-} ts_pes_mode_t;
-
-/* extension header struct */
-typedef struct __attribute__((__packed__)) {
-#if defined(BYTE_ORDER) && BYTE_ORDER == LITTLE_ENDIAN
-    unsigned original  : 1;
-    unsigned copyright : 1;
-    unsigned alignment : 1;
-    unsigned priority  : 1;
-    unsigned scrambled : 2;
-    unsigned marker    : 2;
-    /* byte 6 */
-    unsigned extension : 1;
-    unsigned crc       : 1;
-    unsigned copy_info : 1;
-    unsigned dsm_trick : 1;
-    unsigned es_rate   : 1;
-    unsigned escr      : 1;
-    unsigned dts       : 1;
-    unsigned pts       : 1;
-    /* byte 7 */
-#elif defined(BYTE_ORDER) && BYTE_ORDER == BIG_ENDIAN
-    /* byte 6 */
-    unsigned marker    : 2;
-    unsigned scrambled : 2;
-    unsigned priority  : 1;
-    unsigned alignment : 1;
-    unsigned copyright : 1;
-    unsigned original  : 1;
-    /* byte 7 */
-    unsigned pts       : 1;
-    unsigned dts       : 1;
-    unsigned escr      : 1;
-    unsigned es_rate   : 1;
-    unsigned dsm_trick : 1;
-    unsigned copy_info : 1;
-    unsigned crc       : 1;
-    unsigned extension : 1;
-#else
-#   error "Please fix BYTE_ORDER defines"
-#endif /* BYTE_ORDER */
-    /* byte 8 */
-    unsigned hdrlen    : 8;
-} ts_pes_ext_t;
-
-/* (de)muxer context struct */
-struct ts_pes_t
-{
-    /* TS header */
-    uint16_t pid;
-    uint8_t i_cc; /* input CC */
-    uint8_t o_cc; /* output CC */
-    bool key;     /* random access */
-
-    /* PES header */
-    uint8_t stream_id;
-    size_t expect_size;
-
-    /* PES extension header */
-    ts_pes_ext_t ext;
-
-    /* timing data */
-    uint64_t pts;
-    uint64_t dts;
-    uint64_t pcr;
-
-    /* packet counters */
-    unsigned sent;
-    unsigned truncated;
-    unsigned dropped;
-
-    /* mux buffer */
-    uint8_t buffer[PES_MAX_BUFFER];
-    size_t buf_read;
-    size_t buf_write;
-
-    /* demux buffer */
-    uint8_t ts[TS_PACKET_SIZE];
-
-    /* output mode */
-    ts_pes_mode_t mode;
-
-    /* callbacks */
-    void *cb_arg;
-    pes_callback_t on_pes;
-    ts_callback_t on_ts;
-};
-
-ts_pes_t *ts_pes_init(uint16_t pid) __asc_result;
-void ts_pes_destroy(ts_pes_t *pes);
-
-bool ts_pes_mux(ts_pes_t *pes, const uint8_t *ts);
 
 #endif /* _TS_PES_ */

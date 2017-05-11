@@ -139,7 +139,6 @@ libastra_la_SOURCES += \
     astra/mpegts/mpegts.h \
     astra/mpegts/pcr.c \
     astra/mpegts/pcr.h \
-    astra/mpegts/pes.c \
     astra/mpegts/pes.h \
     astra/mpegts/psi.c \
     astra/mpegts/psi.h \
