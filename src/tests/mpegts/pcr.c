@@ -66,7 +66,7 @@ START_TEST(get_set)
 END_TEST
 
 /* PCR wrapover test */
-START_TEST(delta)
+START_TEST(wrapover)
 {
     uint64_t total = 0, add = 0, pa = 0, pb = 0;
 
@@ -205,7 +205,7 @@ Suite *mpegts_pcr(void)
     tcase_add_checked_fixture(tc, setup, NULL);
 
     tcase_add_test(tc, get_set);
-    tcase_add_test(tc, delta);
+    tcase_add_test(tc, wrapover);
     tcase_add_test(tc, interval);
     tcase_add_test(tc, calc);
     tcase_add_test(tc, test_vectors);

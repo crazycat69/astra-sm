@@ -460,10 +460,10 @@ void xor_sc(void *arg, const uint8_t *ts)
     ASC_UNUSED(ts);
 
     unsigned int sc = TS_GET_SC(t->data);
-    ck_assert(((t->data[3] & 0xc0) >> 6) == sc);
+    ck_assert((unsigned int)((t->data[3] & 0xc0) >> 6) == sc);
     sc ^= xor_mask;
     TS_SET_SC(t->data, sc);
-    ck_assert(((t->data[3] & 0xc0) >> 6) == (sc & 0x3));
+    ck_assert((unsigned int)((t->data[3] & 0xc0) >> 6) == (sc & 0x3));
 }
 
 static
