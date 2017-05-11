@@ -44,7 +44,12 @@ START_TEST(get_set)
     for (size_t i = 6; i < TS_PACKET_SIZE; i++)
         ck_assert(ts[i] == 0xff);
 
-    for (uint64_t val = 0; val < TS_PCR_MAX; val += rand() % TS_PCR_FREQ)
+    int mul = 1;
+    if (TS_PCR_FREQ > RAND_MAX)
+        mul = TS_PCR_FREQ / RAND_MAX;
+
+    for (uint64_t val = 0; val < TS_PCR_MAX
+         ; val += (rand() % TS_PCR_FREQ) * mul)
     {
         ck_assert(!TS_IS_PCR(ts));
         TS_SET_PCR(ts, val);

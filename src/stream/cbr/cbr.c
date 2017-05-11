@@ -56,19 +56,36 @@
 /* maximum allowed clock drift when restamping PCRs */
 #define MAX_CLOCK_DRIFT ((TS_PCR_FREQ / 1000) * 25) /* 25ms */
 
+/* maximum PCR adjustment increment */
+#define MAX_PCR_ADJ 12 /* 444ns */
+
+/* calculate average PCR drift over this number of packets */
+#define DRIFT_HIST_SIZE 256
+
 typedef struct
 {
     unsigned int pnr;
     unsigned int pid;
+
     unsigned int pcr_pid;
 } pmt_item_t;
 
 typedef struct
 {
     unsigned int pid;
+
     unsigned int cc;
     uint64_t last;
     size_t offset;
+
+    struct
+    {
+        int hist[DRIFT_HIST_SIZE];
+        unsigned int pos;
+        int sum;
+        int thresh;
+        int adj;
+    } drift;
 } pcr_item_t;
 
 struct module_data_t
@@ -78,7 +95,7 @@ struct module_data_t
     const char *name;
     size_t bitrate;
     size_t pcr_interval;
-    int64_t pcr_delay;
+    int pcr_delay;
 
     ts_type_t stream[TS_MAX_PIDS];
     ts_psi_t *psi[TS_MAX_PIDS];
@@ -97,7 +114,7 @@ struct module_data_t
     uint64_t master_pcr_last;
     unsigned int master_pcr_pid;
     unsigned int pending;
-    int64_t feedback;
+    int feedback;
 };
 
 /*
@@ -131,6 +148,7 @@ void next_master_pcr(module_data_t *mod)
         /* reset restamping state */
         pcr->last = TS_TIME_NONE;
         pcr->offset = pcr->cc = 0;
+        memset(&pcr->drift, 0, sizeof(pcr->drift));
     }
 }
 
@@ -196,6 +214,9 @@ void update_pcr_list(module_data_t *mod)
         }
     }
 
+    asc_log_debug(MSG("total %zu PCR PIDs referenced by PMTs")
+                  , asc_list_count(mod->pcr_list));
+
     if (mod->master_pcr_pid == TS_NULL_PID)
         next_master_pcr(mod);
 }
@@ -221,7 +242,7 @@ void on_pmt(module_data_t *mod, ts_psi_t *psi)
     pmt_item_t *const pmt = mod->pmt[psi->pid];
     const unsigned int pcr_pid = PMT_GET_PCR(psi);
 
-    if (pcr_pid != pmt->pcr_pid)
+    if (pmt != NULL && pcr_pid != pmt->pcr_pid)
     {
         pmt->pcr_pid = pcr_pid;
         update_pcr_list(mod);
@@ -289,6 +310,9 @@ void on_pat(module_data_t *mod, ts_psi_t *psi)
         }
     }
 
+    asc_log_debug(MSG("total %zu PMTs referenced by PAT")
+                  , asc_list_count(mod->pmt_list));
+
     update_pcr_list(mod);
 }
 
@@ -314,7 +338,7 @@ void on_psi(void *arg, ts_psi_t *psi)
  */
 
 static inline
-uint64_t pcr_add(uint64_t pcr, int64_t add)
+uint64_t pcr_add(uint64_t pcr, int add)
 {
     return (TS_PCR_MAX + pcr + (uint64_t)add) % TS_PCR_MAX;
 }
@@ -336,6 +360,7 @@ void send_null(module_data_t *mod)
         {
             uint64_t new_pcr = pcr->last;
             new_pcr += TS_PCR_CALC(pcr->offset, mod->bitrate);
+            new_pcr += pcr->drift.adj;
             new_pcr %= TS_PCR_MAX;
 
             pcr->last = new_pcr;
@@ -363,6 +388,90 @@ void send_null(module_data_t *mod)
 }
 
 static
+void restamp_pcr(module_data_t *mod, uint8_t *ts, pcr_item_t *pcr)
+{
+    const uint64_t old_pcr = TS_GET_PCR(ts);
+    uint64_t new_pcr = old_pcr;
+
+    if (pcr->last != TS_TIME_NONE)
+    {
+        new_pcr = pcr->last;
+        new_pcr += TS_PCR_CALC(pcr->offset, mod->bitrate);
+        new_pcr %= TS_PCR_MAX;
+    }
+
+    /* compensate for clock drift */
+    int64_t drift = (int64_t)new_pcr - (int64_t)old_pcr;
+
+    if (drift >= TS_PCR_MAX / 2)
+        drift -= TS_PCR_MAX;
+    else if (drift <= -(TS_PCR_MAX / 2))
+        drift += TS_PCR_MAX;
+
+    if (drift < -MAX_CLOCK_DRIFT || drift > MAX_CLOCK_DRIFT)
+    {
+        const long long ms = drift / (TS_PCR_FREQ / 1000);
+        asc_log_debug(MSG("reset time base on PCR PID %u (%lldms)")
+                      , pcr->pid, ms);
+
+        new_pcr = old_pcr;
+        drift = 0;
+
+        memset(&pcr->drift, 0, sizeof(pcr->drift));
+    }
+
+    if (pcr->pid == mod->master_pcr_pid)
+    {
+        /*
+         * Master clock can be corrected by increasing or decreasing
+         * the amount of null padding inserted by the buffer.
+         */
+        mod->feedback = drift / 10;
+    }
+    else
+    {
+        /*
+         * Slave clocks have to be adjusted gradually in order to avoid
+         * injecting PCR_AC errors (a.k.a. PCR jitter). This could probably
+         * be done in a more elegant and/or correct way.
+         */
+        pcr->drift.sum -= pcr->drift.hist[pcr->drift.pos];
+        pcr->drift.hist[pcr->drift.pos] = drift;
+        pcr->drift.sum += pcr->drift.hist[pcr->drift.pos++];
+        pcr->drift.pos %= DRIFT_HIST_SIZE;
+
+        const int average = pcr->drift.sum / DRIFT_HIST_SIZE;
+        const int diff = pcr->drift.thresh - (average / 500);
+
+        if (diff < -1 || diff > 1)
+        {
+            pcr->drift.thresh += (diff > 0) ? -1 : 1;
+            pcr->drift.adj = -pcr->drift.thresh;
+
+            if (pcr->drift.adj > MAX_PCR_ADJ)
+                pcr->drift.adj = MAX_PCR_ADJ;
+            else if (pcr->drift.adj < -MAX_PCR_ADJ)
+                pcr->drift.adj = -MAX_PCR_ADJ;
+
+#ifdef CBR_DEBUG
+            asc_log_debug(MSG("PID: %04u, A: % 6d, D: % 3d, T: % 3d, J: % 3d")
+                          , pcr->pid, average, diff
+                          , pcr->drift.thresh, pcr->drift.adj);
+#endif /* CBR_DEBUG */
+        }
+
+        new_pcr = pcr_add(new_pcr, pcr->drift.adj);
+    }
+
+    /* rewrite PCR field */
+    pcr->last = new_pcr;
+    pcr->offset = 0;
+
+    new_pcr = pcr_add(new_pcr, mod->pcr_delay);
+    TS_SET_PCR(ts, new_pcr);
+}
+
+static
 void send_nonnull(module_data_t *mod, uint8_t *ts)
 {
     const unsigned int pid = TS_GET_PID(ts);
@@ -375,54 +484,8 @@ void send_nonnull(module_data_t *mod, uint8_t *ts)
         {
             pcr->cc = TS_GET_CC(ts);
 
-            /* restamp existing PCR values */
             if (TS_IS_PCR(ts))
-            {
-                const uint64_t old_pcr = TS_GET_PCR(ts);
-                uint64_t new_pcr = old_pcr;
-
-                if (pcr->last != TS_TIME_NONE)
-                {
-                    new_pcr = pcr->last;
-                    new_pcr += TS_PCR_CALC(pcr->offset, mod->bitrate);
-                    new_pcr %= TS_PCR_MAX;
-                }
-
-                /* compensate for clock drift */
-                int64_t drift = (int64_t)new_pcr - (int64_t)old_pcr;
-
-                if (drift >= TS_PCR_MAX / 2)
-                    drift -= TS_PCR_MAX;
-                else if (drift <= -(TS_PCR_MAX / 2))
-                    drift += TS_PCR_MAX;
-
-                if (drift < -MAX_CLOCK_DRIFT || drift > MAX_CLOCK_DRIFT)
-                {
-                    asc_log_debug(MSG("reset time base on PCR PID %u"), pid);
-
-                    new_pcr = old_pcr;
-                    drift = 0;
-                }
-
-                if (pid == mod->master_pcr_pid)
-                {
-                    /* master clock is adjusted via padding buffer */
-                    mod->feedback = drift / 10;
-                }
-                else if (drift != 0)
-                {
-                    /* FIXME: add proper clock correction for slave PIDs */
-                    const int adj = (drift > 0) ? -1 : 1;
-                    new_pcr = pcr_add(new_pcr, adj);
-                }
-
-                /* rewrite PCR field */
-                pcr->last = new_pcr;
-                pcr->offset = 0;
-
-                new_pcr = pcr_add(new_pcr, mod->pcr_delay);
-                TS_SET_PCR(ts, new_pcr);
-            }
+                restamp_pcr(mod, ts, pcr);
         }
 
         pcr->offset += TS_PACKET_SIZE;
@@ -468,7 +531,11 @@ void buffer_push(module_data_t *mod, const uint8_t *ts)
     if (mod->buf_fill >= mod->buf_size)
     {
         asc_log_error(MSG("buffer overflow, reloading PCR PID list"));
-        reload_pcr_list(mod);
+
+        reload_pcr_list(mod); /* NOTE: this flushes the buffer */
+        module_stream_send(mod, ts);
+
+        return;
     }
 
     memcpy(mod->buf[mod->buf_fill], ts, TS_PACKET_SIZE);
@@ -515,9 +582,9 @@ void receive_pcr(module_data_t *mod, const uint8_t *ts)
          */
         if (pcr_last != TS_TIME_NONE)
         {
-            const unsigned int ms = delta / (TS_PCR_FREQ / 1000);
-            asc_log_debug(MSG("PCR discontinuity (%ums) on master PCR PID %u, "
-                              "resetting clock"), ms, mod->master_pcr_pid);
+            const long long ms = delta / (TS_PCR_FREQ / 1000);
+            asc_log_debug(MSG("PCR discontinuity (%lldms) on master PCR PID "
+                              "%u, resetting clock"), ms, mod->master_pcr_pid);
 
             next_master_pcr(mod);
         }

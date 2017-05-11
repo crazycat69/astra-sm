@@ -364,7 +364,7 @@ START_TEST(ts_payload)
         {
             off = (intptr_t)pay - (intptr_t)buf;
             ck_assert(off > 0);
-            ck_assert(off == (TS_HEADER_SIZE + 1 + i));
+            ck_assert(off == (intptr_t)(TS_HEADER_SIZE + 1 + i));
             ck_assert(len == (TS_BODY_SIZE - 1 - i));
         }
         else
@@ -638,7 +638,7 @@ START_TEST(test_vectors)
 
         /* test setters */
         size_t cb_num = ASC_ARRAY_SIZE(cb_list);
-        ts_callback_t list[cb_num];
+        ts_callback_t *const list = ASC_ALLOC(cb_num, ts_callback_t);
         memcpy(list, cb_list, sizeof(ts_callback_t) * cb_num);
 
         for (unsigned int k = 0; k < 512; k++)
@@ -684,6 +684,7 @@ START_TEST(test_vectors)
         }
 
         ck_assert(!memcmp(t.data, orig_ts, TS_PACKET_SIZE));
+        free(list);
     }
 }
 END_TEST
