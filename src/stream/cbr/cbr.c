@@ -360,8 +360,7 @@ void send_null(module_data_t *mod)
         {
             uint64_t new_pcr = pcr->last;
             new_pcr += TS_PCR_CALC(pcr->offset, mod->bitrate);
-            new_pcr += pcr->drift.adj;
-            new_pcr %= TS_PCR_MAX;
+            new_pcr = pcr_add(new_pcr, pcr->drift.adj);
 
             pcr->last = new_pcr;
             pcr->offset = 0;
