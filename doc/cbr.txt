@@ -1,0 +1,61 @@
+commit 402fc6d72d95acbe95b2adbeb079e2215eb1a0bb
+Merge: b87863d be3355d
+Author: Artem Kharitonov <artem@3phase.pw>
+Date:   Fri May 12 04:47:27 2017 +0500
+
+    Merge branch 'ts_cbr' into staging
+
+    Replace stream/remux with a new and improved CBR converter.
+
+    - PCR wrapover is now handled correctly.
+    - Null padding is distributed evenly among received packets.
+    - Unknown PIDs are passed through instead of being dropped.
+
+    Usage examples:
+        make_channel({
+            ...
+
+            -- enable CBR for all outputs:
+            transform = {
+                {
+                    format = "cbr",
+
+                    ---- Target bitrate in bits per second (required):
+                    rate = 31668448,
+
+                    ---- Rate is treated as mbps if less than or equal to 1000.
+                    ---- E.g. 'rate = 20' is the same as 'rate = 20000000'.
+
+                    ---- Insert PCR at least once every 38 ms:
+                    -- pcr_interval = 38,
+
+                    ---- Subtract this value from output PCRs:
+                    -- pcr_delay = 0,
+
+                    ---- Buffer size in milliseconds at target rate:
+                    -- buffer_size = 150,
+                },
+            },
+
+            ...
+
+            -- enable CBR only for specific outputs:
+            output = {
+                -- 10 Mbps
+                "udp://239.1.2.3:1234#cbr=10&sync",
+
+                -- 20 Mbps with PCRs at least once per 20 ms:
+                "udp://239.3.2.1:1234#cbr=20&cbr_pcr_interval=20&sync",
+            },
+
+            ...
+        })
+
+    NOTE: 'remux' option now raises a Lua error if used.
+
+    Also included in this merge:
+    - mpegts: use shorter ts_ prefix instead of mpegts_ [ffd77361]
+    - mpegts/sync: clean up code, add unit test [ec52a782]
+    - mpegts/pes: remove PES parsing code [f7b88bf4]
+    - mpegts/mpegts: clean up header, add unit test [e7f66948] [8867e2ad]
+    - mpegts/pcr: ditto [c8bd7adc] [208b31d9]
