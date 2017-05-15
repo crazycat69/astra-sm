@@ -87,7 +87,7 @@ struct module_data_t
         // XXX: claim?
     } buf;
 
-    mpegts_sync_t *sync;
+    ts_sync_t *sync;
     asc_timer_t *retry_timer;
     asc_timer_t *send_timer;
 

@@ -250,9 +250,9 @@ START_TEST(wake_up)
 END_TEST
 
 /* mutex timed lock */
-#define TL_P1_WAIT (100 * 1000) /* 100ms */
-#define TL_P2_WAIT (200 * 1000) /* 200ms */
-#define TL_MS 500 /* timeout in msecs */
+#define TL_P1_WAIT (300 * 1000) /* 300ms */
+#define TL_P2_WAIT (600 * 1000) /* 600ms */
+#define TL_MS 1000 /* timeout in msecs */
 
 #define TL_CHECK_TIME(__start, __timeout) \
     do { \
@@ -261,73 +261,80 @@ END_TEST
                   && __bench >= (__timeout) * 0.7); \
     } while (0)
 
-static asc_mutex_t tl_mutex1;
-static asc_mutex_t tl_mutex2;
-static asc_mutex_t tl_mutex3;
+typedef struct
+{
+    asc_mutex_t mutex1;
+    asc_mutex_t mutex2;
+    asc_mutex_t mutex3;
+} tlock_test_t;
 
 static void timedlock_proc(void *arg)
 {
-    ASC_UNUSED(arg);
+    tlock_test_t *const tl = (tlock_test_t *)arg;
 
-    asc_mutex_lock(&tl_mutex2); /* locked M2 */
+    asc_mutex_lock(&tl->mutex2); /* locked M2 */
 
     /* part 1 */
-    ck_assert(asc_mutex_trylock(&tl_mutex1) == false);
+    ck_assert(asc_mutex_trylock(&tl->mutex1) == false);
     const uint64_t start = asc_utime();
-    const bool ret = asc_mutex_timedlock(&tl_mutex1, TL_MS); /* locked M1 */
+    const bool ret = asc_mutex_timedlock(&tl->mutex1, TL_MS); /* locked M1 */
     ck_assert(ret == true);
     TL_CHECK_TIME(start, TL_P1_WAIT);
 
     /* part 2 */
     asc_usleep(TL_P2_WAIT);
-    asc_mutex_unlock(&tl_mutex2); /* released M2 */
+    asc_mutex_unlock(&tl->mutex2); /* released M2 */
 
     /* part 3 */
-    asc_mutex_lock(&tl_mutex3); /* locked M3 */
-    asc_mutex_unlock(&tl_mutex1); /* released M1 */
-    asc_mutex_unlock(&tl_mutex3); /* released M3 */
-    ck_assert(asc_mutex_trylock(&tl_mutex1) == true); /* locked M1 */
-    asc_mutex_unlock(&tl_mutex1); /* released M1 */
+    asc_mutex_lock(&tl->mutex3); /* locked M3 */
+    asc_mutex_unlock(&tl->mutex1); /* released M1 */
+    asc_mutex_unlock(&tl->mutex3); /* released M3 */
+    ck_assert(asc_mutex_trylock(&tl->mutex1) == true); /* locked M1 */
+    asc_mutex_unlock(&tl->mutex1); /* released M1 */
 }
 
 START_TEST(mutex_timedlock)
 {
-    asc_mutex_init(&tl_mutex1);
-    asc_mutex_init(&tl_mutex2);
-    asc_mutex_init(&tl_mutex3);
+    tlock_test_t *const tl = ASC_ALLOC(1, tlock_test_t);
 
-    asc_mutex_lock(&tl_mutex3); /* locked M3 */
+    asc_mutex_init(&tl->mutex1);
+    asc_mutex_init(&tl->mutex2);
+    asc_mutex_init(&tl->mutex3);
+
+    asc_mutex_lock(&tl->mutex3); /* locked M3 */
 
     /* part 1: aux thread waits for main */
-    asc_mutex_lock(&tl_mutex1); /* locked M1 */
-    asc_thread_t *const thr = asc_thread_init(NULL, timedlock_proc, NULL);
+    asc_mutex_lock(&tl->mutex1); /* locked M1 */
+    asc_thread_t *const thr = asc_thread_init(tl, timedlock_proc, NULL);
     asc_usleep(TL_P1_WAIT);
-    asc_mutex_unlock(&tl_mutex1); /* released M1 */
+    asc_mutex_unlock(&tl->mutex1); /* released M1 */
 
     /* part 2: main thread waits for aux */
-    ck_assert(asc_mutex_trylock(&tl_mutex2) == false);
+    ck_assert(asc_mutex_trylock(&tl->mutex2) == false);
     uint64_t start = asc_utime();
-    bool ret = asc_mutex_timedlock(&tl_mutex2, TL_MS); /* locked M2 */
+    bool ret = asc_mutex_timedlock(&tl->mutex2, TL_MS); /* locked M2 */
     ck_assert(ret == true);
     TL_CHECK_TIME(start, TL_P2_WAIT);
 
     /* part 3: timedlock failure */
     start = asc_utime();
-    ret = asc_mutex_timedlock(&tl_mutex1, TL_MS); /* timeout for M1 */
+    ret = asc_mutex_timedlock(&tl->mutex1, TL_MS); /* timeout for M1 */
     ck_assert(ret == false);
     TL_CHECK_TIME(start, TL_MS * 1000);
 
     /* join thread and clean up */
-    asc_mutex_unlock(&tl_mutex2); /* released M2 */
-    asc_mutex_unlock(&tl_mutex3); /* released M3 */
+    asc_mutex_unlock(&tl->mutex2); /* released M2 */
+    asc_mutex_unlock(&tl->mutex3); /* released M3 */
     asc_thread_join(thr);
 
-    ck_assert(asc_mutex_trylock(&tl_mutex3) == true); /* locked M3 */
-    asc_mutex_unlock(&tl_mutex3); /* released M3 */
+    ck_assert(asc_mutex_trylock(&tl->mutex3) == true); /* locked M3 */
+    asc_mutex_unlock(&tl->mutex3); /* released M3 */
 
-    asc_mutex_destroy(&tl_mutex1);
-    asc_mutex_destroy(&tl_mutex2);
-    asc_mutex_destroy(&tl_mutex3);
+    asc_mutex_destroy(&tl->mutex1);
+    asc_mutex_destroy(&tl->mutex2);
+    asc_mutex_destroy(&tl->mutex3);
+
+    free(tl);
 }
 END_TEST
 
@@ -428,8 +435,7 @@ static void multi_proc(void *arg)
 
 START_TEST(cond_multi)
 {
-    thread_test_t tt[MULTI_THREADS];
-
+    thread_test_t *const tt = ASC_ALLOC(MULTI_THREADS, thread_test_t);
     asc_list_t *const list = asc_list_init();
 
     asc_cond_t cond;
@@ -440,7 +446,7 @@ START_TEST(cond_multi)
 
     /* start worker threads */
     asc_mutex_lock(&mutex);
-    for (size_t i = 0; i < ASC_ARRAY_SIZE(tt); i++)
+    for (size_t i = 0; i < MULTI_THREADS; i++)
     {
         tt[i].list = list;
         tt[i].mutex = &mutex;
@@ -471,7 +477,7 @@ START_TEST(cond_multi)
     asc_mutex_unlock(&mutex);
 
     size_t tasks_done = 0;
-    for (size_t i = 0; i < ASC_ARRAY_SIZE(tt); i++)
+    for (size_t i = 0; i < MULTI_THREADS; i++)
     {
         asc_thread_join(tt[i].thread);
         tasks_done += tt[i].value;
@@ -483,6 +489,7 @@ START_TEST(cond_multi)
     asc_mutex_destroy(&mutex);
     asc_cond_destroy(&cond);
     asc_list_destroy(list);
+    free(tt);
 }
 END_TEST
 

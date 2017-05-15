@@ -349,7 +349,7 @@ void parse_pid_list(lua_State *L, module_data_t *mod)
         const int iopt = luaL_checkinteger(L, -1);
         lua_pop(L, 1);
 
-        if (!(iopt >= 0 && iopt < TS_MAX_PID))
+        if (!ts_pid_valid(iopt))
             luaL_error(L, MSG("PID out of range: '%d'"), iopt);
 
         pid->pid = iopt;

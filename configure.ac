@@ -132,6 +132,22 @@ case "${host_os}" in
     mingw*)
         SYS=win32
 
+        # set Windows-specific linker flags
+        AX_CHECK_LDFLAG([-Wl,--no-seh])
+        AX_CHECK_LDFLAG([-Wl,--nxcompat])
+        AX_CHECK_LDFLAG([-Wl,--tsaware])
+
+        AX_CHECK_LDFLAG([-Wl,--dynamicbase,--pic-executable], [], [
+            AX_CHECK_LDFLAG([-Wl,--high-entropy-va], [], [
+                # high-entropy ASLR is only supported on 64-bit builds
+                AX_CHECK_LDFLAG([-Wl,--image-base,0x140000000])
+                AX_CHECK_LDFLAG([-Wl,--entry,mainCRTStartup])
+            ], [
+                AX_CHECK_LDFLAG([-Wl,--large-address-aware])
+                AX_CHECK_LDFLAG([-Wl,--entry,_mainCRTStartup])
+            ])
+        ])
+
         # choose value for _WIN32_WINNT
         AS_IF([test "x${with_winver}" = "x"], [
             # default version
@@ -614,15 +630,17 @@ AS_IF([test "x${enable_debug}" = "xyes"], [
     AC_DEFINE([DEBUG], [1], [Define when building a debug version])
 
     # add debug info
-    AX_CHECK_CFLAGS([-g3], [], [], [
+    AX_CHECK_CFLAG([-g3], [], [], [
         # try to fall back to -g
-        AX_CHECK_CFLAGS([-g], [], [], [
+        AX_CHECK_CFLAG([-g], [], [], [
             AC_MSG_ERROR([$CC doesn't support required debug flag; pass --disable-debug to disable this check])
         ])
     ])
 
     # non-essential debug flags
-    AX_CHECK_CFLAGS([-ggdb -ggdb3 -fno-builtin])
+    AX_CHECK_CFLAG([-ggdb])
+    AX_CHECK_CFLAG([-ggdb3])
+    AX_CHECK_CFLAG([-fno-builtin])
     kill_optflags="yes"
 ])
 
@@ -631,7 +649,11 @@ AC_ARG_ENABLE([gcov],
     AC_HELP_STRING([--enable-gcov], [enable test coverage analysis]))
 
 AS_IF([test "x${enable_gcov}" = "xyes"], [
-    AX_CHECK_CFLAGS([-ftest-coverage -fprofile-arcs], [], [], [
+    have_gcov="no"
+    AX_CHECK_CFLAG([-ftest-coverage], [],
+        [ AX_CHECK_CFLAG([-fprofile-arcs], [], [have_gcov="yes"]) ])
+
+    AS_IF([test "x${have_gcov}" != "xyes"], [
         AC_MSG_ERROR([$CC doesn't support gcov; pass --disable-gcov to disable this check])
     ])
 
@@ -644,7 +666,7 @@ AC_ARG_ENABLE([gprof],
     AC_HELP_STRING([--enable-gprof], [enable profiling with gprof]))
 
 AS_IF([test "x${enable_gprof}" = "xyes"], [
-    AX_CHECK_CFLAGS([-pg], [], [], [
+    AX_CHECK_CFLAG([-pg], [], [], [
         AC_MSG_ERROR([$CC doesn't support gprof; pass --disable-gprof to disable this check])
     ])
 ])
@@ -670,8 +692,8 @@ AX_CHECK_CFLAG([-Wextra], [WARN_CFLAGS])
 
 AS_IF([test "x${enable_warnings}" = "xyes"], [
     # older GCC versions don't support -Wpedantic
-    AX_CHECK_CFLAG([-Wpedantic], [WARN_CFLAGS], [], [
-        AX_CHECK_CFLAGS([-pedantic], [WARN_CFLAGS]) ])
+    AX_CHECK_CFLAG([-Wpedantic], [WARN_CFLAGS], [],
+        [ AX_CHECK_CFLAG([-pedantic], [WARN_CFLAGS]) ])
 
     AX_CHECK_CFLAG([-Waggregate-return], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wbad-function-cast], [WARN_CFLAGS])
@@ -737,7 +759,7 @@ AC_ARG_ENABLE([werror],
     AC_HELP_STRING([--enable-werror], [turn on -Werror]))
 
 AS_IF([test "x${enable_werror}" = "xyes"], [
-    AX_CHECK_CFLAGS([-Werror], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Werror], [WARN_CFLAGS])
 ])
 
 AC_SUBST(WARN_CFLAGS)

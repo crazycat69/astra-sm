@@ -11,6 +11,7 @@ $1])])
 # -------------
 AC_DEFUN([AX_SAVE_FLAGS], [
     SAVED_CFLAGS="$CFLAGS"
+    SAVED_LDFLAGS="$LDFLAGS"
     SAVED_LIBS="$LIBS"
 ])
 
@@ -18,6 +19,7 @@ AC_DEFUN([AX_SAVE_FLAGS], [
 #-----------------
 AC_DEFUN([AX_RESTORE_FLAGS], [
     CFLAGS="$SAVED_CFLAGS"
+    LDFLAGS="$SAVED_LDFLAGS"
     LIBS="$SAVED_LIBS"
 ])
 
@@ -160,11 +162,32 @@ AC_DEFUN([AX_CHECK_CFLAG], [
     ])
 ])
 
-# AX_CHECK_CFLAGS(FLAGLIST, [FLAGVAR], [ACTION-IF-SUCCESS], [ACTION-IF-FAILURE])
-#-------------------------------------------------------------------------------
-# For each flag in FLAGLIST perform AX_CHECK_CFLAG
-AC_DEFUN([AX_CHECK_CFLAGS], [
-    for ac_flag in $1; do
-        AX_CHECK_CFLAG([$ac_flag], [$2], [$3], [$4])
-    done
+# AX_CHECK_LDFLAG(FLAG, [FLAGVAR], [ACTION-IF-SUCCESS], [ACTION-IF-FAILURE])
+#---------------------------------------------------------------------------
+# Check if $LD supports FLAG; append it to FLAGVAR on success.
+# If specified, perform ACTION-IF-SUCCESS or ACTION-IF-FAILURE.
+AC_DEFUN([AX_CHECK_LDFLAG], [
+    AC_MSG_CHECKING([whether $LD accepts $1])
+
+    AX_SAVE_FLAGS
+    LDFLAGS="$LDFLAGS $1"
+    AC_LINK_IFELSE([
+        AC_LANG_PROGRAM()
+    ], [
+        clf_have_flag="yes"
+    ], [
+        clf_have_flag="no"
+    ])
+    AX_RESTORE_FLAGS
+
+    AS_IF([test "x${clf_have_flag}" = "xyes"], [
+        AC_MSG_RESULT([yes])
+        m4_define([clf_flag_var], m4_default([$2], [LDFLAGS]))
+        clf_flag_var="$clf_flag_var $1"
+        m4_undefine([clf_flag_var])
+        m4_default([$3], [])
+    ], [
+        AC_MSG_RESULT([no])
+        m4_default([$4], [])
+    ])
 ])

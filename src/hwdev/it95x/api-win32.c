@@ -63,10 +63,6 @@ struct IKsObject
 #define STATIC_KSPROPSETID_IT9500Properties \
     0xf23fac2d,0xe1af,0x48e0,{0x8b,0xbe,0xa1,0x40,0x29,0xc9,0x2f,0x11}
 
-static
-const GUID KSPROPSETID_IT9500Properties =
-    { STATIC_KSPROPSETID_IT9500Properties };
-
 enum
 {
     KSPROPERTY_IT95X_DRV_INFO = 0,
@@ -83,10 +79,6 @@ enum
 
 #define STATIC_KSPROPSETID_IT9500PropertiesAux \
     0xc6efe5eb,0x855a,0x4f1b,{0xb7,0xaa,0x87,0xb5,0xe1,0xdc,0x41,0x13}
-
-static
-const GUID KSPROPSETID_IT9500PropertiesAux =
-    { STATIC_KSPROPSETID_IT9500PropertiesAux };
 
 enum
 {

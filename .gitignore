@@ -30,6 +30,7 @@ gmon.out
 *.core
 *.gcda
 *.gcno
+*.gcov
 *.log
 *.trs
 
