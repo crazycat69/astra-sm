@@ -29,7 +29,7 @@
 #include <astra/luaapi/luaapi.h>
 #include <astra/luaapi/state.h>
 
-#define MSG(_msg) "[core/mainloop] " _msg
+#define MSG(_msg) "[mainloop] " _msg
 
 /* garbage collector interval, usecs */
 #define LUA_GC_TIMEOUT (1 * 1000 * 1000)

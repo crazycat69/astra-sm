@@ -23,7 +23,7 @@
 #include <astra/mpegts/psi.h>
 #include <astra/utils/crc8.h>
 
-#define MSG(_msg) "[t2mi/%s] " _msg, mi->name
+#define MSG(_msg) "[t2mi %s] " _msg, mi->name
 
 /* sizes and lengths */
 #define PLP_LIST_SIZE 0x100

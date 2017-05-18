@@ -25,7 +25,7 @@
 
 #define EV_ADD_ALL (EV_ADD | EV_EOF | EV_ERROR)
 
-#define MSG(_msg) "[core/event-kqueue] " _msg
+#define MSG(_msg) "[event-kqueue] " _msg
 
 typedef struct
 {

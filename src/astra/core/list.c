@@ -22,7 +22,7 @@
 #include <astra/astra.h>
 #include <astra/core/list.h>
 
-#define MSG(_msg) "[core/list] " _msg
+#define MSG(_msg) "[list] " _msg
 
 /* minimum list size, items */
 #define LIST_MIN_SIZE 32

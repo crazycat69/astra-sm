@@ -27,7 +27,7 @@
 #   include <syslog.h>
 #endif /* !_WIN32 */
 
-#define MSG(_msg) "[core/log] " _msg
+#define MSG(_msg) "[log] " _msg
 
 typedef struct
 {

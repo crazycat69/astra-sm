@@ -27,7 +27,7 @@
 #include <astra/core/socket.h>
 #include <astra/luaapi/state.h>
 
-#define MSG(_msg) "[core/init] " _msg
+#define MSG(_msg) "[init] " _msg
 
 int asc_exit_status = 0;
 
