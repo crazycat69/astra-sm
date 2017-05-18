@@ -29,8 +29,7 @@
  *      name        - string, instance identifier for logging
  *      adapter     - number, device index
  *      devpath     - string, unique OS-specific device path
- *      sync        - boolean, enable or disable buffering (default is true)
- *      sync_opts   - string, sync buffer options
+ *      buffer_size - number, buffer size in megabytes (default is 1 MiB)
  *
  *      frequency   - number, carrier frequency in kHz
  *      bandwidth   - number, channel bandwidth in kHz
@@ -69,13 +68,105 @@
 
 #include "it95x.h"
 
-// TODO: on_ts goes here
+/* default buffer size, MiB */
+#define DEFAULT_BUFFER_SIZE 1
+
+/* device restart interval, seconds */
+#define RESTART_TIMER_SEC 10
+
+/* transmit timer interval, milliseconds */
+#define TX_TIMER_MSEC 15
+
+/*
+ * buffering and worker thread communication
+ */
+
+/* thread restart callback */
+static
+void on_worker_close(void *arg);
+
+static
+void on_worker_restart(void *arg)
+{
+    module_data_t *const mod = (module_data_t *)arg;
+
+    if (mod->restart_timer != NULL)
+    {
+        asc_log_debug(MSG("attempting to reinitialize device"));
+        mod->restart_timer = NULL;
+    }
+
+    mod->thread = asc_thread_init(mod, it95x_worker_loop, on_worker_close);
+}
+
+/* called whenever the worker thread returns */
+static
+void on_worker_close(void *arg)
+{
+    module_data_t *const mod = (module_data_t *)arg;
+
+    ASC_FREE(mod->thread, asc_thread_join);
+    mod->transmitting = mod->quitting = false;
+    mod->tx_tail = mod->tx_head;
+
+    /* schedule modulator restart */
+    asc_log_warning(MSG("reopening device in %u seconds")
+                    , RESTART_TIMER_SEC);
+
+    const unsigned int ms = RESTART_TIMER_SEC * 1000;
+    mod->restart_timer = asc_timer_one_shot(ms, on_worker_restart, mod);
+}
+
+/* queue current block for transmission and start filling up the next one */
+static
+void next_block(module_data_t *mod)
+{
+    asc_mutex_lock(&mod->mutex);
+
+    if (mod->transmitting)
+    {
+        size_t next = (mod->tx_head + 1) % mod->tx_size;
+        if (next == mod->tx_tail)
+        {
+            asc_log_error(MSG("transmit ring full, resetting"));
+            next = (mod->tx_tail + 1) % mod->tx_size;
+        }
+
+        mod->tx_head = next;
+        asc_cond_signal(&mod->cond);
+    }
+
+    mod->tx_ring[mod->tx_head].size = 0;
+
+    asc_mutex_unlock(&mod->mutex);
+}
+
+#if 0
+// FIXME
+static
+void on_xmit_timer(void *arg)
+{
+    module_data_t *const mod = (module_data_t *)arg;
+
+    if (mod->tx_ring[mod->tx_head].size > 0)
+        buffer_push(mod);
+}
+#endif
+
+/* queue single TS packet for transmission */
 static
 void on_ts(module_data_t *mod, const uint8_t *ts)
 {
-    // TODO: implement transmit buffering
-    ASC_UNUSED(mod);
-    ASC_UNUSED(ts);
+#if 1
+return; // XXX: remove me
+#endif
+    it95x_tx_block_t *const blk = &mod->tx_ring[mod->tx_head];
+
+    memcpy(&blk->data[blk->size], ts, TS_PACKET_SIZE);
+    blk->size += TS_PACKET_SIZE;
+
+    if (blk->size >= IT95X_TX_BLOCK_SIZE)
+        next_block(mod);
 }
 
 /*
@@ -110,7 +201,8 @@ void module_init(lua_State *L, module_data_t *mod)
     asc_cond_init(&mod->cond);
 
     /* get instance name */
-    if (!module_option_string(L, "name", &mod->name, NULL))
+    module_option_string(L, "name", &mod->name, NULL);
+    if (mod->name == NULL)
         luaL_error(L, "[it95x] option 'name' is required");
 
     /* get device identifier */
@@ -132,34 +224,35 @@ void module_init(lua_State *L, module_data_t *mod)
         luaL_error(L, MSG("either adapter or devpath must be set"));
     }
 
-    /* apply modulation settings */
+    /* get debug mode */
+    module_option_boolean(L, "debug", &mod->debug);
+
+    /* validate modulation settings */
     it95x_parse_opts(L, mod);
 
-    module_option_boolean(L, "debug", &mod->debug);
     if (mod->debug)
         it95x_dump_opts(mod);
 
-    // TODO: create TX ring
+    /* create transmit ring */
+    int opt = DEFAULT_BUFFER_SIZE;
+    module_option_integer(L, "buffer_size", &opt);
+    if (!(opt >= 1 && opt <= 100))
+        luaL_error(L, MSG("buffer size must be between 1 and 100 MiB"));
 
-    /* create sync buffer */
-    bool sync_on = true;
-    module_option_boolean(L, "sync", &sync_on);
+    mod->tx_size = ((size_t)opt * 1024UL * 1024UL) / sizeof(*mod->tx_ring);
+    ASC_ASSERT(mod->tx_size > 0, MSG("invalid buffer size"));
 
-    if (sync_on)
-    {
-        const char *sync_opts = NULL;
-        module_option_string(L, "sync_opts", &sync_opts, NULL);
+    mod->tx_ring = ASC_ALLOC(mod->tx_size, it95x_tx_block_t);
+    asc_log_debug(MSG("using ring of %zu transmit blocks (%zu bytes each)")
+                  , mod->tx_size, sizeof(*mod->tx_ring));
 
-        // TODO: create sync ctx
-    }
+    //mod->tx_timer = XXX; // TODO
 
-    // TODO: create send timer (10-15 ms)
-
-    /* start dedicated worker thread for modulator */
+    /* start dedicated thread for sending data to modulator */
     module_stream_init(L, mod, on_ts);
     module_demux_set(mod, NULL, NULL);
 
-    // TODO: start worker thread
+    on_worker_restart(mod);
 }
 
 static
@@ -167,15 +260,19 @@ void module_destroy(module_data_t *mod)
 {
     module_stream_destroy(mod);
 
-    // TODO: kill retry and send timers
+    if (mod->thread != NULL)
+    {
+        asc_mutex_lock(&mod->mutex);
+        mod->quitting = true;
+        asc_cond_signal(&mod->cond);
+        asc_mutex_unlock(&mod->mutex);
 
-    // TODO: signal worker thread to quit
+        asc_thread_join(mod->thread);
+    }
 
-    // TODO: join worker thread
-
-    // TODO: free TX ring
-
-    // TODO: free sync ctx
+    //ASC_FREE(mod->tx_timer, asc_timer_destroy); TODO
+    ASC_FREE(mod->restart_timer, asc_timer_destroy);
+    ASC_FREE(mod->tx_ring, free);
 
     asc_cond_destroy(&mod->cond);
     asc_mutex_destroy(&mod->mutex);

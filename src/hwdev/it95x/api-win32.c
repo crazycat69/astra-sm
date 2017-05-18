@@ -654,6 +654,7 @@ HRESULT dev_from_moniker(IMoniker *moniker, it95x_dev_t **out)
 
     dev->info.chip_type = chip_type;
     dev->info.dev_type = dev_type;
+    dev->info.eagle2 = (chip_type >= 0x9510);
 
     *out = dev;
 
@@ -1109,8 +1110,14 @@ int it95x_set_psi(it95x_dev_t *dev
                   , unsigned int timer_id, unsigned int interval_ms
                   , const uint8_t packet[TS_PACKET_SIZE])
 {
-    if (timer_id < 1 || timer_id > 5)
+    if (timer_id < 1 || timer_id > IT95X_PSI_TIMER_CNT)
         return ret_win32(ERROR_BAD_ARGUMENTS);
+
+    if (dev->info.eagle2)
+    {
+        /* NOTE: Eagle II drivers have zero-based timer numbering */
+        timer_id--;
+    }
 
     HRESULT hr = S_OK;
 
@@ -1194,12 +1201,12 @@ int it95x_set_tps(it95x_dev_t *dev, const it95x_tps_t *tps)
     return ret_hr(hr);
 }
 
-int it95x_set_tps_crypt(it95x_dev_t *dev, bool enable, uint32_t key)
+int it95x_set_tps_crypt(it95x_dev_t *dev, uint32_t key)
 {
     struct ioctl_tps_crypt ioc;
     memset(&ioc, 0, sizeof(ioc));
 
-    if (enable)
+    if (key != 0)
     {
         ioc.code = IOCTL_IT95X_ENABLE_TPS_CRYPT;
         ioc.key = key;

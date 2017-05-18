@@ -484,7 +484,7 @@ void parse_isdbt(lua_State *L, module_data_t *mod)
 
         if (mod->pid_cnt == 0)
         {
-            luaL_error(L, MSG("PID list cannot be empty while partial "
+            luaL_error(L, MSG("PID list cannot be empty when partial "
                               "reception is enabled"));
         }
 

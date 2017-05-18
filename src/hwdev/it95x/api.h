@@ -32,6 +32,9 @@
 /* maximum PID list size for ISDB-T PID filter */
 #define IT95X_PID_LIST_SIZE 31
 
+/* number of PSI insertion timers */
+#define IT95X_PSI_TIMER_CNT 5
+
 /* opaque type for device context */
 typedef struct it95x_dev_t it95x_dev_t;
 
@@ -215,6 +218,7 @@ typedef struct
     /* chip and device type */
     uint16_t chip_type;
     uint8_t dev_type;
+    bool eagle2;
 } it95x_dev_info_t;
 
 /* API functions */
@@ -248,7 +252,7 @@ int it95x_set_psi(it95x_dev_t *dev
 int it95x_set_rf(it95x_dev_t *dev, bool enable);
 int it95x_set_tmcc(it95x_dev_t *dev, const it95x_tmcc_t *tmcc);
 int it95x_set_tps(it95x_dev_t *dev, const it95x_tps_t *tps);
-int it95x_set_tps_crypt(it95x_dev_t *dev, bool enable, uint32_t key);
+int it95x_set_tps_crypt(it95x_dev_t *dev, uint32_t key);
 
 int it95x_set_dc_cal(it95x_dev_t *dev, int dc_i, int dc_q);
 int it95x_set_ofs_cal(it95x_dev_t *dev

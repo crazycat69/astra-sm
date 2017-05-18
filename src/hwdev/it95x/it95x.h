@@ -55,16 +55,15 @@ struct module_data_t
     it95x_iq_t iq_table[IT95X_IQ_TABLE_SIZE];
     size_t iq_size;
 
+    uint32_t tps_crypt;
     it95x_pcr_mode_t pcr_mode;
     it95x_system_t system;
 
-    /* DVB-T specific */
+    /* DVB-T specific options */
     it95x_dvbt_t dvbt;
     it95x_tps_t tps;
 
-    uint32_t tps_crypt;
-
-    /* ISDB-T specific */
+    /* ISDB-T specific options */
     it95x_isdbt_t isdbt;
     it95x_tmcc_t tmcc;
 
@@ -75,27 +74,21 @@ struct module_data_t
     /* channel bitrate (per layer for partial RX) */
     uint32_t bitrate[2];
 
-    /* transmit ring */
-    struct
-    {
-        it95x_tx_block_t *blocks;
-        // XXX: it95x_tx_block_t *current;
-        size_t size;
+    /* module state */
+    //asc_timer_t *tx_timer;
+    asc_timer_t *restart_timer;
 
-        size_t head;
-        size_t tail;
-        // XXX: claim?
-    } buf;
+    it95x_tx_block_t *tx_ring;
+    size_t tx_size;
+    size_t tx_head;
+    size_t tx_tail;
 
-    ts_sync_t *sync;
-    asc_timer_t *retry_timer;
-    asc_timer_t *send_timer;
-
-    /* worker thread */
     asc_thread_t *thread;
     asc_cond_t cond;
     asc_mutex_t mutex;
-    bool running;
+
+    bool transmitting; /* set by worker */
+    bool quitting; /* set by main thread */
 };
 
 void it95x_parse_opts(lua_State *L, module_data_t *mod);
