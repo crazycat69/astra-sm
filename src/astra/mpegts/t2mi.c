@@ -540,8 +540,8 @@ bool bb_reassemble_up(ts_t2mi_t *mi, t2mi_packet_t *pkt)
     if (!pkt->continuous)
     {
         /* packet loss; frag buffer contents are unusable */
-        asc_log_debug(MSG("dropping UP fragment due to discontinuity (%zu bytes)")
-                      , frag_skip);
+        asc_log_debug(MSG("dropping UP fragment due to discontinuity "
+                          "(%zu bytes)"), frag_skip);
 
         return false;
     }
@@ -561,8 +561,8 @@ bool bb_reassemble_up(ts_t2mi_t *mi, t2mi_packet_t *pkt)
         }
         else
         {
-            asc_log_debug(MSG("reassembled UP has wrong size (expected %zu, got %zu)")
-                          , bb->up_size, len);
+            asc_log_debug(MSG("reassembled UP has wrong size (expected %zu, "
+                              "got %zu)"), bb->up_size, len);
         }
 
         return false;
@@ -686,7 +686,7 @@ bool on_bbframe(ts_t2mi_t *mi, t2mi_packet_t *pkt)
 
     if (bb->end > pkt->end)
     {
-        asc_log_error(MSG("BBframe data field length out of bounds"));
+        asc_log_debug(MSG("BBframe data field length out of bounds"));
         return false;
     }
 
@@ -702,7 +702,7 @@ bool on_bbframe(ts_t2mi_t *mi, t2mi_packet_t *pkt)
         bb->up_offset = bb->syncd / 8;
         if (bb->up_offset > bb->df_size)
         {
-            asc_log_error(MSG("BBframe syncd value out of bounds"));
+            asc_log_debug(MSG("BBframe syncd value out of bounds"));
             return false;
         }
     }
@@ -714,7 +714,9 @@ bool on_bbframe(ts_t2mi_t *mi, t2mi_packet_t *pkt)
             return on_bbframe_ts(mi, pkt);
 
         default:
-            asc_log_error_once(MSG("unsupported format: %s"), bb_format_name(bb->format));
+            asc_log_error_once(MSG("unsupported format: %s")
+                               , bb_format_name(bb->format));
+
             return true;
     }
 }
@@ -742,7 +744,7 @@ bool on_l1_current(ts_t2mi_t *mi, const t2mi_packet_t *pkt)
 
     if (&l1->data[l1->l1conf_pos] >= pkt->end)
     {
-        asc_log_error(MSG("L1 pre-signaling length out of bounds"));
+        asc_log_debug(MSG("L1 pre-signaling length out of bounds"));
         return false;
     }
 
@@ -781,7 +783,7 @@ bool on_l1_current(ts_t2mi_t *mi, const t2mi_packet_t *pkt)
 
     if (&l1->data[l1->l1dyn_pos] >= pkt->end)
     {
-        asc_log_error(MSG("L1 configurable signaling length out of bounds"));
+        asc_log_debug(MSG("L1 configurable signaling length out of bounds"));
         return false;
     }
 
@@ -874,15 +876,16 @@ bool on_l1_current(ts_t2mi_t *mi, const t2mi_packet_t *pkt)
 
         /* look for Common Type PLP(s) in the same group */
         if (selected != NULL
-            && plp->type == PLP_TYPE_COMMON && plp->group_id == selected->group_id)
+            && plp->type == PLP_TYPE_COMMON
+            && plp->group_id == selected->group_id)
         {
             plp->active = true;
         }
 
         if (!plp->active && plp->frag_skip > 0)
         {
-            asc_log_debug(MSG("dropping UP fragments on non-active PLP %u (%zu bytes)")
-                          , plp->id, plp->frag_skip);
+            asc_log_debug(MSG("dropping UP fragments on non-active PLP %u "
+                              "(%zu bytes)"), plp->id, plp->frag_skip);
 
             plp->frag_skip = 0;
         }
@@ -896,12 +899,17 @@ bool on_l1_current(ts_t2mi_t *mi, const t2mi_packet_t *pkt)
     if (selected != NULL)
     {
         asc_log_info(MSG("selected data PLP %u%s")
-                     , selected->id, auto_plp ? " (auto)" : "");
+                     , selected->id, (auto_plp ? " (auto)" : ""));
     }
     else if (!auto_plp)
-        asc_log_error(MSG("data PLP with ID %u not found"), mi->prefer_plp);
+    {
+        asc_log_error(MSG("data PLP with ID %u not found")
+                      , mi->prefer_plp);
+    }
     else
+    {
         asc_log_error(MSG("no suitable data PLP's found"));
+    }
 
     /* L1 configurable, cont'd */
     BIT_SKIP(32);
@@ -922,7 +930,7 @@ bool on_l1_current(ts_t2mi_t *mi, const t2mi_packet_t *pkt)
 
     if (&l1->data[l1->l1ext_pos] >= pkt->end)
     {
-        asc_log_error(MSG("L1 dynamic signaling length out of bounds"));
+        asc_log_debug(MSG("L1 dynamic signaling length out of bounds"));
         return false;
     }
 
@@ -940,7 +948,9 @@ bool on_l1_current(ts_t2mi_t *mi, const t2mi_packet_t *pkt)
 
         if (plp == NULL)
         {
-            asc_log_error(MSG("L1 dynamic signaling refers to non-existent PLP %u"), plp_id);
+            asc_log_debug(MSG("L1 dynamic signaling refers to non-existent "
+                              "PLP %u"), plp_id);
+
             return false;
         }
 
@@ -973,8 +983,8 @@ bool on_t2mi(ts_t2mi_t *mi, t2mi_packet_t *pkt)
         /* packet loss; don't report this on first packet */
         if (mi->seen_pkts)
         {
-            asc_log_debug(MSG("T2-MI packet_count discontinuity (expect %u, got %u)")
-                          , expect, pkt->packet_count);
+            asc_log_debug(MSG("T2-MI packet_count discontinuity (expect %u, "
+                              "got %u)"), expect, pkt->packet_count);
 
             mi->seen_pkts = false;
         }
@@ -1057,7 +1067,9 @@ void on_outer_ts(ts_t2mi_t *mi, const uint8_t *ts)
 
     if (cc != expect && mi->skip != 0)
     {
-        asc_log_debug(MSG("CC error (expect %u, got %u), discarding T2-MI packet"), expect, cc);
+        asc_log_debug(MSG("CC error (expect %u, got %u), discarding "
+                          "T2-MI packet"), expect, cc);
+
         mi->skip = 0;
     }
 
@@ -1076,9 +1088,10 @@ void on_outer_ts(ts_t2mi_t *mi, const uint8_t *ts)
 
         if (offset >= paylen)
         {
-            asc_log_error(MSG("header offset out of bounds (%zu > %zu)"), offset, paylen);
-            mi->skip = 0;
+            asc_log_debug(MSG("header offset out of bounds (%zu > %zu)")
+                          , offset, paylen);
 
+            mi->skip = 0;
             return;
         }
 
@@ -1090,7 +1103,7 @@ void on_outer_ts(ts_t2mi_t *mi, const uint8_t *ts)
     /* append payload to reassembly buffer */
     if (mi->skip + paylen > T2MI_BUFFER_SIZE)
     {
-        asc_log_error(MSG("packet too large, flushing buffer"));
+        asc_log_debug(MSG("packet too large, flushing buffer"));
         mi->skip = 0;
     }
 
@@ -1284,7 +1297,9 @@ void on_psi(void *arg, ts_psi_t *psi)
         outer_join_pid(mi, new_pid);
     }
     else
+    {
         asc_log_error(MSG("%s: no valid %s found"), psi_type, psi_ref);
+    }
 }
 
 /*

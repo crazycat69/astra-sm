@@ -398,7 +398,7 @@ void ts_sync_loop(void *arg)
         }
         else if (downtime >= MAX_IDLE_TIME)
         {
-            asc_log_error(MSG("no input in %.2fms, resetting buffer")
+            asc_log_debug(MSG("no input in %.2fms, resetting buffer")
                           , downtime / 1000.0);
 
             buffer_reset(sx, SYNC_RESET_ALL);
@@ -431,7 +431,7 @@ void ts_sync_loop(void *arg)
 
             if (!found)
             {
-                asc_log_error(MSG("next PCR not found, resetting buffer"));
+                asc_log_debug(MSG("next PCR not found, resetting buffer"));
                 buffer_reset(sx, SYNC_RESET_BLOCKS);
 
                 break;
