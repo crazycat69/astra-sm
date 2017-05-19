@@ -282,7 +282,9 @@ void it95x_worker_loop(void *arg)
 {
     module_data_t *const mod = (module_data_t *)arg;
     it95x_dev_t *dev = NULL;
+    int ret = 0;
 
+    /* setup */
     asc_log_debug(MSG("worker thread started"));
 
     if (!open_dev(mod, &dev))
@@ -294,11 +296,32 @@ void it95x_worker_loop(void *arg)
     asc_log_info(MSG("now transmitting at %.3f MHz with %u MHz bandwidth")
                  , mod->frequency / 1000.0, (int)mod->bandwidth / 1000);
 
+    /* modulator transmit loop */
     asc_mutex_lock(&mod->mutex);
     mod->transmitting = true;
 
     do
     {
+        while (!mod->quitting && mod->tx_tail != mod->tx_head)
+        {
+            it95x_tx_block_t *const blk = &mod->tx_ring[mod->tx_tail];
+
+            /*
+             * NOTE: It is possible for the transmit op to block due to
+             *       TS bitrate spikes, bus latency, hardware issues, etc.
+             *       Unlocking the ring allows the main thread to queue
+             *       more data in the meantime.
+             */
+            asc_mutex_unlock(&mod->mutex);
+            ret = it95x_send_ts(dev, blk);
+            asc_mutex_lock(&mod->mutex);
+
+            if (ret == 0)
+                mod->tx_tail = (mod->tx_tail + 1) % mod->tx_size;
+            else
+                mod->quitting = true;
+        }
+
         if (mod->quitting)
             break;
 
@@ -308,7 +331,14 @@ void it95x_worker_loop(void *arg)
     mod->transmitting = false;
     asc_mutex_unlock(&mod->mutex);
 
-    close_dev(mod, dev);
+    /* teardown */
+    if (ret != 0)
+    {
+        char *const err = it95x_strerror(ret);
+        asc_log_error(MSG("TS transmit failed: %s"), err);
+        free(err);
+    }
 
+    close_dev(mod, dev);
     asc_log_debug(MSG("worker thread exiting"));
 }

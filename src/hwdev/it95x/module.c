@@ -157,9 +157,6 @@ void on_xmit_timer(void *arg)
 static
 void on_ts(module_data_t *mod, const uint8_t *ts)
 {
-#if 1
-return; // XXX: remove me
-#endif
     it95x_tx_block_t *const blk = &mod->tx_ring[mod->tx_head];
 
     memcpy(&blk->data[blk->size], ts, TS_PACKET_SIZE);
@@ -243,7 +240,7 @@ void module_init(lua_State *L, module_data_t *mod)
     ASC_ASSERT(mod->tx_size > 0, MSG("invalid buffer size"));
 
     mod->tx_ring = ASC_ALLOC(mod->tx_size, it95x_tx_block_t);
-    asc_log_debug(MSG("using ring of %zu transmit blocks (%zu bytes each)")
+    asc_log_debug(MSG("using transmit ring of %zu blocks (%zu bytes each)")
                   , mod->tx_size, sizeof(*mod->tx_ring));
 
     //mod->tx_timer = XXX; // TODO

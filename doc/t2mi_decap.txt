@@ -4,10 +4,10 @@ Author: Artem Kharitonov <artem@3phase.pw>
 Date:   Mon May 23 20:13:26 2016 +0500
 
     Merge branch 't2mi_anywhere' into staging
-    
+
     Allow receiving T2-MI streams via any of the supported protocols instead
     of just DVB cards. Example configuration:
-    
+
         plp0 = make_t2mi_decap({
             name = "PLP 0", -- required
             input = "udp://239.0.0.1:1234", -- required
@@ -15,16 +15,15 @@ Date:   Mon May 23 20:13:26 2016 +0500
             pnr = 0, -- optional, PNR containing T2-MI payload
             pid = 0, -- optional, force payload pid
         })
-    
+
         make_channel({
             ...
             input = { "t2mi://plp0#pnr=1" },
             ...
         })
-    
-    Command line analyzer invocation:
-    
-        astra --analyze "t2mi://#t2mi_plp=0&t2mi_input=udp://239.0.0.1"
-    
-    NOTE: specifying t2mi options in dvb_tune() will no longer work.
 
+    Command line analyzer invocation:
+
+        astra --analyze "t2mi://#t2mi_plp=0&t2mi_input=udp://239.0.0.1"
+
+    NOTE: specifying t2mi options in dvb_tune() will no longer work.
