@@ -26,7 +26,6 @@
 #include <astra/core/mutex.h>
 #include <astra/core/cond.h>
 #include <astra/core/timer.h>
-#include <astra/mpegts/sync.h>
 
 #include "api.h"
 
@@ -40,7 +39,6 @@ struct module_data_t
     const char *name;
     int adapter;
     const char *devpath;
-    bool debug;
 
     /* generic modulator options */
     uint32_t frequency;
@@ -75,7 +73,6 @@ struct module_data_t
     uint32_t bitrate[2];
 
     /* module state */
-    //asc_timer_t *tx_timer;
     asc_timer_t *restart_timer;
 
     it95x_tx_block_t *tx_ring;
@@ -89,10 +86,17 @@ struct module_data_t
 
     bool transmitting; /* set by worker */
     bool quitting; /* set by main thread */
+
+#ifdef IT95X_DEBUG
+    bool debug;
+    time_t last_report;
+#endif
 };
 
 void it95x_parse_opts(lua_State *L, module_data_t *mod);
+#ifdef IT95X_DEBUG
 void it95x_dump_opts(const module_data_t *mod);
+#endif
 
 void it95x_worker_loop(void *arg);
 

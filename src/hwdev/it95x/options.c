@@ -36,21 +36,6 @@ it95x_coderate_t val_coderate(const char *str)
 }
 
 static
-const char *str_coderate(it95x_coderate_t val)
-{
-    switch (val)
-    {
-        case IT95X_CODERATE_1_2:        return "1/2";
-        case IT95X_CODERATE_2_3:        return "2/3";
-        case IT95X_CODERATE_3_4:        return "3/4";
-        case IT95X_CODERATE_5_6:        return "5/6";
-        case IT95X_CODERATE_7_8:        return "7/8";
-        default:
-            return NULL;
-    }
-}
-
-static
 it95x_constellation_t val_constellation(const char *str)
 {
     if (!strcasecmp(str, "QPSK"))       return IT95X_CONSTELLATION_QPSK;
@@ -58,19 +43,6 @@ it95x_constellation_t val_constellation(const char *str)
     else if (!strcasecmp(str, "64QAM")) return IT95X_CONSTELLATION_64QAM;
 
     return IT95X_CONSTELLATION_UNKNOWN;
-}
-
-static
-const char *str_constellation(it95x_constellation_t val)
-{
-    switch (val)
-    {
-        case IT95X_CONSTELLATION_QPSK:  return "QPSK";
-        case IT95X_CONSTELLATION_16QAM: return "16QAM";
-        case IT95X_CONSTELLATION_64QAM: return "64QAM";
-        default:
-            return NULL;
-    }
 }
 
 static
@@ -84,19 +56,6 @@ it95x_tx_mode_t val_tx_mode(const char *str)
 }
 
 static
-const char *str_tx_mode(it95x_tx_mode_t val)
-{
-    switch (val)
-    {
-        case IT95X_TX_MODE_2K:          return "2K";
-        case IT95X_TX_MODE_8K:          return "8K";
-        case IT95X_TX_MODE_4K:          return "4K";
-        default:
-            return NULL;
-    }
-}
-
-static
 it95x_guardinterval_t val_guardinterval(const char *str)
 {
     if (!strcmp(str, "1/32"))           return IT95X_GUARD_1_32;
@@ -105,20 +64,6 @@ it95x_guardinterval_t val_guardinterval(const char *str)
     else if (!strcmp(str, "1/4"))       return IT95X_GUARD_1_4;
 
     return IT95X_GUARD_UNKNOWN;
-}
-
-static
-const char *str_guardinterval(it95x_guardinterval_t val)
-{
-    switch (val)
-    {
-        case IT95X_GUARD_1_32:          return "1/32";
-        case IT95X_GUARD_1_16:          return "1/16";
-        case IT95X_GUARD_1_8:           return "1/8";
-        case IT95X_GUARD_1_4:           return "1/4";
-        default:
-            return NULL;
-    }
 }
 
 static
@@ -135,38 +80,12 @@ it95x_pcr_mode_t val_pcr_mode(const char *str)
 }
 
 static
-const char *str_pcr_mode(it95x_pcr_mode_t val)
-{
-    switch (val)
-    {
-        case IT95X_PCR_DISABLED:        return "none";
-        case IT95X_PCR_MODE1:           return "1";
-        case IT95X_PCR_MODE2:           return "2";
-        case IT95X_PCR_MODE3:           return "3";
-        default:
-            return NULL;
-    }
-}
-
-static
 it95x_system_t val_system(const char *str)
 {
     if (!strcasecmp(str, "DVBT"))       return IT95X_SYSTEM_DVBT;
     else if (!strcasecmp(str, "ISDBT")) return IT95X_SYSTEM_ISDBT;
 
     return IT95X_SYSTEM_UNKNOWN;
-}
-
-static
-const char *str_system(it95x_system_t val)
-{
-    switch (val)
-    {
-        case IT95X_SYSTEM_DVBT:         return "DVBT";
-        case IT95X_SYSTEM_ISDBT:        return "ISDBT";
-        default:
-            return NULL;
-    }
 }
 
 static
@@ -182,38 +101,12 @@ it95x_layer_t val_layer(const char *str)
 }
 
 static
-const char *str_layer(it95x_layer_t val)
-{
-    switch (val)
-    {
-        case IT95X_LAYER_NONE:          return "none";
-        case IT95X_LAYER_B:             return "B";
-        case IT95X_LAYER_A:             return "A";
-        case IT95X_LAYER_AB:            return "AB";
-        default:
-            return NULL;
-    }
-}
-
-static
 it95x_sysid_t val_sysid(const char *str)
 {
     if (!strcasecmp(str, "ARIB-STD-B31"))   return IT95X_SYSID_ARIB_STD_B31;
     else if (!strcasecmp(str, "ISDB-TSB"))  return IT95X_SYSID_ISDB_TSB;
 
     return IT95X_SYSID_UNKNOWN;
-}
-
-static
-const char *str_sysid(it95x_sysid_t val)
-{
-    switch (val)
-    {
-        case IT95X_SYSID_ARIB_STD_B31:  return "ARIB-STD-B31";
-        case IT95X_SYSID_ISDB_TSB:      return "ISDB-TSB";
-        default:
-            return NULL;
-    }
 }
 
 /*
@@ -734,6 +627,8 @@ void it95x_parse_opts(lua_State *L, module_data_t *mod)
     }
 }
 
+#ifdef IT95X_DEBUG
+
 /*
  * configuration dumping
  */
@@ -759,6 +654,113 @@ void cfg_dump(const module_data_t *mod, size_t indent, const char *fmt, ...)
         spaces[i] = ' ';
 
     asc_log_debug(MSG("%s%s"), spaces, buf);
+}
+
+static
+const char *str_coderate(it95x_coderate_t val)
+{
+    switch (val)
+    {
+        case IT95X_CODERATE_1_2:        return "1/2";
+        case IT95X_CODERATE_2_3:        return "2/3";
+        case IT95X_CODERATE_3_4:        return "3/4";
+        case IT95X_CODERATE_5_6:        return "5/6";
+        case IT95X_CODERATE_7_8:        return "7/8";
+        default:
+            return NULL;
+    }
+}
+
+static
+const char *str_constellation(it95x_constellation_t val)
+{
+    switch (val)
+    {
+        case IT95X_CONSTELLATION_QPSK:  return "QPSK";
+        case IT95X_CONSTELLATION_16QAM: return "16QAM";
+        case IT95X_CONSTELLATION_64QAM: return "64QAM";
+        default:
+            return NULL;
+    }
+}
+
+static
+const char *str_tx_mode(it95x_tx_mode_t val)
+{
+    switch (val)
+    {
+        case IT95X_TX_MODE_2K:          return "2K";
+        case IT95X_TX_MODE_8K:          return "8K";
+        case IT95X_TX_MODE_4K:          return "4K";
+        default:
+            return NULL;
+    }
+}
+
+static
+const char *str_guardinterval(it95x_guardinterval_t val)
+{
+    switch (val)
+    {
+        case IT95X_GUARD_1_32:          return "1/32";
+        case IT95X_GUARD_1_16:          return "1/16";
+        case IT95X_GUARD_1_8:           return "1/8";
+        case IT95X_GUARD_1_4:           return "1/4";
+        default:
+            return NULL;
+    }
+}
+
+static
+const char *str_pcr_mode(it95x_pcr_mode_t val)
+{
+    switch (val)
+    {
+        case IT95X_PCR_DISABLED:        return "none";
+        case IT95X_PCR_MODE1:           return "1";
+        case IT95X_PCR_MODE2:           return "2";
+        case IT95X_PCR_MODE3:           return "3";
+        default:
+            return NULL;
+    }
+}
+
+static
+const char *str_system(it95x_system_t val)
+{
+    switch (val)
+    {
+        case IT95X_SYSTEM_DVBT:         return "DVBT";
+        case IT95X_SYSTEM_ISDBT:        return "ISDBT";
+        default:
+            return NULL;
+    }
+}
+
+static
+const char *str_layer(it95x_layer_t val)
+{
+    switch (val)
+    {
+        case IT95X_LAYER_NONE:          return "none";
+        case IT95X_LAYER_B:             return "B";
+        case IT95X_LAYER_A:             return "A";
+        case IT95X_LAYER_AB:            return "AB";
+        default:
+            return NULL;
+    }
+}
+
+static
+const char *str_sysid(it95x_sysid_t val)
+{
+    switch (val)
+    {
+        case IT95X_SYSID_ARIB_STD_B31:  return "ARIB-STD-B31";
+        case IT95X_SYSID_ISDB_TSB:      return "ISDB-TSB";
+        default:
+            return NULL;
+    }
 }
 
 static
@@ -939,3 +941,5 @@ void it95x_dump_opts(const module_data_t *mod)
 
     CFG_DUMP(0, "end configuration dump");
 }
+
+#endif /* IT95X_DEBUG */

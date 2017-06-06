@@ -593,6 +593,22 @@ kill_output_module.pipe = function(channel_data, output_id)
 end
 
 --
+-- Output: it95x://
+--
+
+function make_it95x(conf)
+    -- TODO
+end
+
+init_output_module.it95x = function(channel_data, output_id)
+    -- TODO
+end
+
+kill_output_module.it95x = function(channel_data, output_id)
+    -- TODO
+end
+
+--
 -- Transform
 --
 

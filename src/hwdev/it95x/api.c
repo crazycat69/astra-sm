@@ -20,9 +20,9 @@
 #include "api.h"
 
 #ifdef _WIN32
-#   define INVALID_DATA (E_INVALIDARG)
+#   define IT95X_INVALID_DATA (E_INVALIDARG)
 #else
-#   define INVALID_DATA (-EINVAL)
+#   define IT95X_INVALID_DATA (-EINVAL)
 #endif
 
 /* calculate (bw * fec * constellation * interval) */
@@ -79,8 +79,16 @@ int it95x_bitrate_dvbt(uint32_t bandwidth, const it95x_dvbt_t *dvbt
     /* 1512/2048 * 188/204 * 64/56 = 423/544 */
     *bitrate = (rate * 423ULL) / 544;
 
+    /*
+     * NOTE: There's a driver (?) issue where if the input TS is null-padded
+     *       exactly to the channel rate, transmit latencies can add up
+     *       and eventually cause an overflow in the transmit ring. Make
+     *       the advertised rate slightly lower to compensate.
+     */
+    *bitrate -= TS_PACKET_BITS;
+
     if (*bitrate == 0)
-        return INVALID_DATA;
+        return IT95X_INVALID_DATA;
     else
         return 0;
 }
@@ -109,17 +117,21 @@ int it95x_bitrate_isdbt(uint32_t bandwidth, const it95x_isdbt_t *isdbt
 
         *b_bitrate = (b_rate * 188ULL * b_seg) / 3213;
         *a_bitrate = (a_rate * 188ULL * a_seg) / 3213;
+        /* FIXME: add latency compensation? */
 
         if (*a_bitrate == 0 || *b_bitrate == 0)
-            return INVALID_DATA;
+            return IT95X_INVALID_DATA;
     }
     else
     {
         *b_bitrate = 0;
         *a_bitrate = (a_rate * 188ULL * 13ULL) / 3213; /* all 13 segments */
 
+        /* see DVB-T bitrate function for explanation */
+        *a_bitrate -= TS_PACKET_BITS;
+
         if (*a_bitrate == 0)
-            return INVALID_DATA;
+            return IT95X_INVALID_DATA;
     }
 
     return 0;

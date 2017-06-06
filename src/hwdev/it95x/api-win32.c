@@ -189,12 +189,12 @@ enum
     IOCTL_IT95X_SET_ISDBT_MODULATION = 60,
     IOCTL_IT95X_ADD_ISDBT_PID_FILTER = 61,
     IOCTL_IT95X_SET_TMCC = 62,
-    IOCTL_IT95X_SET_TMCC2 = 63,
+    IOCTL_IT95X_SET_TMCC2 = 63, /* purpose unknown */
     IOCTL_IT95X_GET_TMCC = 64,
     IOCTL_IT95X_GET_TS_BITRATE = 65,
     IOCTL_IT95X_CONTROL_ISDBT_PID_FILTER = 66,
     IOCTL_IT95X_SET_PCR_MODE = 67,
-    IOCTL_IT95X_SET_PCR_ENABLE = 68,
+    IOCTL_IT95X_SET_PCR_ENABLE = 68, /* purpose unknown */
     IOCTL_IT95X_RESET_ISDBT_PID_FILTER = 69,
     IOCTL_IT95X_SET_OFS_CAL = 70,
     IOCTL_IT95X_ENABLE_TPS_CRYPT = 71,
@@ -318,8 +318,8 @@ struct ioctl_dvbt
 struct ioctl_isdbt
 {
     uint32_t code;
-    uint32_t frequency; // XXX: unused?
-    uint32_t bandwidth; // XXX: also unused? test w/signal meter
+    uint32_t frequency; /* driver ignores this */
+    uint32_t bandwidth; /* ditto */
     uint32_t tx_mode;
     uint32_t guardinterval;
     uint32_t a_constellation;
@@ -1101,7 +1101,6 @@ int it95x_set_pcr(it95x_dev_t *dev, it95x_pcr_mode_t mode)
         .param2 = mode,
     };
 
-    // XXX: use "pcr enable" ioctl?
     const HRESULT hr = ioctl_set(dev, &ioc, sizeof(ioc));
     return ret_hr(hr);
 }

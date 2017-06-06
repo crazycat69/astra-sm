@@ -64,6 +64,21 @@
  *
  * Module Methods:
  *      bitrate     - return maximum input bitrate based on user settings
+ *
+ * I/Q Calibration Table Syntax:
+ *      iq_table = {
+ *          { <frequency>, <amp>, <phi> },
+ *          -- Up to 65536 entries.
+ *          -- See doc/it95x_iq for converter tool.
+ *      },
+ *
+ * PID Filter Syntax for ISDB-T:
+ *      pid_layer = <layer>,
+ *      pid_list = {
+ *          { <pid_1>, <layer> },
+ *          { <pid_2>, <layer> },
+ *          -- Up to 31 PIDs.
+ *      },
  */
 
 #include "it95x.h"
@@ -73,9 +88,6 @@
 
 /* device restart interval, seconds */
 #define RESTART_TIMER_SEC 10
-
-/* transmit timer interval, milliseconds */
-#define TX_TIMER_MSEC 15
 
 /*
  * buffering and worker thread communication
@@ -123,6 +135,10 @@ void next_block(module_data_t *mod)
 {
     asc_mutex_lock(&mod->mutex);
 
+    size_t filled = mod->tx_head - mod->tx_tail;
+    if (mod->tx_head < mod->tx_tail)
+        filled += mod->tx_size;
+
     if (mod->transmitting)
     {
         size_t next = (mod->tx_head + 1) % mod->tx_size;
@@ -133,27 +149,37 @@ void next_block(module_data_t *mod)
         }
 
         mod->tx_head = next;
-        asc_cond_signal(&mod->cond);
+
+        if (filled > 1)
+            asc_cond_signal(&mod->cond);
     }
 
     mod->tx_ring[mod->tx_head].size = 0;
 
     asc_mutex_unlock(&mod->mutex);
+
+#ifdef IT95X_DEBUG
+    if (mod->debug)
+    {
+        const time_t now = time(NULL);
+
+        if (now - mod->last_report >= 60) /* 1 min */
+        {
+            asc_log_debug(MSG("transmit ring fill: %zu/%zu")
+                          , filled, mod->tx_size);
+
+            mod->last_report = now;
+        }
+
+        if (mod->transmitting && filled == 0)
+        {
+            asc_log_debug(MSG("transmit ring is empty"));
+        }
+    }
+#endif /* IT95X_DEBUG */
 }
 
-#if 0
-// FIXME
-static
-void on_xmit_timer(void *arg)
-{
-    module_data_t *const mod = (module_data_t *)arg;
-
-    if (mod->tx_ring[mod->tx_head].size > 0)
-        buffer_push(mod);
-}
-#endif
-
-/* queue single TS packet for transmission */
+/* copy single TS packet into current TX block */
 static
 void on_ts(module_data_t *mod, const uint8_t *ts)
 {
@@ -221,14 +247,16 @@ void module_init(lua_State *L, module_data_t *mod)
         luaL_error(L, MSG("either adapter or devpath must be set"));
     }
 
-    /* get debug mode */
-    module_option_boolean(L, "debug", &mod->debug);
-
     /* validate modulation settings */
     it95x_parse_opts(L, mod);
 
+#ifdef IT95X_DEBUG
+    /* get debug mode */
+    module_option_boolean(L, "debug", &mod->debug);
+
     if (mod->debug)
         it95x_dump_opts(mod);
+#endif
 
     /* create transmit ring */
     int opt = DEFAULT_BUFFER_SIZE;
@@ -242,8 +270,6 @@ void module_init(lua_State *L, module_data_t *mod)
     mod->tx_ring = ASC_ALLOC(mod->tx_size, it95x_tx_block_t);
     asc_log_debug(MSG("using transmit ring of %zu blocks (%zu bytes each)")
                   , mod->tx_size, sizeof(*mod->tx_ring));
-
-    //mod->tx_timer = XXX; // TODO
 
     /* start dedicated thread for sending data to modulator */
     module_stream_init(L, mod, on_ts);
@@ -267,7 +293,6 @@ void module_destroy(module_data_t *mod)
         asc_thread_join(mod->thread);
     }
 
-    //ASC_FREE(mod->tx_timer, asc_timer_destroy); TODO
     ASC_FREE(mod->restart_timer, asc_timer_destroy);
     ASC_FREE(mod->tx_ring, free);
 
