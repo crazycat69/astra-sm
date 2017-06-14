@@ -1,0 +1,31 @@
+commit 0e47cce8165fa7c01d2bd967e2f269bf93f9111f
+Merge: 89aaded 3050e03
+Author: Artem Kharitonov <artem@3phase.pw>
+Date:   Wed Jun 14 20:35:15 2017 +0500
+
+    Merge branch 'it95x_output' into staging
+
+    Add support for modulators based on the ITE IT9500 series chips, such as
+    the UT-100C transmitter dongle from HiDes. This feature only works on
+    Windows at this time.
+
+    List of tested hardware:
+    - UT-100C
+      TX-only model based on IT9507.
+
+    - UT-100A
+      Same as UT-100C with the addition of an IT9133-based receiver, which
+      shows up as a DVB input in --devices listing and can be used as a normal
+      DVB-T receiver.
+
+    - UT-210
+      DVB-T/ISDB-T transmitter based on the newer IT9517 chip. This one has
+      some extra features, such as hardware PCR restamping and a proprietary
+      RF encryption scheme. Reception of produced ISDB-T signal has not been
+      tested.
+
+    Modulator performance is greatly affected by the USB host controller.
+    Dedicated, non-virtualized USB 3 ports are recommended for stable and
+    jitter-free operation.
+
+    See doc/examples/it95x.lua for configuration examples.
