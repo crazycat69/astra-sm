@@ -85,7 +85,7 @@ int it95x_bitrate_dvbt(uint32_t bandwidth, const it95x_dvbt_t *dvbt
      *       and eventually cause an overflow in the transmit ring. Make
      *       the advertised rate slightly lower to compensate.
      */
-    *bitrate -= TS_PACKET_BITS;
+    *bitrate -= TS_PACKET_BITS / 2;
 
     if (*bitrate == 0)
         return IT95X_INVALID_DATA;
@@ -128,7 +128,7 @@ int it95x_bitrate_isdbt(uint32_t bandwidth, const it95x_isdbt_t *isdbt
         *a_bitrate = (a_rate * 188ULL * 13ULL) / 3213; /* all 13 segments */
 
         /* see DVB-T bitrate function for explanation */
-        *a_bitrate -= TS_PACKET_BITS;
+        *a_bitrate -= TS_PACKET_BITS / 2;
 
         if (*a_bitrate == 0)
             return IT95X_INVALID_DATA;
