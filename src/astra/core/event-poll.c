@@ -39,7 +39,7 @@
 #   define POLLRDHUP 0 /* only exists on Linux 2.6.17 and newer */
 #endif
 
-#define MSG(_msg) "[core/event-poll] " _msg
+#define MSG(_msg) "[event-poll] " _msg
 
 typedef struct
 {

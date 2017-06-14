@@ -1,0 +1,5 @@
+iq_convert is a tool to convert vendor-supplied binary I/Q calibration
+tables into text format understood by the it95x_output module.
+
+Example usage:
+$ ./iq_convert ./iq_table.bin > iq_table.lua

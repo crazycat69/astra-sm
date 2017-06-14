@@ -876,7 +876,7 @@ end
 --
 
 function make_pipe(conf)
-    if not conf.name then
+    if conf.name == nil then
         error("[make_pipe] option 'name' is required")
     end
 

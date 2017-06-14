@@ -593,6 +593,109 @@ kill_output_module.pipe = function(channel_data, output_id)
 end
 
 --
+-- Output: it95x://
+--
+
+function make_it95x(conf)
+    -- check parameters
+    if _G["it95x_output"] == nil then
+        error("[make_it95x] this feature is not available on this platform")
+    end
+    if conf == nil or conf.name == nil then
+        error("[make_it95x] option 'name' is required")
+    end
+
+    -- instantiate output module
+    local cbr_conf = conf.cbr
+    conf.cbr = nil
+
+    local mod_it95x = it95x_output(conf)
+    local head = mod_it95x
+
+    -- instantiate CBR muxer if needed
+    local mod_cbr = nil
+    if cbr_conf ~= false then
+        if cbr_conf == nil then
+            cbr_conf = {}
+        elseif type(cbr_conf) == "number" then
+            cbr_conf = {
+                rate = cbr_conf,
+            }
+        elseif type(cbr_conf) ~= "table" then
+            error("[make_it95x " .. conf.name .. "] option 'cbr' has wrong format")
+        end
+
+        if cbr_conf.rate == nil then
+            local bitrate = mod_it95x:bitrate()
+            if type(bitrate) == "number" then
+                -- use channel rate as target bitrate
+                cbr_conf.rate = bitrate
+            else
+                -- CBR is disabled by default for ISDB-T partial mode
+                log.debug("[make_it95x " .. conf.name .. "] not using CBR for partial reception mode")
+            end
+        end
+
+        if cbr_conf.rate ~= nil then
+            local units = " bps"
+            if cbr_conf.rate <= 1000 then
+                units = " mbps"
+            end
+            log.debug("[make_it95x " .. conf.name .. "] padding output TS to " .. cbr_conf.rate .. units)
+
+            cbr_conf.name = conf.name
+            mod_cbr = ts_cbr(cbr_conf)
+            mod_it95x:set_upstream(mod_cbr:stream())
+            head = mod_cbr
+        end
+    end
+
+    local instance = {
+        name = conf.name,
+        head = head,
+        it95x = mod_it95x,
+        cbr = mod_cbr,
+        busy = false,
+    }
+
+    return instance
+end
+
+init_output_module.it95x = function(channel_data, output_id)
+    local output_data = channel_data.output[output_id]
+    local name = output_data.config.name
+
+    local instance = _G[output_data.config.addr]
+    local function check_instance()
+        if instance == nil then return false end
+        if type(instance) ~= "table" then return false end
+        if instance.name == nil then return false end
+        if instance.it95x == nil then return false end
+        if tostring(instance.it95x) ~= "it95x_output" then return false end
+        if instance.head == nil then return false end
+        return true
+    end
+    if not check_instance() then
+        error("[" .. name .. "] it95x definition not found")
+    end
+    if instance.busy then
+        error("[" .. name .. "] it95x output '" .. instance.name .. "' is already in use")
+    end
+
+    instance.busy = true
+    instance.head:set_upstream(channel_data.tail:stream())
+    output_data.output = instance
+end
+
+kill_output_module.it95x = function(channel_data, output_id)
+    local output_data = channel_data.output[output_id]
+    local instance = output_data.output
+
+    output_data.output = nil
+    instance.busy = false
+end
+
+--
 -- Transform
 --
 

@@ -27,7 +27,7 @@
 #   define EPOLLRDHUP 0 /* didn't exist before Linux 2.6.17 */
 #endif
 
-#define MSG(_msg) "[core/event-epoll] " _msg
+#define MSG(_msg) "[event-epoll] " _msg
 
 typedef struct
 {

@@ -4,19 +4,19 @@ Author: Artem Kharitonov <artem@sysert.ru>
 Date:   Mon Sep 28 14:35:48 2015 +0500
 
     Merge branch 'pipe_posix' into staging
-    
+
     This is an implementation of the pipe:// protocol along with units and
     routines for manipulating child processes. Despite the branch name it
     should also work on Windows.
-    
+
     Usage examples:
-    
+
     Channel input:
         make_channel({
             name = "Pipe Channel",
             input = { "pipe://cat test.ts#sync" },
         })
-    
+
     Shared channel input (e.g. MPTS):
         big_pipe = make_pipe({
             command = "cat test.ts",
@@ -35,17 +35,16 @@ Date:   Mon Sep 28 14:35:48 2015 +0500
             name = "Channel C",
             input = { "pipe://big_pipe#pnr=300" },
         })
-    
+
     Channel output (sync not supported):
         make_channel({
             output = { "pipe://cat >/dev/null" },
         })
-    
+
     Known issues:
     1. Pipe output is experimental, untested and highly inefficient.
     2. Using an external process as a filter is not implemented yet.
     3. Lua methods for interacting with the child are not implemented yet.
-    
+
     Windows version can be compiled using MinGW-w64 and MSYS2 with
     either GCC or Clang.
-

@@ -25,7 +25,7 @@
 #include <astra/core/list.h>
 #include <astra/core/mainloop.h>
 
-#define MSG(_msg) "[core/thread %p] " _msg, (void *)thr
+#define MSG(_msg) "[thread %p] " _msg, (void *)thr
 
 struct asc_thread_t
 {

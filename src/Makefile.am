@@ -278,6 +278,19 @@ libstream_la_SOURCES += \
     hwdev/enum/bda.c
 endif
 
+# IT95x output
+if HAVE_WIN32
+libstream_la_SOURCES += \
+    hwdev/it95x/api.c \
+    hwdev/it95x/api.h \
+    hwdev/it95x/api-win32.c \
+    hwdev/it95x/it95x.h \
+    hwdev/it95x/module.c \
+    hwdev/it95x/options.c \
+    hwdev/it95x/worker.c \
+    hwdev/enum/it95x.c
+endif
+
 # dynamically generated symbol lists
 DYNAMIC_HDR_LIST = \
     stream/list.h \

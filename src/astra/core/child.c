@@ -22,7 +22,7 @@
 #include <astra/core/spawn.h>
 #include <astra/core/timer.h>
 
-#define MSG(_msg) "[core/child %s] " _msg, child->name
+#define MSG(_msg) "[child %s] " _msg, child->name
 
 #define IO_BUFFER_SIZE (64UL * 1024UL) /* 64 KiB */
 #define IO_BUFFER_TS_PACKETS (IO_BUFFER_SIZE / TS_PACKET_SIZE)

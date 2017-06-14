@@ -41,7 +41,7 @@
 #   define IGMP_HEADER_SIZE 8
 #endif
 
-#define MSG(_msg) "[core/socket %d] " _msg, sock->fd
+#define MSG(_msg) "[socket %d] " _msg, sock->fd
 
 struct asc_socket_t
 {

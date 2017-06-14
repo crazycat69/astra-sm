@@ -31,7 +31,7 @@
 #   include <sys/select.h>
 #endif
 
-#define MSG(_msg) "[core/event-select] " _msg
+#define MSG(_msg) "[event-select] " _msg
 
 /*
  * Enforce sane minimum size for fd_set. Linux system headers
