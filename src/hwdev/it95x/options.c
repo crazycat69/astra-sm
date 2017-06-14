@@ -552,7 +552,7 @@ void it95x_parse_opts(lua_State *L, module_data_t *mod)
     mod->dc_i = 0;
     if (module_option_integer(L, "dc_i", &iopt))
     {
-        if (iopt < INT8_MIN || iopt > INT8_MAX)
+        if (iopt < IT95X_DC_CAL_MIN || iopt > IT95X_DC_CAL_MAX)
             luaL_error(L, MSG("invalid DC calibration value: '%d'"), iopt);
 
         mod->dc_i = iopt;
@@ -561,7 +561,7 @@ void it95x_parse_opts(lua_State *L, module_data_t *mod)
     mod->dc_q = 0;
     if (module_option_integer(L, "dc_q", &iopt))
     {
-        if (iopt < INT8_MIN || iopt > INT8_MAX)
+        if (iopt < IT95X_DC_CAL_MIN || iopt > IT95X_DC_CAL_MAX)
             luaL_error(L, MSG("invalid DC calibration value: '%d'"), iopt);
 
         mod->dc_q = iopt;

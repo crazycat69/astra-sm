@@ -35,6 +35,10 @@
 /* number of PSI insertion timers */
 #define IT95X_PSI_TIMER_CNT 5
 
+/* allowed range for DC calibration values */
+#define IT95X_DC_CAL_MIN -512
+#define IT95X_DC_CAL_MAX 512
+
 /* opaque type for device context */
 typedef struct it95x_dev_t it95x_dev_t;
 
