@@ -834,7 +834,7 @@ init_input_module.dvb = function(conf)
         return true
     end
     if not check_def() then
-        error("[" .. name .. "] dvb tuner definition not found")
+        error("[" .. conf.name .. "] dvb tuner definition not found")
     end
 
     if instance.clients == 0 then

@@ -57,7 +57,7 @@ struct IKsObject
 
 /*
  * Main property set. This is used to control device operation as well
- * as send TS data blocks for transmission.
+ * as to send TS data blocks for transmission.
  */
 
 #define STATIC_KSPROPSETID_IT9500Properties \
