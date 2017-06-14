@@ -120,6 +120,15 @@ bool open_dev(const module_data_t *mod, it95x_dev_t **result)
         ret = it95x_set_tps(dev, &mod->tps);
         if (ret != 0)
             INIT_FATAL(mod, ret, out, "failed to set TPS parameters");
+
+        /* disable ISDB-T PID filter */
+        if (info.eagle2)
+        {
+            asc_log_debug(MSG("disabling PID filter"));
+            ret = it95x_ctl_pid(dev, IT95X_LAYER_NONE);
+            if (ret != 0)
+                INIT_WARN(mod, ret, "failed to disable PID filter");
+        }
     }
     else if (mod->system == IT95X_SYSTEM_ISDBT)
     {
