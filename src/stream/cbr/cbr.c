@@ -410,7 +410,7 @@ void restamp_pcr(module_data_t *mod, uint8_t *ts, pcr_item_t *pcr)
     if (drift < -MAX_CLOCK_DRIFT || drift > MAX_CLOCK_DRIFT)
     {
         const long long ms = drift / (TS_PCR_FREQ / 1000);
-        asc_log_debug(MSG("reset time base on PCR PID %u (%lldms)")
+        asc_log_error(MSG("reset time base on PCR PID %u (drift %lld ms)")
                       , pcr->pid, ms);
 
         new_pcr = old_pcr;
@@ -561,11 +561,15 @@ void receive_pcr(module_data_t *mod, const uint8_t *ts)
         if (want > got && mod->buf_fill > 0)
             null_bits = (want - got) / mod->buf_fill;
 
-        if (got > want)
+        if (got / 2 > want
+            && delta > TS_PCR_FREQ / 100) /* warn on >10ms delta */
         {
             const size_t bitrate = (got * TS_PCR_FREQ) / delta;
+            const int ms = delta / (TS_PCR_FREQ / 1000);
+
             asc_log_warning(MSG("input bitrate exceeds configured target "
-                                "(%zu bps > %zu bps)"), bitrate, mod->bitrate);
+                                "(%zu bps @ %d ms > %zu bps)")
+                            , bitrate, ms, mod->bitrate);
         }
 
         /* distribute padding evenly among buffered packets */
@@ -581,8 +585,8 @@ void receive_pcr(module_data_t *mod, const uint8_t *ts)
          */
         if (pcr_last != TS_TIME_NONE)
         {
-            const long long ms = delta / (TS_PCR_FREQ / 1000);
-            asc_log_debug(MSG("PCR discontinuity (%lldms) on master PCR PID "
+            const int ms = delta / (TS_PCR_FREQ / 1000);
+            asc_log_debug(MSG("PCR discontinuity (%d ms) on master PCR PID "
                               "%u, resetting clock"), ms, mod->master_pcr_pid);
 
             next_master_pcr(mod);
