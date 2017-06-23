@@ -1011,6 +1011,9 @@ static void on_status_timer(void *arg)
     lua_setfield(L, -2, "ber");
     lua_pushinteger(L, mod->fe->unc);
     lua_setfield(L, -2, "unc");
+    lua_pushinteger(L, mod->dvr_read);
+    lua_setfield(L, -2, "dvr_read");
+
     if (lua_tr_call(L, 1, 0) != 0)
         lua_err_log(L);
 }

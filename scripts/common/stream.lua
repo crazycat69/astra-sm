@@ -23,8 +23,10 @@
 --   8oooo88    88   8888   8oooo88    888      o  888       888    oo  888    oo
 -- o88o  o888o o88o    88 o88o  o888o o888ooooo88 o888o    o888oooo888 o888ooo8888
 
+
 function on_analyze_spts(channel_data, input_id, data)
     local input_data = channel_data.input[input_id]
+    local force_send = 0
 
     if data.error then
         log.error("[" .. input_data.config.name .. "] Error: " .. data.error)
@@ -66,6 +68,51 @@ function on_analyze_spts(channel_data, input_id, data)
                 start_reserve(channel_data)
             end
         end
+
+       if channel_data.request_timer == nil then
+           channel_data.request_timer = 0
+           force_send = 1
+       end
+
+       if channel_data.status == nil then
+           channel_data.status = {
+               type = 'channel',
+               channel = channel_data.config.name,
+           }
+       end
+
+       if channel_data.status.ready ~= data.on_air or channel_data.status.scrambled ~= data.total.scrambled then
+           force_send = 1
+       end
+
+       channel_data.status.pnr = input_data.config.pnr
+       channel_data.status.ready = data.on_air
+       channel_data.status.scrambled = data.total.scrambled
+       channel_data.status.bitrate = data.total.bitrate
+       channel_data.status.cc_error = data.total.cc_errors
+       channel_data.status.pes_error = data.total.pes_errors
+
+       if channel_data.active_input_id == 0 then
+           curr_input_id = 1
+       else
+           curr_input_id = channel_data.active_input_id
+       end
+
+       if channel_data.input[curr_input_id].config.format == 'dvb' then
+           channel_data.status.stream = channel_data.input[curr_input_id].input.input.__options.name
+       end
+
+       if event_request and (channel_data.request_timer > event_request.interval or force_send == 1) then
+           force_send = 0
+           for key,value in pairs(channel_data.config.output) do
+               channel_data.status.output = value:gsub("#.*","")
+               channel_data.request_timer = 0
+               send_json(channel_data.status)
+           end
+       end
+
+       channel_data.request_timer = channel_data.request_timer + 1
+
     end
 end
 
@@ -122,7 +169,6 @@ end
 
 function channel_init_input(channel_data, input_id)
     local input_data = channel_data.input[input_id]
-
     -- merge channel-wide and input-specific PID maps
     if channel_data.config.map or input_data.config.map then
         local merged_map = {}
@@ -154,6 +200,7 @@ function channel_init_input(channel_data, input_id)
     input_data.input = init_input(input_data.config)
 
     if input_data.config.no_analyze ~= true then
+       --table.dump(input_data)
         input_data.analyze = analyze({
             upstream = input_data.input.tail:stream(),
             name = input_data.config.name,

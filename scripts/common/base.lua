@@ -63,6 +63,45 @@ string.split = function(s, d)
     end
 end
 
+_hostname = utils.hostname()
+
+function send_json(info)
+
+    info.server = _hostname
+    local content = json.encode(info)
+
+    local config = {
+        host = '',
+        path = '/',
+        port = 80,
+        method = "POST",
+
+        headers = {
+            "User-Agent: Astra " .. astra.version,
+            "Host: " .. event_request.host .. ":" .. event_request.port,
+            "Content-Type: application/jsonrequest",
+            "Content-Length: " .. #content,
+            "Connection: close"
+        },
+        callback = function(self, data)
+            if type(data) == 'table' and data.code ~= 200 then
+                log.error(("[event.lua] send_json() failed %d:%s")
+                          :format(data.code, data.message))
+            end
+        end,
+        content = content
+    }
+
+    --table.dump(event_request)
+
+    if event_request.host then config.host = event_request.host end
+    if event_request.uri then config.path = event_request.uri end
+    if event_request.port then config.port = event_request.port end
+    if event_request.method then config.method = event_request.method end
+
+    http_request(config)
+end
+
 --
 -- DVB descriptor dumping
 --
@@ -461,12 +500,19 @@ function init_input(conf)
                 disable_emm = conf.no_emm,
                 ecm_pid = conf.ecm_pid,
                 shift = conf.shift,
+                callback = function(data)
+                   on_status_decrypt(conf,data)
+               end,
             })
             instance.tail = instance.decrypt
         end
     end
 
     return instance
+end
+
+function on_status_decrypt(decrypt_data,data)
+--    table.dump(data)
 end
 
 function kill_input(instance)
@@ -797,6 +843,12 @@ function dvb_tune(conf)
         end
     end
 
+    if event_request then
+        conf.callback = function(data)
+           on_status_dvb(conf,data)
+       end
+    end
+
     -- reuse module instance if it already exists
     local instance_id = string.format("a%s:f%s:d%s",
                                       tostring(conf.adapter),
@@ -814,6 +866,67 @@ function dvb_tune(conf)
     end
 
     return instance
+end
+
+function on_status_dvb(adapter_data,data)
+
+--    FE_HAS_SIGNAL            = 0x01,
+--    FE_HAS_CARRIER           = 0x02,
+--    FE_HAS_VITERBI           = 0x04,
+--    FE_HAS_SYNC              = 0x08,
+--    FE_HAS_LOCK      = 0x10,
+
+    if not adapter_data.request_timer then
+       adapter_data.request_timer=0
+       adapter_data.status = { bitrate = 0, }
+       adapter_data.bitrate_table = { }
+    end
+
+    if  adapter_data.status.status ~= data.status or data.unc > 0 or data.ber > 0  then
+       force_send = 1
+    end
+
+    local tmp_status = data
+    tmp_status.snr = tonumber(string.format("%d", data.snr / 65535 * 100))
+    if( tmp_status.snr > 100 )then
+          tmp_status.snr = 99
+    end
+    tmp_status.signal = tonumber(string.format("%d", data.signal / 65535 * 100))
+    tmp_status.lock = (data.status and 0x10 ) ~= 0
+    curr_bitrate = data.dvr_read * 8 / 1024
+
+    table.insert(adapter_data.bitrate_table, curr_bitrate)
+
+    bitrate_max_index = table.maxn(adapter_data.bitrate_table)
+
+    if ( bitrate_max_index > 20 ) then
+       table.remove(adapter_data.bitrate_table, 1 )
+    end
+
+    local sum = 0
+    for key,value in pairs(adapter_data.bitrate_table) do
+        sum = sum + value
+    end
+
+    if bitrate_max_index > 1 then
+       tmp_status.bitrate = tonumber(string.format("%d", sum/( bitrate_max_index - 1 )))
+    else
+       tmp_status.bitrate = tonumber(string.format("%d", sum))
+    end
+    adapter_data.status = tmp_status
+
+    tmp_status.type = 'dvb'
+    tmp_status.stream = adapter_data.name
+    tmp_status.adapter = adapter_data.adapter
+
+    if event_request and (adapter_data.request_timer > event_request.interval or force_send == 1) then
+       force_send = 0
+       adapter_data.request_timer = 0
+       send_json(tmp_status)
+    end
+
+    adapter_data.request_timer = adapter_data.request_timer + 1
+
 end
 
 init_input_module.dvb = function(conf)
