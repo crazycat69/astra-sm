@@ -206,16 +206,34 @@ void push_signal_stats(lua_State *L, module_data_t *mod)
     asc_mutex_unlock(&mod->signal_lock);
 
     lua_newtable(L);
+
     lua_pushstring(L, state_names[s.graph_state]);
     lua_setfield(L, -2, "state");
-    lua_pushboolean(L, s.present);
-    lua_setfield(L, -2, "present");
-    lua_pushboolean(L, s.locked);
-    lua_setfield(L, -2, "locked");
+
+    char packets[128] = { '\0' };
+    snprintf(packets, sizeof(packets), "%zu", mod->buf.received);
+    lua_pushstring(L, packets);
+    lua_setfield(L, -2, "packets");
+
+    lua_pushboolean(L, s.signal);
+    lua_setfield(L, -2, "signal");
+    lua_pushboolean(L, s.carrier);
+    lua_setfield(L, -2, "carrier");
+    lua_pushboolean(L, s.viterbi);
+    lua_setfield(L, -2, "viterbi");
+    lua_pushboolean(L, s.sync);
+    lua_setfield(L, -2, "sync");
+    lua_pushboolean(L, s.lock);
+    lua_setfield(L, -2, "lock");
+
     lua_pushinteger(L, s.strength);
     lua_setfield(L, -2, "strength");
     lua_pushinteger(L, s.quality);
     lua_setfield(L, -2, "quality");
+    lua_pushinteger(L, s.ber);
+    lua_setfield(L, -2, "ber");
+    lua_pushinteger(L, s.uncorrected);
+    lua_setfield(L, -2, "uncorrected");
 }
 
 /* signal statistics timer callback */
@@ -278,6 +296,7 @@ void bda_buffer_pop(void *arg)
          *       Control thread then talks to CAM via vendor extension.
          */
         module_stream_send(mod, mod->buf.data[i]);
+        mod->buf.received++;
     }
 }
 

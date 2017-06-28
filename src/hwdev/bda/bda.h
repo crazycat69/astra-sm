@@ -213,71 +213,6 @@ HRESULT bda_tuning_space(const bda_network_t *net, ITuningSpace **out);
 HRESULT bda_tune_request(const bda_tune_cmd_t *cmd, ITuneRequest **out);
 
 /*
- * vendor extensions
- */
-
-/* extension types */
-enum
-{
-    BDA_EXT_DISEQC    = 0x00000001, /* send DiSEqC raw command */
-    BDA_EXT_LNBPOWER  = 0x00000002, /* set LNB power and voltage */
-    BDA_EXT_22K       = 0x00000004, /* switch 22kHz tone on and off */
-    BDA_EXT_TONEBURST = 0x00000008, /* switch mini-DiSEqC input (A/B) */
-    BDA_EXT_CA        = 0x00000010, /* CI CAM slot support */
-    BDA_EXT_PIDMAP    = 0x00000020, /* hardware PID filter */
-};
-
-/* tuning data hooks */
-typedef enum
-{
-    BDA_TUNE_PRE = 0,   /* call before starting the graph */
-    BDA_TUNE_POST,      /* call after the graph has started */
-} bda_tune_hook_t;
-
-typedef struct
-{
-    const char *name;
-    const char *description;
-    uint32_t flags;
-
-    HRESULT (*init)(IBaseFilter *[], void **);
-    void (*destroy)(void *);
-
-    /* called before and after starting the graph */
-    HRESULT (*tune_pre)(void *, const bda_tune_cmd_t *);
-    HRESULT (*tune_post)(void *, const bda_tune_cmd_t *);
-
-    /* send DiSEqC command */
-    HRESULT (*diseqc)(void *, const uint8_t *, unsigned int);
-
-    /* LNB power and voltage */
-    HRESULT (*lnbpower)(void *, bda_lnbpower_mode_t);
-
-    /* 22kHz tone */
-    HRESULT (*t22k)(void *, bda_22k_mode_t);
-    HRESULT (*toneburst)(void *, bda_toneburst_mode_t);
-
-    /* PID filter */
-    HRESULT (*pid_set)(void *, uint16_t, bool);
-    HRESULT (*pid_bulk)(void *, const bool[TS_MAX_PIDS]);
-
-    void *data;
-} bda_extension_t;
-
-HRESULT bda_ext_init(module_data_t *mod, IBaseFilter *filters[]);
-void bda_ext_destroy(module_data_t *mod);
-
-HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune
-                     , bda_tune_hook_t when);
-HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t *cmd
-                       , unsigned int len);
-HRESULT bda_ext_lnbpower(module_data_t *mod, bda_lnbpower_mode_t mode);
-HRESULT bda_ext_22k(module_data_t *mod, bda_22k_mode_t mode);
-HRESULT bda_ext_toneburst(module_data_t *mod, bda_toneburst_mode_t mode);
-HRESULT bda_ext_pid_set(module_data_t *mod, uint16_t pid, bool join);
-HRESULT bda_ext_pid_bulk(module_data_t *mod, const bool pids[TS_MAX_PIDS]);
-
-/*
  * BDA graph
  */
 
@@ -295,10 +230,17 @@ typedef struct
     bda_state_t graph_state;
 
     /* standard BDA signal metrics */
-    BOOLEAN locked;
-    BOOLEAN present;
-    LONG quality;
-    LONG strength;
+    bool signal;
+    bool lock;
+    int strength;
+    int quality;
+
+    /* these may be implemented as vendor extensions */
+    bool carrier;
+    bool viterbi;
+    bool sync;
+    int ber;
+    int uncorrected;
 } bda_signal_stats_t;
 
 struct module_data_t
@@ -343,6 +285,7 @@ struct module_data_t
         ts_packet_t *data;
         asc_mutex_t lock;
         size_t size;
+        size_t received;
 
         size_t head;
         size_t claim;
@@ -372,7 +315,6 @@ struct module_data_t
     IFilterGraph2 *graph;
     IMediaEvent *event;
     IBaseFilter *provider;
-    IBDA_SignalStatistics *signal;
 
     HANDLE graph_evt;
     DWORD rot_reg;
@@ -385,6 +327,76 @@ struct module_data_t
 void bda_graph_loop(void *arg);
 
 void bda_buffer_pop(void *arg);
+
+/*
+ * vendor extensions
+ */
+
+/* extension types */
+enum
+{
+    BDA_EXT_DISEQC    = 0x00000001, /* send DiSEqC raw command */
+    BDA_EXT_LNBPOWER  = 0x00000002, /* set LNB power and voltage */
+    BDA_EXT_22K       = 0x00000004, /* switch 22kHz tone on and off */
+    BDA_EXT_TONEBURST = 0x00000008, /* switch mini-DiSEqC input (A/B) */
+    BDA_EXT_CA        = 0x00000010, /* CI CAM slot support */
+    BDA_EXT_PIDMAP    = 0x00000020, /* hardware PID filter */
+    BDA_EXT_SIGNAL    = 0x00000040, /* get signal statistics */
+};
+
+/* tuning data hooks */
+typedef enum
+{
+    BDA_TUNE_PRE = 0,   /* call before starting the graph */
+    BDA_TUNE_POST,      /* call after the graph has started */
+} bda_tune_hook_t;
+
+typedef struct
+{
+    const char *name;
+    const char *description;
+    uint32_t flags;
+
+    HRESULT (*init)(IBaseFilter *[], void **);
+    void (*destroy)(void *);
+
+    /* called before and after starting the graph */
+    HRESULT (*tune_pre)(void *, const bda_tune_cmd_t *);
+    HRESULT (*tune_post)(void *, const bda_tune_cmd_t *);
+
+    /* send DiSEqC command */
+    HRESULT (*diseqc)(void *, const uint8_t *, unsigned int);
+
+    /* LNB power and voltage */
+    HRESULT (*lnbpower)(void *, bda_lnbpower_mode_t);
+
+    /* 22kHz tone */
+    HRESULT (*t22k)(void *, bda_22k_mode_t);
+    HRESULT (*toneburst)(void *, bda_toneburst_mode_t);
+
+    /* PID filter */
+    HRESULT (*pid_set)(void *, uint16_t, bool);
+    HRESULT (*pid_bulk)(void *, const bool[TS_MAX_PIDS]);
+
+    /* signal statistics */
+    HRESULT (*signal)(void *, bda_signal_stats_t *);
+
+    void *data;
+} bda_extension_t;
+
+HRESULT bda_ext_init(module_data_t *mod, IBaseFilter *filters[]);
+void bda_ext_destroy(module_data_t *mod);
+
+HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune
+                     , bda_tune_hook_t when);
+HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t *cmd
+                       , unsigned int len);
+HRESULT bda_ext_lnbpower(module_data_t *mod, bda_lnbpower_mode_t mode);
+HRESULT bda_ext_22k(module_data_t *mod, bda_22k_mode_t mode);
+HRESULT bda_ext_toneburst(module_data_t *mod, bda_toneburst_mode_t mode);
+HRESULT bda_ext_pid_set(module_data_t *mod, uint16_t pid, bool join);
+HRESULT bda_ext_pid_bulk(module_data_t *mod, const bool pids[TS_MAX_PIDS]);
+HRESULT bda_ext_signal(module_data_t *mod, bda_signal_stats_t *stats);
 
 /*
  * error handling (a.k.a. the joys of working with COM in plain C)

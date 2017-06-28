@@ -666,33 +666,6 @@ HRESULT control_stop(IFilterGraph2 *graph)
  * device data exchange
  */
 
-/* request signal statistics from driver */
-static
-HRESULT load_signal_stats(module_data_t *mod, bda_signal_stats_t *out)
-{
-    HRESULT hr = E_FAIL;
-
-    if (out == NULL)
-        return E_POINTER;
-
-    memset(out, 0, sizeof(*out));
-
-    hr = mod->signal->lpVtbl->get_SignalLocked(mod->signal, &out->locked);
-    BDA_CKHR_D(hr, "couldn't retrieve signal lock status");
-
-    hr = mod->signal->lpVtbl->get_SignalPresent(mod->signal, &out->present);
-    BDA_CKHR_D(hr, "couldn't retrieve signal presence status");
-
-    hr = mod->signal->lpVtbl->get_SignalQuality(mod->signal, &out->quality);
-    BDA_CKHR_D(hr, "couldn't retrieve signal quality value");
-
-    hr = mod->signal->lpVtbl->get_SignalStrength(mod->signal, &out->strength);
-    BDA_CKHR_D(hr, "couldn't retrieve signal strength value");
-
-out:
-    return hr;
-}
-
 /* run saved DiSEqC sequence through available extensions */
 static
 HRESULT diseqc_sequence_run(module_data_t *mod)
@@ -800,7 +773,6 @@ HRESULT graph_setup(module_data_t *mod)
     IBaseFilter *source = NULL;
     IBaseFilter *demod = NULL;
     IBaseFilter *capture = NULL;
-    IBDA_SignalStatistics *signal = NULL;
     IBaseFilter *probe = NULL;
     IBaseFilter *demux = NULL;
     IBaseFilter *tif = NULL;
@@ -863,12 +835,6 @@ HRESULT graph_setup(module_data_t *mod)
         }
     }
 
-    /* create signal statistics interface */
-    hr = dshow_find_ctlnode(source, &KSPROPSETID_BdaSignalStats
-                            , &IID_IBDA_SignalStatistics, (void **)&signal);
-    if (FAILED(hr))
-        BDA_ERROR(hr, "failed to locate signal statistics interface");
-
     /* scan for vendor-specific BDA extensions */
     IBaseFilter *flt_list[4];
     flt_list[0] = source;
@@ -927,12 +893,6 @@ HRESULT graph_setup(module_data_t *mod)
     IBaseFilter_AddRef(provider);
     mod->provider = provider;
 
-    if (signal != NULL)
-    {
-        IBDA_SignalStatistics_AddRef(signal);
-        mod->signal = signal;
-    }
-
     need_uninit = false;
     hr = S_OK;
 
@@ -947,7 +907,6 @@ out:
     ASC_RELEASE(tif);
     ASC_RELEASE(demux);
     ASC_RELEASE(probe);
-    ASC_RELEASE(signal);
     ASC_RELEASE(capture);
     ASC_RELEASE(demod);
     ASC_RELEASE(source);
@@ -967,7 +926,6 @@ void graph_teardown(module_data_t *mod)
     control_stop(mod->graph);
     bda_ext_destroy(mod);
 
-    ASC_RELEASE(mod->signal);
     ASC_RELEASE(mod->provider);
     ASC_RELEASE(mod->event);
 
@@ -1143,24 +1101,24 @@ HRESULT watch_signal(module_data_t *mod)
     bda_signal_stats_t s;
     const char *str = NULL;
 
-    hr = load_signal_stats(mod, &s);
+    hr = bda_ext_signal(mod, &s);
     BDA_CKHR(hr, "failed to retrieve signal statistics from driver");
 
     if (!mod->no_dvr)
     {
         /* continuously tune the device until signal lock is acquired */
-        if (s.locked && !mod->signal_stats.locked)
+        if (s.lock && !mod->signal_stats.lock)
         {
             str = " acquired";
             mod->cooldown = 0;
         }
-        else if (mod->signal_stats.locked && !s.locked)
+        else if (mod->signal_stats.lock && !s.lock)
         {
             str = " lost";
             mod->cooldown = mod->timeout;
             mod->tunefail++;
         }
-        else if (!s.locked && --mod->cooldown <= 0)
+        else if (!s.lock && --mod->cooldown <= 0)
         {
             /* time's up, still no lock */
             asc_log_debug(MSG("resending tuning data (%u)")
@@ -1176,15 +1134,20 @@ HRESULT watch_signal(module_data_t *mod)
 
     /* log signal status */
     if (mod->log_signal && str == NULL)
-        str = (s.locked ? "" : " no");
+        str = (s.lock ? "" : " no");
 
     if (str != NULL)
     {
-        asc_log_info(MSG("tuner has%s lock. status: %c%c, "
-                         "quality: %ld%%, strength: %ld%%")
-                     , str, s.present ? 'S' : '_'
-                     , s.locked ? 'L' : '_'
-                     , s.quality, s.strength);
+        asc_log_info(MSG("tuner has%s lock. status: %c%c%c%c%c, "
+                         "strength: %d%%, quality: %d%%, ber: %d, unc: %d")
+                     , str
+                     , (s.signal  ? 'S' : '_')
+                     , (s.carrier ? 'C' : '_')
+                     , (s.viterbi ? 'V' : '_')
+                     , (s.sync    ? 'Y' : '_')
+                     , (s.lock    ? 'L' : '_')
+                     , s.strength, s.quality
+                     , s.ber, s.uncorrected);
     }
 
     set_signal_stats(mod, &s);
@@ -1526,8 +1489,11 @@ void bda_graph_loop(void *arg)
             {
                 HRESULT hr = handle_events(mod);
 
-                if (SUCCEEDED(hr) && mod->signal != NULL)
+                if (SUCCEEDED(hr)
+                    && (mod->ext_flags & BDA_EXT_SIGNAL))
+                {
                     hr = watch_signal(mod);
+                }
 
                 if (FAILED(hr))
                 {

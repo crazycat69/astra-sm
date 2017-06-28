@@ -666,6 +666,81 @@ const bda_extension_t ms_pidmap =
 };
 
 /*
+ * Microsoft Signal Statistics
+ */
+
+static
+HRESULT ms_signal_get(void *data, bda_signal_stats_t *stats)
+{
+    IBDA_SignalStatistics *const signal = (IBDA_SignalStatistics *)data;
+
+    BOOLEAN bval = FALSE;
+    HRESULT hr = signal->lpVtbl->get_SignalPresent(signal, &bval);
+    if (FAILED(hr)) return hr;
+    stats->signal = bval;
+
+    bval = FALSE;
+    hr = signal->lpVtbl->get_SignalLocked(signal, &bval);
+    if (FAILED(hr)) return hr;
+    stats->lock = bval;
+
+    LONG lval = 0;
+    hr = signal->lpVtbl->get_SignalStrength(signal, &lval);
+    if (FAILED(hr)) return hr;
+    stats->strength = lval;
+
+    lval = 0;
+    hr = signal->lpVtbl->get_SignalQuality(signal, &lval);
+    if (FAILED(hr)) return hr;
+    stats->quality = lval;
+
+    /* standard BDA doesn't support these */
+    stats->carrier = stats->signal;
+    stats->viterbi = stats->lock;
+    stats->sync = stats->lock;
+    stats->ber = stats->uncorrected = 0;
+
+    return S_OK;
+}
+
+static
+HRESULT ms_signal_init(IBaseFilter *filters[], void **data)
+{
+    HRESULT hr = E_NOTIMPL;
+
+    for (; *filters != NULL; filters++)
+    {
+        hr = dshow_find_ctlnode(*filters, &KSPROPSETID_BdaSignalStats
+                                , &IID_IBDA_SignalStatistics, data);
+
+        if (SUCCEEDED(hr))
+            break;
+    }
+
+    return hr;
+}
+
+static
+void ms_signal_destroy(void *data)
+{
+    IBDA_SignalStatistics *signal = (IBDA_SignalStatistics *)data;
+    ASC_RELEASE(signal);
+}
+
+static
+const bda_extension_t ms_signal =
+{
+    .name = "ms_signal",
+    .description = "Microsoft Signal Statistics",
+    .flags = BDA_EXT_SIGNAL,
+
+    .init = ms_signal_init,
+    .destroy = ms_signal_destroy,
+
+    .signal = ms_signal_get,
+};
+
+/*
  * public API
  */
 
@@ -673,6 +748,12 @@ const bda_extension_t ms_pidmap =
 static
 const bda_extension_t *const ext_list[] =
 {
+    /*
+     * Allow extensions to override signal statistics by placing the
+     * standard BDA signal interface at the top of the list.
+     */
+    &ms_signal,
+
     /* TurboSight */
     &tbs_pcie_plp,
     &tbs_pcie_pls,
@@ -755,6 +836,9 @@ HRESULT bda_ext_tune(module_data_t *mod, const bda_tune_cmd_t *tune
     /* don't report error if no extensions provide tuning hooks */
     HRESULT out_hr = S_OK;
 
+    if (tune == NULL)
+        return E_POINTER;
+
     asc_list_for(mod->extensions)
     {
         bda_extension_t *const ext =
@@ -783,6 +867,9 @@ HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t *cmd
                        , unsigned int len)
 {
     HRESULT hr = E_NOTIMPL;
+
+    if (cmd == NULL)
+        return E_POINTER;
 
     asc_list_for(mod->extensions)
     {
@@ -904,6 +991,9 @@ HRESULT bda_ext_pid_bulk(module_data_t *mod, const bool pids[TS_MAX_PIDS])
 {
     HRESULT hr = E_NOTIMPL;
 
+    if (pids == NULL)
+        return E_POINTER;
+
     asc_list_for(mod->extensions)
     {
         bda_extension_t *const ext =
@@ -915,6 +1005,35 @@ HRESULT bda_ext_pid_bulk(module_data_t *mod, const bool pids[TS_MAX_PIDS])
             if (FAILED(hr))
             {
                 BDA_ERROR_D(hr, "couldn't load PID whitelist via '%s'"
+                            , ext->name);
+            }
+        }
+    }
+
+    return hr;
+}
+
+/* retrieve signal statistics */
+HRESULT bda_ext_signal(module_data_t *mod, bda_signal_stats_t *stats)
+{
+    HRESULT hr = E_NOTIMPL;
+
+    if (stats == NULL)
+        return E_POINTER;
+
+    memset(stats, 0, sizeof(*stats));
+
+    asc_list_for(mod->extensions)
+    {
+        bda_extension_t *const ext =
+                (bda_extension_t *)asc_list_data(mod->extensions);
+
+        if (ext->signal != NULL)
+        {
+            hr = ext->signal(ext->data, stats);
+            if (FAILED(hr))
+            {
+                BDA_ERROR_D(hr, "couldn't retrieve signal statistics via '%s'"
                             , ext->name);
             }
         }
