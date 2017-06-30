@@ -63,8 +63,12 @@ const GUID KSPROPSETID_BdaTunerExtensionProperties =
 
 enum
 {
-    KSPROPERTY_BDA_ACCESS = 18,
-    KSPROPERTY_BDA_PLPINFO = 22,
+    KSPROPERTY_BDA_NBC_PARAMS = 10,
+    KSPROPERTY_BDA_BLIND_SCAN = 11,
+    KSPROPERTY_BDA_STREAM_ID = 14,
+    KSPROPERTY_BDA_CI_ACCESS = 18,
+    KSPROPERTY_BDA_ACCESS = 21,
+    KSPROPERTY_BDA_PLP_INFO = 22,
     KSPROPERTY_BDA_PLS = 23,
 };
 
@@ -76,13 +80,16 @@ const GUID KSPROPSETID_QBOXControlProperties =
 enum
 {
     KSPROPERTY_CTRL_TUNER = 0,
-    KSPROPERTY_CTRL_IR,
-    KSPROPERTY_CTRL_22K_TONE,
-    KSPROPERTY_CTRL_MOTOR,
-    KSPROPERTY_CTRL_LNBPW,
-    KSPROPERTY_CTRL_LOCK_TUNER,
+    KSPROPERTY_CTRL_IR = 1,
+    KSPROPERTY_CTRL_22K_TONE = 2,
+    KSPROPERTY_CTRL_MOTOR = 3,
+    KSPROPERTY_CTRL_LNBPW = 4,
+    KSPROPERTY_CTRL_LOCK_TUNER = 5,
+    KSPROPERTY_CTRL_CI_ACCESS = 8,
+    KSPROPERTY_CTRL_BLIND_SCAN = 9,
+    KSPROPERTY_CTRL_STREAM_ID = 16,
     KSPROPERTY_CTRL_ACCESS = 18,
-    KSPROPERTY_CTRL_PLPINFO = 19,
+    KSPROPERTY_CTRL_PLP_INFO = 19,
     KSPROPERTY_CTRL_PLS = 20,
 };
 
@@ -228,7 +235,7 @@ HRESULT tbs_pcie_plp_set(void *data, const bda_tune_cmd_t *tune)
 {
     return tbs_plp_set(data, tune
                        , &KSPROPSETID_BdaTunerExtensionProperties
-                       , KSPROPERTY_BDA_PLPINFO);
+                       , KSPROPERTY_BDA_PLP_INFO);
 }
 
 static
@@ -236,7 +243,7 @@ HRESULT tbs_pcie_plp_init(IBaseFilter *filters[], void **data)
 {
     return generic_init(filters, data
                         , &KSPROPSETID_BdaTunerExtensionProperties
-                        , KSPROPERTY_BDA_PLPINFO);
+                        , KSPROPERTY_BDA_PLP_INFO);
 }
 
 static
@@ -329,7 +336,7 @@ HRESULT tbs_usb_plp_set(void *data, const bda_tune_cmd_t *tune)
 {
     return tbs_plp_set(data, tune
                        , &KSPROPSETID_QBOXControlProperties
-                       , KSPROPERTY_CTRL_PLPINFO);
+                       , KSPROPERTY_CTRL_PLP_INFO);
 }
 
 static
@@ -337,7 +344,7 @@ HRESULT tbs_usb_plp_init(IBaseFilter *filters[], void **data)
 {
     return generic_init(filters, data
                         , &KSPROPSETID_QBOXControlProperties
-                        , KSPROPERTY_CTRL_PLPINFO);
+                        , KSPROPERTY_CTRL_PLP_INFO);
 }
 
 static
