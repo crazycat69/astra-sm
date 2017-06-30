@@ -488,27 +488,28 @@ HRESULT remove_filters(const module_data_t *mod, IFilterGraph2 *graph)
 
     do
     {
-        ASC_RELEASE(filter);
-
         hr = IEnumFilters_Next(enum_filters, 1, &filter, NULL);
         ASC_WANT_ENUM(hr, filter);
 
-        if (hr == VFW_E_ENUM_OUT_OF_SYNC)
+        if (hr == S_OK)
+        {
+            hr = IFilterGraph2_RemoveFilter(graph, filter);
+            ASC_RELEASE(filter);
+
+            BDA_CKHR_D(hr, out, "couldn't remove filter from graph");
+        }
+        else if (hr == VFW_E_ENUM_OUT_OF_SYNC)
         {
             hr = IEnumFilters_Reset(enum_filters);
             BDA_CKHR_D(hr, out, "couldn't reset filter enumerator");
-
-            continue;
         }
+        else
+        {
+            if (FAILED(hr))
+                BDA_ERROR_D(hr, "couldn't retrieve next filter in graph");
 
-        if (FAILED(hr))
-            BDA_THROW_D(hr, out, "couldn't retrieve next filter in graph");
-        else if (hr != S_OK)
-            break; /* no more filters */
-
-        hr = IFilterGraph2_RemoveFilter(graph, filter);
-        if (FAILED(hr))
-            BDA_ERROR_D(hr, "couldn't remove filter from graph");
+            break;
+        }
     } while (true);
 
 out:
@@ -752,6 +753,9 @@ HRESULT start_tuning(module_data_t *mod, IFilterGraph2 *graph
     /* reset signal lock timeout */
     mod->cooldown = mod->timeout;
 
+    /* ignore vendor extension errors */
+    hr = S_OK;
+
 out:
     return hr;
 }
@@ -899,6 +903,7 @@ HRESULT graph_setup(module_data_t *mod)
 out:
     if (need_uninit)
     {
+        control_stop(graph);
         bda_ext_destroy(mod);
         remove_filters(mod, graph);
         rot_unregister(&mod->rot_reg);
