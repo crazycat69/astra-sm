@@ -610,36 +610,57 @@ const bda_extension_t omc_pci_diseqc =
  */
 
 static
-HRESULT ms_pidmap_set(void *data, uint16_t pid, bool join)
+HRESULT ms_pidmap_set(void *data, unsigned int pid, bool join)
 {
     IMPEG2PIDMap *const pidmap = (IMPEG2PIDMap *)data;
+    ULONG list[] = { pid };
 
-    // TODO
-    ASC_UNUSED(pidmap);
-    ASC_UNUSED(pid);
-    ASC_UNUSED(join);
-
-    return E_NOTIMPL;
+    if (join)
+        return IMPEG2PIDMap_MapPID(pidmap, 1, list, MEDIA_TRANSPORT_PACKET);
+    else
+        return IMPEG2PIDMap_UnmapPID(pidmap, 1, list);
 }
 
 static
 HRESULT ms_pidmap_bulk(void *data, const bool pids[TS_MAX_PIDS])
 {
     IMPEG2PIDMap *const pidmap = (IMPEG2PIDMap *)data;
+    HRESULT out_hr = S_OK;
 
-    // TODO
-    ASC_UNUSED(pidmap);
-    ASC_UNUSED(pids);
+    for (size_t i = 0; i < TS_MAX_PIDS; i++)
+    {
+        ULONG list[] = { i };
+        HRESULT hr;
 
-    return E_NOTIMPL;
+        if (pids[i])
+            hr = IMPEG2PIDMap_MapPID(pidmap, 1, list, MEDIA_TRANSPORT_PACKET);
+        else
+            hr = IMPEG2PIDMap_UnmapPID(pidmap, 1, list);
+
+        if (FAILED(hr))
+            out_hr = hr;
+    }
+
+    return out_hr;
 }
 
 static
 HRESULT ms_pidmap_init(IBaseFilter *filters[], void **data)
 {
-    // TODO
+#ifdef BDA_MS_PIDMAP
+    for (; *filters != NULL; filters++)
+    {
+        const HRESULT hr = dshow_find_ctlnode(*filters
+                                              , &KSPROPSETID_BdaPIDFilter
+                                              , &IID_IMPEG2PIDMap, data);
+
+        if (SUCCEEDED(hr))
+            return hr;
+    }
+#else
     ASC_UNUSED(filters);
     ASC_UNUSED(data);
+#endif
 
     return E_NOTIMPL;
 }
@@ -706,18 +727,18 @@ HRESULT ms_signal_get(void *data, bda_signal_stats_t *stats)
 static
 HRESULT ms_signal_init(IBaseFilter *filters[], void **data)
 {
-    HRESULT hr = E_NOTIMPL;
-
     for (; *filters != NULL; filters++)
     {
-        hr = dshow_find_ctlnode(*filters, &KSPROPSETID_BdaSignalStats
-                                , &IID_IBDA_SignalStatistics, data);
+        const HRESULT hr = dshow_find_ctlnode(*filters
+                                              , &KSPROPSETID_BdaSignalStats
+                                              , &IID_IBDA_SignalStatistics
+                                              , data);
 
         if (SUCCEEDED(hr))
-            break;
+            return hr;
     }
 
-    return hr;
+    return E_NOTIMPL;
 }
 
 static
@@ -963,7 +984,7 @@ HRESULT bda_ext_toneburst(module_data_t *mod, bda_toneburst_mode_t mode)
 }
 
 /* map or unmap a single PID */
-HRESULT bda_ext_pid_set(module_data_t *mod, uint16_t pid, bool join)
+HRESULT bda_ext_pid_set(module_data_t *mod, unsigned int pid, bool join)
 {
     HRESULT hr = E_NOTIMPL;
 

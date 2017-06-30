@@ -375,7 +375,7 @@ typedef struct
     HRESULT (*toneburst)(void *, bda_toneburst_mode_t);
 
     /* PID filter */
-    HRESULT (*pid_set)(void *, uint16_t, bool);
+    HRESULT (*pid_set)(void *, unsigned int, bool);
     HRESULT (*pid_bulk)(void *, const bool[TS_MAX_PIDS]);
 
     /* signal statistics */
@@ -394,7 +394,7 @@ HRESULT bda_ext_diseqc(module_data_t *mod, const uint8_t *cmd
 HRESULT bda_ext_lnbpower(module_data_t *mod, bda_lnbpower_mode_t mode);
 HRESULT bda_ext_22k(module_data_t *mod, bda_22k_mode_t mode);
 HRESULT bda_ext_toneburst(module_data_t *mod, bda_toneburst_mode_t mode);
-HRESULT bda_ext_pid_set(module_data_t *mod, uint16_t pid, bool join);
+HRESULT bda_ext_pid_set(module_data_t *mod, unsigned int pid, bool join);
 HRESULT bda_ext_pid_bulk(module_data_t *mod, const bool pids[TS_MAX_PIDS]);
 HRESULT bda_ext_signal(module_data_t *mod, bda_signal_stats_t *stats);
 

@@ -953,7 +953,7 @@ void buffer_push(module_data_t *mod, const uint8_t *ts)
 {
     if (mod->sw_pidmap)
     {
-        const uint16_t pid = TS_GET_PID(ts);
+        const unsigned int pid = TS_GET_PID(ts);
         if (!mod->joined_pids[pid])
             return;
     }
@@ -1331,13 +1331,13 @@ void cmd_tune(module_data_t *mod, const bda_tune_cmd_t *tune)
 
 /* request PID filter to map or unmap PID */
 static
-void cmd_pid(module_data_t *mod, bool join, uint16_t pid)
+void cmd_pid(module_data_t *mod, bool join, unsigned int pid)
 {
     const char *const verb = (join ? "join" : "leave");
 
     if (join == mod->joined_pids[pid])
     {
-        asc_log_error(MSG("duplicate %s request for pid %hu, ignoring")
+        asc_log_error(MSG("duplicate %s request for pid %u, ignoring")
                       , verb, pid);
 
         return;
@@ -1352,16 +1352,16 @@ void cmd_pid(module_data_t *mod, bool join, uint16_t pid)
     {
         const HRESULT hr = bda_ext_pid_set(mod, pid, join);
         if (FAILED(hr))
-            BDA_ERROR(hr, "failed to %s pid %hu", verb, pid);
+            BDA_ERROR(hr, "failed to %s pid %u", verb, pid);
     }
 }
 
 /* enable or disable CAM descrambling for a specific program */
 static
-void cmd_ca(module_data_t *mod, bool enable, uint16_t pnr)
+void cmd_ca(module_data_t *mod, bool enable, unsigned int pnr)
 {
     /* TODO: implement CAM support */
-    asc_log_error(MSG("STUB: %s CAM for PNR %hu")
+    asc_log_error(MSG("STUB: %s CAM for PNR %u")
                   , (enable ? "enable" : "disable"), pnr);
 
     // TODO: call bda_ext_ca()
