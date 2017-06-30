@@ -76,7 +76,7 @@ HRESULT create_source(const module_data_t *mod, IFilterGraph2 *graph
     else
         hr = E_OUTOFMEMORY;
 
-    BDA_CKHR_D(hr, "couldn't add source filter to graph");
+    BDA_CKHR_D(hr, out, "couldn't add source filter to graph");
 
     IBaseFilter_AddRef(source);
     *out = source;
@@ -114,15 +114,15 @@ HRESULT create_receiver(const module_data_t *mod, IBaseFilter *source
 
     /* get source's graph and output pin */
     hr = dshow_get_graph(source, &graph);
-    BDA_CKHR_D(hr, "couldn't get source filter's graph");
+    BDA_CKHR_D(hr, out, "couldn't get source filter's graph");
 
     hr = dshow_find_pin(source, PINDIR_OUTPUT, true, NULL, &source_out);
-    BDA_CKHR_D(hr, "couldn't find output pin on source filter");
+    BDA_CKHR_D(hr, out, "couldn't find output pin on source filter");
 
     /* list possible candidates for attaching to source filter */
     hr = dshow_enum(&KSCATEGORY_BDA_RECEIVER_COMPONENT, &enum_moniker, 0);
     if (FAILED(hr))
-        BDA_THROW_D(hr, "couldn't enumerate BDA receiver filters");
+        BDA_THROW_D(hr, out, "couldn't enumerate BDA receiver filters");
     else if (hr != S_OK)
         goto out; /* no receivers installed */
 
@@ -143,7 +143,7 @@ HRESULT create_receiver(const module_data_t *mod, IBaseFilter *source
         ASC_WANT_ENUM(hr, moniker);
 
         if (FAILED(hr))
-            BDA_THROW_D(hr, "couldn't retrieve next receiver filter");
+            BDA_THROW_D(hr, out, "couldn't retrieve next receiver filter");
         else if (hr != S_OK)
             break; /* no more filters */
 
@@ -203,27 +203,27 @@ HRESULT create_demux(const module_data_t *mod, IBaseFilter *tail
     *out = NULL;
 
     hr = dshow_get_graph(tail, &graph);
-    BDA_CKHR_D(hr, "couldn't get capture filter's graph");
+    BDA_CKHR_D(hr, out, "couldn't get capture filter's graph");
 
     hr = CoCreateInstance(&CLSID_MPEG2Demultiplexer, NULL
                           , CLSCTX_INPROC_SERVER, &IID_IBaseFilter
                           , (void **)&demux);
-    BDA_CKPTR_D(hr, demux, "couldn't create demultiplexer filter");
+    BDA_CKPTR_D(hr, out, demux, "couldn't create demultiplexer filter");
 
     hr = dshow_find_pin(tail, PINDIR_OUTPUT, true, NULL, &tail_out);
-    BDA_CKHR_D(hr, "couldn't find output pin on capture filter");
+    BDA_CKHR_D(hr, out, "couldn't find output pin on capture filter");
 
     hr = dshow_find_pin(demux, PINDIR_INPUT, true, NULL, &demux_in);
-    BDA_CKHR_D(hr, "couldn't find input pin on demultiplexer filter");
+    BDA_CKHR_D(hr, out, "couldn't find input pin on demultiplexer filter");
 
     hr = IFilterGraph2_AddFilter(graph, demux, L"Demux");
-    BDA_CKHR_D(hr, "couldn't add demultiplexer to the graph");
+    BDA_CKHR_D(hr, out, "couldn't add demultiplexer to the graph");
 
     hr = IFilterGraph2_ConnectDirect(graph, tail_out, demux_in, NULL);
     if (FAILED(hr))
     {
         IFilterGraph2_RemoveFilter(graph, demux);
-        BDA_THROW_D(hr, "couldn't connect capture filter to demultiplexer");
+        BDA_THROW_D(hr, out, "couldn't connect capture filter to demux");
     }
 
     IBaseFilter_AddRef(demux);
@@ -256,22 +256,22 @@ HRESULT create_tif(const module_data_t *mod, IBaseFilter *demux
 
     /* get demultiplexer's graph */
     hr = dshow_get_graph(demux, &graph);
-    BDA_CKHR_D(hr, "couldn't get demultiplexer's graph");
+    BDA_CKHR_D(hr, out, "couldn't get demultiplexer's graph");
 
     /* create first filter from the TIF category */
     hr = dshow_filter_by_index(&KSCATEGORY_BDA_TRANSPORT_INFORMATION, 0
                                , &tif, NULL);
-    BDA_CKHR_D(hr, "couldn't instantiate transport information filter");
+    BDA_CKHR_D(hr, out, "couldn't instantiate transport information filter");
 
     /* connect TIF to demux */
     hr = dshow_find_pin(tif, PINDIR_INPUT, true, NULL, &tif_in);
-    BDA_CKHR_D(hr, "couldn't find input pin on TIF");
+    BDA_CKHR_D(hr, out, "couldn't find input pin on TIF");
 
     hr = dshow_find_pin(demux, PINDIR_OUTPUT, true, NULL, &demux_out);
-    BDA_CKHR_D(hr, "couldn't find output pin on demultiplexer");
+    BDA_CKHR_D(hr, out, "couldn't find output pin on demultiplexer");
 
     hr = IFilterGraph2_AddFilter(graph, tif, L"TIF");
-    BDA_CKHR_D(hr, "couldn't add transport information filter to graph");
+    BDA_CKHR_D(hr, out, "couldn't add transport information filter to graph");
 
     /*
      * NOTE: There's a handle leak somewhere inside psisdecd.dll.
@@ -282,7 +282,7 @@ HRESULT create_tif(const module_data_t *mod, IBaseFilter *demux
     if (FAILED(hr))
     {
         IFilterGraph2_RemoveFilter(graph, tif);
-        BDA_THROW_D(hr, "couldn't connect TIF to demultiplexer");
+        BDA_THROW_D(hr, out, "couldn't connect TIF to demultiplexer");
     }
 
     IBaseFilter_AddRef(tif);
@@ -318,10 +318,10 @@ HRESULT create_probe(module_data_t *mod, IBaseFilter *tail
 
     /* get tail filter's graph and output pin */
     hr = dshow_get_graph(tail, &graph);
-    BDA_CKHR_D(hr, "couldn't get capture filter's graph");
+    BDA_CKHR_D(hr, out, "couldn't get capture filter's graph");
 
     hr = dshow_find_pin(tail, PINDIR_OUTPUT, true, NULL, &tail_out);
-    BDA_CKHR_D(hr, "couldn't find output pin on capture filter");
+    BDA_CKHR_D(hr, out, "couldn't find output pin on capture filter");
 
     /* try creating and attaching probes with different media subtypes */
     for (unsigned int i = 0; ; i++)
@@ -365,7 +365,7 @@ HRESULT create_probe(module_data_t *mod, IBaseFilter *tail
             IFilterGraph2_RemoveFilter(graph, probe);
         }
     }
-    BDA_CKHR_D(hr, "couldn't connect TS probe to capture filter");
+    BDA_CKHR_D(hr, out, "couldn't connect TS probe to capture filter");
 
 out:
     ASC_RELEASE(tail_out);
@@ -390,24 +390,24 @@ HRESULT provider_tune(const module_data_t *mod, IBaseFilter *provider
 
     /* create tune request from user data */
     hr = bda_tune_request(tune, &request);
-    BDA_CKHR_D(hr, "couldn't create tune request");
+    BDA_CKHR_D(hr, out, "couldn't create tune request");
 
     if (mod->debug)
         bda_dump_request(request);
 
     /* load it into provider */
     hr = ITuneRequest_get_TuningSpace(request, &space);
-    BDA_CKPTR_D(hr, space, "couldn't retrieve tuning space");
+    BDA_CKPTR_D(hr, out, space, "couldn't retrieve tuning space");
 
     hr = IBaseFilter_QueryInterface(provider, &IID_ITuner
                                     , (void **)&provider_tuner);
-    BDA_CKPTR_D(hr, provider_tuner, "couldn't query ITuner interface");
+    BDA_CKPTR_D(hr, out, provider_tuner, "couldn't query ITuner interface");
 
     hr = ITuner_put_TuningSpace(provider_tuner, space);
-    BDA_CKHR_D(hr, "couldn't assign tuning space to provider");
+    BDA_CKHR_D(hr, out, "couldn't assign tuning space to provider");
 
     hr = ITuner_put_TuneRequest(provider_tuner, request);
-    BDA_CKHR_D(hr, "couldn't submit tune request to provider");
+    BDA_CKHR_D(hr, out, "couldn't submit tune request to provider");
 
 out:
     ASC_RELEASE(provider_tuner);
@@ -434,14 +434,14 @@ HRESULT provider_setup(const module_data_t *mod, IBaseFilter *provider
 
     /* get provider's graph */
     hr = dshow_get_graph(provider, &graph);
-    BDA_CKHR_D(hr, "couldn't get network provider's graph");
+    BDA_CKHR_D(hr, out, "couldn't get network provider's graph");
 
     /* get filters' pins */
     hr = dshow_find_pin(provider, PINDIR_OUTPUT, true, NULL, &provider_out);
-    BDA_CKHR_D(hr, "couldn't find output pin on network provider filter");
+    BDA_CKHR_D(hr, out, "couldn't find output pin on network provider");
 
     hr = dshow_find_pin(source, PINDIR_INPUT, true, NULL, &source_in);
-    BDA_CKHR_D(hr, "couldn't find input pin on source filter");
+    BDA_CKHR_D(hr, out, "couldn't find input pin on source filter");
 
     /* connect pins and submit initial tuning data to provider */
     hr = IFilterGraph2_ConnectDirect(graph, provider_out, source_in, NULL);
@@ -455,12 +455,12 @@ HRESULT provider_setup(const module_data_t *mod, IBaseFilter *provider
     }
 
     hr = provider_tune(mod, provider, tune);
-    BDA_CKHR_D(hr, "couldn't configure provider with initial tuning data");
+    BDA_CKHR_D(hr, out, "couldn't send initial tuning data to provider");
 
     if (retry_pins)
     {
         hr = IFilterGraph2_ConnectDirect(graph, provider_out, source_in, NULL);
-        BDA_CKHR_D(hr, "couldn't connect network provider to tuner");
+        BDA_CKHR_D(hr, out, "couldn't connect network provider to tuner");
     }
 
 out:
@@ -484,7 +484,7 @@ HRESULT remove_filters(const module_data_t *mod, IFilterGraph2 *graph)
         return E_POINTER;
 
     hr = IFilterGraph2_EnumFilters(graph, &enum_filters);
-    BDA_CKPTR_D(hr, enum_filters, "couldn't enumerate filters in graph");
+    BDA_CKPTR_D(hr, out, enum_filters, "couldn't enumerate filters in graph");
 
     do
     {
@@ -496,13 +496,13 @@ HRESULT remove_filters(const module_data_t *mod, IFilterGraph2 *graph)
         if (hr == VFW_E_ENUM_OUT_OF_SYNC)
         {
             hr = IEnumFilters_Reset(enum_filters);
-            BDA_CKHR_D(hr, "couldn't reset filter enumerator");
+            BDA_CKHR_D(hr, out, "couldn't reset filter enumerator");
 
             continue;
         }
 
         if (FAILED(hr))
-            BDA_THROW_D(hr, "couldn't retrieve next filter in graph");
+            BDA_THROW_D(hr, out, "couldn't retrieve next filter in graph");
         else if (hr != S_OK)
             break; /* no more filters */
 
@@ -538,7 +538,7 @@ HRESULT rot_register(const module_data_t *mod, IFilterGraph2 *graph
 
     /* get ROT interface */
     hr = GetRunningObjectTable(0, &rot);
-    BDA_CKPTR_D(hr, rot, "couldn't retrieve ROT interface");
+    BDA_CKPTR_D(hr, out, rot, "couldn't retrieve ROT interface");
 
     /*
      * Create a moniker identifying the graph. The moniker must follow
@@ -549,11 +549,11 @@ HRESULT rot_register(const module_data_t *mod, IFilterGraph2 *graph
                      , (void *)graph, GetCurrentProcessId());
 
     hr = CreateItemMoniker(L"!", wbuf, &moniker);
-    BDA_CKPTR_D(hr, moniker, "couldn't create moniker for ROT registration");
+    BDA_CKPTR_D(hr, out, moniker, "couldn't create moniker for ROT");
 
     /* register filter graph in the table */
     hr = IRunningObjectTable_Register(rot, 0, (IUnknown *)graph, moniker, out);
-    BDA_CKHR_D(hr, "couldn't submit ROT registration data");
+    BDA_CKHR_D(hr, out, "couldn't submit ROT registration data");
 
     if (*out == 0)
         hr = E_INVALIDARG;
@@ -605,28 +605,28 @@ HRESULT control_run(const module_data_t *mod, IFilterGraph2 *graph)
     /* get media control */
     hr = IFilterGraph2_QueryInterface(graph, &IID_IMediaControl
                                       , (void **)&control);
-    BDA_CKPTR_D(hr, control, "couldn't query IMediaControl interface");
+    BDA_CKPTR_D(hr, out, control, "couldn't query IMediaControl interface");
 
     /* switch graph into running state */
     hr = IMediaControl_GetState(control, 0, &state);
-    BDA_CKHR_D(hr, "couldn't retrieve graph state");
+    BDA_CKHR_D(hr, out, "couldn't retrieve graph state");
 
     if (hr == S_OK && state == State_Stopped)
         hr = IMediaControl_Run(control);
     else
         hr = VFW_E_NOT_STOPPED;
 
-    BDA_CKHR_D(hr, "couldn't switch the graph into running state");
+    BDA_CKHR_D(hr, out, "couldn't switch the graph into running state");
 
     do
     {
         hr = IMediaControl_GetState(control, 100, &state); /* 100ms */
-        BDA_CKHR_D(hr, "couldn't retrieve graph state");
+        BDA_CKHR_D(hr, out, "couldn't retrieve graph state");
 
         if (hr == S_OK && state == State_Running)
             break;
         else if (tries++ >= 10)
-            BDA_THROW_D(hr, "timed out waiting for the graph to start");
+            BDA_THROW_D(hr, out, "timed out waiting for the graph to start");
     } while (true);
 
 out:
@@ -679,25 +679,25 @@ HRESULT diseqc_sequence_run(module_data_t *mod)
         if (seq->data_len > 0)
         {
             hr = bda_ext_diseqc(mod, seq->data, seq->data_len);
-            BDA_CKHR_D(hr, "couldn't send DiSEqC command");
+            BDA_CKHR_D(hr, out, "couldn't send DiSEqC command");
         }
 
         if (seq->lnbpower != BDA_EXT_LNBPOWER_NOT_SET)
         {
             hr = bda_ext_lnbpower(mod, seq->lnbpower);
-            BDA_CKHR_D(hr, "couldn't set LNB power mode");
+            BDA_CKHR_D(hr, out, "couldn't set LNB power mode");
         }
 
         if (seq->t22k != BDA_EXT_22K_NOT_SET)
         {
             hr = bda_ext_22k(mod, seq->t22k);
-            BDA_CKHR_D(hr, "couldn't set 22kHz tone mode");
+            BDA_CKHR_D(hr, out, "couldn't set 22kHz tone mode");
         }
 
         if (seq->toneburst != BDA_EXT_TONEBURST_NOT_SET)
         {
             hr = bda_ext_toneburst(mod, seq->toneburst);
-            BDA_CKHR_D(hr, "couldn't set tone burst mode");
+            BDA_CKHR_D(hr, out, "couldn't set tone burst mode");
         }
 
         asc_usleep(BDA_DISEQC_DELAY + seq->delay);
@@ -724,7 +724,7 @@ HRESULT start_tuning(module_data_t *mod, IFilterGraph2 *graph
 
     /* start the graph */
     hr = control_run(mod, graph);
-    BDA_CKHR_D(hr, "couldn't run the graph");
+    BDA_CKHR_D(hr, out, "couldn't run the graph");
 
     /* call post-tuning hooks */
     hr = bda_ext_tune(mod, tune, BDA_TUNE_POST);
@@ -779,14 +779,14 @@ HRESULT graph_setup(module_data_t *mod)
 
     /* initialize COM on this thread */
     hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-    BDA_CKHR(hr, "CoInitializeEx() failed");
+    BDA_CKHR(hr, out, "CoInitializeEx() failed");
     ASC_ASSERT(hr != S_FALSE, MSG("COM initialized twice!"));
 
     need_uninit = true;
 
     /* set up graph and event interface */
     hr = dshow_filter_graph(&graph, &event, &graph_evt);
-    BDA_CKHR(hr, "failed to create filter graph");
+    BDA_CKHR(hr, out, "failed to create filter graph");
 
     if (mod->debug)
     {
@@ -804,28 +804,28 @@ HRESULT graph_setup(module_data_t *mod)
         tune.lnb_source = mod->diseqc.port;
 
     hr = bda_net_provider(tune.net, &provider);
-    BDA_CKHR(hr, "failed to create network provider filter");
+    BDA_CKHR(hr, out, "failed to create network provider filter");
 
     hr = IFilterGraph2_AddFilter(graph, provider, L"Network Provider");
-    BDA_CKHR(hr, "failed to add network provider filter to graph");
+    BDA_CKHR(hr, out, "failed to add network provider filter to graph");
 
     hr = create_source(mod, graph, &source);
     if (FAILED(hr))
-        BDA_THROW(hr, "failed to create source filter");
+        BDA_THROW(hr, out, "failed to create source filter");
     else if (hr != S_OK)
-        BDA_THROW(hr, "failed to find the requested device");
+        BDA_THROW(hr, out, "failed to find the requested device");
 
     hr = provider_setup(mod, provider, source, &tune);
-    BDA_CKHR(hr, "failed to connect network provider to source filter");
+    BDA_CKHR(hr, out, "failed to connect network provider to source filter");
 
     /* add demodulator and capture filters if this device has them */
     hr = create_receiver(mod, source, &demod);
-    BDA_CKHR(hr, "failed to create demodulator filter");
+    BDA_CKHR(hr, out, "failed to create demodulator filter");
 
     if (demod != NULL)
     {
         hr = create_receiver(mod, demod, &capture);
-        BDA_CKHR(hr, "failed to create capture filter");
+        BDA_CKHR(hr, out, "failed to create capture filter");
 
         if (capture == NULL)
         {
@@ -866,18 +866,18 @@ HRESULT graph_setup(module_data_t *mod)
             tail = source;
 
         hr = create_probe(mod, tail, &probe);
-        BDA_CKHR(hr, "failed to create TS probe");
+        BDA_CKHR(hr, out, "failed to create TS probe");
 
         /* set up demultiplexer and TIF */
         hr = create_demux(mod, probe, &demux);
-        BDA_CKHR(hr, "failed to initialize demultiplexer");
+        BDA_CKHR(hr, out, "failed to initialize demultiplexer");
 
         hr = create_tif(mod, demux, &tif);
-        BDA_CKHR(hr, "failed to initialize transport information filter");
+        BDA_CKHR(hr, out, "failed to initialize transport information filter");
 
         /* start moving data through the graph */
         hr = start_tuning(mod, graph, &tune);
-        BDA_CKHR(hr, "failed to initiate tuning sequence");
+        BDA_CKHR(hr, out, "failed to initiate tuning sequence");
 
         mod->tunefail = 0;
     }
@@ -1058,7 +1058,7 @@ HRESULT restart_graph(module_data_t *mod)
      */
 
     HRESULT hr = control_stop(mod->graph);
-    BDA_CKHR_D(hr, "couldn't stop the graph");
+    BDA_CKHR_D(hr, out, "couldn't stop the graph");
 
     /* same tuning routine as graph_setup() */
     bda_tune_cmd_t tune;
@@ -1068,10 +1068,10 @@ HRESULT restart_graph(module_data_t *mod)
         tune.lnb_source = mod->diseqc.port;
 
     hr = provider_tune(mod, mod->provider, &tune);
-    BDA_CKHR_D(hr, "couldn't configure provider with tuning data");
+    BDA_CKHR_D(hr, out, "couldn't configure provider with tuning data");
 
     hr = start_tuning(mod, mod->graph, &tune);
-    BDA_CKHR_D(hr, "couldn't initiate tuning sequence");
+    BDA_CKHR_D(hr, out, "couldn't initiate tuning sequence");
 
 out:
     return hr;
@@ -1102,7 +1102,7 @@ HRESULT watch_signal(module_data_t *mod)
     const char *str = NULL;
 
     hr = bda_ext_signal(mod, &s);
-    BDA_CKHR(hr, "failed to retrieve signal statistics from driver");
+    BDA_CKHR(hr, out, "failed to retrieve signal statistics from driver");
 
     if (!mod->no_dvr)
     {
@@ -1128,7 +1128,7 @@ HRESULT watch_signal(module_data_t *mod)
                 str = " no"; /* always report first tuning failure */
 
             hr = restart_graph(mod);
-            BDA_CKHR(hr, "failed to restart tuning process");
+            BDA_CKHR(hr, out, "failed to restart tuning process");
         }
     }
 
@@ -1222,7 +1222,7 @@ HRESULT handle_events(module_data_t *mod)
         }
         else if (hr != S_OK)
         {
-            BDA_THROW(hr, "failed to retrieve next graph event");
+            BDA_THROW(hr, out, "failed to retrieve next graph event");
         }
 
         /* bail out if the event indicates an error */
@@ -1231,10 +1231,10 @@ HRESULT handle_events(module_data_t *mod)
             asc_log_debug(MSG("ignoring unknown event: 0x%02lx"), ec);
 
         hr = IMediaEvent_FreeEventParams(mod->event, ec, p1, p2);
-        BDA_CKHR(hr, "failed to free event parameters");
+        BDA_CKHR(hr, out, "failed to free event parameters");
 
         if (ev_text != NULL)
-            BDA_THROW(hr, "unexpected event: %s (0x%02lx)", ev_text, ec);
+            BDA_THROW(hr, out, "unexpected event: %s (0x%02lx)", ev_text, ec);
     } while (true);
 
 out:
