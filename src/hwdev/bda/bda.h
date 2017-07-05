@@ -285,7 +285,6 @@ struct module_data_t
         ts_packet_t *data;
         asc_mutex_t lock;
         size_t size;
-        size_t received;
 
         size_t head;
         size_t claim;
@@ -293,6 +292,7 @@ struct module_data_t
 
         unsigned int pending;
         unsigned int dropped;
+        uint32_t received;
     } buf;
 
     uint8_t frag[TS_PACKET_SIZE];

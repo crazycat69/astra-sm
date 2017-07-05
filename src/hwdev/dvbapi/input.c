@@ -60,6 +60,7 @@ struct module_data_t
     uint8_t dvr_buffer[1022 * TS_PACKET_SIZE];
 
     uint32_t dvr_read;
+    uint32_t packets;
 
     ts_psi_t *pat;
     int pat_error;
@@ -191,6 +192,7 @@ static void dvr_on_read(void *arg)
             ca_on_ts(mod->ca, ts);
 
         module_stream_send(mod, ts);
+        mod->packets++;
 
         if(TS_IS_SYNC(ts) && TS_GET_PID(ts) == 0)
             ts_psi_mux(mod->pat, ts, on_pat, mod);
@@ -1001,18 +1003,33 @@ static void on_status_timer(void *arg)
 
     lua_rawgeti(L, LUA_REGISTRYINDEX, mod->idx_callback);
     lua_newtable(L);
-    lua_pushinteger(L, mod->fe->status);
-    lua_setfield(L, -2, "status");
-    lua_pushinteger(L, mod->fe->signal);
+
+    // TODO: supply real module state
+    lua_pushstring(L, "running");
+    lua_setfield(L, -2, "state");
+
+    lua_pushnumber(L, mod->packets);
+    lua_setfield(L, -2, "packets");
+
+    lua_pushboolean(L, (mod->fe->status & FE_HAS_SIGNAL));
     lua_setfield(L, -2, "signal");
-    lua_pushinteger(L, mod->fe->snr);
-    lua_setfield(L, -2, "snr");
+    lua_pushboolean(L, (mod->fe->status & FE_HAS_CARRIER));
+    lua_setfield(L, -2, "carrier");
+    lua_pushboolean(L, (mod->fe->status & FE_HAS_VITERBI));
+    lua_setfield(L, -2, "viterbi");
+    lua_pushboolean(L, (mod->fe->status & FE_HAS_SYNC));
+    lua_setfield(L, -2, "sync");
+    lua_pushboolean(L, (mod->fe->status & FE_HAS_LOCK));
+    lua_setfield(L, -2, "lock");
+
+    lua_pushinteger(L, (mod->fe->signal * 100) / 0xFFFF);
+    lua_setfield(L, -2, "strength");
+    lua_pushinteger(L, (mod->fe->snr * 100) / 0xFFFF);
+    lua_setfield(L, -2, "quality");
     lua_pushinteger(L, mod->fe->ber);
     lua_setfield(L, -2, "ber");
     lua_pushinteger(L, mod->fe->unc);
-    lua_setfield(L, -2, "unc");
-    lua_pushinteger(L, mod->dvr_read);
-    lua_setfield(L, -2, "dvr_read");
+    lua_setfield(L, -2, "uncorrected");
 
     if (lua_tr_call(L, 1, 0) != 0)
         lua_err_log(L);

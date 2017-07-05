@@ -210,9 +210,7 @@ void push_signal_stats(lua_State *L, module_data_t *mod)
     lua_pushstring(L, state_names[s.graph_state]);
     lua_setfield(L, -2, "state");
 
-    char packets[128] = { '\0' };
-    snprintf(packets, sizeof(packets), "%zu", mod->buf.received);
-    lua_pushstring(L, packets);
+    lua_pushnumber(L, mod->buf.received);
     lua_setfield(L, -2, "packets");
 
     lua_pushboolean(L, s.signal);
