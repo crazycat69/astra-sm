@@ -17,6 +17,13 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+default_event = nil
+
+ifaddr_list = nil
+if utils.ifaddrs then
+    ifaddr_list = utils.ifaddrs()
+end
+
 table.dump = function(t, p, i)
     if not p then p = print end
     if not i then
@@ -63,48 +70,10 @@ string.split = function(s, d)
     end
 end
 
-_hostname = utils.hostname()
-
-function send_json(info)
-
-    info.server = _hostname
-    local content = json.encode(info)
-
-    local config = {
-        host = '',
-        path = '/',
-        port = 80,
-        method = "POST",
-
-        headers = {
-            "User-Agent: Astra " .. astra.version,
-            "Host: " .. event_request.host .. ":" .. event_request.port,
-            "Content-Type: application/jsonrequest",
-            "Content-Length: " .. #content,
-            "Connection: close"
-        },
-        callback = function(self, data)
-            if type(data) == 'table' and data.code ~= 200 then
-                log.error(("[event.lua] send_json() failed %d:%s")
-                          :format(data.code, data.message))
-            end
-        end,
-        content = content
-    }
-
-    --table.dump(event_request)
-
-    if event_request.host then config.host = event_request.host end
-    if event_request.uri then config.path = event_request.uri end
-    if event_request.port then config.port = event_request.port end
-    if event_request.method then config.method = event_request.method end
-
-    http_request(config)
-end
-
 --
 -- DVB descriptor dumping
 --
+
 dump_descriptor_func = {}
 
 dump_descriptor_func["cas"] = function(prefix, desc)
@@ -168,6 +137,7 @@ end
 --
 -- SI content dumping
 --
+
 dump_psi_info = {}
 
 dump_psi_info["pat"] = function(name, info)
@@ -221,14 +191,9 @@ dump_psi_info["sdt"] = function(name, info)
     log.info(name .. ("SDT: crc32: 0x%X"):format(info.crc32))
 end
 
-ifaddr_list = nil
-if utils.ifaddrs then ifaddr_list = utils.ifaddrs() end
-
--- ooooo  oooo oooooooooo  ooooo
---  888    88   888    888  888
---  888    88   888oooo88   888
---  888    88   888  88o    888      o
---   888oo88   o888o  88o8 o888ooooo88
+--
+-- URL parsing
+--
 
 parse_url_format = {}
 
@@ -275,7 +240,7 @@ end
 
 parse_url_format.rtp = parse_url_format.udp
 
-parse_url_format._http = function(url, data)
+local function parse_url_http(url, data)
     local b = url:find("/")
     if b then
         data.path = url:sub(b)
@@ -308,19 +273,19 @@ parse_url_format._http = function(url, data)
 end
 
 parse_url_format.http = function(url, data)
-    local r = parse_url_format._http(url, data)
+    local r = parse_url_http(url, data)
     if data.port == nil then data.port = 80 end
     return r
 end
 
 parse_url_format.https = function(url, data)
-    local r = parse_url_format._http(url, data)
+    local r = parse_url_http(url, data)
     if data.port == nil then data.port = 443 end
     return r
 end
 
 parse_url_format.np = function(url, data)
-    local r = parse_url_format._http(url, data)
+    local r = parse_url_http(url, data)
     if data.port == nil then data.port = 80 end
     return r
 end
@@ -402,30 +367,165 @@ function parse_url(url)
     return data
 end
 
--- ooooo oooo   oooo oooooooooo ooooo  oooo ooooooooooo
---  888   8888o  88   888    888 888    88  88  888  88
---  888   88 888o88   888oooo88  888    88      888
---  888   88   8888   888        888    88      888
--- o888o o88o    88  o888o        888oo88      o888o
+--
+-- Event notification
+--
+
+function make_event(conf)
+    -- notification service endpoint URL
+    if type(conf) ~= "table" or conf.url == nil then
+        error("[make_event] option 'url' is required")
+    end
+
+    local http_conf = parse_url(conf.url)
+    if http_conf == nil then
+        error("[make_event] invalid URL format")
+    elseif http_conf.format ~= "http" and http_conf.format ~= "https" then
+        error("[make_event] cannot use scheme '" .. http_conf.format .. "' for event notification")
+    end
+
+    -- interval in seconds between requests
+    local interval = 30
+    if conf.interval ~= nil then
+        interval = tonumber(conf.interval)
+    end
+    if interval == nil or interval < 1 then
+        error("[make_event] invalid request interval: '" .. interval .. "'")
+    end
+
+    -- maximum number of simultaneous requests
+    local backlog = 10
+    if conf.backlog ~= nil then
+        backlog = tonumber(conf.backlog)
+    end
+    if backlog == nil or backlog < 1 then
+        error("[make_event] invalid backlog size: '" .. backlog .. "'")
+    end
+
+    -- hostname to report to remote server
+    local hostname = conf.hostname or utils.hostname()
+    if type(hostname) ~= "string" then
+        error("[make_event] invalid format for option 'hostname'")
+    end
+
+    -- additional HTTP headers
+    local headers = {}
+    if conf.headers ~= nil then
+        if type(conf.headers) ~= "table" then
+            error("[make_event] invalid format for option 'headers'")
+        end
+        for key, val in ipairs(conf.headers) do
+            if type(val) ~= "string" then
+                error("[make_event] invalid header value at index " .. key)
+            end
+            table.insert(headers, val)
+        end
+    end
+
+    local event = {
+        http_conf = http_conf,
+        interval = interval,
+        backlog = backlog,
+        hostname = hostname,
+        headers = headers,
+        requests = {},
+    }
+
+    return event
+end
+
+function send_event(event, data)
+    local http_conf = event.http_conf
+
+    data.server = event.hostname
+    local content = json.encode(data)
+
+    local headers = {
+        "User-Agent: " .. http_user_agent,
+        "Content-Type: application/jsonrequest",
+        "Content-Length: " .. #content,
+        "Connection: close",
+    }
+    local add_host = true
+    for _, val in ipairs(event.headers) do
+        table.insert(headers, val)
+        if val:lower():sub(1, 5) == "host:" then
+            -- do not add duplicate Host header
+            add_host = false
+        end
+    end
+    if add_host then
+        local hdr = "Host: " .. http_conf.host .. ":" .. http_conf.port
+        table.insert(headers, hdr)
+    end
+
+    local conf = {
+        host = http_conf.host,
+        port = http_conf.port,
+        path = http_conf.path,
+        timeout = http_conf.timeout,
+        -- FIXME: add TLS support to http_request
+
+        method = "POST",
+        headers = headers,
+        content = content,
+
+        callback = function(self, data)
+            if type(data) == "table" and data.code ~= 200 then
+                log.error(("[event %s] HTTP request failed (%d: %s)")
+                          :format(http_conf.host, data.code, data.message))
+            end
+        end,
+    }
+
+    table.insert(event.requests, http_request(conf))
+    while #event.requests > event.backlog do
+        local req = table.remove(event.requests, 1)
+        req:close()
+        -- FIXME: do not disable GC by default for http_request
+    end
+end
+
+function parse_event(val)
+    local event = nil
+    if type(val) == "string" then
+        event = _G[val]
+    elseif type(val) == "table" then
+        event = val
+    elseif val ~= false then
+        event = _G["default_event"]
+    end
+    return event
+end
+
+--
+-- TS inputs
+--
 
 init_input_module = {}
 kill_input_module = {}
 
 function init_input(conf)
-    local instance = { config = conf, }
-
-    if not conf.name then
+    if conf == nil or conf.name == nil then
         error("[init_input] option 'name' is required")
+    elseif conf.format == nil then
+        error("[init_input " .. conf.name .. "] option 'format' is required")
     end
 
-    if not init_input_module[conf.format] then
-        error("[init_input " .. conf.name .. "] unknown input format")
+    local init_module = init_input_module[conf.format]
+    if init_module == nil then
+        error("[init_input " .. conf.name .. "] unknown input format: '" .. conf.format .. "'")
     end
-    instance.input = init_input_module[conf.format](conf)
+
+    local instance = {
+        config = conf,
+        input = init_module(conf),
+    }
     instance.tail = instance.input
 
+    -- Attach TS demultiplexer if needed
     if conf.pnr == nil then
-        local function check_dependent()
+        local function need_demux()
             if conf.set_pnr ~= nil then return true end
             if conf.no_sdt == true then return true end
             if conf.no_eit == true then return true end
@@ -434,12 +534,13 @@ function init_input(conf)
             if conf["filter~"] then return true end
             return false
         end
-        if check_dependent() then conf.pnr = 0 end
+        if need_demux() then conf.pnr = 0 end
     end
 
     if conf.pnr ~= nil then
-        if conf.cam and conf.cam ~= true then conf.cas = true end
-
+        if conf.cam and conf.cam ~= true then
+            conf.cas = true
+        end
         instance.channel = channel({
             upstream = instance.tail:stream(),
             name = conf.name,
@@ -459,7 +560,9 @@ function init_input(conf)
         instance.tail = instance.channel
     end
 
+    -- Configure conditional access
     if conf.biss then
+        -- Software BISS descrambling
         instance.decrypt = decrypt({
             upstream = instance.tail:stream(),
             name = conf.name,
@@ -467,52 +570,42 @@ function init_input(conf)
         })
         instance.tail = instance.decrypt
     elseif conf.cam == true then
-        -- DVB-CI
+        -- CA handled by upstream module (e.g. hardware CI CAM)
     elseif conf.cam then
-        local function get_softcam()
-            if type(conf.cam) == "table" then
-                if conf.cam.cam then
-                    return conf.cam
-                end
-            else
-                if type(softcam_list) == "table" then
-                    for _, i in ipairs(softcam_list) do
-                        if tostring(i.__options.id) == conf.cam then return i end
-                    end
-                end
-                local i = _G[tostring(conf.cam)]
-                if type(i) == "table" and i.cam then return i end
-            end
-            log.error("[" .. conf.name .. "] cam is not found")
-            return nil
+        -- Software CAM
+        local cam = nil
+        if type(conf.cam) == "string" then
+            cam = _G[conf.cam]
+        elseif type(conf.cam) == "table" then
+            cam = conf.cam
         end
-        local cam = get_softcam()
-        if cam then
-            local cas_pnr = nil
-            if conf.pnr and conf.set_pnr then cas_pnr = conf.pnr end
+        if type(cam) ~= "table" or type(cam.cam) ~= "function" then
+            cam = nil
+        end
+        if cam == nil then
+            error("[" .. conf.name .. "] CAM definition not found: '" .. tostring(conf.cam) .. "'")
+        end
+        conf.cam = nil
 
-            instance.decrypt = decrypt({
-                upstream = instance.tail:stream(),
-                name = conf.name,
-                cam = cam:cam(),
-                cas_data = conf.cas_data,
-                cas_pnr = cas_pnr,
-                disable_emm = conf.no_emm,
-                ecm_pid = conf.ecm_pid,
-                shift = conf.shift,
-                callback = function(data)
-                   on_status_decrypt(conf,data)
-               end,
-            })
-            instance.tail = instance.decrypt
+        local cas_pnr = nil
+        if conf.pnr and conf.set_pnr then
+            cas_pnr = conf.pnr
         end
+
+        instance.decrypt = decrypt({
+            upstream = instance.tail:stream(),
+            name = conf.name,
+            cam = cam:cam(),
+            cas_data = conf.cas_data,
+            cas_pnr = cas_pnr,
+            disable_emm = conf.no_emm,
+            ecm_pid = conf.ecm_pid,
+            shift = conf.shift,
+        })
+        instance.tail = instance.decrypt
     end
 
     return instance
-end
-
-function on_status_decrypt(decrypt_data,data)
---    table.dump(data)
 end
 
 function kill_input(instance)
@@ -528,11 +621,9 @@ function kill_input(instance)
     instance.decrypt = nil
 end
 
--- ooooo         ooooo  oooo ooooooooo  oooooooooo
---  888           888    88   888    88o 888    888
---  888 ooooooooo 888    88   888    888 888oooo88
---  888           888    88   888    888 888
--- o888o           888oo88   o888ooo88  o888o
+--
+-- Input: udp://
+--
 
 udp_input_instance_list = {}
 
@@ -576,11 +667,9 @@ kill_input_module.rtp = function(module, conf)
     kill_input_module.udp(module, conf)
 end
 
--- ooooo         ooooooooooo ooooo ooooo       ooooooooooo
---  888           888    88   888   888         888    88
---  888 ooooooooo 888oo8      888   888         888ooo8
---  888           888         888   888      o  888    oo
--- o888o         o888o       o888o o888ooooo88 o888ooo8888
+--
+-- Input: file://
+--
 
 init_input_module.file = function(conf)
     conf.callback = function()
@@ -594,11 +683,9 @@ kill_input_module.file = function(module)
     --
 end
 
--- ooooo         ooooo ooooo ooooooooooo ooooooooooo oooooooooo
---  888           888   888  88  888  88 88  888  88  888    888
---  888 ooooooooo 888ooo888      888         888      888oooo88
---  888           888   888      888         888      888
--- o888o         o888o o888o    o888o       o888o    o888o
+--
+-- Input: http://
+--
 
 http_user_agent = "Astra"
 http_input_instance_list = {}
@@ -727,11 +814,87 @@ end
 dvb_input_instance_list = {}
 dvb_list = nil
 
+local function on_status_dvb(instance, stats)
+    local event = instance.event
+    local data = instance.event_data
+
+    -- calculate average bitrate over the last 10 seconds
+    local sample_secs = 10
+
+    local last = data.last or stats
+    local delta = stats.packets - last.packets
+    data.last = stats
+
+    if data.delta_log == nil then
+        data.delta_log = {}
+    end
+
+    if delta < 0 then
+        -- packet counter wraparound, reuse last delta
+        if #data.delta_log > 0 then
+            delta = data.delta_log[#data.delta_log]
+        else
+            delta = 0
+        end
+    end
+
+    table.insert(data.delta_log, delta)
+    while #data.delta_log > sample_secs do
+        table.remove(data.delta_log, 1)
+    end
+
+    local bitrate = 0
+    for _, val in ipairs(data.delta_log) do
+        bitrate = bitrate + val
+    end
+    bitrate = ((bitrate / sample_secs) * 1504) / 1000
+    bitrate = tonumber(string.format("%d", bitrate))
+
+    -- send reports at configured interval or on signal status change
+    local do_send = false
+
+    if stats.lock ~= last.lock
+       or stats.ber ~= last.ber
+       or stats.uncorrected ~= last.uncorrected
+    then
+        do_send = true
+        data.ticks = math.random(event.interval)
+    elseif data.ticks ~= nil then
+        data.ticks = data.ticks - 1
+        if data.ticks <= 0 then
+            do_send = true
+            data.ticks = event.interval
+        end
+    else
+        data.ticks = math.random(event.interval)
+    end
+
+    if do_send then
+        send_event(event, {
+            type = "dvb",
+            stream = instance.name,
+
+            adapter = instance.conf.adapter,
+            frontend = instance.conf.frontend,
+            devpath = instance.conf.devpath,
+
+            signal = stats.strength,
+            snr = stats.quality,
+            ber = stats.ber,
+            unc = stats.uncorrected,
+            lock = stats.lock,
+            packets = stats.packets,
+
+            bitrate = bitrate,
+        })
+    end
+end
+
 function dvb_tune(conf)
-    local name = conf.name
-    if name == nil then
+    if type(conf) ~= "table" or conf.name == nil then
         error("[dvb_tune] option 'name' is required")
     end
+    local name = conf.name
 
     -- look up MAC if needed
     if conf.mac ~= nil then
@@ -843,11 +1006,12 @@ function dvb_tune(conf)
         end
     end
 
-    if event_request then
-        conf.callback = function(data)
-           on_status_dvb(conf,data)
-       end
+    -- configure event notification
+    local event = parse_event(conf.event)
+    if conf.event and event == nil then
+        error("[dvb_tune " .. name .. "] event definition not found: '" .. tostring(conf.event) .. "'")
     end
+    conf.event = nil
 
     -- reuse module instance if it already exists
     local instance_id = string.format("a%s:f%s:d%s",
@@ -863,70 +1027,15 @@ function dvb_tune(conf)
             conf = conf,
             clients = 0,
         }
+        if event ~= nil then
+            instance.event = event
+            conf.callback = function(data)
+                on_status_dvb(instance, data)
+            end
+        end
     end
 
     return instance
-end
-
-function on_status_dvb(adapter_data,data)
-
---    FE_HAS_SIGNAL            = 0x01,
---    FE_HAS_CARRIER           = 0x02,
---    FE_HAS_VITERBI           = 0x04,
---    FE_HAS_SYNC              = 0x08,
---    FE_HAS_LOCK      = 0x10,
-
-    if not adapter_data.request_timer then
-       adapter_data.request_timer=0
-       adapter_data.status = { bitrate = 0, }
-       adapter_data.bitrate_table = { }
-    end
-
-    if  adapter_data.status.status ~= data.status or data.unc > 0 or data.ber > 0  then
-       force_send = 1
-    end
-
-    local tmp_status = data
-    tmp_status.snr = tonumber(string.format("%d", data.snr / 65535 * 100))
-    if( tmp_status.snr > 100 )then
-          tmp_status.snr = 99
-    end
-    tmp_status.signal = tonumber(string.format("%d", data.signal / 65535 * 100))
-    tmp_status.lock = (data.status and 0x10 ) ~= 0
-    curr_bitrate = data.dvr_read * 8 / 1024
-
-    table.insert(adapter_data.bitrate_table, curr_bitrate)
-
-    bitrate_max_index = table.maxn(adapter_data.bitrate_table)
-
-    if ( bitrate_max_index > 20 ) then
-       table.remove(adapter_data.bitrate_table, 1 )
-    end
-
-    local sum = 0
-    for key,value in pairs(adapter_data.bitrate_table) do
-        sum = sum + value
-    end
-
-    if bitrate_max_index > 1 then
-       tmp_status.bitrate = tonumber(string.format("%d", sum/( bitrate_max_index - 1 )))
-    else
-       tmp_status.bitrate = tonumber(string.format("%d", sum))
-    end
-    adapter_data.status = tmp_status
-
-    tmp_status.type = 'dvb'
-    tmp_status.stream = adapter_data.name
-    tmp_status.adapter = adapter_data.adapter
-
-    if event_request and (adapter_data.request_timer > event_request.interval or force_send == 1) then
-       force_send = 0
-       adapter_data.request_timer = 0
-       send_json(tmp_status)
-    end
-
-    adapter_data.request_timer = adapter_data.request_timer + 1
-
 end
 
 init_input_module.dvb = function(conf)
@@ -958,6 +1067,7 @@ init_input_module.dvb = function(conf)
         end
 
         instance.module = func(instance.conf)
+        instance.event_data = {}
         dvb_input_instance_list[instance.conf.id] = instance
     end
 
@@ -980,6 +1090,7 @@ kill_input_module.dvb = function(module, conf)
     instance.clients = instance.clients - 1
     if instance.clients == 0 then
         instance.module = nil
+        instance.event_data = nil
         dvb_input_instance_list[instance_id] = nil
     end
 end
@@ -1122,11 +1233,9 @@ kill_input_module.t2mi = function(module, conf)
     end
 end
 
--- ooooo         oooooooooo  ooooooooooo ooooo         ooooooo      o      ooooooooo
---  888           888    888  888    88   888        o888   888o   888      888    88o
---  888 ooooooooo 888oooo88   888ooo8     888        888     888  8  88     888    888
---  888           888  88o    888    oo   888      o 888o   o888 8oooo88    888    888
--- o888o         o888o  88o8 o888ooo8888 o888ooooo88   88ooo88 o88o  o888o o888ooo88
+--
+-- Input: reload://
+--
 
 init_input_module.reload = function(conf)
     return transmit({
@@ -1144,11 +1253,9 @@ kill_input_module.reload = function(module)
     module.__options.timer:close()
 end
 
--- ooooo          oooooooo8 ooooooooooo   ooooooo  oooooooooo
---  888          888        88  888  88 o888   888o 888    888
---  888 ooooooooo 888oooooo     888     888     888 888oooo88
---  888                  888    888     888o   o888 888
--- o888o         o88oooo888    o888o      88ooo88  o888o
+--
+-- Input: stop://
+--
 
 init_input_module.stop = function(conf)
     return transmit({})
@@ -1158,11 +1265,9 @@ kill_input_module.stop = function(module)
     --
 end
 
--- ooooo         ooooooo      o      ooooooooo
---  888        o888   888o   888      888    88o
---  888        888     888  8  88     888    888
---  888      o 888o   o888 8oooo88    888    888
--- o888ooooo88   88ooo88 o88o  o888o o888ooo88
+--
+-- Option parsing
+--
 
 function astra_usage()
     print("Usage: " .. argv0 .. " [APP] [OPTIONS]")

@@ -2,7 +2,7 @@
 -- https://cesbo.com/astra/
 --
 -- Copyright (C) 2013-2015, Andrey Dyldin <and@cesbo.com>
---               2015-2016, Artem Kharitonov <artem@3phase.pw>
+--               2015-2017, Artem Kharitonov <artem@3phase.pw>
 --
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
@@ -17,16 +17,65 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
---      o      oooo   oooo     o      ooooo    ooooo  oooo ooooooooooo ooooooooooo
---     888      8888o  88     888      888       888  88   88    888    888    88
---    8  88     88 888o88    8  88     888         888         888      888ooo8
---   8oooo88    88   8888   8oooo88    888      o  888       888    oo  888    oo
--- o88o  o888o o88o    88 o88o  o888o o888ooooo88 o888o    o888oooo888 o888ooo8888
+--
+-- Analyze
+--
 
+local function on_status_channel(instance, stats)
+    local event = instance.event
+    local data = instance.event_data
 
-function on_analyze_spts(channel_data, input_id, data)
+    local input_id = instance.active_input_id
+    if input_id == 0 then input_id = 1 end
+    local input = instance.input[input_id]
+
+    local last = data.last or stats
+    data.last = stats
+
+    local do_send = false
+
+    if stats.on_air ~= last.on_air
+       or stats.total.scrambled ~= last.total.scrambled
+    then
+        do_send = true
+        data.ticks = math.random(event.interval)
+    elseif data.ticks ~= nil then
+        data.ticks = data.ticks - 1
+        if data.ticks <= 0 then
+            do_send = true
+            data.ticks = event.interval
+        end
+    else
+        data.ticks = math.random(event.interval)
+    end
+
+    if do_send then
+        local dvb_name = nil
+        if input.config.format == "dvb" then
+            -- FIXME: figure out a prettier way of retrieving DVB instance's name
+            dvb_name = input.input.input.__options.name
+        end
+
+        send_event(event, {
+            type = "channel",
+            channel = instance.config.name,
+
+            stream = dvb_name,
+            pnr = input.config.pnr,
+
+            ready = stats.on_air,
+            scrambled = stats.total.scrambled,
+            bitrate = stats.total.bitrate,
+            cc_error = stats.total.cc_errors,
+            pes_error = stats.total.pes_errors,
+
+            -- TODO: add output list
+        })
+    end
+end
+
+local function on_analyze_channel(channel_data, input_id, data)
     local input_data = channel_data.input[input_id]
-    local force_send = 0
 
     if data.error then
         log.error("[" .. input_data.config.name .. "] Error: " .. data.error)
@@ -69,58 +118,15 @@ function on_analyze_spts(channel_data, input_id, data)
             end
         end
 
-       if channel_data.request_timer == nil then
-           channel_data.request_timer = 0
-           force_send = 1
-       end
-
-       if channel_data.status == nil then
-           channel_data.status = {
-               type = 'channel',
-               channel = channel_data.config.name,
-           }
-       end
-
-       if channel_data.status.ready ~= data.on_air or channel_data.status.scrambled ~= data.total.scrambled then
-           force_send = 1
-       end
-
-       channel_data.status.pnr = input_data.config.pnr
-       channel_data.status.ready = data.on_air
-       channel_data.status.scrambled = data.total.scrambled
-       channel_data.status.bitrate = data.total.bitrate
-       channel_data.status.cc_error = data.total.cc_errors
-       channel_data.status.pes_error = data.total.pes_errors
-
-       if channel_data.active_input_id == 0 then
-           curr_input_id = 1
-       else
-           curr_input_id = channel_data.active_input_id
-       end
-
-       if channel_data.input[curr_input_id].config.format == 'dvb' then
-           channel_data.status.stream = channel_data.input[curr_input_id].input.input.__options.name
-       end
-
-       if event_request and (channel_data.request_timer > event_request.interval or force_send == 1) then
-           force_send = 0
-           for key,value in pairs(channel_data.config.output) do
-               channel_data.status.output = value:gsub("#.*","")
-               channel_data.request_timer = 0
-               send_json(channel_data.status)
-           end
-       end
-
-       channel_data.request_timer = channel_data.request_timer + 1
-
+        if channel_data.event ~= nil then
+            on_status_channel(channel_data, data)
+        end
     end
 end
 
--- oooooooooo  ooooooooooo  oooooooo8 ooooooooooo oooooooooo ooooo  oooo ooooooooooo
---  888    888  888    88  888         888    88   888    888 888    88   888    88
---  888oooo88   888ooo8     888oooooo  888ooo8     888oooo88   888  88    888ooo8
---  888  88o    888    oo          888 888    oo   888  88o     88888     888    oo
--- o888o  88o8 o888ooo8888 o88oooo888 o888ooo8888 o888o  88o8    888     o888ooo8888
+--
+-- Failover
+--
 
 function start_reserve(channel_data)
     local active_input_id = 0
@@ -161,14 +167,13 @@ function start_reserve(channel_data)
     end
 end
 
--- ooooo oooo   oooo oooooooooo ooooo  oooo ooooooooooo
---  888   8888o  88   888    888 888    88  88  888  88
---  888   88 888o88   888oooo88  888    88      888
---  888   88   8888   888        888    88      888
--- o888o o88o    88  o888o        888oo88      o888o
+--
+-- Input
+--
 
 function channel_init_input(channel_data, input_id)
     local input_data = channel_data.input[input_id]
+
     -- merge channel-wide and input-specific PID maps
     if channel_data.config.map or input_data.config.map then
         local merged_map = {}
@@ -200,14 +205,13 @@ function channel_init_input(channel_data, input_id)
     input_data.input = init_input(input_data.config)
 
     if input_data.config.no_analyze ~= true then
-       --table.dump(input_data)
         input_data.analyze = analyze({
             upstream = input_data.input.tail:stream(),
             name = input_data.config.name,
             cc_limit = input_data.config.cc_limit,
             bitrate_limit = input_data.config.bitrate_limit,
             callback = function(data)
-                on_analyze_spts(channel_data, input_id, data)
+                on_analyze_channel(channel_data, input_id, data)
             end,
         })
     end
@@ -232,11 +236,9 @@ function channel_kill_input(channel_data, input_id)
     channel_data.input[input_id] = { config = input_data.config, }
 end
 
---   ooooooo  ooooo  oooo ooooooooooo oooooooooo ooooo  oooo ooooooooooo
--- o888   888o 888    88  88  888  88  888    888 888    88  88  888  88
--- 888     888 888    88      888      888oooo88  888    88      888
--- 888o   o888 888    88      888      888        888    88      888
---   88ooo88    888oo88      o888o    o888o        888oo88      o888o
+--
+-- Output
+--
 
 init_output_option = {}
 kill_output_option = {}
@@ -321,11 +323,9 @@ function channel_kill_output(channel_data, output_id)
     channel_data.output[output_id] = { config = output_data.config, }
 end
 
---   ooooooo            ooooo  oooo ooooooooo  oooooooooo
--- o888   888o           888    88   888    88o 888    888
--- 888     888 ooooooooo 888    88   888    888 888oooo88
--- 888o   o888           888    88   888    888 888
---   88ooo88              888oo88   o888ooo88  o888o
+--
+-- Output: udp://, rtp://
+--
 
 init_output_module.udp = function(channel_data, output_id)
     local output_data = channel_data.output[output_id]
@@ -360,11 +360,9 @@ kill_output_module.rtp = function(channel_data, output_id)
     kill_output_module.udp(channel_data, output_id)
 end
 
---   ooooooo            ooooooooooo ooooo ooooo       ooooooooooo
--- o888   888o           888    88   888   888         888    88
--- 888     888 ooooooooo 888oo8      888   888         888ooo8
--- 888o   o888           888         888   888      o  888    oo
---   88ooo88            o888o       o888o o888ooooo88 o888ooo8888
+--
+-- Output: file://
+--
 
 init_output_module.file = function(channel_data, output_id)
     local output_data = channel_data.output[output_id]
@@ -383,11 +381,9 @@ kill_output_module.file = function(channel_data, output_id)
     output_data.output = nil
 end
 
---   ooooooo            ooooo ooooo ooooooooooo ooooooooooo oooooooooo
--- o888   888o           888   888  88  888  88 88  888  88  888    888
--- 888     888 ooooooooo 888ooo888      888         888      888oooo88
--- 888o   o888           888   888      888         888      888
---   88ooo88            o888o o888o    o888o       o888o    o888o
+--
+-- Output: http://
+--
 
 http_output_client_list = {}
 http_output_instance_list = {}
@@ -525,11 +521,9 @@ kill_output_module.http = function(channel_data, output_id)
     output_data.channel_data = nil
 end
 
---   ooooooo            oooo   oooo oooooooooo
--- o888   888o           8888o  88   888    888
--- 888     888 ooooooooo 88 888o88   888oooo88
--- 888o   o888           88   8888   888
---   88ooo88            o88o    88  o888o
+--
+-- Output: np://
+--
 
 init_output_module.np = function(channel_data, output_id)
     local output_data = channel_data.output[output_id]
@@ -799,52 +793,54 @@ kill_transform_module.pipe = function(instance)
     --
 end
 
---   oooooooo8 ooooo ooooo      o      oooo   oooo oooo   oooo ooooooooooo ooooo
--- o888     88  888   888      888      8888o  88   8888o  88   888    88   888
--- 888          888ooo888     8  88     88 888o88   88 888o88   888ooo8     888
--- 888o     oo  888   888    8oooo88    88   8888   88   8888   888    oo   888      o
---  888oooo88  o888o o888o o88o  o888o o88o    88  o88o    88  o888ooo8888 o888ooooo88
+--
+-- Channel
+--
 
 channel_list = {}
 
-function make_channel(channel_config)
-    if not channel_config.name then
-        log.error("[make_channel] option 'name' is required")
+function make_channel(conf)
+    if conf == nil or conf.name == nil then
+        error("[make_channel] option 'name' is required")
+    elseif conf.input == nil or #conf.input == 0 then
+        error("[make_channel " .. conf.name .. "] option 'input' is required")
+    end
+
+    if conf.transform == nil then conf.transform = {} end
+    if conf.output == nil then conf.output = {} end
+    if conf.timeout == nil then conf.timeout = 0 end
+    if conf.enable == nil then conf.enable = true end
+
+    if conf.enable == false then
+        log.info("[make_channel " .. conf.name .. "] channel is disabled via configuration")
         return nil
     end
 
-    if not channel_config.input or #channel_config.input == 0 then
-        log.error("[" .. channel_config.name .. "] option 'input' is required")
-        return nil
+    local event = parse_event(conf.event)
+    if conf.event and event == nil then
+        error("[make_channel " .. conf.name .. "] event definition not found: '" .. tostring(conf.event) .. "'")
     end
+    conf.event = nil
 
-    if channel_config.transform == nil then channel_config.transform = {} end
-    if channel_config.output == nil then channel_config.output = {} end
-    if channel_config.timeout == nil then channel_config.timeout = 0 end
-    if channel_config.enable == nil then channel_config.enable = true end
-
-    if channel_config.enable == false then
-        log.info("[" .. channel_config.name .. "] channel is disabled")
-        return nil
-    end
-
-    local channel_data = {
-        config = channel_config,
+    local instance = {
+        config = conf,
         input = {},
         transform = {},
         output = {},
         delay = 3,
         clients = 0,
+        event = event,
+        event_data = {},
     }
 
-    local function check_url_format(obj)
-        local url_list = channel_config[obj]
-        local config_list = channel_data[obj]
-        local module_list = _G["init_" .. obj .. "_module"]
-        local function check_module(config)
-            if not config then return false end
-            if not config.format then return false end
-            if not module_list[config.format] then return false end
+    local function add_urls(obj)
+        local url_list = conf[obj]
+        local parsed_list = instance[obj]
+        local init_list = _G["init_" .. obj .. "_module"]
+        local function check_item_cfg(tbl)
+            if type(tbl) ~= "table" then return false end
+            if not tbl.format then return false end
+            if not init_list[tbl.format] then return false end
             return true
         end
         for n, url in ipairs(url_list) do
@@ -854,100 +850,96 @@ function make_channel(channel_config)
             elseif type(url) == "table" then
                 if url.url then
                     local u = parse_url(url.url)
-                    for k,v in pairs(u) do url[k] = v end
+                    for k, v in pairs(u) do url[k] = v end
                 end
                 item.config = url
             end
-            if not check_module(item.config) then
-                log.error("[" .. channel_config.name .. "] wrong " .. obj .. " #" .. n .. " format")
-                return false
+            if not check_item_cfg(item.config) then
+                error("[make_channel " .. conf.name .. "] invalid URL format for " .. obj .. " #" .. n)
             end
-            item.config.name = channel_config.name .. " #" .. n
-            table.insert(config_list, item)
+            item.config.name = conf.name .. " #" .. n
+            table.insert(parsed_list, item)
         end
-        return true
     end
 
-    if not check_url_format("input") then return nil end
-    if not check_url_format("transform") then return nil end
-    if not check_url_format("output") then return nil end
+    add_urls("input")
+    add_urls("transform")
+    add_urls("output")
 
-    if #channel_data.output == 0 then
-        channel_data.clients = 1
+    if #instance.output == 0 then
+        instance.clients = 1
     else
-        for _, o in pairs(channel_data.output) do
+        for _, o in pairs(instance.output) do
             if o.config.format ~= "http" or o.config.keep_active == true then
-                channel_data.clients = channel_data.clients + 1
+                instance.clients = instance.clients + 1
             end
         end
     end
 
-    channel_data.active_input_id = 0
-    channel_data.transmit = transmit()
-    channel_data.tail = channel_data.transmit
+    instance.active_input_id = 0
+    instance.transmit = transmit()
+    instance.tail = instance.transmit
 
-    for xfrm_id in ipairs(channel_data.transform) do
-        stream_init_transform(channel_data, xfrm_id)
+    for xfrm_id in ipairs(instance.transform) do
+        stream_init_transform(instance, xfrm_id)
     end
 
-    if channel_data.clients > 0 then
-        channel_init_input(channel_data, 1)
+    if instance.clients > 0 then
+        channel_init_input(instance, 1)
     end
 
-    for output_id in ipairs(channel_data.output) do
-        channel_init_output(channel_data, output_id)
+    for output_id in ipairs(instance.output) do
+        channel_init_output(instance, output_id)
     end
 
-    table.insert(channel_list, channel_data)
-    return channel_data
+    table.insert(channel_list, instance)
+    return instance
 end
 
-function kill_channel(channel_data)
-    if not channel_data then return nil end
-
+function kill_channel(instance)
     local channel_id = 0
-    for key, value in pairs(channel_list) do
-        if value == channel_data then
-            channel_id = key
-            break
+    if instance ~= nil then
+        for key, value in pairs(channel_list) do
+            if value == instance then
+                channel_id = key
+                break
+            end
         end
     end
-
     if channel_id == 0 then
-        log.error("[kill_channel] channel is not found")
-        return nil
+        error("[kill_channel] channel not found")
     end
 
-    while #channel_data.input > 0 do
-        channel_kill_input(channel_data, 1)
-        table.remove(channel_data.input, 1)
+    while #instance.input > 0 do
+        channel_kill_input(instance, 1)
+        table.remove(instance.input, 1)
     end
-    channel_data.input = nil
+    instance.input = nil
 
-    while #channel_data.transform > 0 do
-        stream_kill_transform(channel_data, 1)
-        table.remove(channel_data.transform, 1)
+    while #instance.transform > 0 do
+        stream_kill_transform(instance, 1)
+        table.remove(instance.transform, 1)
     end
-    channel_data.transform = nil
+    instance.transform = nil
 
-    while #channel_data.output > 0 do
-        channel_kill_output(channel_data, 1)
-        table.remove(channel_data.output, 1)
+    while #instance.output > 0 do
+        channel_kill_output(instance, 1)
+        table.remove(instance.output, 1)
     end
-    channel_data.output = nil
+    instance.output = nil
 
-    channel_data.tail = nil
-    channel_data.transmit = nil
-    channel_data.config = nil
+    instance.tail = nil
+    instance.transmit = nil
+    instance.config = nil
 
     table.remove(channel_list, channel_id)
     collectgarbage()
 end
 
 function find_channel(key, value)
-    for _, channel_data in pairs(channel_list) do
-        if channel_data.config[key] == value then
-            return channel_data
+    for _, instance in pairs(channel_list) do
+        if instance.config[key] == value then
+            return instance
         end
     end
     return nil
