@@ -42,6 +42,9 @@
 /* maximum DiSEqC sequence size */
 #define BDA_DISEQC_MAX_SEQ 64
 
+/* MAC address length, bytes */
+#define BDA_MAC_LEN 6
+
 typedef enum
 {
     BDA_COMMAND_TUNE = 0,   /* tune the device and begin receiving TS */
@@ -342,6 +345,7 @@ enum
     BDA_EXT_CA        = 0x00000010, /* CI CAM slot support */
     BDA_EXT_PIDMAP    = 0x00000020, /* hardware PID filter */
     BDA_EXT_SIGNAL    = 0x00000040, /* get signal statistics */
+    BDA_EXT_MAC       = 0x00000080, /* retrieve MAC address */
 };
 
 /* tuning data hooks */
@@ -356,6 +360,7 @@ typedef struct
     const char *name;
     const char *description;
     uint32_t flags;
+    bool allow_dup;
 
     HRESULT (*init)(IBaseFilter *[], void **);
     void (*destroy)(void *);
@@ -381,8 +386,13 @@ typedef struct
     /* signal statistics */
     HRESULT (*signal)(void *, bda_signal_stats_t *);
 
+    /* MAC address */
+    HRESULT (*mac)(void *, uint8_t[BDA_MAC_LEN]);
+
     void *data;
 } bda_extension_t;
+
+extern const bda_extension_t *const bda_ext_list[];
 
 HRESULT bda_ext_init(module_data_t *mod, IBaseFilter *filters[]);
 void bda_ext_destroy(module_data_t *mod);

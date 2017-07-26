@@ -612,6 +612,202 @@ const bda_extension_t omc_pci_diseqc =
     .diseqc = omc_pci_diseqc_send,
 };
 
+#ifdef BDA_CRAZYBDA
+/*
+ * CrazyBDA
+ */
+
+static
+const GUID KSPROPERTYSET_CCTunerControl =
+    {0xa3e871e9,0x1f10,0x473e,{0x99,0xbd,0xee,0x70,0xe0,0xd2,0xf0,0x70}};
+
+enum
+{
+    KSPROPERTY_CC_SET_FREQUENCY = 0,
+    KSPROPERTY_CC_SET_DISEQC = 1,
+    KSPROPERTY_CC_GET_SIGNAL_STATS = 2,
+};
+
+typedef struct
+{
+    uint32_t freq;
+    uint32_t lof1;
+    uint32_t lof2;
+    uint32_t slof;
+    uint32_t sr;
+
+    // FIXME: change enums to int32_t
+    Polarisation pol;
+    uint32_t std;
+    ModulationType mod;
+    BinaryConvolutionCodeRate fec;
+    RollOff rolloff;
+    Pilot pilot;
+    uint32_t stream_id;
+    uint32_t lnb_source;
+
+    uint32_t diseqc_len;
+    uint8_t diseqc_cmd[8];
+
+    uint32_t strength;
+    uint32_t quality;
+    bool locked; // FIXME: change bool to uint8_t
+
+    int32_t rflevel; /* dBm */
+    int32_t snr10; /* dB, snr * 10 */
+    uint32_t ber10e7;
+} cc_tuner_cmd_t;
+
+/*
+ * CrazyBDA DiSEqC
+ */
+
+static
+HRESULT cc_diseqc_send(void *data, const uint8_t *cmd, unsigned int len)
+{
+    cc_tuner_cmd_t cc_cmd =
+    {
+        .diseqc_len = len,
+    };
+    memcpy(cc_cmd.diseqc_cmd, cmd, len);
+
+    IKsPropertySet *const prop = (IKsPropertySet *)data;
+    return IKsPropertySet_Set(prop
+                              , &KSPROPERTYSET_CCTunerControl
+                              , KSPROPERTY_CC_SET_DISEQC
+                              , NULL, 0, &cc_cmd, sizeof(cc_cmd));
+}
+
+static
+HRESULT cc_diseqc_init(IBaseFilter *filters[], void **data)
+{
+    return generic_init(filters, data
+                        , &KSPROPERTYSET_CCTunerControl
+                        , KSPROPERTY_CC_SET_DISEQC);
+}
+
+static
+const bda_extension_t cc_diseqc =
+{
+    .name = "cc_diseqc",
+    .description = "CrazyBDA DiSEqC",
+    .flags = BDA_EXT_DISEQC,
+
+    .init = cc_diseqc_init,
+    .destroy = generic_destroy,
+
+    .diseqc = cc_diseqc_send,
+};
+
+/*
+ * CrazyBDA Signal Statistics
+ */
+
+static
+HRESULT cc_signal_get(void *data, bda_signal_stats_t *stats)
+{
+    IKsPropertySet *const prop = (IKsPropertySet *)data;
+
+    DWORD returned = 0;
+    cc_tuner_cmd_t cc_cmd;
+    memset(&cc_cmd, 0, sizeof(cc_cmd));
+
+    const HRESULT hr = IKsPropertySet_Get(prop
+                                          , &KSPROPERTYSET_CCTunerControl
+                                          , KSPROPERTY_CC_GET_SIGNAL_STATS
+                                          , NULL, 0, &cc_cmd, sizeof(cc_cmd)
+                                          , &returned);
+
+    if (SUCCEEDED(hr))
+    {
+        stats->strength = cc_cmd.strength;
+        stats->quality = cc_cmd.quality;
+        stats->lock = cc_cmd.locked;
+        stats->ber = cc_cmd.ber10e7;
+    }
+
+    return hr;
+}
+
+static
+HRESULT cc_signal_init(IBaseFilter *filters[], void **data)
+{
+    return generic_init(filters, data
+                        , &KSPROPERTYSET_CCTunerControl
+                        , KSPROPERTY_CC_GET_SIGNAL_STATS);
+}
+
+static
+const bda_extension_t cc_signal =
+{
+    .name = "cc_signal",
+    .description = "CrazyBDA Signal Statistics",
+    .flags = BDA_EXT_SIGNAL,
+    .allow_dup = true,
+
+    .init = cc_signal_init,
+    .destroy = generic_destroy,
+
+    .signal = cc_signal_get,
+};
+
+/*
+ * CrazyBDA Tuning
+ */
+
+static
+HRESULT cc_tune_post(void *data, const bda_tune_cmd_t *tune)
+{
+    // FIXME: handle '-1' values in bda_tune_cmd_t
+    //        left shifting those is UB
+    const uint32_t stream_id =
+        (tune->pls_mode << 26) | (tune->pls_code << 8) | tune->stream_id;
+
+    cc_tuner_cmd_t cc_cmd =
+    {
+        .freq = tune->frequency / 1000,
+        .lof1 = tune->lof1 / 1000,
+        .lof2 = tune->lof2 / 1000,
+        .slof = tune->slof / 1000,
+        .sr = tune->symbolrate / 1000,
+        .pol = tune->polarization,
+        .std = 0,
+        .mod = tune->modulation,
+        .rolloff = tune->rolloff,
+        .pilot = tune->pilot,
+        .lnb_source = tune->lnb_source,
+        .stream_id = stream_id,
+    };
+
+    IKsPropertySet *const prop = (IKsPropertySet *)data;
+    return IKsPropertySet_Set(prop
+                              , &KSPROPERTYSET_CCTunerControl
+                              , KSPROPERTY_CC_SET_FREQUENCY
+                              , NULL, 0, &cc_cmd, sizeof(cc_cmd));
+}
+
+static
+HRESULT cc_tune_init(IBaseFilter *filters[], void **data)
+{
+    return generic_init(filters, data
+                        , &KSPROPERTYSET_CCTunerControl
+                        , KSPROPERTY_CC_SET_FREQUENCY);
+}
+
+static
+const bda_extension_t cc_tune =
+{
+    .name = "cc_tune",
+    .description = "CrazyBDA Tuning",
+
+    .init = cc_tune_init,
+    .destroy = generic_destroy,
+
+    .tune_post = cc_tune_post,
+};
+#endif /* BDA_CRAZYBDA */
+
+#ifdef BDA_MS_PIDMAP
 /*
  * Microsoft PID Filter
  */
@@ -654,7 +850,6 @@ HRESULT ms_pidmap_bulk(void *data, const bool pids[TS_MAX_PIDS])
 static
 HRESULT ms_pidmap_init(IBaseFilter *filters[], void **data)
 {
-#ifdef BDA_MS_PIDMAP
     for (; *filters != NULL; filters++)
     {
         const HRESULT hr = dshow_find_ctlnode(*filters
@@ -664,10 +859,6 @@ HRESULT ms_pidmap_init(IBaseFilter *filters[], void **data)
         if (SUCCEEDED(hr))
             return hr;
     }
-#else
-    ASC_UNUSED(filters);
-    ASC_UNUSED(data);
-#endif
 
     return E_NOTIMPL;
 }
@@ -692,6 +883,7 @@ const bda_extension_t ms_pidmap =
     .pid_set = ms_pidmap_set,
     .pid_bulk = ms_pidmap_bulk,
 };
+#endif /* BDA_MS_PIDMAP */
 
 /*
  * Microsoft Signal Statistics
@@ -773,8 +965,7 @@ const bda_extension_t ms_signal =
  */
 
 /* list of supported BDA extensions */
-static
-const bda_extension_t *const ext_list[] =
+const bda_extension_t *const bda_ext_list[] =
 {
     /*
      * Allow extensions to override signal statistics by placing the
@@ -795,8 +986,17 @@ const bda_extension_t *const ext_list[] =
     &omc_pci_pls,
     &omc_pci_diseqc,
 
+#ifdef BDA_CRAZYBDA
+    /* CrazyBDA */
+    &cc_diseqc,
+    &cc_signal,
+    &cc_tune,
+#endif
+
+#ifdef BDA_MS_PIDMAP
     /* Microsoft */
     &ms_pidmap,
+#endif
 
     NULL,
 };
@@ -806,11 +1006,11 @@ HRESULT bda_ext_init(module_data_t *mod, IBaseFilter *filters[])
 {
     HRESULT out_hr = S_OK;
 
-    for (size_t i = 0; ext_list[i] != NULL; i++)
+    for (size_t i = 0; bda_ext_list[i] != NULL; i++)
     {
-        const bda_extension_t *const ext = ext_list[i];
+        const bda_extension_t *const ext = bda_ext_list[i];
 
-        if (mod->ext_flags & ext->flags)
+        if ((mod->ext_flags & ext->flags) && !ext->allow_dup)
         {
             asc_log_debug(MSG("skipping extension: %s"), ext->name);
             continue;
