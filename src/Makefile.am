@@ -80,8 +80,6 @@ libastra_la_SOURCES += \
     astra/core/socket.h \
     astra/core/spawn.c \
     astra/core/spawn.h \
-    astra/core/strbuf.c \
-    astra/core/strbuf.h \
     astra/core/thread.c \
     astra/core/thread.h \
     astra/core/timer.c \
@@ -185,6 +183,8 @@ libstream_la_SOURCES = \
     stream/http/parser.h \
     stream/http/request.c \
     stream/http/server.c \
+    stream/http/strbuf.c \
+    stream/http/strbuf.h \
     stream/http/utils.c \
     stream/http/modules/downstream.c \
     stream/http/modules/redirect.c \

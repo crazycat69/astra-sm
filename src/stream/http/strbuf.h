@@ -19,8 +19,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _ASC_STRBUF_H_
-#define _ASC_STRBUF_H_ 1
+#ifndef _HTTP_STRBUF_H_
+#define _HTTP_STRBUF_H_ 1
 
 #ifndef _ASTRA_H_
 #   error "Please include <astra/astra.h> first"
@@ -45,4 +45,4 @@ char *string_buffer_release(string_buffer_t *buffer
                             , size_t *size) __asc_result;
 void string_buffer_push(lua_State *L, string_buffer_t *buffer);
 
-#endif /* _ASC_STRBUF_H_ */
+#endif /* _HTTP_STRBUF_H_ */

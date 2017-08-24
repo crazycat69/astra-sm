@@ -20,7 +20,7 @@
  */
 
 #include <astra/astra.h>
-#include <astra/core/strbuf.h>
+#include "strbuf.h"
 
 #define MAX_BUFFER_SIZE 4096
 
