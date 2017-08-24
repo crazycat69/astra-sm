@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
+ *                    2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -19,93 +20,93 @@
  */
 
 #include <astra/astra.h>
-#include <astra/core/strbuf.h>
 #include <astra/luaapi/module.h>
 
 #define MSG(_msg) "[json] " _msg
+
+/* maximum number of elements in Lua stack */
+#define JSON_MAX_STACK 1000
 
 /*
  * encoding
  */
 
 static
-void walk_table(lua_State *L, string_buffer_t *buffer);
+void walk_table(lua_State *L, luaL_Buffer *buf);
 
 static
-void set_string(string_buffer_t *buffer, const char *str)
+void set_string(luaL_Buffer *buf, const char *str)
 {
-    char c;
-    string_buffer_addchar(buffer, '"');
-    for (int i = 0; (c = str[i]) != '\0'; ++i)
+    luaL_addchar(buf, '"');
+
+    for (size_t i = 0; str[i] != '\0'; ++i)
     {
-        switch (c)
+        switch (str[i])
         {
-            case '\\':
-                string_buffer_addlstring(buffer, "\\\\", 2);
-                break;
-            case '"':
-                string_buffer_addlstring(buffer, "\\\"", 2);
-                break;
-            case '\t':
-                string_buffer_addlstring(buffer, "\\t", 2);
-                break;
-            case '\r':
-                string_buffer_addlstring(buffer, "\\r", 2);
-                break;
-            case '\n':
-                string_buffer_addlstring(buffer, "\\n", 2);
-                break;
+            case '\\': luaL_addlstring(buf, "\\\\", 2); break;
+            case '"':  luaL_addlstring(buf, "\\\"", 2); break;
+            case '\t': luaL_addlstring(buf, "\\t", 2);  break;
+            case '\r': luaL_addlstring(buf, "\\r", 2);  break;
+            case '\n': luaL_addlstring(buf, "\\n", 2);  break;
+            case '\f': luaL_addlstring(buf, "\\f", 2);  break;
+            case '\b': luaL_addlstring(buf, "\\b", 2);  break;
+
             default:
-                string_buffer_addchar(buffer, c);
+                luaL_addchar(buf, str[i]);
                 break;
         }
     }
-    string_buffer_addchar(buffer, '"');
+
+    luaL_addchar(buf, '"');
 }
 
 static
-void set_value(lua_State *L, string_buffer_t *buffer)
+void set_value(lua_State *L, luaL_Buffer *buf)
 {
+    const char *num;
+
     switch (lua_type(L, -1))
     {
         case LUA_TTABLE:
-        {
-            walk_table(L, buffer);
+            walk_table(L, buf);
             break;
-        }
+
         case LUA_TBOOLEAN:
-        {
-            if (lua_toboolean(L, -1) == true)
-                string_buffer_addlstring(buffer, "true", 4);
-            else
-                string_buffer_addlstring(buffer, "false", 5);
+            luaL_addstring(buf, lua_toboolean(L, -1) ? "true" : "false");
             break;
-        }
+
         case LUA_TNUMBER:
-        {
-            char number[32];
-            const int size = snprintf(number, sizeof(number), "%.14g"
-                                      , lua_tonumber(L, -1));
-            string_buffer_addlstring(buffer, number, size);
+            num = lua_tostring(L, -1);
+            if (strpbrk(num, "nN") != NULL) /* catch NaN/Inf */
+                luaL_error(L, MSG("cannot encode: invalid number: %s"), num);
+
+            luaL_addstring(buf, num);
             break;
-        }
+
         case LUA_TSTRING:
-        {
-            set_string(buffer, lua_tostring(L, -1));
+            set_string(buf, lua_tostring(L, -1));
             break;
-        }
+
+        case LUA_TNIL:
+            luaL_addlstring(buf, "null", 4);
+            break;
+
         default:
-            break;
+            luaL_error(L, MSG("cannot encode: type '%s' is not supported")
+                       , lua_typename(L, lua_type(L, -1)));
+            break; /* unreachable */
     }
 }
 
 static
-void walk_table(lua_State *L, string_buffer_t *buffer)
+void walk_table(lua_State *L, luaL_Buffer *buf)
 {
-    luaL_checktype(L, -1, LUA_TTABLE);
+    luaL_checkstack(L, 1, "cannot encode: not enough stack slots");
+    if (lua_gettop(L) > JSON_MAX_STACK)
+        luaL_error(L, MSG("cannot encode: nested table depth exceeds limit"));
 
     int pairs_count = 0;
-    for (lua_pushnil(L); lua_next(L, -2); lua_pop(L, 1))
+    lua_foreach(L, -2)
         ++pairs_count;
 
     const bool is_array = (luaL_len(L, -1) == pairs_count);
@@ -113,38 +114,101 @@ void walk_table(lua_State *L, string_buffer_t *buffer)
 
     if (is_array)
     {
-        string_buffer_addchar(buffer, '[');
+        luaL_addchar(buf, '[');
 
-        for (lua_pushnil(L); lua_next(L, -2); lua_pop(L, 1))
+        lua_foreach(L, -2)
         {
             if (!is_first)
-                string_buffer_addchar(buffer, ',');
+                luaL_addchar(buf, ',');
             else
                 is_first = false;
 
-            set_value(L, buffer);
+            set_value(L, buf);
         }
 
-        string_buffer_addchar(buffer, ']');
+        luaL_addchar(buf, ']');
     }
     else
     {
-        string_buffer_addchar(buffer, '{');
+        luaL_addchar(buf, '{');
 
-        for (lua_pushnil(L); lua_next(L, -2); lua_pop(L, 1))
+        lua_foreach(L, -2)
         {
             if (!is_first)
-                string_buffer_addchar(buffer, ',');
+                luaL_addchar(buf, ',');
             else
                 is_first = false;
 
-            set_string(buffer, lua_tostring(L, -2));
-            string_buffer_addchar(buffer, ':');
-            set_value(L, buffer);
+            set_string(buf, lua_tostring(L, -2));
+            luaL_addchar(buf, ':');
+            set_value(L, buf);
         }
 
-        string_buffer_addchar(buffer, '}');
+        luaL_addchar(buf, '}');
     }
+}
+
+static
+const char *json_encode(lua_State *L, size_t *len)
+{
+    lua_State *const Lb = lua_newthread(L);
+    lua_insert(L, -2); /* push back slave Lua state */
+
+    luaL_Buffer b;
+    luaL_buffinit(Lb, &b);
+
+    set_value(L, &b);
+    luaL_pushresult(&b);
+    lua_insert(L, -2);
+
+    return lua_tolstring(Lb, -1, len);
+}
+
+static
+int method_encode(lua_State *L)
+{
+    luaL_checkany(L, 1);
+    lua_pushstring(L, json_encode(L, NULL));
+
+    return 1;
+}
+
+static
+int method_save(lua_State *L)
+{
+    const char *const filename = luaL_checkstring(L, 1);
+    luaL_checkany(L, 2);
+
+    size_t json_len = 0;
+    const char *const json = json_encode(L, &json_len);
+
+    const int flags = O_WRONLY | O_CREAT | O_TRUNC;
+    const mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+
+    const int fd = open(filename, flags, mode);
+    if (fd == -1)
+        luaL_error(L, MSG("open(): %s: %s"), filename, strerror(errno));
+
+    size_t skip = 0;
+    while (skip < json_len)
+    {
+        const ssize_t written = write(fd, &json[skip], json_len - skip);
+        if (written == -1)
+        {
+            close(fd);
+            luaL_error(L, MSG("write(): %s: %s"), filename, strerror(errno));
+        }
+
+        skip += written;
+    }
+
+    if (write(fd, "\n", 1) == -1)
+        { ; } /* ignore */
+
+    if (close(fd) == -1)
+        luaL_error(L, MSG("close(): %s: %s"), filename, strerror(errno));
+
+    return 0;
 }
 
 /*
@@ -152,10 +216,10 @@ void walk_table(lua_State *L, string_buffer_t *buffer)
  */
 
 static
-int scan_json(lua_State *L, const char *str, int pos);
+size_t scan_json(lua_State *L, const char *str, size_t pos);
 
-static
-int skip_sp(const char *str, int pos)
+static __asc_noinline
+size_t skip_space(const char *str, size_t pos)
 {
     do
     {
@@ -167,7 +231,7 @@ int skip_sp(const char *str, int pos)
             case '\n':
                 ++pos;
                 continue;
-            case '\0':
+
             default:
                 return pos;
         }
@@ -175,299 +239,301 @@ int skip_sp(const char *str, int pos)
 }
 
 static
-int skip_comment(const char *str, int pos)
+size_t skip_comment(lua_State *L, const char *str, size_t pos)
 {
-    char c;
-    for (; (c = str[pos]) != '\0'; ++pos)
+    for (; str[pos] != '\0'; ++pos)
     {
-        if (c == '*' && str[pos + 1] == '/')
+        if (str[pos] == '*' && str[pos + 1] == '/')
             return pos + 2;
     }
 
-    return -1;
+    luaL_error(L, MSG("cannot decode: unterminated comment at position %d")
+               , (int)pos);
+
+    return 0; /* unreachable */
 }
 
 static
-int scan_string(lua_State *L, const char *str, int pos)
+size_t scan_string(lua_State *L, const char *str, size_t pos)
 {
-    char c;
     luaL_Buffer b;
     luaL_buffinit(L, &b);
 
-    for (; (c = str[pos]) != '\0'; ++pos)
+    for (; str[pos] != '\0'; ++pos)
     {
-        if (c == '"')
-            break;
-
-        else if (c == '\\')
+        if (str[pos] == '"')
         {
-            ++pos;
-            switch (str[pos])
+            break;
+        }
+        else if (str[pos] == '\\')
+        {
+            switch (str[++pos])
             {
-                case '/':
-                    luaL_addchar(&b, '/');
-                    break;
-                case '\\':
-                    luaL_addchar(&b, '\\');
-                    break;
-                case '"':
-                    luaL_addchar(&b, '"');
-                    break;
-                case 't':
-                    luaL_addchar(&b, '\t');
-                    break;
-                case 'r':
-                    luaL_addchar(&b, '\r');
-                    break;
-                case 'n':
-                    luaL_addchar(&b, '\n');
-                    break;
+                case '/':  luaL_addchar(&b, '/');  break;
+                case '\\': luaL_addchar(&b, '\\'); break;
+                case '"':  luaL_addchar(&b, '"');  break;
+                case 't':  luaL_addchar(&b, '\t'); break;
+                case 'r':  luaL_addchar(&b, '\r'); break;
+                case 'n':  luaL_addchar(&b, '\n'); break;
+                case 'f':  luaL_addchar(&b, '\f'); break;
+                case 'b':  luaL_addchar(&b, '\b'); break;
+
                 default:
-                    return -1;
+                    luaL_error(L, MSG("cannot decode: unknown escape "
+                                      "sequence '\\%c' at offset %d")
+                               , str[pos], (int)pos);
+                    break; /* unreachable */
             }
         }
-
         else
-            luaL_addchar(&b, c);
+        {
+            luaL_addchar(&b, str[pos]);
+        }
+    }
+
+    if (str[pos] == '\0')
+    {
+        luaL_error(L, MSG("cannot decode: unterminated string at offset %d")
+                   , (int)pos);
     }
 
     luaL_pushresult(&b);
+
     return pos + 1;
 }
 
 static
-int scan_number(lua_State *L, const char *str, int pos)
+size_t scan_number(lua_State *L, const char *str, size_t pos)
 {
-    char c;
-    double number = 0;
+    luaL_Buffer b;
+    luaL_buffinit(L, &b);
 
-    bool is_nn = false;
-    if (str[pos] == '-')
+    for (; str[pos] != '\0'; ++pos)
     {
-        is_nn = true;
-        ++pos;
-    }
-
-    for (; (c = str[pos]) != '\0'; ++pos)
-    {
-        if (c >= '0' && c <= '9')
+        const char c = str[pos];
+        if (!(c >= '0' && c <= '9') && c != '-' && c != '+'
+            && c != '.' && c != 'e' && c != 'E')
         {
-            if (number > 0)
-                number *= 10;
-            number += c - '0';
-        }
-        else
             break;
-    }
-
-    if (c == '.')
-    {
-        // TODO: fix that
-        ++pos;
-        for (; (c = str[pos]) != '\0'; ++pos)
-        {
-            if (c >= '0' && c <= '9')
-                ;
-            else
-                break;
         }
+
+        luaL_addchar(&b, c);
     }
 
-    if (is_nn)
-        number = 0 - number;
+    luaL_pushresult(&b);
 
-    lua_pushnumber(L, number);
+    int isnum = 0;
+    lua_pushnumber(L, lua_tonumberx(L, -1, &isnum));
+    lua_remove(L, -2);
+
+    if (!isnum)
+    {
+        luaL_error(L, MSG("cannot decode: invalid number at offset %d")
+                   , (int)pos);
+    }
 
     return pos;
 }
 
 static
-int scan_object(lua_State *L, const char *str, int pos)
+size_t scan_object(lua_State *L, const char *str, size_t pos)
 {
+    lua_newtable(L);
+
     do
     {
-        pos = skip_sp(str, pos);
-        char c = str[pos];
+        pos = skip_space(str, pos);
 
-        if (c == '"')
+        if (str[pos] == ',')
         {
-            ;
-        }
-        else if (c == ',')
-        {
+            /* next item */
             ++pos;
             continue;
         }
-        else if (c == '}')
+        else if (str[pos] == '}')
         {
-            ++pos;
-            return pos;
+            /* object end */
+            return ++pos;
         }
-        else
+        else if (str[pos] == '/' && str[pos + 1] == '*')
         {
-            if (c == '/')
-            {
-                if (str[pos + 1] == '*')
-                {
-                    pos = skip_comment(str, pos + 2);
-                    continue;
-                }
-            }
-
-            return -1;
+            /* comment block */
+            pos = skip_comment(L, str, pos + 2);
+            continue;
+        }
+        else if (str[pos] != '"')
+        {
+            /* invalid key */
+            luaL_error(L, MSG("cannot decode: expected '\"' at offset %d")
+                       , (int)pos);
         }
 
-        // key
+        /* key */
         pos = scan_string(L, str, pos + 1);
-        if (pos == -1)
-            return -1;
+        pos = skip_space(str, pos);
 
-        pos = skip_sp(str, pos);
         if (str[pos] != ':')
         {
-            lua_pop(L, 1);
-            return -1;
+            luaL_error(L, MSG("cannot decode: expected ':' at offset %d")
+                       , (int)pos);
         }
 
-        // value
-        pos = skip_sp(str, pos + 1);
+        /* value */
+        pos = skip_space(str, pos + 1);
         pos = scan_json(L, str, pos);
-        if (pos == -1)
-        {
-            lua_pop(L, 1);
-            return -1;
-        }
-
         lua_settable(L, -3);
+
+        /* require item separators */
+        pos = skip_space(str, pos);
+        if (str[pos] != ',' && str[pos] != '}')
+        {
+            luaL_error(L, MSG("cannot decode: expected ',' at offset %d")
+                       , (int)pos);
+        }
     } while (true);
 }
 
 static
-int scan_array(lua_State *L, const char *str, int pos)
+size_t scan_array(lua_State *L, const char *str, size_t pos)
 {
-    int key = 1;
+    lua_newtable(L);
+
     do
     {
-        pos = skip_sp(str, pos);
-        char c = str[pos];
+        pos = skip_space(str, pos);
 
-        if (c == ',')
+        if (str[pos] == ',')
         {
+            /* next item */
             ++pos;
             continue;
         }
-        else if (c == ']')
+        else if (str[pos] == ']')
         {
-            ++pos;
-            return pos;
+            /* array end */
+            return ++pos;
         }
-        else
+        else if (str[pos] == '/' && str[pos + 1] == '*')
         {
-            if (c == '/')
-            {
-                if (str[pos + 1] == '*')
-                {
-                    pos = skip_comment(str, pos + 2);
-                    continue;
-                }
-            }
+            /* comment block */
+            pos = skip_comment(L, str, pos + 2);
+            continue;
         }
 
-        lua_pushinteger(L, key);
-
+        /* array item */
+        const int idx = luaL_len(L, -1) + 1;
         pos = scan_json(L, str, pos);
-        if (pos == -1)
-        {
-            lua_pop(L, 1);
-            return -1;
-        }
+        lua_rawseti(L, -2, idx);
 
-        lua_settable(L, -3);
-        ++key;
+        /* require item separators */
+        pos = skip_space(str, pos);
+        if (str[pos] != ',' && str[pos] != ']')
+        {
+            luaL_error(L, MSG("cannot decode: expected ',' at offset %d")
+                       , (int)pos);
+        }
     } while (true);
 }
 
 static
-int scan_json(lua_State *L, const char *str, int pos)
+size_t scan_json(lua_State *L, const char *str, size_t pos)
 {
-    pos = skip_sp(str, pos);
-    char c = str[pos];
+    luaL_checkstack(L, 1, "cannot decode: not enough stack slots");
+    if (lua_gettop(L) > JSON_MAX_STACK)
+        luaL_error(L, MSG("cannot decode: nested table depth exceeds limit"));
 
-    switch (c)
+    pos = skip_space(str, pos);
+
+    switch (str[pos])
     {
         case '\0':
-            return -1;
-
-        case '{':
-        {
-            lua_newtable(L);
-            pos = scan_object(L, str, pos + 1);
-            if (pos == -1)
-                lua_pop(L, 1);
-            break;
-        }
-
-        case '[':
-        {
-            lua_newtable(L);
-            pos = scan_array(L, str, pos + 1);
-            if (pos == -1)
-                lua_pop(L, 1);
-            break;
-        }
+            luaL_error(L, MSG("cannot decode: premature end at offset %d")
+                       , (int)pos);
+            break; /* unreachable */
 
         case '/':
-        {
-            if (str[pos + 1] == '*')
-                pos = skip_comment(str, pos + 2);
-            else
-                pos = -1;
+            if (str[pos + 1] != '*')
+            {
+                luaL_error(L, MSG("cannot decode: expected '/*' at offset %d")
+                           , (int)pos);
+            }
+
+            pos = skip_comment(L, str, pos + 2);
+            pos = scan_json(L, str, pos);
             break;
-        }
+
+        case '{':
+            pos = scan_object(L, str, pos + 1);
+            break;
+
+        case '[':
+            pos = scan_array(L, str, pos + 1);
+            break;
 
         case '"':
-        {
             pos = scan_string(L, str, pos + 1);
             break;
-        }
 
         default:
-        {
-            if ((c >= '0' && c <= '9') || (c == '-') || (c == '.'))
-            { // scan number
+            if ((str[pos] >= '0' && str[pos] <= '9')
+                || str[pos] == '-' || str[pos] == '.')
+            {
                 pos = scan_number(L, str, pos);
             }
             else if (!strncmp(&str[pos], "true", 4))
             {
                 lua_pushboolean(L, true);
-                pos = pos + 4;
+                pos += 4;
             }
             else if (!strncmp(&str[pos], "false", 5))
             {
                 lua_pushboolean(L, false);
-                pos = pos + 5;
+                pos += 5;
             }
             else if (!strncmp(&str[pos], "null", 4))
             {
                 lua_pushnil(L);
-                pos = pos + 4;
+                pos += 4;
+            }
+            else
+            {
+                luaL_error(L, MSG("cannot decode: invalid input at offset %d")
+                           , (int)pos);
             }
             break;
-        }
     }
 
     return pos;
 }
 
 static
-int method_decode(lua_State *L)
+void json_decode(lua_State *L, const char *str, size_t len)
 {
-    luaL_checktype(L, -1, LUA_TSTRING);
-
     const int top = lua_gettop(L);
-    scan_json(L, lua_tostring(L, -1), 0);
+
+    if (len > 0)
+    {
+        size_t pos = scan_json(L, str, 0);
+        pos = skip_space(str, pos);
+
+        if (pos < len)
+        {
+            luaL_error(L, MSG("cannot decode: trailing garbage at offset %d")
+                       , (int)pos);
+        }
+    }
+
     if (top == lua_gettop(L))
         lua_pushnil(L);
+}
+
+static
+int method_decode(lua_State *L)
+{
+    size_t json_len = 0;
+    const char *const json = luaL_checklstring(L, 1, &json_len);
+
+    json_decode(L, json, json_len);
 
     return 1;
 }
@@ -475,111 +541,46 @@ int method_decode(lua_State *L)
 static
 int method_load(lua_State *L)
 {
-    luaL_checktype(L, -1, LUA_TSTRING);
+    const char *const filename = luaL_checkstring(L, 1);
 
-    const char *filename = lua_tostring(L, -1);
     const int fd = open(filename, O_RDONLY);
     if (fd == -1)
-    {
-        asc_log_error(MSG("json.load(%s) failed to open [%s]")
-                      , filename, strerror(errno));
-
-        lua_pushnil(L);
-        return 1;
-    }
+        luaL_error(L, MSG("open(): %s: %s"), filename, strerror(errno));
 
     struct stat sb;
-    const int ret = fstat(fd, &sb);
-    if (ret != 0)
+    if (fstat(fd, &sb) != 0)
     {
-        asc_log_error(MSG("fstat(): %s: %s"), filename, strerror(errno));
-        lua_pushnil(L);
-        return 1;
+        close(fd);
+        luaL_error(L, MSG("fstat(): %s: %s"), filename, strerror(errno));
     }
 
-    char *const json = ASC_ALLOC(sb.st_size, char);
-    off_t skip = 0;
-    while (skip != sb.st_size)
+    if (sb.st_size < 0 || sb.st_size > INTPTR_MAX)
     {
-        const ssize_t r = read(fd, &json[skip], sb.st_size - skip);
-        if (r == -1)
+        close(fd);
+        luaL_error(L, MSG("cannot load %s: file is too large"), filename);
+    }
+
+    const size_t json_len = sb.st_size;
+    char *const json = (char *)lua_newuserdata(L, json_len + 1);
+    json[json_len] = '\0';
+
+    size_t skip = 0;
+    while (skip < json_len)
+    {
+        const ssize_t got = read(fd, &json[skip], json_len - skip);
+        if (got == -1)
         {
-            asc_log_error(MSG("json.load(%s) failed to read [%s]")
-                          , filename, strerror(errno));
-
-            lua_pushnil(L);
-            skip = 0;
-            break;
+            close(fd);
+            luaL_error(L, MSG("read(): %s: %s"), filename, strerror(errno));
         }
-        skip += sb.st_size;
+
+        skip += got;
     }
 
-    const int top = lua_gettop(L);
-    if (skip)
-        scan_json(L, json, 0);
+    if (close(fd) == -1)
+        luaL_error(L, MSG("close(): %s: %s"), filename, strerror(errno));
 
-    if (top == lua_gettop(L))
-        lua_pushnil(L);
-
-    close(fd);
-    free(json);
-
-    return 1;
-}
-
-static
-int method_encode(lua_State *L)
-{
-    luaL_checktype(L, -1, LUA_TTABLE);
-
-    string_buffer_t *const buffer = string_buffer_alloc();
-    walk_table(L, buffer);
-    string_buffer_push(L, buffer);
-
-    return 1;
-}
-
-static
-int method_save(lua_State *L)
-{
-    luaL_checktype(L, -2, LUA_TSTRING);
-    luaL_checktype(L, -1, LUA_TTABLE);
-
-    const char *filename = lua_tostring(L, -2);
-    const int flags = O_WRONLY | O_CREAT | O_TRUNC;
-    const mode_t mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-
-    const int fd = open(filename, flags, mode);
-    if (fd == -1)
-    {
-        asc_log_error(MSG("json.save(%s) failed to open [%s]")
-                      , filename, strerror(errno));
-
-        lua_pushboolean(L, false);
-        return 1;
-    }
-
-    string_buffer_t *buffer = string_buffer_alloc();
-
-    walk_table(L, buffer);
-
-    size_t json_size = 0;
-    char *json = string_buffer_release(buffer, &json_size);
-    const ssize_t w = write(fd, json, json_size);
-    close(fd);
-    free(json);
-
-    if (w == (ssize_t)json_size)
-    {
-        lua_pushboolean(L, true);
-    }
-    else
-    {
-        asc_log_error(MSG("json.save(%s) failed to write [%s]")
-                      , filename, strerror(errno));
-
-        lua_pushboolean(L, false);
-    }
+    json_decode(L, json, json_len);
 
     return 1;
 }
@@ -590,9 +591,9 @@ void module_load(lua_State *L)
     static const luaL_Reg api[] =
     {
         { "encode", method_encode },
+        { "save", method_save },
         { "decode", method_decode },
         { "load", method_load },
-        { "save", method_save },
         { NULL, NULL },
     };
 
