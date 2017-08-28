@@ -52,12 +52,13 @@ bool module_demux_check(const module_data_t *mod, uint16_t pid) __asc_result;
 
 #define STREAM_MODULE_REGISTER(_name) \
     extern module_registry_t __registry_##_name; \
+    MODULE_MANIFEST_DECL(_name); \
     MODULE_MANIFEST_DEF(_name) = \
     { \
         .name = #_name, \
+        .reg = &__registry_##_name, \
         .size = sizeof(module_data_t), \
         .type = MODULE_TYPE_STREAM, \
-        .reg = &__registry_##_name, \
     }; \
     module_registry_t __registry_##_name =
 

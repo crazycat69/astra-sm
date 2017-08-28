@@ -44,6 +44,7 @@ typedef struct
     extern HW_ENUM_DEF(_name)
 
 #define HW_ENUM_REGISTER(_name) \
+    HW_ENUM_DECL(_name); \
     HW_ENUM_DEF(_name) =
 
 #endif /* _HWDEV_ENUM_H_ */

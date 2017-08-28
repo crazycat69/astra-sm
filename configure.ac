@@ -704,6 +704,7 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wmissing-declarations], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wmissing-include-dirs], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wmissing-prototypes], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wmissing-variable-declarations], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wnested-externs], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wold-style-definition], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wpointer-arith], [WARN_CFLAGS])
