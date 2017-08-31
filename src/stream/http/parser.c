@@ -390,11 +390,11 @@ char *http_authorization(const char *auth_header, size_t size
 
         memset(&ctx, 0, sizeof(md5_ctx_t));
         au_md5_init(&ctx);
-        au_md5_update(&ctx, (uint8_t *)login, login_len);
-        au_md5_update(&ctx, (uint8_t *)":", 1);
-        au_md5_update(&ctx, (uint8_t *)realm, realm_len);
-        au_md5_update(&ctx, (uint8_t *)":", 1);
-        au_md5_update(&ctx, (uint8_t *)password, password_len);
+        au_md5_update(&ctx, login, login_len);
+        au_md5_update(&ctx, ":", 1);
+        au_md5_update(&ctx, realm, realm_len);
+        au_md5_update(&ctx, ":", 1);
+        au_md5_update(&ctx, password, password_len);
         au_md5_final(&ctx, digest);
         au_hex2str(ha1, digest, MD5_DIGEST_SIZE);
 
@@ -403,9 +403,9 @@ char *http_authorization(const char *auth_header, size_t size
 
         memset(&ctx, 0, sizeof(md5_ctx_t));
         au_md5_init(&ctx);
-        au_md5_update(&ctx, (uint8_t *)method, method_len);
-        au_md5_update(&ctx, (uint8_t *)":", 1);
-        au_md5_update(&ctx, (uint8_t *)path, path_len);
+        au_md5_update(&ctx, method, method_len);
+        au_md5_update(&ctx, ":", 1);
+        au_md5_update(&ctx, path, path_len);
         au_md5_final(&ctx, digest);
         au_hex2str(ha2, digest, MD5_DIGEST_SIZE);
 
@@ -422,11 +422,11 @@ char *http_authorization(const char *auth_header, size_t size
 
         memset(&ctx, 0, sizeof(md5_ctx_t));
         au_md5_init(&ctx);
-        au_md5_update(&ctx, (uint8_t *)ha1, MD5_DIGEST_SIZE * 2);
-        au_md5_update(&ctx, (uint8_t *)":", 1);
-        au_md5_update(&ctx, (uint8_t *)nonce, nonce_len);
-        au_md5_update(&ctx, (uint8_t *)":", 1);
-        au_md5_update(&ctx, (uint8_t *)ha2, MD5_DIGEST_SIZE * 2);
+        au_md5_update(&ctx, ha1, MD5_DIGEST_SIZE * 2);
+        au_md5_update(&ctx, ":", 1);
+        au_md5_update(&ctx, nonce, nonce_len);
+        au_md5_update(&ctx, ":", 1);
+        au_md5_update(&ctx, ha2, MD5_DIGEST_SIZE * 2);
         au_md5_final(&ctx, digest);
         au_hex2str(ha3, digest, MD5_DIGEST_SIZE);
 
