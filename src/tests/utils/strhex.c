@@ -85,7 +85,7 @@ START_TEST(test_vectors)
         /* hex string to binary */
         uint8_t hbuf[512] = { 0 };
         /* NOTE: buffer size must be at least (strlen(str) / 2) */
-        uint8_t *const hp = au_str2hex(test->str, hbuf, sizeof(hbuf));
+        void *const hp = au_str2hex(test->str, hbuf, sizeof(hbuf));
         ck_assert(hp == hbuf);
         ck_assert(!memcmp(hbuf, test->data, test->datalen));
 
@@ -134,7 +134,7 @@ START_TEST(invalid_strings)
         const strhex_test_t *const test = &invalid[i];
 
         uint8_t hbuf[512] = { 0 };
-        uint8_t *const hp = au_str2hex(test->str, hbuf, sizeof(hbuf));
+        void *const hp = au_str2hex(test->str, hbuf, sizeof(hbuf));
         ck_assert(hp == hbuf);
         ck_assert(!memcmp(hbuf, test->data, test->datalen));
     }
@@ -148,10 +148,33 @@ START_TEST(omit_dstlen)
     {
         const strhex_test_t *const test = &test_strings[i];
 
-        uint8_t hbuf[512] = { 0 };
-        uint8_t *const hp = au_str2hex(test->str, hbuf, 0);
+        uint8_t *const hbuf = ASC_ALLOC(test->datalen, uint8_t);
+        void *const hp = au_str2hex(test->str, hbuf, 0);
         ck_assert(hp == hbuf);
         ck_assert(!memcmp(hbuf, test->data, test->datalen));
+        free(hbuf);
+    }
+}
+END_TEST
+
+/* insufficient buffer size */
+START_TEST(small_buffer)
+{
+    for (size_t i = 0; i < ASC_ARRAY_SIZE(test_strings); i++)
+    {
+        const strhex_test_t *const test = &test_strings[i];
+
+        if (test->datalen == 0)
+            continue;
+
+        uint8_t *const hbuf = ASC_ALLOC(test->datalen, uint8_t);
+        memset(hbuf, 0x7f, test->datalen);
+        const size_t hblim = test->datalen / 2;
+        void *const hp = au_str2hex(test->str, hbuf, hblim);
+        ck_assert(hp == hbuf);
+        ck_assert(!memcmp(hbuf, test->data, hblim));
+        ck_assert(hbuf[hblim] == 0x7f);
+        free(hbuf);
     }
 }
 END_TEST
@@ -183,7 +206,7 @@ START_TEST(random_h2s)
         /* control buffer */
         uint8_t *const ctlbuf = ASC_ALLOC(hbsize, uint8_t);
 
-        uint8_t *const cp = au_str2hex(sbuf, ctlbuf, hbsize);
+        void *const cp = au_str2hex(sbuf, ctlbuf, hbsize);
         ck_assert(cp == ctlbuf);
         ck_assert(!memcmp(ctlbuf, hbuf, hbsize));
 
@@ -213,7 +236,7 @@ START_TEST(random_s2h)
 
         /* fill binary buffer */
         uint8_t *const hbuf = ASC_ALLOC(hbsize, uint8_t);
-        uint8_t *const hp = au_str2hex(sbuf, hbuf, hbsize);
+        void *const hp = au_str2hex(sbuf, hbuf, hbsize);
         ck_assert(hp == hbuf);
 
         /* convert to string and compare */
@@ -238,6 +261,7 @@ Suite *utils_strhex(void)
     tcase_add_test(tc, test_vectors);
     tcase_add_test(tc, invalid_strings);
     tcase_add_test(tc, omit_dstlen);
+    tcase_add_test(tc, small_buffer);
     tcase_add_test(tc, random_h2s);
     tcase_add_test(tc, random_s2h);
     suite_add_tcase(s, tc);

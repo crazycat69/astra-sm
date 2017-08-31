@@ -59,7 +59,7 @@ void lua_url_decode(lua_State *L, const char *str, size_t size)
         if(c == '%')
         {
             c = ' ';
-            au_str2hex(&str[skip + 1] , (uint8_t *)&c, 1);
+            au_str2hex(&str[skip + 1] , &c, 1);
             string_buffer_addchar(buffer, c);
             skip += 3;
         }

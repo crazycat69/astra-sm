@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,7 +26,7 @@
 #   error "Please include <astra/astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-char *au_hex2str(char *dst, const uint8_t *src, size_t srclen);
-uint8_t *au_str2hex(const char *src, uint8_t *dst, size_t dstlen);
+char *au_hex2str(char *dst, const void *src, size_t srclen);
+void *au_str2hex(const char *src, void *dst, size_t dstlen);
 
 #endif /* _AU_STRHEX_H_ */
