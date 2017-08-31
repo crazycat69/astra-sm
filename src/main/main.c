@@ -144,7 +144,7 @@ int main(int argc, const char *argv[])
 
 #ifdef _WIN32
 /* NOTE: prototype is here to suppress missing prototype warnings */
-int wmain(int argc, wchar_t *wargv[], wchar_t *wenvp[]);
+extern int wmain(int argc, wchar_t *wargv[], wchar_t *wenvp[]);
 
 int wmain(int argc, wchar_t *wargv[], wchar_t *wenvp[])
 {

@@ -30,14 +30,14 @@
 void signal_setup(void);
 void signal_enable(bool running);
 
-static inline
+static inline __asc_noreturn
 void signal_timeout(void)
 {
     fprintf(stderr, "wait timeout for signal lock\n");
     _exit(ASC_EXIT_SIGNAL);
 }
 
-static inline
+static inline __asc_noreturn
 void signal_perror(int errnum, const char *str)
 {
     char buf[512] = { 0 };

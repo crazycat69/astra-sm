@@ -60,8 +60,8 @@ typedef struct
     asc_event_t *wake_ev;
     unsigned int wake_cnt;
 
-    loop_job_t jobs[JOB_QUEUE_SIZE];
     unsigned int job_cnt;
+    loop_job_t jobs[JOB_QUEUE_SIZE];
     asc_mutex_t job_mutex;
 } asc_main_loop_t;
 
@@ -127,7 +127,7 @@ void on_wake_read(void *arg)
     ASC_UNUSED(arg);
 
     char buf[32];
-    const int ret = recv(main_loop->wake_fd[PIPE_RD], buf, sizeof(buf), 0);
+    const ssize_t ret = recv(main_loop->wake_fd[PIPE_RD], buf, sizeof(buf), 0);
     switch (ret)
     {
         case -1:

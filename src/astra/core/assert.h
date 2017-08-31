@@ -35,7 +35,7 @@
             fprintf(stderr, "%s:%u: %s: assertion `%s' failed\n" \
                     , __FILE__, __LINE__, __func__, #_cond); \
             fprintf(stderr, __VA_ARGS__); \
-            putc('\n', stderr); \
+            fprintf(stderr, "\n"); \
             asc_lib_abort(); \
         } \
     } while (0)

@@ -113,6 +113,46 @@
 #define __asc_result
 #endif /* !__GNUC__ */
 
+static inline
+uint32_t asc_get_be32(const void *ptr)
+{
+    const uint8_t *const byte = (uint8_t *)ptr;
+
+    return (((uint32_t)byte[0] << 24) | ((uint32_t)byte[1] << 16)
+            | ((uint32_t)byte[2] << 8) | ((uint32_t)byte[3]));
+}
+
+static inline
+uint32_t asc_get_le32(const void *ptr)
+{
+    const uint8_t *const byte = (uint8_t *)ptr;
+
+    return (((uint32_t)byte[0]) | ((uint32_t)byte[1] << 8)
+            | ((uint32_t)byte[2] << 16) | ((uint32_t)byte[3] << 24));
+}
+
+static inline
+void asc_put_be32(void *ptr, uint32_t val)
+{
+    uint8_t *const byte = (uint8_t *)ptr;
+
+    byte[0] = (uint8_t)(val >> 24);
+    byte[1] = (uint8_t)(val >> 16);
+    byte[2] = (uint8_t)(val >> 8);
+    byte[3] = (uint8_t)val;
+}
+
+static inline
+void asc_put_le32(void *ptr, uint32_t val)
+{
+    uint8_t *const byte = (uint8_t *)ptr;
+
+    byte[0] = (uint8_t)val;
+    byte[1] = (uint8_t)(val >> 8);
+    byte[2] = (uint8_t)(val >> 16);
+    byte[3] = (uint8_t)(val >> 24);
+}
+
 /*
  * public interface
  */
