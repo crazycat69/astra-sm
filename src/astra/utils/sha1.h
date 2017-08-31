@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,15 +28,15 @@
 
 typedef struct
 {
-    uint32_t state[5];
-    uint32_t count[2];
-    uint8_t buffer[64];
+    size_t size;
+    unsigned int H[5];
+    unsigned int W[16];
 } sha1_ctx_t;
 
 #define SHA1_DIGEST_SIZE 20
 
-void au_sha1_init(sha1_ctx_t *context);
-void au_sha1_update(sha1_ctx_t *context, const uint8_t* data, size_t len);
-void au_sha1_final(sha1_ctx_t *context, uint8_t digest[SHA1_DIGEST_SIZE]);
+void au_sha1_init(sha1_ctx_t *ctx);
+void au_sha1_update(sha1_ctx_t *ctx, const void *data, size_t len);
+void au_sha1_final(sha1_ctx_t *ctx, uint8_t digest[SHA1_DIGEST_SIZE]);
 
 #endif /* _AU_SHA1_H_ */
