@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -25,9 +26,9 @@
 #   error "Please include <astra/astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-char *au_base64_enc(const void *in, size_t in_size
-                    , size_t *out_size) __asc_result;
-void *au_base64_dec(const char *in, size_t in_size
-                    , size_t *out_size) __asc_result;
+char *au_base64_enc(const void *data, size_t data_len
+                    , size_t *b64_len) __asc_result;
+void *au_base64_dec(const char *data, size_t data_len
+                    , size_t *plain_len) __asc_result;
 
 #endif /* _AU_BASE64_H_ */
