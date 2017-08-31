@@ -40,47 +40,12 @@
 #endif /* M_PI */
 #define M_2PI (M_PI * 2)
 
-/* assume little endian by default */
-#if defined(BYTE_ORDER) && BYTE_ORDER == BIG_ENDIAN
-#   define le16(__num) \
-    ( \
-        (((uint16_t)(__num) >> 8) & 0xff) | \
-        (((uint16_t)(__num) & 0xff) << 8) \
-    )
-#   define le32(__num) \
-    ( \
-        (((uint32_t)(__num) >> 24) & 0xff) | \
-        (((uint32_t)(__num) << 8) & 0xff0000) | \
-        (((uint32_t)(__num) >> 8) & 0xff00) | \
-        (((uint32_t)(__num) << 24) & 0xff000000) \
-    )
-#else
-#   define le16(__num) __num
-#   define le32(__num) __num
-#endif /* BYTE_ORDER */
-
-/* option parser macros */
-#define usage(__error) \
-    { \
-        fprintf(__error ? stderr : stdout, \
-            "Usage: %s [options]\n" \
-            "Options:\n" \
-            "    -s  sample rate (8000..192000, default 48000 Hz)\n" \
-            "    -f  tone frequency (20..20000, default 600 Hz)\n" \
-            "    -a  volume (1..100, default 60%%)\n" \
-            "    -t  duration (at least 1, default 10 secs)\n" \
-            "    -c  channels (1..8, default 2)\n" \
-            "    -o  output file (out.wav)\n" \
-            "    -h  show this message\n", \
-            argv[0] \
-        ); \
-        exit(__error ? EXIT_FAILURE : EXIT_SUCCESS); \
-    }
+#define WAVE_FORMAT_PCM 0x0001
 
 #define optfail(__fmt, ...) \
     { \
         fprintf(stderr, "ERROR: " __fmt "\n\n", __VA_ARGS__); \
-        usage(true); \
+        usage(true, argv[0]); \
     }
 
 #define fatal(__fmt, ...) \
@@ -92,22 +57,58 @@
 /* WAV file header */
 typedef struct
 {
-    char riff[4];
-    uint32_t filesize;
-    char wave[4];
-    char fmt[4];
-    uint32_t hdrsize;
-    uint16_t format;
-    uint16_t channels;
-    uint32_t sample_rate;
-    uint32_t bps;
-    uint16_t block_align;
-    uint16_t sample_bits;
-    char data[4];
-    uint32_t datasize;
+    uint8_t riff[4];
+    uint8_t filesize[4];
+    uint8_t wave[4];
+    uint8_t fmt[4];
+    uint8_t hdrsize[4];
+    uint8_t format[2];
+    uint8_t channels[2];
+    uint8_t sample_rate[4];
+    uint8_t bps[4];
+    uint8_t block_align[2];
+    uint8_t sample_bits[2];
+    uint8_t data[4];
+    uint8_t datasize[4];
 } wav_header_t;
 
-#define WAVE_FORMAT_PCM 0x0001
+static
+void usage(bool error, const char *argv0)
+{
+    fprintf(error ? stderr : stdout,
+        "Usage: %s [options]\n"
+        "Options:\n"
+        "    -s  sample rate (8000..192000, default 48000 Hz)\n"
+        "    -f  tone frequency (20..20000, default 600 Hz)\n"
+        "    -a  volume (1..100, default 60%%)\n"
+        "    -t  duration (at least 1, default 10 secs)\n"
+        "    -c  channels (1..8, default 2)\n"
+        "    -o  output file (out.wav)\n"
+        "    -h  show this message\n",
+        argv0
+    );
+    exit(error ? EXIT_FAILURE : EXIT_SUCCESS);
+}
+
+static inline
+void put_le16(void *ptr, uint16_t val)
+{
+    uint8_t *const byte = (uint8_t *)ptr;
+
+    byte[0] = (uint8_t)val;
+    byte[1] = (uint8_t)(val >> 8);
+}
+
+static inline
+void put_le32(void *ptr, uint32_t val)
+{
+    uint8_t *const byte = (uint8_t *)ptr;
+
+    byte[0] = (uint8_t)val;
+    byte[1] = (uint8_t)(val >> 8);
+    byte[2] = (uint8_t)(val >> 16);
+    byte[3] = (uint8_t)(val >> 24);
+}
 
 int main(int argc, char *argv[])
 {
@@ -125,7 +126,7 @@ int main(int argc, char *argv[])
         const char *opt = argv[idx++];
         if (strcmp(opt, "-h") == 0)
         {
-            usage(false);
+            usage(false, argv[0]);
         }
         if (idx < argc && opt[0] == '-')
         {
@@ -197,15 +198,15 @@ int main(int argc, char *argv[])
     memcpy(hdr.fmt,  "fmt ", 4);
     memcpy(hdr.data, "data", 4);
 
-    hdr.filesize    = le32(datasize + sizeof(hdr) - 8);
-    hdr.hdrsize     = le32(16); /* fmt chunk size */
-    hdr.format      = le16(WAVE_FORMAT_PCM);
-    hdr.channels    = le16(channels);
-    hdr.sample_rate = le32(sample_rate);
-    hdr.bps         = le32(sample_rate * block_align);
-    hdr.block_align = le16(block_align);
-    hdr.sample_bits = le16(sizeof(int16_t) * 8);
-    hdr.datasize    = le32(datasize);
+    put_le32(hdr.filesize, datasize + sizeof(hdr) - 8);
+    put_le32(hdr.hdrsize, 16); /* fmt chunk size */
+    put_le16(hdr.format, WAVE_FORMAT_PCM);
+    put_le16(hdr.channels, channels);
+    put_le32(hdr.sample_rate, sample_rate);
+    put_le32(hdr.bps, sample_rate * block_align);
+    put_le16(hdr.block_align, block_align);
+    put_le16(hdr.sample_bits, 16);
+    put_le32(hdr.datasize, datasize);
 
     size_t written = fwrite(&hdr, sizeof(hdr), 1, out);
     assert(written == 1);
@@ -213,13 +214,15 @@ int main(int argc, char *argv[])
     /* write samples */
     for (size_t i = 0; i < total_samples; i++)
     {
-        const double val = sin((M_2PI / num_samples) * i);
-        int16_t sample = ((val * INT16_MAX) / 100) * volume;
-        sample = le16(sample);
+        double val = sin((M_2PI / num_samples) * i);
+        val = ((val * INT16_MAX) / 100) * volume;
+
+        uint8_t buf[2];
+        put_le16(buf, val);
 
         for (size_t ch = 0; ch < channels; ch++)
         {
-            written = fwrite(&sample, sizeof(sample), 1, out);
+            written = fwrite(buf, sizeof(buf), 1, out);
             assert(written == 1);
         }
     }
