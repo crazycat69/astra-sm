@@ -2,7 +2,7 @@
  * Astra Unit Tests
  * http://cesbo.com/astra
  *
- * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2016-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -136,12 +136,57 @@ START_TEST(t2mi_headers)
 }
 END_TEST
 
+START_TEST(catch_em_all)
+{
+    unsigned int got = 0, total = 0;
+    bool map[256] = { false };
+
+    while (got < sizeof(map))
+    {
+        const size_t buf_size = rand() % 10240;
+        char *const buf = ASC_ALLOC(buf_size, char);
+
+        for (size_t i = 0; i < buf_size; i++)
+            buf[i] = rand();
+
+        const uint8_t crc = au_crc8(buf, buf_size);
+        if (!map[crc])
+        {
+            map[crc] = true;
+            got++;
+        }
+
+        free(buf);
+        total++;
+    }
+
+    for (size_t i = 0; i < ASC_ARRAY_SIZE(map); i++)
+        ck_assert(map[i] != 0);
+
+    asc_log_info("catch_em_all stats: %u over %u attempts", got, total);
+}
+END_TEST
+
+/* zero length input */
+START_TEST(zero_length)
+{
+    char empty[1] = { 0 };
+    ck_assert(au_crc8(NULL, 0) == 0);
+    ck_assert(au_crc8(empty, 0) == 0);
+}
+END_TEST
+
 Suite *utils_crc8(void)
 {
     Suite *const s = suite_create("utils/crc8");
 
     TCase *const tc = tcase_create("default");
+    tcase_add_checked_fixture(tc, lib_setup, lib_teardown);
+
     tcase_add_test(tc, t2mi_headers);
+    tcase_add_test(tc, catch_em_all);
+    tcase_add_test(tc, zero_length);
+
     suite_add_tcase(s, tc);
 
     return s;
