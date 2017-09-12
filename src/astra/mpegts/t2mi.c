@@ -1035,6 +1035,8 @@ bool on_t2mi(ts_t2mi_t *mi, t2mi_packet_t *pkt)
                 return on_l1_current(mi, pkt);
             }
 
+            /* fallthrough */
+
         default:
             return true;
     }

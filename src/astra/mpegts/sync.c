@@ -326,9 +326,13 @@ void buffer_reset(ts_sync_t *sx, enum sync_reset type)
 
             buffer_resize(sx, MIN_BUFFER_SIZE);
 
+            /* fallthrough */
+
         case SYNC_RESET_BLOCKS:
             /* restart initial buffering */
             sx->last_error = sx->num_blocks = sx->buffered = 0;
+
+            /* fallthrough */
 
         case SYNC_RESET_PCR:
             /* reset PCR lookahead routine */

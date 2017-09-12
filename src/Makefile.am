@@ -157,6 +157,8 @@ libastra_la_SOURCES += \
     astra/utils/crc8.h \
     astra/utils/iso8859.c \
     astra/utils/iso8859.h \
+    astra/utils/json.c \
+    astra/utils/json.h \
     astra/utils/md5.c \
     astra/utils/md5.h \
     astra/utils/rc4.c \
@@ -375,6 +377,7 @@ tests_libastra_SOURCES += \
 tests_libastra_SOURCES += \
     tests/luaapi/lib/astra.c \
     tests/luaapi/lib/base64.c \
+    tests/luaapi/lib/json.c \
     tests/luaapi/lib/md5.c \
     tests/luaapi/lib/pidfile.c \
     tests/luaapi/lib/rc4.c \
@@ -393,6 +396,7 @@ tests_libastra_SOURCES += \
     tests/utils/base64.c \
     tests/utils/crc32b.c \
     tests/utils/crc8.c \
+    tests/utils/json.c \
     tests/utils/md5.c \
     tests/utils/rc4.c \
     tests/utils/rc4_vectors.h \
