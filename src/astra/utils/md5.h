@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,17 +28,19 @@
 
 typedef struct
 {
-    uint32_t state[4];  /* state (ABCD) */
-    uint32_t count[2];  /* number of bits, modulo 2^64 (lsb first) */
-    uint8_t buffer[64]; /* input buffer */
+    uint32_t lo, hi;
+    uint32_t a, b, c, d;
+    uint8_t buffer[64];
+    uint32_t block[16];
 } md5_ctx_t;
 
 #define MD5_DIGEST_SIZE 16
+#define MD5_CRYPT_SIZE 36
 
-void au_md5_init(md5_ctx_t *context);
-void au_md5_update(md5_ctx_t *context, const uint8_t *data, size_t len);
-void au_md5_final(md5_ctx_t *context, uint8_t digest[MD5_DIGEST_SIZE]);
+void au_md5_init(md5_ctx_t *ctx);
+void au_md5_update(md5_ctx_t *ctx, const void *data, size_t len);
+void au_md5_final(md5_ctx_t *ctx, uint8_t digest[MD5_DIGEST_SIZE]);
 
-void au_md5_crypt(const char *pw, const char *salt, char passwd[36]);
+void au_md5_crypt(const char *pw, const char *salt, char buf[MD5_CRYPT_SIZE]);
 
 #endif /* _AU_MD5_H_ */

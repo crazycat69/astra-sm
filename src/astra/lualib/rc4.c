@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,18 +34,18 @@
 static
 int method_rc4(lua_State *L)
 {
-    const uint8_t *const data = (uint8_t *)luaL_checkstring(L, 1);
-    const int data_size = luaL_len(L, 1);
+    size_t data_size = 0;
+    const void *const data = luaL_checklstring(L, 1, &data_size);
 
-    const uint8_t *const key = (uint8_t *)luaL_checkstring(L, 2);
-    const int key_size = luaL_len(L, 2);
+    size_t key_size = 0;
+    const uint8_t *const key = (uint8_t *)luaL_checklstring(L, 2, &key_size);
 
     rc4_ctx_t ctx;
     au_rc4_init(&ctx, key, key_size);
 
     luaL_Buffer b;
     char *const p = luaL_buffinitsize(L, &b, data_size);
-    au_rc4_crypt(&ctx, (uint8_t *)p, data, data_size);
+    au_rc4_crypt(&ctx, p, data, data_size);
     luaL_addsize(&b, data_size);
     luaL_pushresult(&b);
 

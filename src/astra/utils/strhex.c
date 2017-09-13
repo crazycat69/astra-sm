@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,15 +22,18 @@
 #include <astra/astra.h>
 #include <astra/utils/strhex.h>
 
-char *au_hex2str(char *dst, const uint8_t *src, size_t srclen)
+static
+const char char_str[] = "0123456789ABCDEF";
+
+char *au_hex2str(char *dst, const void *src, size_t srclen)
 {
-    static const char char_str[] = "0123456789ABCDEF";
+    uint8_t *const srcp = (uint8_t *)src;
 
     for (size_t i = 0; i < srclen; i++)
     {
         const size_t j = i * 2;
-        dst[j + 0] = char_str[src[i] >> 4];
-        dst[j + 1] = char_str[src[i] & 0x0f];
+        dst[j + 0] = char_str[srcp[i] >> 4];
+        dst[j + 1] = char_str[srcp[i] & 0x0f];
     }
     dst[srclen * 2] = '\0';
 
@@ -37,7 +41,7 @@ char *au_hex2str(char *dst, const uint8_t *src, size_t srclen)
 }
 
 static inline
-uint8_t single_char_to_hex(char c)
+uint8_t nibble_to_bin(char c)
 {
     if (c >= '0' && c <= '9')
         return c - '0';
@@ -50,18 +54,20 @@ uint8_t single_char_to_hex(char c)
 }
 
 static inline
-uint8_t char_to_hex(const char *c)
+uint8_t octet_to_bin(const char *c)
 {
-    return (single_char_to_hex(c[0]) << 4) | single_char_to_hex(c[1]);
+    return (nibble_to_bin(c[0]) << 4) | nibble_to_bin(c[1]);
 }
 
-uint8_t *au_str2hex(const char *src, uint8_t *dst, size_t dstlen)
+void *au_str2hex(const char *src, void *dst, size_t dstlen)
 {
+    uint8_t *const dstp = (uint8_t *)dst;
+
     if (dstlen == 0)
         dstlen = ~0;
 
     for (size_t i = 0; src[0] && src[1] && i < dstlen; src += 2, ++i)
-        dst[i] = char_to_hex(src);
+        dstp[i] = octet_to_bin(src);
 
     return dst;
 }

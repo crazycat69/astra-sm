@@ -378,7 +378,7 @@ static int module_call(lua_State *L, module_data_t *mod)
         memset(&ctx, 0, sizeof(sha1_ctx_t));
         au_sha1_init(&ctx);
         au_sha1_update(&ctx, (const uint8_t *)key, key_size);
-        au_sha1_update(&ctx, (const uint8_t *)__websocket_magic, sizeof(__websocket_magic) - 1);
+        au_sha1_update(&ctx, __websocket_magic, sizeof(__websocket_magic) - 1);
         uint8_t digest[SHA1_DIGEST_SIZE];
         au_sha1_final(&ctx, digest);
         accept_key = au_base64_enc(digest, sizeof(digest), NULL);

@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -33,17 +34,19 @@
 static
 int method_md5(lua_State *L)
 {
-    const char *const data = luaL_checkstring(L, 1);
-    const int data_size = luaL_len(L, 1);
+    size_t data_size = 0;
+    const void *const data = luaL_checklstring(L, 1, &data_size);
 
+    uint8_t digest[MD5_DIGEST_SIZE] = { 0 };
     md5_ctx_t ctx;
+
     memset(&ctx, 0, sizeof(md5_ctx_t));
     au_md5_init(&ctx);
-    au_md5_update(&ctx, (uint8_t *)data, data_size);
-    uint8_t digest[MD5_DIGEST_SIZE];
+    au_md5_update(&ctx, data, data_size);
     au_md5_final(&ctx, digest);
 
     lua_pushlstring(L, (char *)digest, sizeof(digest));
+
     return 1;
 }
 

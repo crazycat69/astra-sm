@@ -197,7 +197,7 @@ int fork_and_exec(const char *command, pid_t *out_pid
         fcntl(STDERR_FILENO, F_SETFD, 0);
 
         /* reset signal handlers and masks */
-        for (size_t sig = 1; sig < NSIG; sig++)
+        for (int sig = 1; sig < NSIG; sig++)
         {
             struct sigaction sa;
             if (sigaction(sig, NULL, &sa) == 0 && sa.sa_handler != SIG_DFL)

@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -27,6 +28,6 @@
 
 #define CRC32_SIZE 4
 
-uint32_t au_crc32b(const uint8_t *buffer, int size) __asc_result;
+uint32_t au_crc32b(const void *data, size_t len) __asc_result;
 
 #endif /* _AU_CRC32B_H_ */

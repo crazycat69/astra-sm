@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -35,11 +36,11 @@
 static
 int method_hex(lua_State *L)
 {
-    const uint8_t *const data = (uint8_t *)luaL_checkstring(L, 1);
-    const int data_size = luaL_len(L, 1);
+    size_t data_size = 0;
+    const void *const data = luaL_checklstring(L, 1, &data_size);
 
     luaL_Buffer b;
-    char *const p = luaL_buffinitsize(L, &b, data_size * 2 + 1);
+    char *const p = luaL_buffinitsize(L, &b, (data_size * 2) + 1);
     au_hex2str(p, data, data_size);
     luaL_addsize(&b, data_size * 2);
     luaL_pushresult(&b);
@@ -50,12 +51,13 @@ int method_hex(lua_State *L)
 static
 int method_bin(lua_State *L)
 {
-    const char *const data = luaL_checkstring(L, 1);
-    const int data_size = luaL_len(L, 1) / 2;
+    size_t data_size = 0;
+    const char *const data = luaL_checklstring(L, 1, &data_size);
+    data_size /= 2;
 
     luaL_Buffer b;
     char *const p = luaL_buffinitsize(L, &b, data_size);
-    au_str2hex(data, (uint8_t *)p, data_size);
+    au_str2hex(data, p, data_size);
     luaL_addsize(&b, data_size);
     luaL_pushresult(&b);
 

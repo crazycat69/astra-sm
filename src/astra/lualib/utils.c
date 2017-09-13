@@ -70,7 +70,7 @@ int method_hostname(lua_State *L)
 static
 int method_ifaddrs(lua_State *L)
 {
-    struct ifaddrs *ifaddr;
+    struct ifaddrs *ifaddr = NULL;
     char host[NI_MAXHOST];
 
     const int ret = getifaddrs(&ifaddr);

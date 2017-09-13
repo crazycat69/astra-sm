@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../libastra.h"
+#include "../libastra.h"
 #include <astra/luaapi/state.h>
 
 #define L lua
@@ -185,9 +185,9 @@ START_TEST(overwrite)
 }
 END_TEST
 
-Suite *luaapi_lib_pidfile(void)
+Suite *lualib_pidfile(void)
 {
-    Suite *const s = suite_create("luaapi/lib/pidfile");
+    Suite *const s = suite_create("lualib/pidfile");
 
     TCase *const tc_c = tcase_create("from_c");
     tcase_add_checked_fixture(tc_c, lib_setup, lib_teardown);

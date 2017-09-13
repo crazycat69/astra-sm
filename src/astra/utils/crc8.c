@@ -2,7 +2,7 @@
  * Astra Utils (CRC-8)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015-2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,15 +18,18 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <astra/astra.h>
-#include <astra/utils/crc8.h>
-
 /*
  * CRC-8 calculation routine as per ETSI EN 302 755.
  *
  * Polynomial used: x^8 + x^7 + x^6 + x^4 + x^2 + 1 (0xD5)
  */
-static const uint8_t crc8_table[256] = {
+
+#include <astra/astra.h>
+#include <astra/utils/crc8.h>
+
+static
+const uint8_t crc8_table[256] =
+{
     0x00, 0xd5, 0x7f, 0xaa, 0xfe, 0x2b, 0x81, 0x54, 0x29, 0xfc, 0x56, 0x83,
     0xd7, 0x02, 0xa8, 0x7d, 0x52, 0x87, 0x2d, 0xf8, 0xac, 0x79, 0xd3, 0x06,
     0x7b, 0xae, 0x04, 0xd1, 0x85, 0x50, 0xfa, 0x2f, 0xa4, 0x71, 0xdb, 0x0e,
@@ -51,15 +54,16 @@ static const uint8_t crc8_table[256] = {
     0x53, 0x86, 0x2c, 0xf9
 };
 
-uint8_t au_crc8(const uint8_t *buffer, size_t len)
+uint8_t au_crc8(const void *data, size_t len)
 {
+    const uint8_t *p = (uint8_t *)data;
     unsigned int crc = 0;
 
-    while (len--)
+    while (len-- > 0)
     {
-        const unsigned int i = (crc ^ *buffer++) & 0xFF;
-        crc = (crc8_table[i] ^ (crc << 8)) & 0xFF;
+        const unsigned int i = (crc ^ *(p++)) & 0xff;
+        crc = (crc8_table[i] ^ (crc << 8)) & 0xff;
     }
 
-    return crc & 0xFF;
+    return crc;
 }

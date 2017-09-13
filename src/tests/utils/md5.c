@@ -28,7 +28,8 @@ typedef struct
     const char *hash;
 } md5_test_t;
 
-static const md5_test_t test_strings[] =
+static
+const md5_test_t test_strings[] =
 {
     {
         "abc",
@@ -62,7 +63,7 @@ START_TEST(test_vectors)
 
         md5_ctx_t test;
         au_md5_init(&test);
-        au_md5_update(&test, (uint8_t *)msg, strlen(msg));
+        au_md5_update(&test, msg, strlen(msg));
         au_md5_final(&test, hash);
 
         ck_assert(!memcmp(hash, expect, sizeof(hash)));
@@ -78,7 +79,7 @@ START_TEST(million_a)
 
     for (size_t i = 0; i < 1000000; i++)
     {
-        static const uint8_t a = 'a';
+        const uint8_t a = 'a';
         au_md5_update(&test, &a, sizeof(a));
     }
 
@@ -103,19 +104,40 @@ typedef struct
     const char *out;
 } md5_pwd_t;
 
-static const md5_pwd_t test_pwds[] =
+static
+const md5_pwd_t test_pwds[] =
 {
     {
+        "", "",
+        "$1$$qRPK7m23GJusamGpoGLby/", /* empty password */
+    },
+    {
         "abc", "",
-        "$1$$j0yT3c/2mYPQF09fpvPLb0",
+        "$1$$j0yT3c/2mYPQF09fpvPLb0", /* empty salt */
     },
     {
         "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", "24k2HGno",
-        "$1$24k2HGno$dlqH.myjULrcEFC/LVrlX/",
+        "$1$24k2HGno$dlqH.myjULrcEFC/LVrlX/", /* maximum size salt */
     },
     {
         "The quick brown fox jumps over the lazy dog", "9Uiu7vSwRoDowN7U",
-        "$1$9Uiu7vSw$daEwZ1SA6sXzBZGF.xkOV1",
+        "$1$9Uiu7vSw$daEwZ1SA6sXzBZGF.xkOV1", /* should cut off excess salt */
+    },
+    {
+        "Quick zephyrs blow, vexing daft Jim", "salt\0pepper",
+        "$1$salt$AYueshwxEUBaF8E1OPPnj.", /* NUL in salt */
+    },
+    {
+        "Sphinx of black quartz, judge my vow", "YdOb$2noM",
+        "$1$YdOb$.oTllKs1umecEjbgWO7350", /* salt terminated by '$' */
+    },
+    {
+        "Jinxed wizards pluck ivy from the big quilt", "$1$SALTSALTSALT",
+        "$1$SALTSALT$enxC6wJZyfNdPu7BOADXi0", /* salt with MD5 magic */
+    },
+    {
+        "Crazy Fredrick bought many very exquisite opal jewels", "$1$\0",
+        "$1$$fRj2TvGbEPJzTjdnSKYUx1", /* magic only, no salt */
     },
     {
         "foo", "HDYlw",
@@ -133,9 +155,12 @@ START_TEST(pwd_crypt)
     {
         const md5_pwd_t *const p = &test_pwds[i];
 
-        char out[36] = { '\0' };
+        char out[MD5_CRYPT_SIZE] = { '\0' };
         au_md5_crypt(p->str, p->salt, out);
-        ck_assert(!strcmp(out, p->out));
+
+        ck_assert_msg(!strcmp(out, p->out)
+                      , "crypt %zu: expected '%s', got '%s'"
+                      , i, p->out, out);
     }
 }
 END_TEST

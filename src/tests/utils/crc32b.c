@@ -2,7 +2,7 @@
  * Astra Unit Tests
  * http://cesbo.com/astra
  *
- * Copyright (C) 2016, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2016-2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -22,7 +22,8 @@
 #include <astra/utils/crc32b.h>
 
 /* PSI tables */
-static const uint8_t test_tables[][96] =
+static
+const uint8_t test_tables[][96] =
 {
     {
         0x00, 0xb0, 0x5d, 0x00, 0x01, 0xff, 0x00, 0x00, 0x00, 0x00, 0xe0, 0x10,
@@ -125,16 +126,118 @@ START_TEST(psi_tables)
     {
         const uint8_t *const buf = test_tables[i];
         const size_t buf_size = buf[2] + 3;
+        ck_assert(buf_size > CRC32_SIZE);
 
-        const uint32_t expect = (
-            ((uint32_t)(&buf[buf_size - CRC32_SIZE])[0]) << 24 |
-            ((uint32_t)(&buf[buf_size - CRC32_SIZE])[1]) << 16 |
-            ((uint32_t)(&buf[buf_size - CRC32_SIZE])[2]) << 8 |
-            ((uint32_t)(&buf[buf_size - CRC32_SIZE])[3])
-        );
+        const uint32_t expect = asc_get_be32(&buf[buf_size - CRC32_SIZE]);
         const uint32_t crc = au_crc32b(buf, buf_size - CRC32_SIZE);
         ck_assert(crc == expect);
     }
+}
+END_TEST
+
+/* repeating patterns */
+typedef struct
+{
+    const char *alphabet;
+    size_t len;
+    uint32_t crc[8];
+} rep_test_t;
+
+static
+const rep_test_t rep_tests[] =
+{
+    {
+        .alphabet = " ",
+
+        .len = 16384,
+        .crc = {
+            0x57f69b40, 0x7d162c35, 0xea78abb0, 0x1023ba80,
+            0x9a3faa96, 0xabebfa96, 0x9c7f8d03, 0x3c50b22d,
+        },
+    },
+    {
+        .alphabet = "0123456789",
+
+        .len = 123,
+        .crc = {
+            0x6d3d8f7e, 0x26a4afab, 0xd8dd7ad0, 0xaaa26715,
+            0x623b4455, 0x461e00c3, 0x05add70f, 0xe05e8ceb,
+        },
+    },
+    {
+        .alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+
+        .len = 54321,
+        .crc = {
+            0x402ca6c7, 0x672fd0bf, 0x1815c7f5, 0x8f2ef75c,
+            0xd487ce02, 0xcaa65445, 0x4ae18b5e, 0x43ab6519,
+        },
+    },
+    {
+        .alphabet = "abcdefghijklmnopqrstuvwxyz",
+
+        .len = 9999,
+        .crc = {
+            0x3fcbe722, 0xf5ff86b5, 0x1cd6c120, 0x62cf1b77,
+            0x61bf4344, 0x4d45f81f, 0xbc9e0fee, 0x7cf674e0,
+        },
+    },
+    {
+        .alphabet = "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~",
+
+        .len = 777,
+        .crc = {
+            0x46033477, 0xda7c3ff2, 0x4fe1a15f, 0x897a0c58,
+            0x43f31cd5, 0x051fcc98, 0x9ddbe0da, 0xabc032f5,
+        },
+    },
+    {
+        .alphabet = "\xff\x01\x02\x03\x04\x05\x06\x07"
+                    "\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
+                    "\x10\x11\x12\x13\x14\x15\x16\x17"
+                    "\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f",
+
+        .len = 100000,
+        .crc = {
+            0x35f5c978, 0xbeb1e1c1, 0xa7ebaab6, 0x14f8ae62,
+            0xe7f77085, 0x0e597077, 0x6ecc42cc, 0x30757d32,
+        },
+    },
+};
+
+START_TEST(repeating_strings)
+{
+    for (size_t j = 0; j < ASC_ARRAY_SIZE(rep_tests); j++)
+    {
+        const rep_test_t *const t = &rep_tests[j];
+        const size_t alphachrs = strlen(t->alphabet);
+
+        for (size_t r = 0; r < 8; r++)
+        {
+            const size_t len = (t->len * 8 * (r + 1)) + r;
+            ck_assert(len % 8 == r);
+            char *const buf = ASC_ALLOC(len, char);
+
+            for (size_t i = 0; i < len; i++)
+                buf[i] = t->alphabet[i % alphachrs];
+
+            const uint32_t crc = au_crc32b(buf, len);
+            ck_assert_msg(crc == t->crc[r]
+                          , "rep: %zu/%zu/% 8zu: expected 0x%08x, got 0x%08x\n"
+                          , j, r, len, t->crc[r], crc);
+
+            free(buf);
+        }
+    }
+}
+END_TEST
+
+/* zero length input */
+START_TEST(zero_length)
+{
+    char empty[1] = { 0 };
+    ck_assert(au_crc32b(NULL, 0) == 0);
+    ck_assert(au_crc32b(empty, 0) == 0);
 }
 END_TEST
 
@@ -144,6 +247,8 @@ Suite *utils_crc32b(void)
 
     TCase *const tc = tcase_create("default");
     tcase_add_test(tc, psi_tables);
+    tcase_add_test(tc, repeating_strings);
+    tcase_add_test(tc, zero_length);
     suite_add_tcase(s, tc);
 
     return s;

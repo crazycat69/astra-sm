@@ -1718,7 +1718,7 @@ START_TEST(ts_bench)
     /* check average bitrate */
     t.clk_bits /= t.rx_idx;
     t.pcr_bits /= t.rx_idx;
-    asc_log_debug("avg rate: clk: %.2f, pcr: %.2f\n", t.clk_bits, t.pcr_bits);
+    asc_log_debug("avg rate: clk: %.2f, pcr: %.2f", t.clk_bits, t.pcr_bits);
 
     const unsigned int res = get_timer_res();
     if (res <= 10000) /* 10ms or better */

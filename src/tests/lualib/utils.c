@@ -18,44 +18,33 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../libastra.h"
+#include "../libastra.h"
 #include <astra/luaapi/state.h>
 
 #define L lua
 
-/* encode and decode test strings */
-START_TEST(test_vectors)
+/* get hostname */
+START_TEST(get_hostname)
 {
-    static const char *const script =
-        "local test = {" "\n"
-        "    { '', '' }," "\n"
-        "    { 'f', 'Zg==' }," "\n"
-        "    { 'fo', 'Zm8=' }," "\n"
-        "    { 'foo', 'Zm9v' }," "\n"
-        "    { 'foob', 'Zm9vYg==' }," "\n"
-        "    { 'fooba', 'Zm9vYmE=' }," "\n"
-        "    { 'foobar', 'Zm9vYmFy' }," "\n"
-        "}" "\n"
-        "for _, v in pairs(test) do" "\n"
-        "    local text = v[1]" "\n"
-        "    local b64 = v[2]" "\n"
-        "    assert(text:b64e() == b64)" "\n"
-        "    assert(base64.encode(text) == b64)" "\n"
-        "    assert(b64:b64d() == text)" "\n"
-        "    assert(base64.decode(b64) == text)" "\n"
-        "end" "\n";
-
-    ck_assert_msg(luaL_dostring(L, script) == 0, lua_tostring(L, -1));
+    lua_getglobal(L, "utils");
+    ck_assert(lua_istable(L, -1));
+    lua_getfield(L, -1, "hostname");
+    ck_assert(lua_isfunction(L, -1));
+    ck_assert(lua_pcall(L, 0, 1, 0) == 0);
+    ck_assert(lua_gettop(L) == 2);
+    ck_assert(lua_isstring(L, -1));
+    ck_assert(luaL_len(L, -1) > 0);
+    lua_pop(L, 2);
 }
 END_TEST
 
-Suite *luaapi_lib_base64(void)
+Suite *lualib_utils(void)
 {
-    Suite *const s = suite_create("luaapi/lib/base64");
+    Suite *const s = suite_create("lualib/utils");
 
     TCase *const tc = tcase_create("default");
     tcase_add_checked_fixture(tc, lib_setup, lib_teardown);
-    tcase_add_test(tc, test_vectors);
+    tcase_add_test(tc, get_hostname);
     suite_add_tcase(s, tc);
 
     return s;

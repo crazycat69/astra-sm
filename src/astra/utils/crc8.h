@@ -25,6 +25,6 @@
 #   error "Please include <astra/astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-uint8_t au_crc8(const uint8_t *buffer, size_t len) __asc_result;
+uint8_t au_crc8(const void *data, size_t len) __asc_result;
 
 #endif /* _AU_CRC8_H_ */

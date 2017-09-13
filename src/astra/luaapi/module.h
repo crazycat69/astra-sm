@@ -55,9 +55,9 @@ typedef struct
 typedef struct
 {
     const char *name;
+    const module_registry_t *reg;
     size_t size;
     module_type_t type;
-    const module_registry_t *reg;
 } module_manifest_t;
 
 void module_add_methods(lua_State *L, const module_data_t *mod
@@ -93,22 +93,24 @@ bool module_option_boolean(lua_State *L, const char *name, bool *boolean);
 
 #define MODULE_REGISTER(_name) \
     extern module_registry_t __registry_##_name; \
+    MODULE_MANIFEST_DECL(_name); \
     MODULE_MANIFEST_DEF(_name) = \
     { \
         .name = #_name, \
+        .reg = &__registry_##_name, \
         .size = sizeof(module_data_t), \
         .type = MODULE_TYPE_BASIC, \
-        .reg = &__registry_##_name, \
     }; \
     module_registry_t __registry_##_name =
 
 #define BINDING_REGISTER(_name) \
     extern module_registry_t __registry_##_name; \
+    MODULE_MANIFEST_DECL(_name); \
     MODULE_MANIFEST_DEF(_name) = \
     { \
         .name = #_name, \
-        .type = MODULE_TYPE_BINDING, \
         .reg = &__registry_##_name, \
+        .type = MODULE_TYPE_BINDING, \
     }; \
     module_registry_t __registry_##_name =
 

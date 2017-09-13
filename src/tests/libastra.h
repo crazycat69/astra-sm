@@ -52,15 +52,16 @@ Suite *luaapi_module(void);
 Suite *luaapi_state(void);
 Suite *luaapi_stream(void);
 
-/* luaapi/lib */
-Suite *luaapi_lib_astra(void);
-Suite *luaapi_lib_base64(void);
-Suite *luaapi_lib_md5(void);
-Suite *luaapi_lib_pidfile(void);
-Suite *luaapi_lib_rc4(void);
-Suite *luaapi_lib_sha1(void);
-Suite *luaapi_lib_strhex(void);
-Suite *luaapi_lib_utils(void);
+/* lualib */
+Suite *lualib_astra(void);
+Suite *lualib_base64(void);
+Suite *lualib_json(void);
+Suite *lualib_md5(void);
+Suite *lualib_pidfile(void);
+Suite *lualib_rc4(void);
+Suite *lualib_sha1(void);
+Suite *lualib_strhex(void);
+Suite *lualib_utils(void);
 
 /* mpegts */
 Suite *mpegts_mpegts(void);
@@ -71,6 +72,7 @@ Suite *mpegts_sync(void);
 Suite *utils_base64(void);
 Suite *utils_crc32b(void);
 Suite *utils_crc8(void);
+Suite *utils_json(void);
 Suite *utils_md5(void);
 Suite *utils_rc4(void);
 Suite *utils_sha1(void);
@@ -100,15 +102,16 @@ static suite_func_t suite_list[] = {
     luaapi_state,
     luaapi_stream,
 
-    /* luaapi/lib */
-    luaapi_lib_astra,
-    luaapi_lib_base64,
-    luaapi_lib_md5,
-    luaapi_lib_pidfile,
-    luaapi_lib_rc4,
-    luaapi_lib_sha1,
-    luaapi_lib_strhex,
-    luaapi_lib_utils,
+    /* lualib */
+    lualib_astra,
+    lualib_base64,
+    lualib_json,
+    lualib_md5,
+    lualib_pidfile,
+    lualib_rc4,
+    lualib_sha1,
+    lualib_strhex,
+    lualib_utils,
 
     /* mpegts */
     mpegts_mpegts,
@@ -119,6 +122,7 @@ static suite_func_t suite_list[] = {
     utils_base64,
     utils_crc32b,
     utils_crc8,
+    utils_json,
     utils_md5,
     utils_rc4,
     utils_sha1,

@@ -1,8 +1,9 @@
 /*
- * Astra (OS signal handling)
+ * Astra Utils (JSON)
  * http://cesbo.com/astra
  *
- * Copyright (C) 2015-2017, Artem Kharitonov <artem@3phase.pw>
+ * Copyright (C) 2012-2015, Andrey Dyldin <and@cesbo.com>
+ *                    2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,32 +19,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef _MAIN_SIG_H_
-#define _MAIN_SIG_H_ 1
+#ifndef _AU_JSON_H_
+#define _AU_JSON_H_ 1
 
 #ifndef _ASTRA_H_
 #   error "Please include <astra/astra.h> first"
 #endif /* !_ASTRA_H_ */
 
-#define SIGNAL_LOCK_WAIT 5000 /* ms */
+#include <astra/luaapi/luaapi.h>
 
-void signal_setup(void);
-void signal_enable(bool running);
+int au_json_enc(lua_State *L);
+int au_json_dec(lua_State *L, const char *str, size_t len);
 
-static inline __asc_noreturn
-void signal_timeout(void)
-{
-    fprintf(stderr, "wait timeout for signal lock\n");
-    _exit(ASC_EXIT_SIGNAL);
-}
-
-static inline __asc_noreturn
-void signal_perror(int errnum, const char *str)
-{
-    char buf[512] = { 0 };
-    asc_strerror(errnum, buf, sizeof(buf));
-    fprintf(stderr, "%s: %s\n", str, buf);
-    _exit(ASC_EXIT_SIGNAL);
-}
-
-#endif /* _MAIN_SIG_H_ */
+#endif /* _AU_JSON_H_ */

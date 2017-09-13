@@ -242,7 +242,7 @@ START_TEST(far_close)
 END_TEST
 
 /* try to close child multiple times in a row */
-asc_child_t *double_child = NULL;
+static asc_child_t *double_child = NULL;
 
 static void double_on_read(void *arg, const void *buf, size_t len)
 {

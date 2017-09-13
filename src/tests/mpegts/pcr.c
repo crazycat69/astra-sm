@@ -190,7 +190,7 @@ START_TEST(test_vectors)
         const uint64_t pcr = TS_GET_PCR(t->data);
         ck_assert(pcr == t->pcr.value);
 
-        uint8_t ts[TS_PACKET_SIZE];
+        uint8_t ts[TS_PACKET_SIZE] = { 0 };
         TS_SET_PCR(ts, pcr);
         ck_assert(TS_GET_PCR(ts) == t->pcr.value);
     }

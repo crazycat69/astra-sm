@@ -114,9 +114,14 @@ int method_new(lua_State *L)
     };
 
     lua_newtable(L);
+
     lua_pushlightuserdata(L, (void *)manifest);
     lua_pushlightuserdata(L, mod);
     luaL_setfuncs(L, meta_methods, 2);
+
+    lua_pushstring(L, manifest->name);
+    lua_setfield(L, -2, "__metatable");
+
     lua_setmetatable(L, -2);
 
     /* set up user methods */

@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -41,28 +42,28 @@
 static
 int method_encode(lua_State *L)
 {
-    const char *const data = luaL_checkstring(L, 1);
-    const int data_size = luaL_len(L, 1);
+    size_t plain_len = 0;
+    const char *const plain = luaL_checklstring(L, 1, &plain_len);
 
-    size_t data_enc_size = 0;
-    char *data_enc = au_base64_enc(data, data_size, &data_enc_size);
-    lua_pushlstring(L, data_enc, data_enc_size);
+    size_t b64_len = 0;
+    char *const b64 = au_base64_enc(plain, plain_len, &b64_len);
+    lua_pushlstring(L, b64, b64_len);
+    free(b64);
 
-    free(data_enc);
     return 1;
 }
 
 static
 int method_decode(lua_State *L)
 {
-    const char *const data = luaL_checkstring(L, 1);
-    const int data_size = luaL_len(L, 1);
+    size_t b64_len = 0;
+    const char *const b64 = luaL_checklstring(L, 1, &b64_len);
 
-    size_t data_dec_size = 0;
-    char *data_dec = (char *)au_base64_dec(data, data_size, &data_dec_size);
-    lua_pushlstring(L, data_dec, data_dec_size);
+    size_t plain_len = 0;
+    char *const plain = (char *)au_base64_dec(b64, b64_len, &plain_len);
+    lua_pushlstring(L, plain, plain_len);
+    free(plain);
 
-    free(data_dec);
     return 1;
 }
 

@@ -83,40 +83,6 @@ AC_TYPE_UINT32_T
 AC_TYPE_UINT64_T
 AC_TYPE_INT64_T
 
-# in case endian.h is absent
-AC_MSG_CHECKING([for endian.h presence and usability])
-AC_PREPROC_IFELSE([
-    AC_LANG_PROGRAM([
-        #include <endian.h>
-        #include <sys/types.h>
-        #if (!defined(BYTE_ORDER) || !defined(LITTLE_ENDIAN) || !defined(BIG_ENDIAN))
-        #   error "BYTE_ORDER defines absent"
-        #endif
-        #if (BYTE_ORDER != LITTLE_ENDIAN && BYTE_ORDER != BIG_ENDIAN)
-        #   error "BYTE_ORDER has invalid value"
-        #endif
-    ])
-], [
-    AC_MSG_RESULT([yes])
-], [
-    AC_MSG_RESULT([no])
-
-    # let's make our own!
-    AC_DEFINE([LITTLE_ENDIAN], [1234], [Little endian byte order])
-    AC_DEFINE([BIG_ENDIAN], [4321], [Big endian byte order])
-
-    AC_C_BIGENDIAN([ac_cv_c_bigendian="yes"], [ac_cv_c_bigendian="no"], [], [
-        AC_MSG_ERROR([universal endianness not supported; please preset ac_cv_c_bigendian=no]) ])
-
-    AS_IF([test "x${ac_cv_c_bigendian}" = "xyes"], [
-        AC_DEFINE([BYTE_ORDER], [BIG_ENDIAN],
-            [Define this machine's endianness])
-    ], [
-        AC_DEFINE([BYTE_ORDER], [LITTLE_ENDIAN],
-            [Define this machine's endianness])
-    ])
-])
-
 # use 64 bit file offsets on 32 bit systems
 AC_SYS_LARGEFILE
 
@@ -704,6 +670,7 @@ AS_IF([test "x${enable_warnings}" = "xyes"], [
     AX_CHECK_CFLAG([-Wmissing-declarations], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wmissing-include-dirs], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wmissing-prototypes], [WARN_CFLAGS])
+    AX_CHECK_CFLAG([-Wmissing-variable-declarations], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wnested-externs], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wold-style-definition], [WARN_CFLAGS])
     AX_CHECK_CFLAG([-Wpointer-arith], [WARN_CFLAGS])

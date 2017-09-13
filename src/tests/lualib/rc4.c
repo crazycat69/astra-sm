@@ -18,50 +18,46 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../libastra.h"
+#include "../libastra.h"
 #include <astra/luaapi/state.h>
 
 #define L lua
 
-/* hash test strings */
+/* encrypt and decrypt test strings */
 START_TEST(test_vectors)
 {
     static const char *const script =
+        "local key = 'testtesttest'" "\n"
         "local test = {" "\n"
         "    {" "\n"
-        "        'abc'," "\n"
-        "        '900150983cd24fb0d6963f7d28e17f72'," "\n"
-        "    }," "\n"
-        "    {" "\n"
-        "        'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq'," "\n"
-        "        '8215ef0796a20bcaaae116d3876c664a'," "\n"
-        "    }," "\n"
-        "    {" "\n"
-        "        'The quick brown fox jumps over the lazy dog'," "\n"
-        "        '9e107d9d372bb6826bd81d3542a419d6'," "\n"
-        "    }," "\n"
-        "    {" "\n"
         "        'foo'," "\n"
-        "        'acbd18db4cc2f85cedef654fccc4a4d8'," "\n"
+        "        'c8e048'," "\n"
+        "    }," "\n"
+        "    {" "\n"
+        "        'bar'," "\n"
+        "        'ccee55'," "\n"
         "    }," "\n"
         "    {" "\n"
         "        'foobar'," "\n"
-        "        '3858f62230ac3c915f300c664312c63f'," "\n"
+        "        'c8e048738158'," "\n"
+        "    }," "\n"
+        "    {" "\n"
+        "        'foobarfoobar'," "\n"
+        "        'c8e0487381581b4ab92c3c11'," "\n"
         "    }," "\n"
         "}" "\n"
         "for _, v in pairs(test) do" "\n"
-        "    local str = v[1]" "\n"
-        "    local hash = v[2]" "\n"
-        "    assert(((str:md5()):hex()):lower() == hash)" "\n"
+        "    assert(((v[1]:rc4(key)):hex()):lower() == v[2])" "\n"
+        "    assert((v[2]:bin()):rc4(key) == v[1])" "\n"
         "end" "\n";
 
     ck_assert_msg(luaL_dostring(L, script) == 0, lua_tostring(L, -1));
 }
 END_TEST
 
-Suite *luaapi_lib_md5(void)
+Suite *lualib_rc4(void)
 {
-    Suite *const s = suite_create("luaapi/lib/md5");
+    Suite *const s = suite_create("lualib/rc4");
 
     TCase *const tc = tcase_create("default");
     tcase_add_checked_fixture(tc, lib_setup, lib_teardown);

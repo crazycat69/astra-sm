@@ -80,7 +80,7 @@ START_TEST(test_vectors)
         sha1_ctx_t test;
         au_sha1_init(&test);
         for (size_t j = 0; j < test_strings[i].repeat; j++)
-            au_sha1_update(&test, (uint8_t *)msg, strlen(msg));
+            au_sha1_update(&test, msg, strlen(msg));
 
         au_sha1_final(&test, hash);
         ck_assert(!memcmp(hash, expect, sizeof(hash)));

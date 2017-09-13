@@ -3,6 +3,7 @@
  * http://cesbo.com/astra
  *
  * Copyright (C) 2012-2013, Andrey Dyldin <and@cesbo.com>
+ *                    2017, Artem Kharitonov <artem@3phase.pw>
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -32,8 +33,7 @@ typedef struct
     uint8_t index2;
 } rc4_ctx_t;
 
-void au_rc4_init(rc4_ctx_t *state, const uint8_t *key, int keylen);
-void au_rc4_crypt(rc4_ctx_t *state, uint8_t *dst, const uint8_t *buf
-                  , int buflen);
+void au_rc4_init(rc4_ctx_t *ctx, const uint8_t *key, size_t keylen);
+void au_rc4_crypt(rc4_ctx_t *ctx, void *dst, const void *src, size_t len);
 
 #endif /* _AU_RC4_H_ */

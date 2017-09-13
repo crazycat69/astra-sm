@@ -5,10 +5,10 @@
 #include <astra/astra.h>
 #include <astra/core/event.h>
 #include <astra/core/socket.h>
-#include <astra/core/strbuf.h>
 #include <astra/luaapi/module.h>
 #include <astra/utils/strhex.h>
 
+#include "strbuf.h"
 #include "parser.h"
 
 #define HTTP_BUFFER_SIZE (16 * 1024)

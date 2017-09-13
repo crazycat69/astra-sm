@@ -45,7 +45,8 @@ MODULE_MANIFEST_DECL(winsvc);
 #endif
 
 /* manifest list */
-static const module_manifest_t *lua_lib_list[] =
+static
+const module_manifest_t *const lua_lib_list[] =
 {
     &MODULE_MANIFEST_SYMBOL(astra),
     &MODULE_MANIFEST_SYMBOL(base64),

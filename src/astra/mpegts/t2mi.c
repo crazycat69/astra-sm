@@ -346,10 +346,6 @@ uint64_t read_bit_field(const uint8_t **ptr, unsigned *off, unsigned size)
 #define BITS_TO_BYTES(__data_bits) \
     (((__data_bits) + 7) / 8)
 
-/* read 32-bit integer from offset, MSB first */
-#define GET_UINT32(x) \
-    (uint32_t)(((x)[0] << 24) | ((x)[1] << 16) | ((x)[2] << 8) | ((x)[3]))
-
 /*
  * string values for header fields
  */
@@ -1039,6 +1035,8 @@ bool on_t2mi(ts_t2mi_t *mi, t2mi_packet_t *pkt)
                 return on_l1_current(mi, pkt);
             }
 
+            /* fallthrough */
+
         default:
             return true;
     }
@@ -1144,7 +1142,7 @@ void on_outer_ts(ts_t2mi_t *mi, const uint8_t *ts)
 
         /* check CRC32 */
         const size_t crc32_pos = want - CRC32_SIZE;
-        pkt->crc32 = GET_UINT32(&buf[crc32_pos]);
+        pkt->crc32 = asc_get_be32(&buf[crc32_pos]);
         const uint32_t calc_crc32 = au_crc32b(buf, crc32_pos);
 
         if (pkt->crc32 != calc_crc32)
