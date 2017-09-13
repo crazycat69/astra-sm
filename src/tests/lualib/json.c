@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../libastra.h"
+#include "../libastra.h"
 #include <astra/utils/json.h>
 #include <astra/luaapi/state.h>
 
@@ -2159,9 +2159,9 @@ START_TEST(from_lua)
 }
 END_TEST
 
-Suite *luaapi_lib_json(void)
+Suite *lualib_json(void)
 {
-    Suite *const s = suite_create("luaapi/lib/json");
+    Suite *const s = suite_create("lualib/json");
 
     TCase *const tc = tcase_create("default");
     tcase_add_checked_fixture(tc, setup, teardown);

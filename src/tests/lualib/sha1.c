@@ -18,51 +18,44 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../libastra.h"
+#include "../libastra.h"
 #include <astra/luaapi/state.h>
 
 #define L lua
 
-/* pre-defined test strings */
+/* encrypt and decrypt test strings */
 START_TEST(test_vectors)
 {
     static const char *const script =
         "local test = {" "\n"
         "    {" "\n"
         "        ''," "\n"
-        "        ''," "\n"
+        "        'da39a3ee5e6b4b0d3255bfef95601890afd80709'," "\n"
         "    }," "\n"
         "    {" "\n"
-        "        'foo'," "\n"
-        "        '666f6f'," "\n"
+        "        'abc'," "\n"
+        "        'a9993e364706816aba3e25717850c26c9cd0d89d'," "\n"
         "    }," "\n"
         "    {" "\n"
-        "        'bar'," "\n"
-        "        '626172'," "\n"
+        "        'abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq'," "\n"
+        "        '84983e441c3bd26ebaae4aa1f95129e5e54670f1'," "\n"
         "    }," "\n"
         "    {" "\n"
-        "        'foobar'," "\n"
-        "        '666f6f626172'," "\n"
-        "    }," "\n"
-        "    {" "\n"
-        "        \"foo\\0bar\"," "\n"
-        "        '666f6f00626172'," "\n"
+        "        'abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu'," "\n"
+        "        'a49b2446a02c645bf419f995b67091253a04a259'," "\n"
         "    }," "\n"
         "}" "\n"
         "for _, v in pairs(test) do" "\n"
-        "    assert((v[1]:hex()):lower() == v[2])" "\n"
-        "    assert(string.hex(v[1]):lower() == v[2])" "\n"
-        "    assert(v[2]:bin() == v[1])" "\n"
-        "    assert(string.bin(v[2]) == v[1])" "\n"
+        "    assert(((v[1]:sha1()):hex()):lower() == v[2])" "\n"
         "end" "\n";
 
     ck_assert_msg(luaL_dostring(L, script) == 0, lua_tostring(L, -1));
 }
 END_TEST
 
-Suite *luaapi_lib_strhex(void)
+Suite *lualib_sha1(void)
 {
-    Suite *const s = suite_create("luaapi/lib/strhex");
+    Suite *const s = suite_create("lualib/sha1");
 
     TCase *const tc = tcase_create("default");
     tcase_add_checked_fixture(tc, lib_setup, lib_teardown);

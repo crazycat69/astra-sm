@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "../../libastra.h"
+#include "../libastra.h"
 #include <astra/core/mainloop.h>
 #include <astra/luaapi/state.h>
 
@@ -92,9 +92,9 @@ START_TEST(astra_exit)
 }
 END_TEST
 
-Suite *luaapi_lib_astra(void)
+Suite *lualib_astra(void)
 {
-    Suite *const s = suite_create("luaapi/lib/astra");
+    Suite *const s = suite_create("lualib/astra");
 
     TCase *const tc = tcase_create("default");
     tcase_add_checked_fixture(tc, lib_setup, lib_teardown);

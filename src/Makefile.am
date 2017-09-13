@@ -109,25 +109,25 @@ libastra_la_SOURCES += \
     astra/luaapi/stream.c \
     astra/luaapi/stream.h
 
-# luaapi/lib/
+# lualib/
 libastra_la_SOURCES += \
-    astra/luaapi/lib/astra.c \
-    astra/luaapi/lib/base64.c \
-    astra/luaapi/lib/iso8859.c \
-    astra/luaapi/lib/json.c \
-    astra/luaapi/lib/log.c \
-    astra/luaapi/lib/md5.c \
-    astra/luaapi/lib/pidfile.c \
-    astra/luaapi/lib/rc4.c \
-    astra/luaapi/lib/sha1.c \
-    astra/luaapi/lib/strhex.c \
-    astra/luaapi/lib/timer.c \
-    astra/luaapi/lib/utils.c \
-    astra/luaapi/lib/list.h
+    astra/lualib/astra.c \
+    astra/lualib/base64.c \
+    astra/lualib/iso8859.c \
+    astra/lualib/json.c \
+    astra/lualib/log.c \
+    astra/lualib/md5.c \
+    astra/lualib/pidfile.c \
+    astra/lualib/rc4.c \
+    astra/lualib/sha1.c \
+    astra/lualib/strhex.c \
+    astra/lualib/timer.c \
+    astra/lualib/utils.c \
+    astra/lualib/list.h
 
 if HAVE_WIN32
 libastra_la_SOURCES += \
-    astra/luaapi/lib/winsvc.c
+    astra/lualib/winsvc.c
 endif
 
 # mpegts/
@@ -375,15 +375,15 @@ tests_libastra_SOURCES += \
     tests/luaapi/stream.c
 
 tests_libastra_SOURCES += \
-    tests/luaapi/lib/astra.c \
-    tests/luaapi/lib/base64.c \
-    tests/luaapi/lib/json.c \
-    tests/luaapi/lib/md5.c \
-    tests/luaapi/lib/pidfile.c \
-    tests/luaapi/lib/rc4.c \
-    tests/luaapi/lib/sha1.c \
-    tests/luaapi/lib/strhex.c \
-    tests/luaapi/lib/utils.c
+    tests/lualib/astra.c \
+    tests/lualib/base64.c \
+    tests/lualib/json.c \
+    tests/lualib/md5.c \
+    tests/lualib/pidfile.c \
+    tests/lualib/rc4.c \
+    tests/lualib/sha1.c \
+    tests/lualib/strhex.c \
+    tests/lualib/utils.c
 
 tests_libastra_SOURCES += \
     tests/mpegts/mpegts.c \

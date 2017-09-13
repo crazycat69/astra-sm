@@ -22,7 +22,7 @@
 #include <astra/luaapi/state.h>
 #include <astra/luaapi/module.h>
 
-#include "lib/list.h"
+#include "../lualib/list.h"
 
 #define MSG(_msg) "[lua] " _msg
 
